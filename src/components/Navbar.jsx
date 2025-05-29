@@ -1,43 +1,34 @@
 import React, { useState } from 'react';
 import '../styles/Navbar.css';
-import ServiceLayout from './ServiceLayout';
+import { Navbar, Nav, Container, Carousel, Card, Button, Form } from 'react-bootstrap';
 
-const Navbar = () => {
-  const [showServices, setShowServices] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
+const CustomNavbar = () => {
   return (
-    <nav className="navbar">
-      <div className="logo">
-        TECH<span className="logo-x">X</span>PLORERS
-      </div>
+    
+         <Navbar bg="light" expand="lg" className="shadow-sm">
+      <Container>
+        {/* Brand Logo */}
+        <Navbar.Brand href="#home" className="fw-bold fs-2">TECH<span>X</span>PLORERS</Navbar.Brand>
 
-      {/* Mobile menu button - hidden on desktop */}
-      <button 
-        className={`mobile-menu-button ${mobileMenuOpen ? 'active' : ''}`}
-        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-      >
-        <span className="menu-icon">{mobileMenuOpen ? '✕' : '☰'}</span>
-      </button>
+        {/* Toggle Button for Mobile View */}
+        <Navbar.Toggle aria-controls="basic-navbar-nav" />
 
-      <div className={`nav-links ${mobileMenuOpen ? 'active' : ''}`}>
-        <div 
-          className="nav-item"
-          onMouseEnter={() => !mobileMenuOpen && setShowServices(true)}
-          onMouseLeave={() => !mobileMenuOpen && setShowServices(false)}
-          onClick={() => mobileMenuOpen && setShowServices(!showServices)}
-        >
-          <a href="#services" className="nav-link">SERVICES</a>
-          {showServices && <div className="service-dropdown"><ServiceLayout /></div>}
-        </div>
+        {/* Navbar Links (Centered) */}
+        <Navbar.Collapse id="basic-navbar-nav">
+          <Nav className="ms-auto me-auto justify-content-center  gap-5">
+            <Nav.Link href="#services">SERVICES</Nav.Link>
+            <Nav.Link href="#career">CAREER</Nav.Link>
+            <Nav.Link href="#about-us" active>ABOUT US</Nav.Link>
+            <Nav.Link href="#contact">CONTACT</Nav.Link>
+          </Nav>
         
-        <a href="#career" className="nav-link">CAREERS</a>
-        <a href="#about" className="nav-link">ABOUT</a>
-        <a href="#contact" className="nav-link">CONTACT</a>
-        <button className="login-btn">LOGIN</button>
-      </div>
-    </nav>
+
+        {/* Login Button (Right-Aligned) */}
+        <Button variant="primary" size="lg" className="ms-auto">LOGIN</Button>
+        </Navbar.Collapse>
+      </Container>
+    </Navbar>
   );
 };
 
-export default Navbar;
+export default CustomNavbar;

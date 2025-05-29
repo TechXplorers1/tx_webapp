@@ -16,57 +16,26 @@ html, body {
 }
 
 /* Hero Carousel */
-.carousel {
-  width: 100%;
-  height: 400px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  position: relative;
-  padding: 0;
-  margin: 0;
-  background-color: transparent; /* Removed grey background */
+.carousel-container {
+  margin-top: 20px;
 }
 
-.carousel-content {
-  text-align: center;
-  width: 100%;
-}
-
-.carousel h1 {
-  font-size: 36px;
-  margin-bottom: 20px;
-  color: #333;
+.carousel-shadow {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .carousel-item {
-  width: 100%;
-  height: 300px;
-  background-color: white;
-  margin: 0 auto;
+  height: 400px;
+}
+
+.carousel-img {
+  height: 100%;
+  object-fit: cover;
 }
 
 /* Services Section */
 .services-section {
-  width: 100%;
-  padding: 50px 5%;
-  text-align: center;
-  background-color: white;
-}
-
-.services-section h2 {
-  font-size: 32px;
-  margin-bottom: 40px;
-  color: #333;
-}
-
-.services-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 30px;
-  margin: 30px auto;
-  max-width: 1200px;
-  margin-left: 90px;
+  padding: 50px 0;
 }
 
 .service-card {
@@ -90,7 +59,7 @@ html, body {
   display: block;
 }
 
-.service-card h3 {
+.service-title {
   position: absolute;
   bottom: 0;
   left: 0;
@@ -105,44 +74,20 @@ html, body {
 
 /* World Services Section */
 .world-services {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
   padding: 40px 0;
-  background-color: #fff;
 }
 
-.world-services h2 {
-  font-size: 32px;
-  color: #333;
-  margin-bottom: 20px;
-}
-
-/* Map Container */
 .map-container {
-  height: 400px;
-  width: 90%;
-  margin: 30px auto 0;
+  height: 500px;
   border-radius: 10px;
   overflow: hidden;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  position: relative;
-}
-
-.leaflet-container {
-  height: 100%;
-  width: 100%;
 }
 
 .countries-list {
-  position: absolute;
-  bottom: 20px;
-  right: 20px;
   background: rgba(255, 255, 255, 0.9);
   padding: 15px;
   border-radius: 5px;
-  z-index: 1000;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
@@ -162,25 +107,15 @@ html, body {
 
 /* Responsive Styles */
 @media (max-width: 768px) {
-  .services-grid {
-    grid-template-columns: 1fr;
-    padding: 0 15px;
-  }
-
-  .carousel {
+  .carousel-item {
     height: 300px;
-  }
-
-  .carousel h1 {
-    font-size: 28px;
-  }
-
-  .services-section h2,
-  .world-services h2 {
-    font-size: 26px;
   }
 
   .service-card {
     height: 250px;
+  }
+
+  .map-container {
+    height: 400px;
   }
 }
