@@ -1,8 +1,8 @@
 import React from 'react';
-import '../styles/LandingPage.css';
+import { Container, Row, Col } from 'react-bootstrap';
 import { MapContainer, TileLayer, Marker, Popup, Polygon } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Carousel } from 'react-bootstrap';
+import Carousel from 'react-bootstrap/Carousel';
 
 import CustomNavbar from './Navbar'; // Make sure this path is correct
 
@@ -56,73 +56,78 @@ const LandingPage = () => {
       <CustomNavbar />
 
       {/* Hero Carousel */}
-      <div className="carousel">
-        <div className="carousel-content">
-          <Carousel indicators={false} className="carousel-shadow">
-            {[1, 2, 3, 4, 5].map((item) => (
-              <Carousel.Item key={item}>
-                <img
-                  className="d-block w-100 carousel-img"
-                  src={`https://picsum.photos/1600/400?random=${item}`}
-                  alt={`Slide ${item}`}
-                />
-              </Carousel.Item>
-            ))}
-          </Carousel>
-        </div>
-      </div>
+      <Container fluid className="carousel-container my-5">
+        <Carousel indicators={false} className="carousel-shadow">
+          {[1, 2, 3, 4, 5].map((item) => (
+            <Carousel.Item key={item}>
+              <img
+                className="d-block w-100 carousel-img"
+                src={`https://picsum.photos/1600/400?random= ${item}`}
+                alt={`Slide ${item}`}
+              />
+            </Carousel.Item>
+          ))}
+        </Carousel>
+      </Container>
 
       {/* Services Section */}
       <section className="services-section" id="services">
-        <div className="services-grid">
-          <div className="service-card">
-            <img src={SMOImg} alt="SMO Service" className="service-image" />
-            <h3>SMO</h3>
-          </div>
-          <div className="service-card">
-            <img src={webDevImg} alt="Web App Development" className="service-image" />
-            <h3>WEB APP DEVELOPMENT</h3>
-          </div>
-          <div className="service-card">
-            <img src={techSupportImg} alt="Tech Support" className="service-image" />
-            <h3>TECH SUPPORT</h3>
-          </div>
-        </div>
+        <Container className="my-5">
+          <h2 className="text-center mb-4">OUR SERVICES</h2>
+          <Row className="justify-content-center">
+            <Col md={4} xs={12} className="service-card mb-4">
+              <img src={SMOImg} alt="SMO Service" className="service-image w-100 h-100 object-fit-cover" />
+              <h3 className="service-title text-center">SMO</h3>
+            </Col>
+            <Col md={4} xs={12} className="service-card mb-4">
+              <img src={webDevImg} alt="Web App Development" className="service-image w-100 h-100 object-fit-cover" />
+              <h3 className="service-title text-center">WEB APP DEVELOPMENT</h3>
+            </Col>
+            <Col md={4} xs={12} className="service-card mb-4">
+              <img src={techSupportImg} alt="Tech Support" className="service-image w-100 h-100 object-fit-cover" />
+              <h3 className="service-title text-center">TECH SUPPORT</h3>
+            </Col>
+          </Row>
+        </Container>
       </section>
 
       {/* World Services Section */}
       <section className="world-services" id="world">
-        <h2>OUR SERVICES IN THE WORLD</h2>
-        <div className="map-container">
-          <MapContainer 
-            center={[20.0, 0.0]} 
-            zoom={2} 
-            scrollWheelZoom={false}
-            style={{ height: '500px', width: '100%' }}
-          >
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            <HighlightedCountries />
-            {offices.map((office, index) => (
-              <Marker key={index} position={office.position}>
-                <Popup>{office.name}</Popup>
-              </Marker>
-            ))}
-          </MapContainer>
-          <div className="countries-list">
-            <h3>We operate in:</h3>
-            <ul>
-              <li>United Kingdom</li>
-              <li>United States</li>
-              <li>India</li>
-              <li>Nigeria</li>
-              <li>Canada</li>
-              <li>Australia</li>
-            </ul>
-          </div>
-        </div>
+        <Container className="my-5">
+          <h2 className="text-center mb-4">OUR SERVICES IN THE WORLD</h2>
+          <Row>
+            <Col md={8} className="map-container">
+              <MapContainer 
+                center={[20.0, 0.0]} 
+                zoom={2} 
+                scrollWheelZoom={false}
+                style={{ height: '500px', width: '100%' }}
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/ ">OpenStreetMap</a> contributors'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                <HighlightedCountries />
+                {offices.map((office, index) => (
+                  <Marker key={index} position={office.position}>
+                    <Popup>{office.name}</Popup>
+                  </Marker>
+                ))}
+              </MapContainer>
+            </Col>
+            <Col md={4} className="countries-list">
+              <h3>We operate in:</h3>
+              <ul>
+                <li>United Kingdom</li>
+                <li>United States</li>
+                <li>India</li>
+                <li>Nigeria</li>
+                <li>Canada</li>
+                <li>Australia</li>
+              </ul>
+            </Col>
+          </Row>
+        </Container>
       </section>
     </div>
   );

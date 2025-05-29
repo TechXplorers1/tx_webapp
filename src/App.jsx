@@ -7,7 +7,7 @@ import ContactPage from './components/Contact.jsx';
 function App() {
   return (
     <div className="App">
-      <ContactPage />
+      <LandingPage />
     </div>
   );
 }
