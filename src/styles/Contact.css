@@ -1,0 +1,46 @@
+/* General Styles */
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f9f9f9;
+}
+
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.contact-us-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Contact Form Section */
+.contact-form {
+  display: flex;
+  gap: 2rem;
+}
+
+/* Vertical Separator Line */
+.vertical-separator {
+  height: 100%;
+  width: 1px;
+  background-color: #ddd;
+}
+
+/* Footer */
+footer {
+  color: white;
+  text-align: center;
+}
+
+footer a {
+  color: white;
+  text-decoration: none;
+}
+
+footer a:hover {
+  text-decoration: underline;
+}

@@ -1,0 +1,66 @@
+/* src/App.css */
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f9f9f9;
+}
+/* #root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+} */
+
+.about-us-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.para-text {
+  max-width: 800px;
+  margin: auto;
+  line-height: 1.8;
+}
+
+.carousel-img {
+  height: 400px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.carousel-shadow {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.carousel-item img {
+  border-radius: 8px;
+}
+
+.video-card iframe {
+  border-radius: 6px;
+}
+
+/* Optional: If using custom padding override */
+.no-padding {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+footer a:hover {
+  text-decoration: underline !important;
+}
+
+
+
+
+
+
+@media (max-width: 768px) {
+  .para-text {
+    font-size: 0.95rem;
+  }
+
+  .carousel-img {
+    height: 250px;
+  }
+}
