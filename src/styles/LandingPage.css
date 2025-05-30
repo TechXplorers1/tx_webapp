@@ -41,6 +41,7 @@
 .carousel-section {
   position: relative;
   height: 60vh;
+  width: 100%;
   background: url('/images/carousel-background.jpg') center/cover no-repeat;
   display: flex;
   align-items: center;
@@ -118,47 +119,53 @@
   color: #666;
 }
 
-.global-services {
+.world-services {
   padding: 60px 40px;
   background: #fff;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 40px;
 }
 
-.global-services .map {
-  flex: 1 1 55%;
-  min-height: 400px;
-  background-color: #e6e6e6;
-  border-radius: 20px;
-  position: relative;
+.map-operate-container {
+  border: 1px solid #000;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-.global-services .country-list {
-  flex: 1 1 35%;
-  padding: 20px;
+.map-col {
+  height: 500px;
+  padding: 0;
+}
+
+.operate-col {
   background-color: #f8f9fa;
-  border-radius: 20px;
-  max-height: 400px;
-  overflow-y: auto;
+  height: 500px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.country-list h2 {
+.operate-content {
+  padding: 30px;
+  width: 100%;
+}
+
+.operate-content h3 {
   font-size: 24px;
-  margin-bottom: 15px;
+  margin-bottom: 20px;
+  color: #333;
+  text-align: center;
 }
 
-.country-list ul {
+.operate-content ul {
   list-style: none;
   padding-left: 0;
 }
 
-.country-list li {
-  padding: 8px 0;
+.operate-content li {
+  padding: 12px 0;
   border-bottom: 1px solid #ddd;
   font-size: 16px;
+  text-align: center;
 }
 
 /* Responsive styles */
@@ -186,15 +193,25 @@
     padding: 40px 20px;
   }
 
-  .global-services {
-    flex-direction: column;
+  .world-services {
     padding: 40px 20px;
   }
+}
 
-  .global-services .map,
-  .global-services .country-list {
-    flex: 1 1 100%;
-    min-height: 300px;
+@media (max-width: 768px) {
+  .map-col,
+  .operate-col {
+    width: 100%;
+    height: auto;
+  }
+
+  .map-col {
+    height: 400px;
+  }
+
+  .operate-col {
+    height: auto;
+    padding: 20px;
   }
 }
 
@@ -215,12 +232,11 @@
     width: 90%;
   }
 
-  .country-list h2 {
+  .operate-content h3 {
     font-size: 20px;
   }
 
-  .country-list li {
+  .operate-content li {
     font-size: 14px;
   }
 }
-

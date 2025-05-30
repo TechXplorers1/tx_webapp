@@ -7,15 +7,19 @@
 
 /* Brand Logo Styling */
 .navbar-brand {
-  font-size: 1rem;
-  font-weight: 500;
+  font-size: 1.5rem;
   margin-right: 2rem;
 }
 
-.navbar-brand span {
-  color: #007bff;
+.brand-x {
   font-size: 2rem;
+  color: #007bff;
 }
+
+.brand-small {
+  font-size: 1.5rem;
+}
+
 
 /* Nav Links Styling */
 .nav-link-custom {

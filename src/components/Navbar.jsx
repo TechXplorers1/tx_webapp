@@ -11,9 +11,12 @@ const CustomNavbar = () => {
     <Navbar bg="light" expand="lg" className="fixed-top shadow-sm">
       <Container fluid> {/* Changed to Container fluid for full width */}
         {/* Brand Logo */}
-        <Navbar.Brand href="#home" className="fw-bold fs-2">
-          TECH<span className="text-primary">X</span>PLORERS
-        </Navbar.Brand>
+<Navbar.Brand href="#home" className="fw-bold navbar-brand">
+  <span className="brand-small">TECH</span>
+  <span className="brand-x">X</span>
+  <span className="brand-small">PLORERS</span>
+</Navbar.Brand>
+
 
         {/* Toggle Button for Mobile View */}
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
