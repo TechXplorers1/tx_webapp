@@ -5,8 +5,8 @@ import { FcGoogle } from "react-icons/fc";
 import { MdEmail } from "react-icons/md";
 import { RiLockPasswordFill } from "react-icons/ri";
 import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
-import { Navbar, Nav, Container, Button } from 'react-bootstrap';
-
+import { Button } from 'react-bootstrap';
+import JsNavbar from './JsNavbar';
 
 export default function SignupPage() {
   const navigate = useNavigate();
@@ -14,9 +14,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-//   const [agreeToTerms, setAgreeToTerms] = useState(false);
-//   const [termsError, setTermsError] = useState(false);
-   const [emailError, setEmailError] = useState("");
+  const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
 
@@ -29,7 +27,7 @@ export default function SignupPage() {
     return null;
   };
 
-   const handleSubmit = (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
 
     // Clear previous errors
@@ -63,36 +61,11 @@ export default function SignupPage() {
 
   return (
     <div className="signup-page">
-      
-            <Navbar bg="light" expand="lg" className="fixed-top shadow-sm">
-                <Container fluid> {/* Changed to Container fluid for full width */}
-                    {/* Brand Logo */}
-                    <Navbar.Brand href="#home" className="fw-bold navbar-brand">
-                      <span className="brand-small">TECH</span>
-                      <span className="brand-x">X</span>
-                      <span className="brand-small">PLORERS</span>
-                    </Navbar.Brand>
-
-                    {/* Toggle Button for Mobile View */}
-                    <Navbar.Toggle aria-controls="basic-navbar-nav" />
-
-                    {/* Navbar Links (Centered) */}
-                    <Navbar.Collapse id="basic-navbar-nav">
-                        <Nav className="mx-auto gap-lg-5 gap-3"> {/* Improved gap classes */}
-                            {/* <Nav.Link href="#services" className="nav-link-custom" onClick={() => navigate('/')}>SERVICES</Nav.Link>
-            <Nav.Link href="#career" className="nav-link-custom" >CAREER</Nav.Link>
-            <Nav.Link href="#about-us" className="nav-link-custom active" onClick={() => navigate('/aboutus')}>ABOUT US</Nav.Link>
-            <Nav.Link href="#contact" className="nav-link-custom" onClick={() => navigate('/contactus')}>CONTACT</Nav.Link> */}
-                        </Nav>
-
-                       
-                    </Navbar.Collapse>
-                </Container>
-            </Navbar>
+      <JsNavbar />
 
       <div className="d-flex justify-content-center align-items-center vh-90">
         <form onSubmit={handleSubmit} className="shadow-lg p-4 rounded bg-white signup-box">
-          <h3 className="text-center fw-bold mb-3">Let’s sign up!</h3>
+          <h3 className="text-center fw-bold mb-3">Let's sign up!</h3>
 
           <button type="button" className="btn btn-light w-100 border mb-3 d-flex align-items-center justify-content-center gap-2">
             <FcGoogle size={20} />
@@ -101,8 +74,7 @@ export default function SignupPage() {
 
           <div className="text-center text-muted mb-2">──────── OR ────────</div>
 
-
-           {/* Email Field */}
+          {/* Email Field */}
           <div className="mb-3">
             <label className="form-label">Email</label>
             <div className="input-group">
@@ -118,7 +90,7 @@ export default function SignupPage() {
             {emailError && <div className="text-danger mt-1">{emailError}</div>}
           </div>
 
-           {/* Password Field */}
+          {/* Password Field */}
           <div className="mb-3">
             <label className="form-label">Password</label>
             <div className="input-group">
@@ -166,7 +138,6 @@ export default function SignupPage() {
             </div>
             {confirmPasswordError && <div className="text-danger mt-1">{confirmPasswordError}</div>}
           </div>
-
 
           <button type="submit" className="btn btn-info w-100 text-white fw-bold">Sign Up</button>
 

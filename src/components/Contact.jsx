@@ -24,12 +24,13 @@ const ContactPage = () => {
             <Container className="my-5">
                 <h1 className="text-center mb-5">OUR CONTACT LOCATIONS</h1>
                 <Row>
+                   
                     <Col md={6}>
                         <Card className="mb-4 shadow-sm h-100">
                             <Card.Body>
                                 {/* Placeholder for Google Map */}
                                 <iframe
-                                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d4296.444043533194!2d77.58445815918705!3d14.66620358598588!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bb14b00165094f3%3A0x9bf5c8ec88ce2b98!2sTechxplorers%20Pvt%20Ltd%20new%20branch!5e1!3m2!1sen!2sin!4v1748514565850!5m2!1sen!2sin "
+                                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d709.765200898061!2d77.58993104299888!3d14.666434711346092!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bb14b00165cab3f%3A0xcefe46ad8e4291aa!2sTECH%20XPLORERS%20PRIVATE%20LIMITED!5e1!3m2!1sen!2sin!4v1748514787859!5m2!1sen!2sin "
                                     width="100%"
                                     height="300"
                                     style={{ border: 0 }}
@@ -40,12 +41,12 @@ const ContactPage = () => {
                             </Card.Body>
                         </Card>
                     </Col>
-                    <Col md={6}>
+                     <Col md={6}>
                         <Card className="mb-4 shadow-sm h-100">
                             <Card.Body>
                                 {/* Placeholder for Google Map */}
                                 <iframe
-                                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d709.765200898061!2d77.58993104299888!3d14.666434711346092!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bb14b00165cab3f%3A0xcefe46ad8e4291aa!2sTECH%20XPLORERS%20PRIVATE%20LIMITED!5e1!3m2!1sen!2sin!4v1748514787859!5m2!1sen!2sin "
+                                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d4296.444043533194!2d77.58445815918705!3d14.66620358598588!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bb14b00165094f3%3A0x9bf5c8ec88ce2b98!2sTechxplorers%20Pvt%20Ltd%20new%20branch!5e1!3m2!1sen!2sin!4v1748514565850!5m2!1sen!2sin "
                                     width="100%"
                                     height="300"
                                     style={{ border: 0 }}
@@ -92,7 +93,7 @@ const ContactPage = () => {
                     <Col md={6}>
                         <div className="d-flex flex-column justify-content-center align-items-start h-100">
                             <h2 className="mb-4">CONTACT MAIL ID</h2>
-                            <p className="mb-2"><a href="mailto:hr@techxplores.in">hr@techxplores.in</a></p>
+                            <p className="mb-2"><a href="mailto:hr@techxplores.in">txhr@techxplores.in</a></p>
                             <p className="mb-2"><a href="mailto:sales@techxplores.in">sales@techxplores.in</a></p>
                             <p><a href="mailto:support@techxplores.in">support@techxplores.in</a></p>
                         </div>
