@@ -1,83 +1,80 @@
-/* Reset some default styles */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
+/* Navbar Styling */
 .navbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background-color: white;
-  padding: 1rem 2rem;
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  border-bottom: 1px solid #e0e0e0;
+  padding: 0.8rem 1rem;
+  width: 100%;
+  z-index: 1030; /* Higher than most elements */
 }
 
-/* Logo Section */
-.logo {
-  font-size: 24px;
-  font-weight: bold;
-  color: #333;
+/* Brand Logo Styling */
+.navbar-brand {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-right: 2rem;
 }
 
-.logo-x {
-  font-size: 32px;
+.navbar-brand span {
   color: #007bff;
-  vertical-align: middle;
-  display: inline-block;
-  transform: translateY(-2px);
+  font-size: 2rem;
 }
 
-/* Navigation Links */
-.nav-links {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-}
-
-.nav-links a {
-  text-decoration: none;
-  color: #333;
+/* Nav Links Styling */
+.nav-link-custom {
   font-weight: 500;
-  transition: color 0.3s;
+  color: #333 !important;
+  padding: 0.5rem 1rem !important;
+  transition: all 0.3s ease;
 }
 
-.nav-links a:hover {
-  color: #ff7800;
+.nav-link-custom:hover, 
+.nav-link-custom:focus {
+  color: #007bff !important;
 }
 
-/* Login Button */
-.login-btn {
-  background-color: #00bfff;
+.nav-link-custom.active {
+  color: #007bff !important;
+  font-weight: 600;
+}
+
+/* Login Button Styling */
+.btn-primary {
+  background-color: #007bff;
+  border-color: #007bff;
+  font-weight: 500;
+  padding: 0.5rem 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  background-color: #0069d9;
+  border-color: #0062cc;
+}
+
+/* Mobile Menu Styling */
+.navbar-toggler {
   border: none;
-  padding: 0.5rem 1rem;
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
-  border-radius: 4px;
-  transition: background-color 0.3s;
+  padding: 0.5rem;
 }
 
-.login-btn:hover {
-  background-color: #e66a00;
+.navbar-toggler:focus {
+  box-shadow: none;
 }
 
 /* Responsive Adjustments */
-@media (max-width: 768px) {
-  .nav-links {
-    flex-direction: column;
-    align-items: flex-end;
-    background: white;
-    position: absolute;
-    top: 70px;
-    right: 0;
-    padding: 1rem;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    display: none; /* Add toggle for mobile later if needed */
+@media (max-width: 992px) {
+  .navbar-collapse {
+    padding: 1rem 0;
+    background-color: white;
+    margin-top: 0.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+  }
+  
+  .nav-link-custom {
+    padding: 0.75rem 1rem !important;
+  }
+  
+  .btn-primary {
+    margin-top: 0.5rem;
+    width: 100%;
   }
 }

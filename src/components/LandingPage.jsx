@@ -1,17 +1,21 @@
 import React from 'react';
-import { Container, Row, Col } from 'react-bootstrap';
+import { Container, Row, Col, Carousel } from 'react-bootstrap';
 import { MapContainer, TileLayer, Marker, Popup, Polygon } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import Carousel from 'react-bootstrap/Carousel';
-
-import CustomNavbar from './Navbar'; // Make sure this path is correct
+import CustomNavbar from './Navbar';
 
 // Import your images
+import Image1 from '../assets/MobileDev.png';
+import Image2 from '../assets/WebDev.png';
+import Image3 from '../assets/DigitalMarketing.png';
+import Image4 from '../assets/JobsApply.png';
+import Image5 from '../assets/ItSupport.png';
+
+// Service images
 import SMOImg from '../assets/SMO.png';
 import webDevImg from '../assets/WebDevelopment.png';
 import techSupportImg from '../assets/TechSupport.png';
 
-// Create a custom component for highlighted countries using Polygon
 const HighlightedCountries = () => {
   const countries = [
     { name: 'India', coordinates: [[20.5937, 78.9629], [8.4, 68.1], [35.6, 97.4], [6.8, 93.3]] },
@@ -50,21 +54,32 @@ const LandingPage = () => {
     { name: 'Australia Branch - Sydney', position: [-33.8688, 151.2093] }
   ];
 
+  const carouselItems = [
+    { id: 1, image: Image1, alt: "TechXplorers Service 1", text: "Mobile Application Development" },
+    { id: 2, image: Image2, alt: "TechXplorers Service 2", text: "Web Application Development" },
+    { id: 3, image: Image3, alt: "TechXplorers Service 3", text: "Digital Marketing" },
+    { id: 4, image: Image4, alt: "TechXplorers Service 4", text: "Jobs Apply" },
+    { id: 5, image: Image5, alt: "TechXplorers Service 5", text: "IT Talent Supply" }
+  ];
+
   return (
     <div className="landing-page">
-      {/* Reusable Navbar */}
       <CustomNavbar />
 
-      {/* Hero Carousel */}
-      <Container fluid className="carousel-container my-5">
-        <Carousel indicators={false} className="carousel-shadow">
-          {[1, 2, 3, 4, 5].map((item) => (
-            <Carousel.Item key={item}>
+      {/* Hero Carousel with overlay and centered text */}
+      <Container fluid className="carousel-container my-5 px-0">
+        <Carousel indicators={true} interval={3000} className="carousel-shadow">
+          {carouselItems.map((item) => (
+            <Carousel.Item key={item.id} className="carousel-item-custom">
+              <div className="carousel-text-above">
+                <h3>{item.text}</h3>
+              </div>
               <img
                 className="d-block w-100 carousel-img"
-                src={`https://picsum.photos/1600/400?random= ${item}`}
-                alt={`Slide ${item}`}
+                src={item.image}
+                alt={item.alt}
               />
+              <div className="carousel-mask" />
             </Carousel.Item>
           ))}
         </Carousel>
@@ -104,7 +119,7 @@ const LandingPage = () => {
                 style={{ height: '500px', width: '100%' }}
               >
                 <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/ ">OpenStreetMap</a> contributors'
+                  attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
                 <HighlightedCountries />
