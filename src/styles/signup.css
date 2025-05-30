@@ -8,4 +8,23 @@
     width: 100%;
     max-width: 500px;
   }
-  
+  .navbar {
+  padding: 0.8rem 1rem;
+  width: 100%;
+  z-index: 1030; /* Higher than most elements */
+}
+
+/* Brand Logo Styling */
+.navbar-brand {
+  font-size: 1.5rem;
+  margin-right: 2rem;
+}
+
+.brand-x {
+  font-size: 2rem;
+  color: #007bff;
+}
+
+.brand-small {
+  font-size: 1.5rem;
+}
