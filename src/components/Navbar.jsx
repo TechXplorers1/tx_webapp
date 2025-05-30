@@ -1,30 +1,32 @@
-import React, { useState } from 'react';
+import React from 'react';
 import '../styles/Navbar.css';
-import { Navbar, Nav, Container, Carousel, Card, Button, Form } from 'react-bootstrap';
+import { Navbar, Nav, Container, Button } from 'react-bootstrap';
 
 const CustomNavbar = () => {
   return (
-    
-         <Navbar bg="light" expand="lg" className="shadow-sm">
-      <Container>
+    <Navbar bg="light" expand="lg" className="fixed-top shadow-sm">
+      <Container fluid> {/* Changed to Container fluid for full width */}
         {/* Brand Logo */}
-        <Navbar.Brand href="#home" className="fw-bold fs-2">TECH<span>X</span>PLORERS</Navbar.Brand>
+        <Navbar.Brand href="#home" className="fw-bold fs-2">
+          TECH<span className="text-primary">X</span>PLORERS
+        </Navbar.Brand>
 
         {/* Toggle Button for Mobile View */}
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
 
         {/* Navbar Links (Centered) */}
         <Navbar.Collapse id="basic-navbar-nav">
-          <Nav className="ms-auto me-auto justify-content-center  gap-5">
-            <Nav.Link href="#services">SERVICES</Nav.Link>
-            <Nav.Link href="#career">CAREER</Nav.Link>
-            <Nav.Link href="#about-us" active>ABOUT US</Nav.Link>
-            <Nav.Link href="#contact">CONTACT</Nav.Link>
+          <Nav className="mx-auto gap-lg-5 gap-3"> {/* Improved gap classes */}
+            <Nav.Link href="#services" className="nav-link-custom">SERVICES</Nav.Link>
+            <Nav.Link href="#career" className="nav-link-custom">CAREER</Nav.Link>
+            <Nav.Link href="#about-us" className="nav-link-custom active">ABOUT US</Nav.Link>
+            <Nav.Link href="#contact" className="nav-link-custom">CONTACT</Nav.Link>
           </Nav>
         
-
-        {/* Login Button (Right-Aligned) */}
-        <Button variant="primary" size="lg" className="ms-auto">LOGIN</Button>
+          {/* Login Button (Right-Aligned) */}
+          <Button variant="primary" size="lg" className="ms-lg-3">
+            LOGIN
+          </Button>
         </Navbar.Collapse>
       </Container>
     </Navbar>
