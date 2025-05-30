@@ -2,6 +2,7 @@
 import React from 'react';
 import { Navbar, Nav, Container, Carousel, Card, Button, Form } from 'react-bootstrap';
 import '../styles/AboutUs.css';
+import { useNavigate } from 'react-router-dom';
 import CustomNavbar from './Navbar'; // Make sure this path is correct
 
 
@@ -20,7 +21,10 @@ import industry3 from '../assets/mobile3.png';
 import industry4 from '../assets/mobile4.png';
 import industry5 from '../assets/mobile5.png';
 
-function App() {
+function AboutUs() {
+
+      const navigate = useNavigate();
+
     return (
         <div className="about-us-page">
 
@@ -119,4 +123,4 @@ function App() {
     );
 }
 
-export default App;
+export default AboutUs;

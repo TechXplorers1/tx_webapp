@@ -3,6 +3,8 @@ import { Container, Row, Col, Carousel } from 'react-bootstrap';
 import { MapContainer, TileLayer, Marker, Popup, Polygon } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import CustomNavbar from './Navbar';
+import { useNavigate } from 'react-router-dom';
+
 
 // Import your images
 import Image1 from '../assets/MobileDev.png';
@@ -26,6 +28,8 @@ const HighlightedCountries = () => {
     { name: 'Australia', coordinates: [[-10.0628, 112.9214], [-43.6346, 112.9214], [-10.0628, 153.6387], [-43.6346, 153.6387]] }
   ];
 
+        const navigate = useNavigate();
+  
   return (
     <>
       {countries.map((country, index) => (
