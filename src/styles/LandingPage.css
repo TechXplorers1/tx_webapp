@@ -1,157 +1,225 @@
-/* Global Reset */
-html, body {
-  width: 100%;
-  margin: 0;
-  padding: 0;
-  overflow-x: hidden;
-  font-family: 'Arial', sans-serif;
-  background-color: white;
-}
+/* LandingPage.css */
 
-/* Main Container */
 .landing-page {
-  width: 100vw;
-  min-width: 100%;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #333;
+  background: #fff;
   overflow-x: hidden;
 }
 
-/* Hero Carousel */
-.carousel-container {
-  margin-top: 20px;
+.top-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 40px;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e1e1e1;
 }
 
-.carousel-shadow {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+.logo {
+  font-size: 24px;
+  font-weight: 600;
+  color: #007bff;
 }
 
-.carousel-item-custom {
-  height: 350px;
+.nav-links {
+  display: flex;
+  gap: 25px;
+}
+
+.nav-links a {
+  color: #333;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.nav-links a:hover {
+  color: #007bff;
+}
+
+.carousel-section {
   position: relative;
-}
-
-.carousel-img {
-  height: 100%;
-  width: 100%;
-  object-fit: cover;
-}
-
-/* Overlay Mask */
-.carousel-mask {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  z-index: 1;
-}
-
-/* Carousel Text Above Image */
-.carousel-text-above {
-  position: absolute;
-  top: 20%;
-  left: 0;
-  width: 100%;
+  height: 60vh;
+  background: url('/images/carousel-background.jpg') center/cover no-repeat;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  z-index: 2;
+}
+
+.carousel-overlay {
+  background-color: rgba(0, 0, 0, 0.4);
+  padding: 40px;
+  border-radius: 20px;
+  color: #fff;
+}
+
+.carousel-overlay h1 {
+  font-size: 40px;
+  margin-bottom: 15px;
+}
+
+.carousel-overlay p {
+  font-size: 18px;
+  margin-bottom: 20px;
+}
+
+.carousel-overlay button {
+  padding: 10px 20px;
+  font-size: 16px;
+  background-color: #007bff;
   color: white;
-  padding: 0 15px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
 }
 
-.carousel-text-above h3 {
-  font-size: 2rem;
-  font-weight: bold;
-  margin: 0;
-  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+.carousel-overlay button:hover {
+  background-color: #0056b3;
 }
 
-/* Services Section */
-.services-section {
-  padding: 50px 0;
+.services-row {
+  padding: 60px 40px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 30px;
+  justify-content: center;
+  background: #f1f3f5;
 }
 
 .service-card {
-  background-color: #fff;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  width: 260px;
+  padding: 25px;
+  text-align: center;
   transition: transform 0.3s ease;
-  height: 300px;
-  position: relative;
 }
 
 .service-card:hover {
   transform: translateY(-5px);
 }
 
-.service-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
+.service-card img {
+  width: 60px;
+  height: 60px;
+  margin-bottom: 15px;
 }
 
-.service-title {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgba(0, 0, 0, 0.7);
-  color: white;
-  padding: 15px;
-  margin: 0;
-  text-align: center;
-  font-size: 22px;
+.service-card h3 {
+  font-size: 20px;
+  margin-bottom: 10px;
 }
 
-/* World Services Section */
-.world-services {
-  padding: 40px 0;
+.service-card p {
+  font-size: 14px;
+  color: #666;
 }
 
-.map-container {
-  height: 500px;
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+.global-services {
+  padding: 60px 40px;
+  background: #fff;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 40px;
 }
 
-.countries-list {
-  background: rgba(255, 255, 255, 0.9);
-  padding: 15px;
-  border-radius: 5px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+.global-services .map {
+  flex: 1 1 55%;
+  min-height: 400px;
+  background-color: #e6e6e6;
+  border-radius: 20px;
+  position: relative;
 }
 
-.countries-list h3 {
-  margin-top: 0;
-  color: #333;
+.global-services .country-list {
+  flex: 1 1 35%;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 20px;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
-.countries-list ul {
-  padding-left: 20px;
-  margin-bottom: 0;
+.country-list h2 {
+  font-size: 24px;
+  margin-bottom: 15px;
 }
 
-.countries-list li {
-  margin-bottom: 5px;
+.country-list ul {
+  list-style: none;
+  padding-left: 0;
 }
 
-/* Responsive Styles */
-@media (max-width: 768px) {
-  .carousel-item-custom {
-    height: 250px;
+.country-list li {
+  padding: 8px 0;
+  border-bottom: 1px solid #ddd;
+  font-size: 16px;
+}
+
+/* Responsive styles */
+@media (max-width: 992px) {
+  .top-nav {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
-  .carousel-text-above h3 {
-    font-size: 1.5rem;
+  .nav-links {
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .carousel-overlay h1 {
+    font-size: 32px;
+  }
+
+  .carousel-overlay p {
+    font-size: 16px;
+  }
+
+  .services-row {
+    padding: 40px 20px;
+  }
+
+  .global-services {
+    flex-direction: column;
+    padding: 40px 20px;
+  }
+
+  .global-services .map,
+  .global-services .country-list {
+    flex: 1 1 100%;
+    min-height: 300px;
+  }
+}
+
+@media (max-width: 576px) {
+  .carousel-overlay {
+    padding: 20px;
+  }
+
+  .carousel-overlay h1 {
+    font-size: 24px;
+  }
+
+  .carousel-overlay p {
+    font-size: 14px;
   }
 
   .service-card {
-    height: 250px;
+    width: 90%;
   }
 
-  .map-container {
-    height: 400px;
+  .country-list h2 {
+    font-size: 20px;
+  }
+
+  .country-list li {
+    font-size: 14px;
   }
 }

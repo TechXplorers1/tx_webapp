@@ -7,14 +7,14 @@ import CustomNavbar from './Navbar';
 // Import your images
 import Image1 from '../assets/MobileDev.png';
 import Image2 from '../assets/WebDev.png';
-import Image3 from '../assets/DigitalMarketing.png';
-import Image4 from '../assets/JobsApply.png';
-import Image5 from '../assets/ItSupport.png';
+import Image3 from '../assets/DigiMark.png';
+import Image4 from '../assets/JobApply.png';
+import Image5 from '../assets/ItTalentSupply.png';
 
 // Service images
-import SMOImg from '../assets/SMO.png';
-import webDevImg from '../assets/WebDevelopment.png';
-import techSupportImg from '../assets/TechSupport.png';
+import SMOImg from '../assets/WebAnalytics&Reporting.png';
+import ResumeImg from '../assets/ResumeBuilding.png';
+import techSupportImg from '../assets/tech_support.png';
 
 const HighlightedCountries = () => {
   const countries = [
@@ -92,15 +92,15 @@ const LandingPage = () => {
           <Row className="justify-content-center">
             <Col md={4} xs={12} className="service-card mb-4">
               <img src={SMOImg} alt="SMO Service" className="service-image w-100 h-100 object-fit-cover" />
-              <h3 className="service-title text-center">SMO</h3>
+              <h3 className="service-title text-center">Web Analytics & Reporting</h3>
             </Col>
             <Col md={4} xs={12} className="service-card mb-4">
-              <img src={webDevImg} alt="Web App Development" className="service-image w-100 h-100 object-fit-cover" />
-              <h3 className="service-title text-center">WEB APP DEVELOPMENT</h3>
+              <img src={ResumeImg} alt="Resume Building" className="service-image w-100 h-100 object-fit-cover" />
+              <h3 className="service-title text-center">Resume Building</h3>
             </Col>
             <Col md={4} xs={12} className="service-card mb-4">
               <img src={techSupportImg} alt="Tech Support" className="service-image w-100 h-100 object-fit-cover" />
-              <h3 className="service-title text-center">TECH SUPPORT</h3>
+              <h3 className="service-title text-center">Tech Support</h3>
             </Col>
           </Row>
         </Container>
