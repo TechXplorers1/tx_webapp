@@ -58,24 +58,37 @@ const LandingPage = () => {
       </Container>
 
       {/* Services Section */}
-      <section className="services-section" id="services">
-        <Container className="my-5">
-          <Row className="justify-content-center">
-            <Col md={4} xs={12} className="service-card mb-4">
-              <img src={WebAnalyticsImg} alt="WebAnalytics Service" className="service-image w-100 h-100 object-fit-cover rounded" />
-              <h3 className="service-title text-center">Web Analytics & Reporting</h3>
-            </Col>
-            <Col md={4} xs={12} className="service-card mb-4">
-              <img src={ProjectPlanningImg} alt="Project Planning" className="service-image w-100 h-100 object-fit-cover rounded" />
-              <h3 className="service-title text-center">Project Planning</h3>
-            </Col>
-            <Col md={4} xs={12} className="service-card mb-4">
-              <img src={techSupportImg} alt="Tech Support" className="service-image w-100 h-100 object-fit-cover rounded" />
-              <h3 className="service-title text-center">Tech Support</h3>
-            </Col>
-          </Row>
-        </Container>
-      </section>
+    <section className="services-section" id="services">
+  <Container className="my-5">
+    <Row className="justify-content-center">
+      <Col md={4} xs={12} className="service-card mb-4">
+        <div className="service-overlay-container">
+          <img src={WebAnalyticsImg} alt="WebAnalytics Service" className="service-image w-100 h-100 object-fit-cover rounded" />
+          <div className="service-overlay-text">
+            <h3>Web Analytics & Reporting</h3>
+          </div>
+        </div>
+      </Col>
+      <Col md={4} xs={12} className="service-card mb-4">
+        <div className="service-overlay-container">
+          <img src={ProjectPlanningImg} alt="Project Planning" className="service-image w-100 h-100 object-fit-cover rounded" />
+          <div className="service-overlay-text">
+            <h3>Project Planning</h3>
+          </div>
+        </div>
+      </Col>
+      <Col md={4} xs={12} className="service-card mb-4">
+        <div className="service-overlay-container">
+          <img src={techSupportImg} alt="Tech Support" className="service-image w-100 h-100 object-fit-cover rounded" />
+          <div className="service-overlay-text">
+            <h3>Tech Support</h3>
+          </div>
+        </div>
+      </Col>
+    </Row>
+  </Container>
+</section>
+
  {/* World Services Section */}
       <section className="world-services" id="world">
         <Container className="my-5">
