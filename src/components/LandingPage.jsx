@@ -3,6 +3,8 @@ import { Container, Row, Col, Carousel } from 'react-bootstrap';
 import { MapContainer, TileLayer, Marker, Popup, Polygon } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import CustomNavbar from './Navbar';
+import { useNavigate } from 'react-router-dom';
+
 
 // Import your images
 import Image1 from '../assets/MobileDev.png';
@@ -26,6 +28,8 @@ const HighlightedCountries = () => {
     { name: 'Australia', coordinates: [[-10.0628, 112.9214], [-43.6346, 112.9214], [-10.0628, 153.6387], [-43.6346, 153.6387]] }
   ];
 
+        const navigate = useNavigate();
+  
   return (
     <>
       {countries.map((country, index) => (
@@ -91,16 +95,16 @@ const LandingPage = () => {
           <h2 className="text-center mb-4">OUR SERVICES</h2>
           <Row className="justify-content-center">
             <Col md={4} xs={12} className="service-card mb-4">
-              <img src={SMOImg} alt="SMO Service" className="service-image w-100 h-100 object-fit-cover" />
-              <h3 className="service-title text-center">Web Analytics & Reporting</h3>
+              <img src={SMOImg} alt="SMO Service" className="service-image w-100 h-100 object-fit-cover rounded" />
+              <h3 className="service-title text-center">SMO</h3>
             </Col>
             <Col md={4} xs={12} className="service-card mb-4">
-              <img src={ResumeImg} alt="Resume Building" className="service-image w-100 h-100 object-fit-cover" />
-              <h3 className="service-title text-center">Resume Building</h3>
+              <img src={webDevImg} alt="Web App Development" className="service-image w-100 h-100 object-fit-cover rounded" />
+              <h3 className="service-title text-center">WEB APP DEVELOPMENT</h3>
             </Col>
             <Col md={4} xs={12} className="service-card mb-4">
-              <img src={techSupportImg} alt="Tech Support" className="service-image w-100 h-100 object-fit-cover" />
-              <h3 className="service-title text-center">Tech Support</h3>
+              <img src={techSupportImg} alt="Tech Support" className="service-image w-100 h-100 object-fit-cover rounded" />
+              <h3 className="service-title text-center">TECH SUPPORT</h3>
             </Col>
           </Row>
         </Container>
@@ -111,7 +115,7 @@ const LandingPage = () => {
         <Container className="my-5">
           <h2 className="text-center mb-4">OUR SERVICES IN THE WORLD</h2>
           <Row>
-            <Col md={8} className="map-container">
+            <Col md={12} className="map-container">
               <MapContainer 
                 center={[20.0, 0.0]} 
                 zoom={2} 
@@ -130,7 +134,7 @@ const LandingPage = () => {
                 ))}
               </MapContainer>
             </Col>
-            <Col md={4} className="countries-list">
+            <Col md={2} className="countries-list">
               <h3>We operate in:</h3>
               <ul>
                 <li>United Kingdom</li>
