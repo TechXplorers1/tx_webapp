@@ -1,11 +1,23 @@
 /* Global styles */
-body, html, #root {
-  margin-top: 70px;
+body, html {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+
+
+/* Global styles */ */
+ /* body, html {
+  margin: 0;
   padding: 0;
   height: 100%;
   font-family: 'Segoe UI', sans-serif;
   box-sizing: border-box;
-}
+} */
 
 /* Login Page Background */
 .login-page {
@@ -16,30 +28,11 @@ body, html, #root {
   flex-direction: column;
 }
 
-.navbar {
-  padding: 0.8rem 1rem;
-  width: 100%;
-  z-index: 1030; /* Higher than most elements */
-}
-
-/* Brand Logo Styling */
-.navbar-brand {
-  font-size: 1.5rem;
-  margin-right: 2rem;
-}
-
-.brand-x {
-  font-size: 2rem;
-  color: #007bff;
-}
-
-.brand-small {
-  font-size: 1.5rem;
-}
-
 /* Ensure the box takes up full width up to a limit */
 .login-box {
   margin-bottom: 120px;
+  margin-top: 120px;
+  margin-left: 500px;
   width: 100%;
   max-width: 500px;
 }

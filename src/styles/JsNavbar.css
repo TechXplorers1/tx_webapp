@@ -1,0 +1,85 @@
+/* Navbar Styling */
+.navbar {
+  padding: 0.8rem 1rem;
+  width: 100%;
+  z-index: 1030; /* Higher than most elements */
+}
+
+/* Brand Logo Styling */
+.navbar-brand {
+  font-size: 1.5rem;
+  margin-right: 2rem;
+}
+
+.brand-x {
+  font-size: 2rem;
+  color: #007bff;
+}
+
+.brand-small {
+  font-size: 1.5rem;
+}
+
+/* Nav Links Styling */
+.nav-link-custom {
+  font-weight: 500;
+  color: #333 !important;
+  padding: 0.5rem 1rem !important;
+  transition: all 0.3s ease;
+}
+
+.nav-link-custom:hover, 
+.nav-link-custom:focus {
+  color: #007bff !important;
+}
+
+.nav-link-custom.active {
+  color: #007bff !important;
+  font-weight: 600;
+}
+
+/* Home Link Styling */
+.home-text-link {
+  color: #007bff;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.home-text-link:hover {
+  color: #0056b3;
+  text-decoration: underline;
+}
+
+/* Mobile Menu Styling */
+.navbar-toggler {
+  border: none;
+  padding: 0.5rem;
+}
+
+.navbar-toggler:focus {
+  box-shadow: none;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 992px) {
+  .navbar-collapse {
+    padding: 1rem 0;
+    background-color: white;
+    margin-top: 0.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+  }
+  
+  .nav-link-custom {
+    padding: 0.75rem 1rem !important;
+  }
+  
+  .home-text-link {
+    display: block;
+    padding: 0.75rem 1rem;
+    margin-top: 0.5rem;
+  }
+}
