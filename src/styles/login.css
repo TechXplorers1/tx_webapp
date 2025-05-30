@@ -4,20 +4,9 @@ body, html {
   padding: 0;
   height: 100%;
   width: 100%;
-  overflow: hidden;
+  /* overflow: hidden; */
   font-family: 'Segoe UI', sans-serif;
 }
-
-
-
-/* Global styles */ */
- /* body, html {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  font-family: 'Segoe UI', sans-serif;
-  box-sizing: border-box;
-} */
 
 /* Login Page Background */
 .login-page {

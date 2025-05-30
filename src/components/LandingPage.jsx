@@ -30,7 +30,7 @@ const LandingPage = () => {
     { id: 1, image: Image1, alt: "TechXplorers Service 1", text: "Mobile Application Development" },
     { id: 2, image: Image2, alt: "TechXplorers Service 2", text: "Web Application Development" },
     { id: 3, image: Image3, alt: "TechXplorers Service 3", text: "Digital Marketing" },
-    { id: 4, image: Image4, alt: "TechXplorers Service 4", text: "Jobs Apply" },
+    { id: 4, image: Image4, alt: "TechXplorers Service 4", text: "Job Support" },
     { id: 5, image: Image5, alt: "TechXplorers Service 5", text: "IT Talent Supply" }
   ];
 
