@@ -28,7 +28,7 @@ const CustomNavbar = () => {
           </Nav>
         
           {/* Login Button (Right-Aligned) */}
-          <Button variant="primary" size="lg" className="ms-lg-3">
+          <Button variant="primary" size="lg" className="ms-lg-3" onClick={() => navigate('/login')}>
             LOGIN
           </Button>
         </Navbar.Collapse>
