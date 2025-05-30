@@ -76,15 +76,15 @@ const LandingPage = () => {
           <h2 className="text-center mb-4">OUR SERVICES</h2>
           <Row className="justify-content-center">
             <Col md={4} xs={12} className="service-card mb-4">
-              <img src={SMOImg} alt="SMO Service" className="service-image w-100 h-100 object-fit-cover" />
+              <img src={SMOImg} alt="SMO Service" className="service-image w-100 h-100 object-fit-cover rounded" />
               <h3 className="service-title text-center">SMO</h3>
             </Col>
             <Col md={4} xs={12} className="service-card mb-4">
-              <img src={webDevImg} alt="Web App Development" className="service-image w-100 h-100 object-fit-cover" />
+              <img src={webDevImg} alt="Web App Development" className="service-image w-100 h-100 object-fit-cover rounded" />
               <h3 className="service-title text-center">WEB APP DEVELOPMENT</h3>
             </Col>
             <Col md={4} xs={12} className="service-card mb-4">
-              <img src={techSupportImg} alt="Tech Support" className="service-image w-100 h-100 object-fit-cover" />
+              <img src={techSupportImg} alt="Tech Support" className="service-image w-100 h-100 object-fit-cover rounded" />
               <h3 className="service-title text-center">TECH SUPPORT</h3>
             </Col>
           </Row>
@@ -96,7 +96,7 @@ const LandingPage = () => {
         <Container className="my-5">
           <h2 className="text-center mb-4">OUR SERVICES IN THE WORLD</h2>
           <Row>
-            <Col md={8} className="map-container">
+            <Col md={12} className="map-container">
               <MapContainer 
                 center={[20.0, 0.0]} 
                 zoom={2} 
@@ -115,7 +115,7 @@ const LandingPage = () => {
                 ))}
               </MapContainer>
             </Col>
-            <Col md={4} className="countries-list">
+            <Col md={2} className="countries-list">
               <h3>We operate in:</h3>
               <ul>
                 <li>United Kingdom</li>

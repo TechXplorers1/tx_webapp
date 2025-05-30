@@ -100,26 +100,33 @@ const ContactPage = () => {
                 </Row>
             </Container>
 
-            {/* Footer */}
-            <footer className="bg-white text-white py-5">
-                <Container>
-                    <Form className="mb-4 d-flex justify-content-center align-items-center gap-2gap">
-                        <Form.Control type="text" placeholder="Ask" className="w-50 p-2 rounded-0" />
-                        <button type="button" variant="light" className="btn btn-primary rounded-0 px-4">Submit</button>
-                    </Form>
-                     {/* Copyright and Links */}
-        <div className="d-flex justify-content-center align-items-center">
-          {/* Centered Copyright */}
-          <p className="mb-0 text-dark">Techxplorers ©2025</p> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
-
-          {/* Right-aligned Links */}
-          <div>
-            <a href="#" className="text-dark me-2 text-decoration-none">Privacy & Legal</a>
-            <a href="#" className="text-dark text-decoration-none">Contact</a>
-          </div>
-        </div>
-                </Container>
-            </footer>
+                 {/* Footer */}
+                          <footer className="bg-white py-5">
+                 <Container>
+                   {/* Form Section */}
+                   <Form className="d-flex justify-content-center align-items-center mb-5">
+                     <Form.Control
+                       type="text"
+                       placeholder="Ask"
+                       className="me-2 rounded-0 py-2"
+                       style={{ width: '25%' }}
+                     />
+                     <button variant="primary" className="btn btn-primary rounded-0 px-4 py-2">Submit</button>
+                   </Form>
+           
+                   {/* Copyright and Links */}
+                   <div className="d-flex justify-content-center align-items-center">
+                     {/* Centered Copyright */}
+                     <p className="mb-0 text-dark">Techxplorers ©2025</p> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+           
+                     {/* Right-aligned Links */}
+                     <div>
+                       <a href="#" className="text-dark me-2 text-decoration-none">Privacy & Legal</a>
+                       <a href="#" className="text-dark text-decoration-none">Contact</a>
+                     </div>
+                   </div>
+                 </Container>
+               </footer>
         </div>
     );
 };
