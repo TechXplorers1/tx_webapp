@@ -99,7 +99,7 @@ const LandingPage = () => {
               <h3 className="service-title text-center">SMO</h3>
             </Col>
             <Col md={4} xs={12} className="service-card mb-4">
-              <img src={webDevImg} alt="Web App Development" className="service-image w-100 h-100 object-fit-cover rounded" />
+              <img src={ResumeImg} alt="Web App Development" className="service-image w-100 h-100 object-fit-cover rounded" />
               <h3 className="service-title text-center">WEB APP DEVELOPMENT</h3>
             </Col>
             <Col md={4} xs={12} className="service-card mb-4">

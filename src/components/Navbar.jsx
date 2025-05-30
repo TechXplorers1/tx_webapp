@@ -23,7 +23,7 @@ const CustomNavbar = () => {
           <Nav className="mx-auto gap-lg-5 gap-3"> {/* Improved gap classes */}
             <Nav.Link href="#services" className="nav-link-custom" onClick={() => navigate('/')}>SERVICES</Nav.Link>
             <Nav.Link href="#career" className="nav-link-custom" >CAREER</Nav.Link>
-            <Nav.Link href="#about-us" className="nav-link-custom active" onClick={() => navigate('/aboutus')}>ABOUT US</Nav.Link>
+            <Nav.Link href="#about-us" className="nav-link-custom" onClick={() => navigate('/aboutus')}>ABOUT US</Nav.Link>
             <Nav.Link href="#contact" className="nav-link-custom" onClick={() => navigate('/contactus')}>CONTACT</Nav.Link>
           </Nav>
         
