@@ -13,6 +13,7 @@ import Careers from '../components/Careers';
 
 
 
+
 const WebsiteRoutes = () => {
   return (
     <Routes>
@@ -22,7 +23,6 @@ const WebsiteRoutes = () => {
         <Route path="/careers" element={<Careers />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
-
     </Routes>
   );
 };

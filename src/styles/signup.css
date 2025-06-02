@@ -1,10 +1,10 @@
 .signup-page {
-    background: linear-gradient(to bottom right, #ffffff 50%, #b5d8f1 100%);
+    background: linear-gradient(to bottom right, #ffffff 50% );
     min-height: 100vh;
   }
   
   .signup-box {
-    margin-top: 5px;
+    margin-top: 70px;
     width: 100%;
     max-width: 500px;
   }
