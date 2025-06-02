@@ -5,7 +5,7 @@ import AboutUs from '../components/AboutUs';
 import ContactPage from '../components/Contact';
 import LoginPage from '../components/login';
 import SignupPage from '../components/signup';
-
+import Careers from '../components/Careers';
 
 
 
@@ -19,6 +19,7 @@ const WebsiteRoutes = () => {
         <Route path="/" element={<LandingPage />} />
         <Route path="/aboutus" element={<AboutUs />} />
         <Route path="/contactus" element={<ContactPage />} />
+        <Route path="/careers" element={<Careers />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
 
