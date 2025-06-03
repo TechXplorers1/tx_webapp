@@ -3,7 +3,6 @@ import '../styles/login.css'; // for custom styles
 import { useNavigate } from 'react-router-dom';
 import JsNavbar from './JsNavbar';
 import { Button } from 'react-bootstrap';
-
 import { FcGoogle } from "react-icons/fc";
 import { MdEmail } from "react-icons/md";
 import { RiLockPasswordFill } from "react-icons/ri";
@@ -53,8 +52,8 @@ export default function LoginPage() {
         <div className="login-page">
             <JsNavbar />
 
-            <div className="login-container">
-                <form onSubmit={handleSubmit}>
+            <div className="d-flex justify-content-center align-items-center vh-90">
+                <form onSubmit={handleSubmit} className=" rounded bg-white signup-box">
                     <div className="shadow-lg p-5 rounded bg-white login-box">
                         <h3 className="text-center fw-bold mb-3">Welcome back!</h3>
                         <button type="button" className="btn btn-light w-100 border mb-3 d-flex align-items-center justify-content-center gap-2">
