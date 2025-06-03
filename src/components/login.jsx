@@ -46,7 +46,7 @@ export default function LoginPage() {
         if (hasError) return;
 
         console.log("User Registered with Email:", email);
-        navigate('/clientdashboard');
+        // navigate('/clientdashboard');
     };
 
     return (

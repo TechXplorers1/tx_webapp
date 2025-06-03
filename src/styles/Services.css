@@ -1,0 +1,104 @@
+.services-dropdown-container {
+  position: fixed; /* Changed from absolute to fixed */
+  top: 80px; /* Height of your navbar */
+  left: 0;
+  width: 100vw;
+  background: white;
+  padding: 30px 0;
+  box-sizing: border-box;
+  z-index: 9997; /* Just below navbar */
+  min-height: fit-content;
+  display: flex;
+  justify-content: center;
+  backdrop-filter: blur(5px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  transform-origin: top center;
+}
+
+.services-dropdown {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 30px;
+  width: 100%;
+  max-width: 1200px;
+  box-sizing: border-box;
+  padding: 0 20px;
+}
+
+.service-card1 {
+  width: 180px;
+  height: 220px;
+  border: 2px solid #00f0ff;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  text-align: center;
+  font-weight: bold;
+  color: white;
+  background-color: rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.service-card:hover {
+  transform: scale(1.05);
+  background-color: rgba(0, 240, 255, 0.1);
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+}
+
+.service-card img {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 15px;
+}
+
+.services-dropdown-container:hover {
+  opacity: 1 !important;
+}
+
+/* Responsive Design */
+@media (max-width: 1020px) {
+  .services-dropdown {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .services-dropdown-container {
+    top: 70px; /* Adjusted for mobile navbar height */
+    padding: 20px 10px;
+  }
+
+  .service-card1 {
+    width: 140px;
+    height: 180px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    overflow: hidden;
+    word-wrap: break-word;
+  }
+
+  .service-card1 span,
+  .service-card1 p,
+  .service-card-title {
+    font-size: 13px;
+    line-height: 1.2;
+    max-width: 100%;
+    word-break: break-word;
+    white-space: normal;
+    overflow-wrap: break-word;
+    text-overflow: ellipsis;
+  }
+}
+
+.service-card-link {
+  text-decoration: none;
+  color: inherit;
+}
