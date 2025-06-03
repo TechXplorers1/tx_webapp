@@ -12,16 +12,11 @@ body, html {
 .login-page {
   background: linear-gradient(to bottom right, #ffffff 50%);
   min-height: 100vh;
-  position: relative;
-  display: flex;
-  flex-direction: column;
 }
 
 /* Ensure the box takes up full width up to a limit */
 .login-box {
-  margin-bottom: 120px;
-  margin-top: 120px;
-  margin-left: 450px;
+  margin-top: 70px;
   width: 100%;
   max-width: 500px;
 }
