@@ -33,19 +33,19 @@ export default function LoginPage() {
 
         if (!email.includes("@") || !email.includes(".")) {
             setEmailError("Please enter a valid email address");
-            hasError = true;
+            hasError = false;
         }
 
         const passwordValidation = validatePassword(password);
         if (passwordValidation) {
             setPasswordError(passwordValidation);
-            hasError = true;
+            hasError = false;
         }
 
         if (hasError) return;
 
         console.log("User Registered with Email:", email);
-        // navigate('/clientdashboard');
+        navigate('/clientdashboard');
     };
 
     return (
