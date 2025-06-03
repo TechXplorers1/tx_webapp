@@ -1,15 +1,29 @@
-import React from 'react';
-import LandingPage from './components/LandingPage'; // Make sure the path is correct
-// import AboutUs from './components/AboutUs.jsx';
-// import ContactPage from './components/Contact.jsx';
+import { Routes, Route } from 'react-router-dom';
+
+import LandingPage from './components/LandingPage';
+import AboutUs from './components/AboutUs';
+import ContactPage from './components/Contact';
+import LoginPage from './components/login';
+import SignupPage from './components/signup';
+import Careers from './components/Careers';
 
 
-function App() {
+
+
+const App = () => {
   return (
-    <div className='App'>
-      <LandingPage/>
+    <div>
+    <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/aboutus" element={<AboutUs />} />
+        <Route path="/contactus" element={<ContactPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/careers" element={<Careers />} />
+
+
+    </Routes>
     </div>
   );
-}
-
+};
 export default App;

@@ -24,11 +24,11 @@ const CustomNavbar = () => {
         {/* Navbar Links (Centered) */}
         <Navbar.Collapse id="basic-navbar-nav">
           <Nav className="mx-auto gap-lg-5 gap-3"> {/* Improved gap classes */}
-            <Nav.Link href="#home" className="nav-link-custom" onClick={() => navigate('/')}>HOME</Nav.Link>
-            <Nav.Link href="#services" className="nav-link-custom" >SERVICES</Nav.Link>
-            <Nav.Link href="#career" className="nav-link-custom" onClick={() => navigate('/careers')} >CAREER</Nav.Link>
-            <Nav.Link href="#about-us" className="nav-link-custom" onClick={() => navigate('/aboutus')}>ABOUT US</Nav.Link>
-            <Nav.Link href="#contact" className="nav-link-custom" onClick={() => navigate('/contactus')}>CONTACT</Nav.Link>
+            <Nav.Link  className="nav-link-custom" onClick={() => navigate('/')}>HOME</Nav.Link>
+            <Nav.Link className="nav-link-custom" >SERVICES</Nav.Link>
+            <Nav.Link className="nav-link-custom" onClick={() => navigate('/careers')} >CAREER</Nav.Link>
+            <Nav.Link className="nav-link-custom" onClick={() => navigate('/aboutus')}>ABOUT US</Nav.Link>
+            <Nav.Link className="nav-link-custom" onClick={() => navigate('/contactus')}>CONTACT</Nav.Link>
           </Nav>
         
           {/* Login Button (Right-Aligned) */}

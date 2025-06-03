@@ -42,9 +42,11 @@ const LandingPage = () => {
       <Container fluid className="carousel-container my-5 px-0">
         <Carousel indicators={true} interval={3000} className="carousel-shadow">
           {carouselItems.map((item) => (
-            <Carousel.Item key={item.id} className="carousel-item-custom">
-              <div className="carousel-text-above">
+            <Carousel.Item key={item.id} className="carousel-item-custom position-relative">
+              <div className="carousel-overlay-content position-absolute top-50 start-50 translate-middle text-center text-white">
                 <h3>{item.text}</h3>
+                <button className="btn btn-primary mt-3">Book a Service</button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                <button className="btn btn-primary mt-3">Learn More</button>
               </div>
               <img
                 className="d-block w-100 carousel-img"
@@ -62,25 +64,29 @@ const LandingPage = () => {
   <Container className="my-5">
     <Row className="justify-content-center">
       <Col md={4} xs={12} className="service-card mb-4">
-        <div className="service-overlay-container">
-          <img src={WebAnalyticsImg} alt="WebAnalytics Service" className="service-image w-100 h-100 object-fit-cover rounded" />
-          <div className="service-overlay-text">
-            <h3>Web Analytics & Reporting</h3>
-          </div>
-        </div>
+        <div className="service-overlay-container position-relative">
+  <img
+    src={WebAnalyticsImg}
+    alt="WebAnalytics Service"
+    className="service-image w-100 h-100 object-fit-cover rounded"
+  />
+  <div className="service-overlay-text position-absolute top-50 start-50 translate-middle text-white text-center">
+    <h3>Web Analytics & Reporting</h3>
+  </div>
+</div>
       </Col>
       <Col md={4} xs={12} className="service-card mb-4">
-        <div className="service-overlay-container">
+        <div className="service-overlay-container position-relative">
           <img src={ProjectPlanningImg} alt="Project Planning" className="service-image w-100 h-100 object-fit-cover rounded" />
-          <div className="service-overlay-text">
+          <div className="service-overlay-text position-absolute top-50 start-50 translate-middle text-white text-center">
             <h3>Project Planning</h3>
           </div>
         </div>
       </Col>
       <Col md={4} xs={12} className="service-card mb-4">
-        <div className="service-overlay-container">
+        <div className="service-overlay-container position-relative">
           <img src={techSupportImg} alt="Tech Support" className="service-image w-100 h-100 object-fit-cover rounded" />
-          <div className="service-overlay-text">
+          <div className="service-overlay-text position-absolute top-50 start-50 translate-middle text-white text-center">
             <h3>Tech Support</h3>
           </div>
         </div>
