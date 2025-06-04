@@ -1,4 +1,5 @@
 import { Routes, Route } from 'react-router-dom';
+import 'bootstrap-icons/font/bootstrap-icons.css';
 
 import LandingPage from './components/LandingPage';
 import AboutUs from './components/AboutUs';
