@@ -6,6 +6,7 @@ import ContactPage from './components/Contact';
 import LoginPage from './components/login';
 import SignupPage from './components/signup';
 import Careers from './components/Careers';
+import ClientDashboard from './components/Dashboard/ClientDashboard';
 
 
 
@@ -20,6 +21,8 @@ const App = () => {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/careers" element={<Careers />} />
+        <Route path="/clientdashboard" element={<ClientDashboard />} />
+
 
 
     </Routes>
