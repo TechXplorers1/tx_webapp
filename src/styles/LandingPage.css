@@ -1,70 +1,22 @@
 /* Global Reset */
-html, body {
-  width: 100%;
+/* html, body {
   margin: 0;
   padding: 0;
+  width: 100%;
   overflow-x: hidden;
   font-family: 'Arial', sans-serif;
   background-color: white;
-}
-
-.service-overlay-container {
-  position: relative;
-  height: 300px; /* or whatever height you prefer */
-  overflow: hidden;
-  border-radius: 10px;
-}
-
-.service-overlay-text {
-  z-index: 2;
-  background: rgba(0, 0, 0, 0.4); /* optional: gives nice contrast */
-  padding: 10px 20px;
-  border-radius: 8px;
-}
-
-.service-image {
-  object-fit: cover;
-  width: 100%;
-  height: 100%;
-}
-
-
-
-
+} */
 
 /* Main Container */
 .landing-page {
-  width: 100vw;
-  min-width: 100%;
-  overflow-x: hidden;
-}
-
-.carousel-item-custom {
-  position: relative;
-}
-
-.carousel-overlay-content {
-  z-index: 2;
-}
-
-.carousel-mask {
-  position: absolute;
-  top: 0;
-  left: 0;
   width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.3); /* semi-transparent dark overlay */
-  z-index: 1;
-}
-
-.carousel-img {
-  object-fit: cover;
-  height: 500px; /* Or however tall you want your images */
+  overflow-x: hidden;
 }
 
 /* Hero Carousel */
 .carousel-container {
-  margin-top: 20px;
+  margin-top: 30px;
 }
 
 .carousel-shadow {
@@ -73,25 +25,41 @@ html, body {
 
 .carousel-item {
   height: 400px;
+  position: relative;
 }
 
-/* .carousel-img {
+.carousel-img {
+  width: 100%;
   height: 100%;
   object-fit: cover;
-} */
+}
+
+.carousel-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 1;
+}
+
+.carousel-overlay-content {
+  z-index: 2;
+}
 
 /* Services Section */
 .services-section {
-  padding: 50px 0;
+  padding: 20px 0;
 }
 
 .service-card {
   background-color: #fff;
-  border-radius: 8px;
+  border-radius: 40px;
   overflow: hidden;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s ease;
-  height: 300px;
+  height: 400px;
   position: relative;
 }
 
@@ -99,29 +67,29 @@ html, body {
   transform: translateY(-5px);
 }
 
+.service-overlay-container {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+}
+
 .service-image {
-  width: 100%;
+  width: 500px;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
-.service-title {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgba(0, 0, 0, 0.7);
-  color: white;
-  padding: 15px;
-  margin: 0;
-  text-align: center;
-  font-size: 22px;
+.service-overlay-text {
+  z-index: 2;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 10px 20px;
+  border-radius: 8px;
 }
 
 /* World Services Section */
 .world-services {
-  padding: 40px 0;
+  padding:10px;
 }
 
 .map-container {
@@ -131,39 +99,105 @@ html, body {
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
-.countries-list {
-  background: rgba(255, 255, 255, 0.9);
-  padding: 15px;
-  border-radius: 5px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+.map-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 1800px;
+  margin: 0 auto;
 }
 
-.countries-list h3 {
-  margin-top: 0;
+.map-container-custom {
+  position: relative;
+  height: 500px;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.leaflet-map {
+  height: 100%;
+  width: 100%;
+  z-index: 1;
+}
+
+.operate-overlay {
+  position: absolute;
+  top: 120px;
+  left: 20px;
+  width: 200px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 20px;
+  border-radius: 8px;
+  z-index: 10;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+
+
+.operate-card {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+.operate-title {
+  margin-bottom: 15px;
+  font-size: 20px;
+  font-weight: bold;
   color: #333;
 }
 
-.countries-list ul {
-  padding-left: 20px;
-  margin-bottom: 0;
+.country-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
 }
 
-.countries-list li {
-  margin-bottom: 5px;
+.country-item {
+  padding: 8px 12px;
+  background-color: #f1f1f1;
+  border-radius: 5px;
+  text-align: center;
+  font-weight: 500;
 }
 
 /* Responsive Styles */
 @media (max-width: 768px) {
+   .map-container-custom {
+    height: 400px;
+  }
+
+    .operate-overlay {
+    position: static;
+    width: 100%;
+    margin-top: 10px;
+    box-shadow: none;
+    background: white;
+    border-radius: 0;
+  }
+
   .carousel-item {
     height: 300px;
   }
 
   .service-card {
-    height: 250px;
+    height: 200px;
   }
 
   .map-container {
-    height: 400px;
+    height: 350px;
+  }
+
+  .service-overlay-text h3 {
+    font-size: 16px;
+  }
+
+  .operate-title {
+    font-size: 18px;
+  }
+
+  .country-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
-

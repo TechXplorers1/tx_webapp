@@ -11,6 +11,7 @@ body {
 } */
 
 .about-us-page {
+  margin-top: 20px;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -50,7 +51,11 @@ footer a:hover {
   text-decoration: underline !important;
 }
 
-
+.video-card-wrapper {
+ width: 100%;
+  max-width: 100%;
+  margin-left: 15px;
+}
 
 
 

@@ -37,11 +37,30 @@ const CustomNavbar = ({ scrolled, aboutRef }) => {
     }, 300);
   };
 
+  const handleServicesClick = () => {
+  setShowServicesPopup(prev => !prev);
+};
+
+const handleClickOutside = (event) => {
+  if (
+    servicesRef.current &&
+    !servicesRef.current.contains(event.target) &&
+    !event.target.closest('.services-popup-wrapper')
+  ) {
+    setShowServicesPopup(false);
+  }
+};
+
   useEffect(() => {
     return () => {
       clearTimeout(servicesTimeoutRef.current);
     };
   }, []);
+
+  useEffect(() => {
+  document.addEventListener("mousedown", handleClickOutside);
+  return () => document.removeEventListener("mousedown", handleClickOutside);
+}, []);
   
   return (
     <Navbar bg="light" expand="lg" className="fixed-top shadow-sm">
@@ -63,9 +82,10 @@ const CustomNavbar = ({ scrolled, aboutRef }) => {
             <Nav.Link  className="nav-link-custom" onClick={() => navigate('/')}>HOME</Nav.Link>
 
              {/* Services */}
-            <div
-              className="nav-link services-popup-wrapper"
-              onMouseEnter={handleServicesEnter}
+            <Nav.Link
+              className="nav-link services-popup-wrapper nav-link-custom"
+              onClick={handleServicesClick}
+              // onMouseEnter={handleServicesEnter}
               onMouseLeave={handleServicesLeave}
             >
               <span>SERVICES</span>
@@ -79,7 +99,7 @@ const CustomNavbar = ({ scrolled, aboutRef }) => {
                   <ServicesDropdown />
                 </div>
               )}
-            </div>
+            </Nav.Link>
 
             <Nav.Link className="nav-link-custom" onClick={() => navigate('/careers')} >CAREER</Nav.Link>
             <Nav.Link className="nav-link-custom" onClick={() => navigate('/aboutus')}>ABOUT US</Nav.Link>
@@ -87,7 +107,7 @@ const CustomNavbar = ({ scrolled, aboutRef }) => {
           </Nav>
         
           {/* Login Button (Right-Aligned) */}
-          <Button variant="primary" size="lg" className="ms-lg-3" onClick={() => navigate('/login')}>
+          <Button variant="primary" size="sm" className="ms-lg-3" onClick={() => navigate('/login')}>
             LOGIN
           </Button>
         </Navbar.Collapse>

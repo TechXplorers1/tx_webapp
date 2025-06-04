@@ -3,6 +3,7 @@ import { Container, Row, Col, Carousel } from 'react-bootstrap';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import CustomNavbar from './Navbar';
+import '../styles/LandingPage.css';
 
 // Import your images
 import Image1 from '../assets/MobileDev.png';
@@ -60,82 +61,89 @@ const LandingPage = () => {
       </Container>
 
       {/* Services Section */}
-    <section className="services-section" id="services">
-  <Container className="my-5">
-    <Row className="justify-content-center">
-      <Col md={4} xs={12} className="service-card mb-4">
-        <div className="service-overlay-container position-relative">
-  <img
-    src={WebAnalyticsImg}
-    alt="WebAnalytics Service"
-    className="service-image w-100 h-100 object-fit-cover rounded"
-  />
-  <div className="service-overlay-text position-absolute top-50 start-50 translate-middle text-white text-center">
-    <h3>Web Analytics & Reporting</h3>
-  </div>
-</div>
-      </Col>
-      <Col md={4} xs={12} className="service-card mb-4">
-        <div className="service-overlay-container position-relative">
-          <img src={ProjectPlanningImg} alt="Project Planning" className="service-image w-100 h-100 object-fit-cover rounded" />
-          <div className="service-overlay-text position-absolute top-50 start-50 translate-middle text-white text-center">
-            <h3>Project Planning</h3>
-          </div>
-        </div>
-      </Col>
-      <Col md={4} xs={12} className="service-card mb-4">
-        <div className="service-overlay-container position-relative">
-          <img src={techSupportImg} alt="Tech Support" className="service-image w-100 h-100 object-fit-cover rounded" />
-          <div className="service-overlay-text position-absolute top-50 start-50 translate-middle text-white text-center">
-            <h3>Tech Support</h3>
-          </div>
-        </div>
-      </Col>
-    </Row>
-  </Container>
-</section>
-
- {/* World Services Section */}
-      <section className="world-services" id="world">
-        <Container className="my-5">
-          <h2 className="text-center mb-4">Delivering Services Across the Globe</h2>
-          <div className="map-operate-container">
-            <Row className="no-gutters">
-              <Col md={8} className="map-col">
-                <MapContainer
-                  center={[20.0, 0.0]}
-                  zoom={2}
-                  scrollWheelZoom={false}
-                  style={{ height: '100%', width: '100%' }}
-                >
-                  <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  />
-                  {offices.map((office, index) => (
-                    <Marker key={index} position={office.position}>
-                      <Popup>{office.name}</Popup>
-                    </Marker>
-                  ))}
-                </MapContainer>
-              </Col>
-              <Col md={4} className="operate-col">
-                <div className="operate-card">
-                  <h3 className="operate-title">We operate in:</h3>
-                  <div className="country-grid">
-                    <div className="country-item">United States</div>
-                    <div className="country-item">Canada</div>
-                    <div className="country-item">United Kingdom</div>
-                    <div className="country-item">Nigeria</div>
-                    <div className="country-item">Australia</div>
-                    <div className="country-item">India</div>
-                  </div>
+      <section className="services-section" id="services">
+        <Container fluid className="px-0"> {/* Use fluid & remove side padding */}
+          <Row className="gx-3"> {/* Remove gutter spacing */}
+            <Col md={4} className="service-card">
+              <div className="service-overlay-container position-relative">
+                <img
+                  src={WebAnalyticsImg}
+                  alt="WebAnalytics Service"
+                  className="service-image w-100 h-100 object-fit-cover rounded-0"
+                />
+                <div className="service-overlay-text position-absolute top-50 start-50 translate-middle text-white text-center">
+                  <h3>Web Analytics & Reporting</h3>
                 </div>
-              </Col>
-            </Row>
+              </div>
+            </Col>
+            <Col md={4} className="service-card">
+              <div className="service-overlay-container position-relative">
+                <img
+                  src={ProjectPlanningImg}
+                  alt="Project Planning"
+                  className="service-image w-100 h-100 object-fit-cover rounded-0"
+                />
+                <div className="service-overlay-text position-absolute top-50 start-50 translate-middle text-white text-center">
+                  <h3>Project Planning</h3>
+                </div>
+              </div>
+            </Col>
+            <Col md={4} className="service-card">
+              <div className="service-overlay-container position-relative">
+                <img
+                  src={techSupportImg}
+                  alt="Tech Support"
+                  className="service-image w-100 h-100 object-fit-cover rounded-0"
+                />
+                <div className="service-overlay-text position-absolute top-50 start-50 translate-middle text-white text-center">
+                  <h3>Tech Support</h3>
+                </div>
+              </div>
+            </Col>
+          </Row>
+        </Container>
+      </section>
+
+
+      {/* World Services Section */}
+      <section className="world-services" id="world">
+        <Container fluid className="px-0">
+          <h2 className="text-center mb-4">Delivering Services Across the Globe</h2>
+          <div className="map-wrapper">
+            <div className="map-container-custom">
+              <MapContainer
+                center={[20.0, 0.0]}
+                zoom={2}
+                scrollWheelZoom={false}
+                className="leaflet-map"
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                {offices.map((office, index) => (
+                  <Marker key={index} position={office.position}>
+                    <Popup>{office.name}</Popup>
+                  </Marker>
+                ))}
+              </MapContainer>
+
+              <div className="operate-overlay">
+                <h3 className="operate-title">We operate in:</h3>
+                <div className="country-grid">
+                  <div className="country-item">United States</div>
+                  <div className="country-item">Canada</div>
+                  <div className="country-item">United Kingdom</div>
+                  <div className="country-item">Nigeria</div>
+                  <div className="country-item">Australia</div>
+                  <div className="country-item">India</div>
+                </div>
+              </div>
+            </div>
           </div>
         </Container>
       </section>
+
     </div>
   );
 };

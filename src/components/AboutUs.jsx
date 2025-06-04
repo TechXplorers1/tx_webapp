@@ -23,13 +23,13 @@ import industry5 from '../assets/mobile5.png';
 
 function AboutUs() {
 
-      const navigate = useNavigate();
+    const navigate = useNavigate();
 
     return (
         <div className="about-us-page">
 
             {/* Navigation Bar */}
-         <CustomNavbar />
+            <CustomNavbar />
 
             {/* About Us Text Section */}
             <Container className="my-5">
@@ -73,51 +73,54 @@ function AboutUs() {
             {/* Video Cards Section */}
             <Container className="my-4 no-padding">
                 <h2 className="mb-4 text-center">OUR VIDEOS :</h2>
-                <div className="row g-4 justify-content-center">
-                    {videoUrls.map((url, index) => (
-                        <div className="col-md-4 col-lg-2" key={index}>
-                            <Card className="h-100 shadow-sm video-card">
-                                <iframe
-                                    title={`Video ${index + 1}`}
-                                    width="100%"
-                                    height="150"
-                                    src={url}
-                                    allowFullScreen
-                                    style={{ border: 'none' }}
-                                ></iframe>
-                            </Card>
-                        </div>
-                    ))}
+                <div className="video-card-wrapper">
+                    <div className="row  gap-5">
+                        {videoUrls.map((url, index) => (
+                            <div className="col-md-4 col-lg-2" key={index}>
+                                <Card className="h-100 shadow-sm video-card">
+                                    <iframe
+                                        title={`Video ${index + 1}`}
+                                        width="100%"
+                                        height="150"
+                                        src={url}
+                                        allowFullScreen
+                                        style={{ border: 'none' }}
+                                    ></iframe>
+                                </Card>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </Container>
 
+
             {/* Footer */}
-               <footer className="bg-white py-5">
-      <Container>
-        {/* Form Section */}
-        <Form className="d-flex justify-content-center align-items-center mb-5">
-          <Form.Control
-            type="text"
-            placeholder="Ask"
-            className="me-2 rounded-0 py-2"
-            style={{ width: '25%' }}
-          />
-          <button variant="primary" className="btn btn-primary rounded-0 px-4 py-2">Submit</button>
-        </Form>
+            <footer className="bg-white py-5">
+                <Container>
+                    {/* Form Section */}
+                    <Form className="d-flex justify-content-center align-items-center mb-5">
+                        <Form.Control
+                            type="text"
+                            placeholder="Ask"
+                            className="me-2 rounded-0 py-2"
+                            style={{ width: '25%' }}
+                        />
+                        <button variant="primary" className="btn btn-primary rounded-0 px-4 py-2">Submit</button>
+                    </Form>
 
-        {/* Copyright and Links */}
-        <div className="d-flex justify-content-center align-items-center">
-          {/* Centered Copyright */}
-          <p className="mb-0 text-dark">Techxplorers ©2025</p> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+                    {/* Copyright and Links */}
+                    <div className="d-flex justify-content-center align-items-center">
+                        {/* Centered Copyright */}
+                        <p className="mb-0 text-dark">Techxplorers ©2025</p> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
 
-          {/* Right-aligned Links */}
-          <div>
-            <a href="#" className="text-dark me-2 text-decoration-none">Privacy & Legal</a>
-            <a href="#" className="text-dark text-decoration-none">Contact</a>
-          </div>
-        </div>
-      </Container>
-    </footer>
+                        {/* Right-aligned Links */}
+                        <div>
+                            <a href="#" className="text-dark me-2 text-decoration-none">Privacy & Legal</a>
+                            <a href="#" className="text-dark text-decoration-none">Contact</a>
+                        </div>
+                    </div>
+                </Container>
+            </footer>
 
         </div>
     );
