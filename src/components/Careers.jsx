@@ -49,13 +49,18 @@ function Careers() {
     <div className="careers-container">
       <CustomNavbar />
       <Container className="d-flex flex-column align-items-center">
-        <input
-          className="search-bar form-control mb-4"
-          placeholder="Search by role"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          style={{ width: '300px' }}
-        />
+        <div className="input-group mb-4" style={{ width: '300px' }}>
+          <span className="input-group-text bg-white border-end-0">
+            <i className="bi bi-search"></i>
+            </span>
+            <input
+            type="text"
+            className="form-control border-start-0"
+            placeholder="Search by role"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            </div>
 
         <h2 className="careers-title">FEATURED JOBS</h2>
         <p className="careers-subtext text-center">
@@ -88,24 +93,39 @@ function Careers() {
       </div>
 
       {/* Apply Form Modal */}
-      <Modal show={showModal} onHide={handleModalClose} centered>
+
+      
+          <Modal
+            show={showModal}
+            onHide={handleModalClose}
+            centered
+            dialogClassName="modal-70w"
+          >
+
         <Modal.Header closeButton>
           <Modal.Title>Apply for {selectedJob?.title}</Modal.Title>
         </Modal.Header>
       <Modal.Body>
         <Form>
           <Form.Group className="mb-3">
-            <Form.Label>
-              First Name <span style={{ color: 'red' }}>*</span>
-            </Form.Label>
-            <Form.Control type="text" placeholder="Enter your first name" required />
-          </Form.Group>
-          <Form.Group className="mb-3">
-            <Form.Label>
-              Last Name <span style={{ color: 'red' }}>*</span>
-            </Form.Label>
-            <Form.Control type="text" placeholder="Enter your last name" required />
-          </Form.Group>
+          <Form.Label>
+            Name <span style={{ color: 'red' }}>*</span>
+          </Form.Label>
+          <div className="d-flex gap-2">
+            <Form.Control
+              type="text"
+              placeholder="First Name"
+              required
+              style={{ flex: 1 }}
+            />
+            <Form.Control
+              type="text"
+              placeholder="Last Name"
+              required
+              style={{ flex: 1 }}
+            />
+          </div>
+        </Form.Group>
           <Form.Group className="mb-3">
             <Form.Label>Email<span style={{ color: 'red' }}>*</span></Form.Label>
             <Form.Control type="email" placeholder="Enter your email" required />
@@ -141,9 +161,11 @@ function Careers() {
             <Form.Label>Resume (Upload File)<span style={{ color: 'red' }}>*</span></Form.Label>
             <Form.Control type="file" accept=".pdf,.doc,.docx" required />
           </Form.Group>
+          <div className="d-flex justify-content-center mt-4">
           <Button variant="primary" type="submit">
             Submit Application
           </Button>
+          </div>
     </Form>
   </Modal.Body>
 </Modal>
