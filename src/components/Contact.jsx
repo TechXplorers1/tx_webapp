@@ -12,7 +12,7 @@ const ContactPage = () => {
 
     if (formSubmitted) {
         return (
-            <div style={{color: 'black', height: '100vh' }} className="d-flex flex-column justify-content-center align-items-center text-center px-3">
+            <div style={{ color: 'black', height: '100vh' }} className="d-flex flex-column justify-content-center align-items-center text-center px-3">
                 <h1 className="fw-bold display-4 mb-3">THANK YOU</h1>
                 <hr style={{ width: '80px', borderTop: '2px solid white' }} />
                 <p className="fs-5">For showing interest in our products and services. Our team will be in contact with you shortly.</p>
@@ -120,16 +120,6 @@ const ContactPage = () => {
                                             className="p-3 bg-light border-light"
                                             style={{ borderRadius: '20px' }}
                                         />
-                                    </Col>
-                                </Row>
-
-                                <Row className="mb-3">
-                                    <Col>
-                                        <Form.Select className="p-3 bg-light border-light" style={{ borderRadius: '20px' }}>
-                                            <option value="">Product</option>
-                                            <option value="product1">Product 1</option>
-                                            <option value="product2">Product 2</option>
-                                        </Form.Select>
                                     </Col>
                                 </Row>
 
