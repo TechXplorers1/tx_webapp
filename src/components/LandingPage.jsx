@@ -1,5 +1,6 @@
 import React from 'react';
 import { Container, Row, Col, Carousel } from 'react-bootstrap';
+import { Link } from 'react-router-dom'; // Import Link from react-router-dom
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import CustomNavbar from './Navbar';
@@ -27,13 +28,13 @@ const LandingPage = () => {
     { name: 'India', position: [28.6139, 77.209] },
   ];
 
-  const carouselItems = [
-    { id: 1, image: Image1, alt: "TechXplorers Service 1", text: "Mobile Application Development" },
-    { id: 2, image: Image2, alt: "TechXplorers Service 2", text: "Web Application Development" },
-    { id: 3, image: Image3, alt: "TechXplorers Service 3", text: "Digital Marketing" },
-    { id: 4, image: Image4, alt: "TechXplorers Service 4", text: "Job Support" },
-    { id: 5, image: Image5, alt: "TechXplorers Service 5", text: "IT Talent Supply" }
-  ];
+const carouselItems = [
+  { id: 1, image: Image1, alt: "TechXplorers Service 1", text: "Mobile Application Development", path: "/services/mobile-app-development" },
+  { id: 2, image: Image2, alt: "TechXplorers Service 2", text: "Web Application Development", path: "/services/web-app-development" },
+  { id: 3, image: Image3, alt: "TechXplorers Service 3", text: "Digital Marketing", path: "/services/digital-marketing" },
+  { id: 4, image: Image4, alt: "TechXplorers Service 4", text: "Job Support", path: "/services/job-support" },
+  { id: 5, image: Image5, alt: "TechXplorers Service 5", text: "IT Talent Supply", path: "/services/it-talent-supply" }
+];
 
   return (
     <div className="landing-page">
@@ -47,7 +48,8 @@ const LandingPage = () => {
               <div className="carousel-overlay-content position-absolute top-50 start-50 translate-middle text-center text-white">
                 <h3>{item.text}</h3>
                 <button className="btn btn-primary mt-3">Book a Service</button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                <button className="btn btn-primary mt-3">Learn More</button>
+                {/* Use Link component for "Learn More" */}
+                <Link to={item.path} className="btn btn-primary mt-3">Learn More</Link>
               </div>
               <img
                 className="d-block w-100 carousel-img"

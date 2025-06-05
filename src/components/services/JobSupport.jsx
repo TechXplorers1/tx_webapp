@@ -1,40 +1,32 @@
-import React, { useEffect } from 'react';
-import '../../../styles/ServiceLayout.css';
-import img1 from '../../../assets/mobile5.png'
+import React from 'react';
+import img1 from '../../assets/JobApply.png';
+import '../../styles/Services/JobSupport.css'; // Import the same CSS file as WebAppDev
 import { useNavigate } from 'react-router-dom';
-import CustomNavbar from '../../../components/Navbar';
 
 const JobSupport = () => {
-  const navigate = useNavigate(); // Initialize useNavigate
-    useEffect(() => {
-      if (!window.location.hash.includes('#')) {
-        window.location.href = window.location.href + '#';
-        window.location.reload();
-      }
-      }, []);
+    const navigate = useNavigate();
+
   return (
-    <div className="mobile-app-dev service-box">
-      <CustomNavbar />
-      <h2 className="section-title">IT Consulting & Job Support</h2>
+    <div className="job-support-container">
+      {/* Header Section */}
+      <header className="header-section">
+        <img src={img1} alt="IT Consulting & Job Support" className="header-image" />
+      </header>
 
-      {/* Single image display */}
-      <div className="single-image-container">
-        <img src={img1} alt="IT Talent Supply" className="service-image" />
-      </div>
-
-      <div className="service-description">
-        <h4>IT Consulting & Job Support – TechXplorers Private Limited</h4>
-        <p>
+      {/* Content Section */}
+      <section className="content-section">
+        <h2 className="section-title">IT Consulting & Job Support</h2>
+        <p className="section-description">
           At TechXplorers Private Limited, we provide expert IT consulting and job support services to help businesses and professionals navigate the complex technology landscape. Our goal is to empower organizations with cutting-edge solutions and equip professionals with real-time project support, ensuring success in their IT careers.
         </p>
 
-        <h4>Our IT Consulting Services</h4>
+        <h3 className="subheading">Our IT Consulting Services</h3>
         <p>
           We offer strategic IT consulting to help businesses streamline operations, enhance security, and adopt modern technologies for digital transformation.
         </p>
 
-        <h4>Key IT Consulting Services</h4>
-        <ul>
+        <h3 className="subheading">Key IT Consulting Services</h3>
+        <ul className="services-list">
           <li><strong>Digital Transformation</strong> – Helping businesses modernize with cloud computing, AI, and automation.</li>
           <li><strong>IT Strategy & Roadmap</strong> – Crafting tailored IT strategies to align with business goals.</li>
           <li><strong>Cloud Computing Consulting</strong> – Expertise in AWS, Azure, and Google Cloud for seamless cloud adoption.</li>
@@ -44,13 +36,13 @@ const JobSupport = () => {
           <li><strong>Enterprise IT Solutions</strong> – Providing ERP, CRM, and data analytics solutions for businesses.</li>
         </ul>
 
-        <h4>Real-Time Job Support for IT Professionals</h4>
+        <h3 className="subheading">Real-Time Job Support for IT Professionals</h3>
         <p>
           Our job support services help IT professionals overcome technical challenges in real-time projects, ensuring career growth and project success.
         </p>
 
-        <h4>How We Help IT Professionals</h4>
-        <ul>
+        <h3 className="subheading">How We Help IT Professionals</h3>
+        <ul className="services-list">
           <li><strong>Live Project Assistance</strong> – Get expert guidance while working on real-time industry projects.</li>
           <li><strong>One-on-One Support</strong> – Personalized mentoring to resolve technical issues quickly.</li>
           <li><strong>Technology-Specific Support</strong> – Specializing in Java, Python, AWS, DevOps, Data Science, Cybersecurity, and more.</li>
@@ -59,9 +51,9 @@ const JobSupport = () => {
           <li><strong>Freelancer & Remote Work Support</strong> – Assisting independent professionals in managing client projects.</li>
         </ul>
 
-        <h4>Our IT Consulting & Job Support Process</h4>
+        <h3 className="subheading">Our IT Consulting & Job Support Process</h3>
         <p>We follow a structured approach to ensure efficiency, reliability, and success for businesses and professionals.</p>
-        <ul>
+        <ul className="services-list">
           <li><strong>Requirement Analysis</strong> – Understanding your challenges and project requirements.</li>
           <li><strong>Expert Allocation</strong> – Assigning domain-specific IT consultants and mentors.</li>
           <li><strong>Problem-Solving Sessions</strong> – Providing real-time troubleshooting and guidance.</li>
@@ -76,7 +68,7 @@ const JobSupport = () => {
             <iframe
               width="40%"
               height="215"
-              src="https://www.youtube.com/embed/UE5wDavgZzA"
+              src="https://www.youtube.com/embed/UE5wDavgZzA" 
               title="Job Support Video"
               frameBorder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -85,23 +77,24 @@ const JobSupport = () => {
           </div>
         </div>
 
+        {/* Contact Section */}
         <div className="contact-container">
-          <h2 className="headline">To work with us?</h2>
-          <a href="https://wa.me/919052990765" target="_blank" rel="noopener noreferrer" className="contact-button">
+          <h2 className="headline">Want to know more or work with us?</h2>
+          <a href="https://wa.me/919052990765"  target="_blank" rel="noopener noreferrer" className="contact-button btn btn-primary">
             Contact Us
-          </a>
-
-        </div>
-        <div className="contact-container">
-          <h2 className="headline">Want to Apply?</h2>
-          <div
-            className="contact-button apply-now-button"
-            onClick={() => navigate('/services/job-contact-support')}
+          </a>&nbsp; &nbsp; &nbsp;OR &nbsp; &nbsp; &nbsp;
+            <a
+            className="contact-button btn btn-primary"
+            onClick={() => navigate('/services/job-contact-form')}
           >
             Apply Now
-          </div>
+          
+        </a>
         </div>
-      </div>
+
+    
+        
+      </section>
     </div>
   );
 };

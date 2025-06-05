@@ -1,0 +1,121 @@
+/* Base Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f8f9fa;
+}
+
+/* Main container */
+.contact-form {
+  background-color:  rgba(186, 195, 198, 0.8);
+  min-height: 100vh;
+  border-radius: 30px;
+  border:#007bff;
+}
+
+/* Form wrapper */
+.contactform-box {
+  background-color: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+  width: 100%;
+  max-width: 900px;
+}
+
+/* Section headings */
+h4 {
+  color: #007bff;
+  margin-bottom: 1rem;
+}
+
+.border-bottom {
+  border-bottom: 1px solid #dee2e6;
+  padding-bottom: 0.5rem;
+}
+
+/* Form labels */
+.form-label {
+  font-weight: 500;
+  color: #333;
+}
+
+/* Inputs and selects */
+.form-control,
+.form-select {
+  border-radius: 5px;
+  border: 1px solid #29629b;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.95rem;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Custom cyan select override */
+/* .custom-select-cyan {
+  border-color: #00ffff;
+  background-color: #e0ffff;
+} */
+
+.custom-select-cyan:focus {
+  border-color: #00bcd4;
+  background-color: #ffffff;
+}
+
+/* Textarea */
+textarea.form-control {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* Phone input styling (react-phone-number-input) */
+.PhoneInput .form-control {
+  width: 100%;
+}
+
+/* Button styles */
+/* .btn-primary {
+  background-color: #00ffff;
+  color: #000;
+  border-color: #00ffff;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+}
+
+.btn-primary:hover {
+  background-color: #00dcd1;
+  border-color: #00dcd1;
+} */
+
+/* Responsive grid */
+.row {
+  margin-bottom: 1rem;
+}
+
+.col-md-4,
+.col-md-6 {
+  padding: 0.5rem;
+}
+
+/* Submit button */
+.d-grid .btn {
+  font-size: 1rem;
+  padding: 0.75rem;
+}
+
+/* Feedback messages */
+.invalid-feedback {
+  display: block;
+  color: red;
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+}

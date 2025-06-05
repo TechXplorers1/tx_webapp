@@ -26,7 +26,7 @@ const ContactPage = () => {
 
             {/* Google Maps Section */}
             <Container className="my-5">
-                <h1 className="text-center mb-5">OUR CONTACT LOCATIONS</h1>
+                <h1 className="text-center mb-3">OUR CONTACT LOCATIONS</h1>
                 <Row>
                     <Col md={6}>
                         <Card className="mb-4 shadow-sm h-100">

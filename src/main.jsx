@@ -8,10 +8,12 @@ import App from './App.jsx'
 import { BrowserRouter } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './App.css';
+import ContactForm from './components/services/JobSupportContactForm.jsx'
 
 
 ReactDOM.createRoot(document.getElementById('root')).render(
     <BrowserRouter>
     <App />
     </BrowserRouter>
+
 )

@@ -85,8 +85,8 @@ const handleClickOutside = (event) => {
             <Nav.Link
               className="nav-link services-popup-wrapper nav-link-custom"
               onClick={handleServicesClick}
-              // onMouseEnter={handleServicesEnter}
-              onMouseLeave={handleServicesLeave}
+                // onMouseEnter={handleServicesEnter}
+              // onMouseLeave={handleServicesLeave}
             >
               <span>SERVICES</span>
               {showServicesPopup && (
