@@ -11,7 +11,7 @@ const ClientDashboard = () => {
   const toggleSidebar = () => setShowSidebar(!showSidebar);
 
   const handleLogout = () => {
-    navigate('/');
+    navigate('/admindashboard');
   };
 
   return (
