@@ -4,6 +4,7 @@ import '../styles/Careers.css';
 import { useNavigate } from 'react-router-dom';
 import CustomNavbar from './Navbar';
 
+
 const jobs = [
   {
     title: 'Data Analyst',
