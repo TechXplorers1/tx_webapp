@@ -1,12 +1,12 @@
 import React from 'react';
 import { Container, Row, Col, Carousel } from 'react-bootstrap';
-import { Link } from 'react-router-dom'; // Import Link from react-router-dom
+import { Link } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import CustomNavbar from './Navbar';
 import '../styles/LandingPage.css';
 
-// Import your images
+// Import images
 import Image1 from '../assets/MobileDev.png';
 import Image2 from '../assets/WebDev.png';
 import Image3 from '../assets/DigiMark.png';
@@ -18,6 +18,9 @@ import WebAnalyticsImg from '../assets/WebAnalytics&Reporting.png';
 import ProjectPlanningImg from '../assets/project_planning.png';
 import techSupportImg from '../assets/tech_support.png';
 
+// Scroll animation hook
+import { useInView } from 'react-intersection-observer';
+
 const LandingPage = () => {
   const offices = [
     { name: 'USA', position: [40.7128, -74.006] },
@@ -28,44 +31,54 @@ const LandingPage = () => {
     { name: 'India', position: [28.6139, 77.209] },
   ];
 
-const carouselItems = [
-  { id: 1, image: Image1, alt: "TechXplorers Service 1", text: "Mobile Application Development", path: "/services/mobile-app-development" },
-  { id: 2, image: Image2, alt: "TechXplorers Service 2", text: "Web Application Development", path: "/services/web-app-development" },
-  { id: 3, image: Image3, alt: "TechXplorers Service 3", text: "Digital Marketing", path: "/services/digital-marketing" },
-  { id: 4, image: Image4, alt: "TechXplorers Service 4", text: "Job Support", path: "/services/job-support" },
-  { id: 5, image: Image5, alt: "TechXplorers Service 5", text: "IT Talent Supply", path: "/services/it-talent-supply" }
-];
+  const carouselItems = [
+    { id: 1, image: Image1, alt: "TechXplorers Service 1", text: "Mobile Application Development", path: "/services/mobile-app-development" },
+    { id: 2, image: Image2, alt: "TechXplorers Service 2", text: "Web Application Development", path: "/services/web-app-development" },
+    { id: 3, image: Image3, alt: "TechXplorers Service 3", text: "Digital Marketing", path: "/services/digital-marketing" },
+    { id: 4, image: Image4, alt: "TechXplorers Service 4", text: "Job Support", path: "/services/job-support" },
+    { id: 5, image: Image5, alt: "TechXplorers Service 5", text: "IT Talent Supply", path: "/services/it-talent-supply" }
+  ];
+
+  // UseInView with triggerOnce: false for re-animation on re-entry
+  const [carouselRef, carouselInView] = useInView({ triggerOnce: false, threshold: 0.1 });
+  const [servicesRef, servicesInView] = useInView({ triggerOnce: false, threshold: 0.1 });
+  const [worldRef, worldInView] = useInView({ triggerOnce: false, threshold: 0.1 });
 
   return (
     <div className="landing-page">
       <CustomNavbar />
 
-      {/* Hero Carousel with overlay and centered text */}
-      <Container fluid className="carousel-container my-5 px-0">
-        <Carousel indicators={true} interval={3000} className="carousel-shadow">
-          {carouselItems.map((item) => (
-            <Carousel.Item key={item.id} className="carousel-item-custom position-relative">
-              <div className="carousel-overlay-content position-absolute top-50 start-50 translate-middle text-center text-white">
-                <h3>{item.text}</h3>
-                <button className="btn btn-primary mt-3">Book a Service</button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                {/* Use Link component for "Learn More" */}
-                <Link to={item.path} className="btn btn-primary mt-3">Learn More</Link>
-              </div>
-              <img
-                className="d-block w-100 carousel-img"
-                src={item.image}
-                alt={item.alt}
-              />
-              <div className="carousel-mask" />
-            </Carousel.Item>
-          ))}
-        </Carousel>
-      </Container>
+      {/* Hero Carousel */}
+      <div ref={carouselRef} className={`animated-section ${carouselInView ? 'zoom-in-content' : ''}`}>
+        <Container fluid className="carousel-container my-5 px-0">
+          <Carousel indicators={true} interval={3000} className="carousel-shadow">
+            {carouselItems.map((item) => (
+              <Carousel.Item key={item.id} className="carousel-item-custom position-relative">
+                <div className="carousel-overlay-content position-absolute top-50 start-50 translate-middle text-center text-white">
+                  <h3>{item.text}</h3>
+                  <button className="btn btn-primary mt-3">Book a Service</button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                  <Link to={item.path} className="btn btn-primary mt-3">Learn More</Link>
+                </div>
+                <img
+                  className="d-block w-100 carousel-img"
+                  src={item.image}
+                  alt={item.alt}
+                />
+                <div className="carousel-mask" />
+              </Carousel.Item>
+            ))}
+          </Carousel>
+        </Container>
+      </div>
 
       {/* Services Section */}
-      <section className="services-section" id="services">
-        <Container fluid className="px-0"> {/* Use fluid & remove side padding */}
-          <Row className="gx-3"> {/* Remove gutter spacing */}
+      <section
+        ref={servicesRef}
+        className={`services-section ${servicesInView ? 'fade-up-section' : ''}`}
+        id="services"
+      >
+        <Container fluid className="px-0">
+          <Row className="gx-3">
             <Col md={4} className="service-card">
               <div className="service-overlay-container position-relative">
                 <img
@@ -106,9 +119,12 @@ const carouselItems = [
         </Container>
       </section>
 
-
       {/* World Services Section */}
-      <section className="world-services" id="world">
+      <section
+        ref={worldRef}
+        className={`world-services ${worldInView ? 'slide-up-section' : ''}`}
+        id="world"
+      >
         <Container fluid className="px-0">
           <h2 className="text-center mb-4">Delivering Services Across the Globe</h2>
           <div className="map-wrapper">
@@ -120,8 +136,8 @@ const carouselItems = [
                 className="leaflet-map"
               >
                 <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>  contributors'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
                 />
                 {offices.map((office, index) => (
                   <Marker key={index} position={office.position}>
@@ -145,7 +161,6 @@ const carouselItems = [
           </div>
         </Container>
       </section>
-
     </div>
   );
 };

@@ -119,36 +119,69 @@ function Careers() {
             handleModalClose();
           }}>
             <Form.Group className="mb-3">
-              <Form.Label>Name <span style={{ color: 'red' }}>*</span></Form.Label>
-              <div className="d-flex gap-2">
-                <Form.Control type="text" placeholder="First Name" required style={{ flex: 1 }} />
-                <Form.Control type="text" placeholder="Last Name" required style={{ flex: 1 }} />
+              <div className="d-flex flex-column gap-2">
+                <div className="d-flex justify-content-between align-items-start gap-2">
+                  <div style={{ flex: 1 }}>
+                    <Form.Label className="form-label-custom">First Name <span style={{ color: 'red' }}>*</span></Form.Label>
+                    <Form.Control type="text" placeholder="First Name" required style={{ width: '100%' }} />
+                  </div>
+
+                  <div style={{ flex: 1 }}>
+                    <Form.Label className="form-label-custom">Last Name <span style={{ color: 'red' }}>*</span></Form.Label>
+                    <Form.Control type="text" placeholder="Last Name" required style={{ width: '100%' }} />
+                  </div>
+                </div>
+              </div>
+
+              <br />
+
+              <div className="d-flex flex-column gap-2">
+                <div className="d-flex justify-content-between align-items-start gap-2">
+                  <div style={{ flex: 1 }}>
+                    <Form.Label className="form-label-custom">Email <span style={{ color: 'red' }}>*</span></Form.Label>
+                    <Form.Control type="email" placeholder="Enter your email" required style={{ width: '100%' }} />
+                  </div>
+
+                  <div style={{ flex: 1 }}>
+                    <Form.Label className="form-label-custom">Mobile Number<span style={{ color: 'red' }}>*</span></Form.Label>
+                    <Form.Control type="text" inputMode="numeric" pattern="[0-9]*" maxLength={10} placeholder="Enter your mobile number" required style={{ width: '100%' }} />
+                  </div>
+                </div>
+              </div>
+
+              <br />
+
+              <div className="d-flex flex-column gap-2">
+                <div className="d-flex justify-content-between align-items-start gap-2">
+                  <div style={{ flex: 1 }}>
+                    <Form.Label className="form-label-custom">Current Salary<span style={{ color: 'red' }}>*</span></Form.Label>
+                    <Form.Control type="text" inputMode="numeric" pattern="[0-9]*" placeholder="Enter your Current Salary" required style={{ width: '100%' }} />
+                  </div>
+
+                  <div style={{ flex: 1 }}>
+                    <Form.Label className="form-label-custom">Expected Salary<span style={{ color: 'red' }}>*</span></Form.Label>
+                    <Form.Control type="text" inputMode="numeric" pattern="[0-9]*" maxLength={10} placeholder="Enter your mobile number" required style={{ width: '100%' }} />
+                  </div>
+                </div>
+              </div>
+
+              <br />
+
+              <div className="d-flex flex-column gap-2">
+                <div className="d-flex justify-content-between align-items-start gap-2">
+                  <div style={{ flex: 1 }}>
+                    <Form.Label className="form-label-custom">How Many Years Of Experience in {selectedJob?.title} <span style={{ color: 'red' }}>*</span></Form.Label>
+                    <Form.Control type="number" placeholder="Enter years of experience" required style={{ width: '100%' }} />
+                  </div>
+
+                  <div style={{ flex: 1 }}>
+                    <Form.Label className="form-label-custom">Resume/CV (Upload File)<span style={{ color: 'red' }}>*</span></Form.Label>
+                    <Form.Control type="file" accept=".pdf,.doc,.docx" required style={{ width: '100%' }} />
+                  </div>
+                </div>
               </div>
             </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Email<span style={{ color: 'red' }}>*</span></Form.Label>
-              <Form.Control type="email" placeholder="Enter your email" required />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Mobile Number<span style={{ color: 'red' }}>*</span></Form.Label>
-              <Form.Control type="text" inputMode="numeric" pattern="[0-9]*" maxLength={10} placeholder="Enter your mobile number" required />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>How Many Years Of Experience in {selectedJob?.title} <span style={{ color: 'red' }}>*</span></Form.Label>
-              <Form.Control type="number" placeholder="Enter years of experience" required />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Current Salary<span style={{ color: 'red' }}>*</span></Form.Label>
-              <Form.Control type="text" inputMode="numeric" pattern="[0-9]*" placeholder="Enter your Current Salary" required />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Expected Salary<span style={{ color: 'red' }}>*</span></Form.Label>
-              <Form.Control type="text" inputMode="numeric" pattern="[0-9]*" placeholder="Enter your Expected Salary" required />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Resume (Upload File)<span style={{ color: 'red' }}>*</span></Form.Label>
-              <Form.Control type="file" accept=".pdf,.doc,.docx" required />
-            </Form.Group>
+
             <div className="d-flex justify-content-center mt-4">
               <Button variant="primary" type="submit">Submit Application</Button>
             </div>
