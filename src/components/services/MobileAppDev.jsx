@@ -1,30 +1,27 @@
 import React from 'react';
-import img1 from '../../assets/MobileDev.png'; // Replace with your mobile development image
+import img1 from '../../assets/MobileDev.png';
 import '../../styles/Services/MobileAppDev.css';
+import { useNavigate } from 'react-router-dom';
+import CustomNavbar from '../Navbar';
+
+
+
 const MobileAppDev = () => {
-  return (
-    <div className="mobile-app-dev-container">
-      {/* Header Section */}
-      <header className="header-section">
-        <img src={img1} alt="Mobile Application Development" className="header-image" />
-      </header>
+  const navigate = useNavigate();
 
-      {/* Content Section */}
-      <section className="content-section">
-        <h2 className="section-title">Mobile Application Development Services: Android & iOS</h2>
-        <p className="section-description">
-          Zethon Tech Pvt Ltd offers expert Android and iOS app development services, ensuring seamless, user-centric experiences across both platforms. Whether you need custom Android apps or innovative iOS solutions, our skilled developers are here to bring your ideas to life with unmatched quality and performance.
+  const cardsData = [
+    {
+      title: 'Android App Development',
+      description: (
+        <p>
+          Android, developed by Google, powers a wide variety of smartphones. TechXplorers Pvt Ltd provides expert Android app development services, creating high-quality, custom apps tailored to your business needs.
         </p>
-
-        {/* Android App Development */}
-        <h3 className="subheading">Android App Development</h3>
-        <p className="subheading-description">
-          Android, developed by Google, powers a wide variety of smartphones. Zethon Tech Pvt Ltd provides expert Android app development services, creating high-quality, custom apps tailored to your business needs.
-        </p>
-
-        {/* Android App Development Services */}
-        <h3 className="subheading">Android App Development Services:</h3>
-        <ul className="services-list">
+      ),
+    },
+    {
+      title: 'Android App Development Services',
+      description: (
+        <ul className="flip-card-list">
           <li>Bluetooth Low Energy (BLE) Powered Devices</li>
           <li>Music and Video Apps</li>
           <li>Health and Fitness Apps</li>
@@ -34,16 +31,20 @@ const MobileAppDev = () => {
           <li>Social Media Apps</li>
           <li>Custom Android App Development</li>
         </ul>
-
-        {/* iOS App Development */}
-        <h3 className="subheading">iOS App Development</h3>
-        <p className="subheading-description">
-          Apple's iOS platform is known for its seamless hardware-software integration, setting high benchmarks for mobile operating systems. Zethon Tech Pvt Ltd specializes in custom iPhone app development for iOS 15/iOS 16, delivering end-to-end solutions.
+      ),
+    },
+    {
+      title: 'iOS App Development',
+      description: (
+        <p>
+          Apple's iOS platform is known for its seamless hardware-software integration, setting high benchmarks for mobile operating systems. TechXplorers Pvt Ltd specializes in custom iPhone app development for iOS 15/iOS 16, delivering end-to-end solutions.
         </p>
-
-        {/* iOS App Development Services */}
-        <h3 className="subheading">iOS App Development Services:</h3>
-        <ul className="services-list">
+      ),
+    },
+    {
+      title: 'iOS App Development Services',
+      description: (
+        <ul className="flip-card-list">
           <li>Bluetooth Low Energy (BLE) Powered Devices</li>
           <li>Music and Video Apps</li>
           <li>Health and Fitness Apps</li>
@@ -53,14 +54,59 @@ const MobileAppDev = () => {
           <li>Social Media Apps</li>
           <li>Custom iOS App Development</li>
         </ul>
+      ),
+    },
+    {
+      title: 'Why Choose TechXplorers Pvt Ltd',
+      description: (
+        <ul className="flip-card-list">
+          <li>Expert Developers: Talented professionals skilled in both Android and iOS app development.</li>
+          <li>User-Centric Design: Focus on seamless user experience and beautiful, functional designs.</li>
+          <li>Quality Assurance: Rigorous testing to ensure flawless app performance.</li>
+          <li>Confidentiality: Full protection of your business idea with NDAs.</li>
+        </ul>
+      ),
+    },
+  ];
 
-        {/* Contact Section */}
+  return (
+    <div className="mobile-app-dev-container">
+      <CustomNavbar />
+      {/* Header Section */}
+      <header className="header-section">
+        <div className="image-with-text-overlay">
+          <img src={img1} alt="Mobile Application Development" className="header-image" />
+          <div className="overlay-text">Mobile App Development</div>
+        </div>
+      </header>
+
+      {/* Flip Cards Section */}
+      <section className="cards-section">
+        <h2 className="section-title">Explore Our Services</h2>
+        <div className="cards-wrapper">
+          {cardsData.map((card, index) => (
+            <div key={index} className="flip-card">
+              <div className="flip-card-inner">
+                <div className="flip-card-front">
+                  <h3>{card.title}</h3>
+                </div>
+                <div className="flip-card-back">
+                  {card.description}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Contact Section */}
+      <section className="contact-section">
         <div className="contact-container">
           <h2 className="headline">Want to know more or work with us?</h2>
-          <a href="https://wa.me/919052990765"  target="_blank" rel="noopener noreferrer" className="contact-button btn btn-primary">
+          <button onClick={() => navigate('/contactus')} className="contact-button btn-lg btn-primary">
             Contact Us
-          </a>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;------or------ &nbsp; &nbsp; &nbsp;
-		  <a className="contact-button btn btn-primary">Apply Now</a>
+          </button>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;------or------ &nbsp; &nbsp; &nbsp;
+          <a className="contact-button btn-lg btn-primary">Apply Now</a>
         </div>
       </section>
     </div>
