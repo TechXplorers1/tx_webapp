@@ -42,7 +42,7 @@ const LandingPage = () => {
   // UseInView with triggerOnce: false for re-animation on re-entry
   const [carouselRef, carouselInView] = useInView({ triggerOnce: false, threshold: 0.1 });
   const [servicesRef, servicesInView] = useInView({ triggerOnce: false, threshold: 0.1 });
-  const [worldRef, worldInView] = useInView({ triggerOnce: false, threshold: 0.1 });
+  const [worldRef, worldInView] = useInView({ triggerOnce: true, threshold: 0.1 });
 
   return (
     <div className="landing-page">

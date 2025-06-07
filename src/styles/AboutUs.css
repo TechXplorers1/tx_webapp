@@ -57,6 +57,53 @@ footer a:hover {
   margin-left: 15px;
 }
 
+.video-marquee-wrapper {
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+.video-item {
+  flex: 0 0 auto;
+}
+
+@keyframes scroll-left {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.video-marquee-wrapper {
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.video-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: scroll-left 15s linear infinite;
+  gap: 2rem;
+}
+
+.video-marquee-wrapper:hover .video-marquee-track {
+  animation-play-state: paused;
+}
+
+.video-item {
+  flex: 0 0 auto;
+}
+
+@keyframes scroll-left {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
 
 
 
