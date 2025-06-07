@@ -82,3 +82,57 @@
     width: 100%;
   }
 }
+
+
+
+/* Profile Icon Wrapper */
+.profile-icon-wrapper {
+  padding: 5px;
+  transition: background-color 0.2s ease;
+}
+
+.profile-icon-wrapper:hover {
+  background-color: #f1f1f1;
+  border-radius: 50%;
+}
+
+/* Profile Dropdown */
+.profile-dropdown-menu {
+  position: absolute;
+  top: 45px;
+  right: 0;
+  background-color: white;
+  min-width: 160px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  border-radius: 5px;
+  z-index: 1000;
+  overflow: hidden;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.profile-dropdown-menu ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.profile-dropdown-menu li {
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.profile-dropdown-menu li:hover {
+  background-color: #f1f1f1;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

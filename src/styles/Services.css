@@ -1,3 +1,5 @@
+
+
 .services-popup-content {
   display: flex;
   justify-content: space-between;
@@ -58,9 +60,10 @@
 
 .services-dropdown-container {
   position: fixed; /* Changed from absolute to fixed */
-  top: 80px; /* Height of your navbar */
+  top: 72px; /* Height of your navbar */
   left: 0;
   width: 100vw;
+  height:40vw;
   background: rgb(231, 228, 228);
   padding: 30px 0;
   box-sizing: border-box;
@@ -98,14 +101,14 @@
   text-align: center;
   font-weight: bold;
   color: white;
-  background-color: rgba(0, 0, 0, 0.3);
+  background-color: rgba(57, 101, 158, 0.3);
   transition: all 0.3s ease;
 }
 
 .service-card1:hover {
   transform: scale(1.05);
-  background-color: rgba(0, 240, 255, 0.1);
-  box-shadow: 0 0 15px rgba(221, 255, 0, 0.3);
+  background-color: rgba(17, 31, 50, 0.3);
+  box-shadow: 0 0 15px rgba(13, 35, 55, 0.3);
 }
 
 .service-card1 img {

@@ -19,7 +19,6 @@ const ServicesDropdown = () => {
   return (
     <div className="services-popup-content">
       <div className="services-left">
-        <h3>DIGITAL MARKETING</h3>
         <div className="services-dropdown">
           {services.map((service, index) => (
             <Link to={service.path} key={index} className="service-card-link">
@@ -35,10 +34,10 @@ const ServicesDropdown = () => {
       <div className="services-right">
         <h3>OTHER NEEDS</h3>
         <p>CONNECT WITH TECHXPLORERS</p>
-        <form className="services-form">
-          <input type="text" placeholder="Subject" className="services-input" />
-          <input type="email" placeholder="Mail ID" className="services-input" />
-          <button type="submit" className="services-submit-btn">Submit</button>
+        <form className="services-form" onClick={(e) => e.stopPropagation()}>
+          <input type="text" placeholder="Message" className="services-input" onClick={(e) => e.stopPropagation()} />
+          <input type="email" placeholder="Mail ID" className="services-input" onClick={(e) => e.stopPropagation()} />
+          <button type="submit" className="services-submit-btn" onClick={(e) => e.stopPropagation()}>Submit</button>
         </form>
       </div>
     </div>

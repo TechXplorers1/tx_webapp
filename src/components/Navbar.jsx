@@ -3,17 +3,22 @@ import '../styles/Navbar.css';
 import { Navbar, Nav, Container, Button } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import ServicesDropdown from '../components/Services';
+import profileIcon from '../assets/Profile.png'; // Add this asset or use dynamic image
+import Image from 'react-bootstrap/Image';
 
 
 
 const CustomNavbar = ({ scrolled, aboutRef }) => {
     const [showServicesPopup, setShowServicesPopup] = useState(false);
+      const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+
 
           const navigate = useNavigate();
 
 
     const servicesTimeoutRef = useRef(null);
     const servicesRef = useRef(null);
+    const profileRef = useRef(null);
         
 
      // --- Services handlers ---
@@ -42,13 +47,26 @@ const CustomNavbar = ({ scrolled, aboutRef }) => {
 };
 
 const handleClickOutside = (event) => {
+   const dropdownElement = servicesRef.current;
+    const profileDropdown = profileRef.current;
   if (
     servicesRef.current &&
     !servicesRef.current.contains(event.target) &&
+    (profileRef.current && !profileRef.current.contains(event.target)) &&
     !event.target.closest('.services-popup-wrapper')
   ) {
     setShowServicesPopup(false);
+          setShowProfileDropdown(false);
+
   }
+   // Hide profile dropdown
+    if (
+      profileDropdown &&
+      !profileDropdown.contains(event.target) &&
+      !event.target.closest('.profile-icon-wrapper')
+    ) {
+      setShowProfileDropdown(false);
+    }
 };
 
   useEffect(() => {
@@ -85,8 +103,8 @@ const handleClickOutside = (event) => {
             <Nav.Link
               className="nav-link services-popup-wrapper nav-link-custom"
               onClick={handleServicesClick}
-                // onMouseEnter={handleServicesEnter}
-              // onMouseLeave={handleServicesLeave}
+                onMouseEnter={handleServicesEnter}
+              onMouseLeave={handleServicesLeave}
             >
               <span>SERVICES</span>
               {showServicesPopup && (
@@ -106,10 +124,33 @@ const handleClickOutside = (event) => {
             <Nav.Link className="nav-link-custom" onClick={() => navigate('/contactus')}>CONTACT</Nav.Link>
           </Nav>
         
-          {/* Login Button (Right-Aligned) */}
+          {/* Right-aligned items: Login + Profile */}
+          <div className="d-flex align-items-center gap-3">
           <Button variant="primary" size="sm" className="ms-lg-3" onClick={() => navigate('/login')}>
             LOGIN
           </Button>
+         {/* Profile Icon */}
+            <div className="position-relative" ref={profileRef}>
+              <Image
+                src={profileIcon} // Replace with dynamic user image if available
+                alt="Profile"
+                roundedCircle
+                width={50}
+                height={40}
+                className="pointer profile-icon"
+                onClick={() => setShowProfileDropdown((prev) => !prev)}
+              />
+             {/* Dropdown Menu */}
+              {showProfileDropdown && (
+                <div className="profile-dropdown-menu">
+                  <ul>
+                    <li onClick={() => navigate('/clientdashboard')}>Your Dashboard</li>
+                    <li onClick={() => navigate('/logout')}>Logout</li>
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
         </Navbar.Collapse>
       </Container>
     </Navbar>
