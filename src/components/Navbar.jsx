@@ -9,17 +9,17 @@ import Image from 'react-bootstrap/Image';
 
 
 const CustomNavbar = ({ scrolled, aboutRef }) => {
-    const [showServicesPopup, setShowServicesPopup] = useState(false);
-      const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [showServicesPopup, setShowServicesPopup] = useState(false);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
 
 
   const navigate = useNavigate();
 
 
-    const servicesTimeoutRef = useRef(null);
-    const servicesRef = useRef(null);
-    const profileRef = useRef(null);
-        
+  const servicesTimeoutRef = useRef(null);
+  const servicesRef = useRef(null);
+  const profileRef = useRef(null);
+
 
   // --- Services handlers ---
   const handleServicesEnter = () => {
@@ -46,20 +46,20 @@ const CustomNavbar = ({ scrolled, aboutRef }) => {
     setShowServicesPopup(prev => !prev);
   };
 
-const handleClickOutside = (event) => {
-   const dropdownElement = servicesRef.current;
+  const handleClickOutside = (event) => {
+    const dropdownElement = servicesRef.current;
     const profileDropdown = profileRef.current;
-  if (
-    servicesRef.current &&
-    !servicesRef.current.contains(event.target) &&
-    (profileRef.current && !profileRef.current.contains(event.target)) &&
-    !event.target.closest('.services-popup-wrapper')
-  ) {
-    setShowServicesPopup(false);
-          setShowProfileDropdown(false);
+    if (
+      servicesRef.current &&
+      !servicesRef.current.contains(event.target) &&
+      (profileRef.current && !profileRef.current.contains(event.target)) &&
+      !event.target.closest('.services-popup-wrapper')
+    ) {
+      setShowServicesPopup(false);
+      setShowProfileDropdown(false);
 
-  }
-   // Hide profile dropdown
+    }
+    // Hide profile dropdown
     if (
       profileDropdown &&
       !profileDropdown.contains(event.target) &&
@@ -67,7 +67,7 @@ const handleClickOutside = (event) => {
     ) {
       setShowProfileDropdown(false);
     }
-};
+  };
 
   useEffect(() => {
     return () => {
@@ -103,7 +103,7 @@ const handleClickOutside = (event) => {
             <Nav.Link
               className="nav-link services-popup-wrapper nav-link-custom"
               onClick={handleServicesClick}
-                onMouseEnter={handleServicesEnter}
+              onMouseEnter={handleServicesEnter}
               onMouseLeave={handleServicesLeave}
             >
               <span>SERVICES</span>
@@ -123,34 +123,14 @@ const handleClickOutside = (event) => {
             <Nav.Link className="nav-link-custom" onClick={() => navigate('/aboutus')}>ABOUT US</Nav.Link>
             <Nav.Link className="nav-link-custom" onClick={() => navigate('/contactus')}>CONTACT</Nav.Link>
           </Nav>
-        
-          {/* Right-aligned items: Login + Profile */}
+
+          {/* Right-aligned items: Login only */}
           <div className="d-flex align-items-center gap-3">
-          <Button variant="primary" size="sm" className="ms-lg-3" onClick={() => navigate('/login')}>
-            LOGIN
-          </Button>
-         {/* Profile Icon */}
-            <div className="position-relative" ref={profileRef}>
-              <Image
-                src={profileIcon} // Replace with dynamic user image if available
-                alt="Profile"
-                roundedCircle
-                width={50}
-                height={40}
-                className="pointer profile-icon"
-                onClick={() => setShowProfileDropdown((prev) => !prev)}
-              />
-             {/* Dropdown Menu */}
-              {showProfileDropdown && (
-                <div className="profile-dropdown-menu">
-                  <ul>
-                    <li onClick={() => navigate('/clientdashboard')}>Your Dashboard</li>
-                    <li onClick={() => navigate('/logout')}>Logout</li>
-                  </ul>
-                </div>
-              )}
-            </div>
+            <Button variant="primary" size="sm" className="ms-lg-3" onClick={() => navigate('/login')}>
+              LOGIN
+            </Button>
           </div>
+
         </Navbar.Collapse>
       </Container>
     </Navbar>

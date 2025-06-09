@@ -14,6 +14,7 @@ import ITTalentSupply from './components/services/ItTalentSupply';
 import DigitalMarketing from './components/services/DigitalMarketing';
 import JobSupport from './components/services/JobSupport';
 import JobSupportForm from './components/services/JobSupportContactForm';
+import UserDashboard from './components/Dashboard/UserDashboard';
 
 
 
@@ -30,6 +31,7 @@ const App = () => {
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/careers" element={<Careers />} />
         <Route path="/clientdashboard" element={<ClientDashboard />} />
+        <Route path="/userdashboard" element={<UserDashboard />} />
            {/* Services-Path */}
         <Route path="/services/mobile-app-development" element={<MobileAppDev />} />
         <Route path="/services/web-app-development" element={<WebAppDev />} />

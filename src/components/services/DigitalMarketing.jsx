@@ -1,26 +1,61 @@
-import React from 'react';
+import React, { useState } from 'react';
 import img1 from '../../assets/DigiMark.png';
-import '../../styles/Services/DigitalMarketing.css'; // Reusing MobileAppDev styles
+import '../../styles/Services/DigitalMarketing.css';
 import { useNavigate } from 'react-router-dom';
 import CustomNavbar from '../Navbar';
-
+import { Modal, Button, Form } from 'react-bootstrap';
 
 const DigitalMarketing = () => {
-    const navigate = useNavigate();
-  
+  const navigate = useNavigate();
+
+  const [showModal, setShowModal] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    mobile: '',
+    email: '',
+    service: '',
+    userType: '',
+  });
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
+
+  const handleServiceSelect = (service) => {
+    setFormData({ ...formData, service });
+  };
+
+  const handleUserTypeSelect = (userType) => {
+    setFormData({ ...formData, userType });
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    console.log('Form submitted:', formData);
+    alert('Form submitted successfully!');
+    setShowModal(false);
+    setFormData({
+      firstName: '',
+      lastName: '',
+      mobile: '',
+      email: '',
+      service: '',
+      userType: '',
+    });
+  };
+
   const cardsData = [
     {
       title: 'Our Digital Marketing Services',
       description: (
         <ul className="flip-card-list">
-          <li>Search Engine Optimization (SEO) – Improve your website's ranking on search engines to drive organic traffic.</li>
-          {/* <li>Pay-Per-Click Advertising (PPC) – Maximize ROI with targeted ad campaigns on Google, Bing, and social media platforms.</li> */}
-          <li>Social Media Marketing (SMM) – Build brand awareness and customer engagement through strategic social media campaigns.</li>
-          <li>Content Marketing – Develop high-quality content to attract, inform, and convert potential customers.</li>
-          {/* <li>Email Marketing – Drive customer retention and engagement with personalized email campaigns.</li> */}
-          {/* <li>Conversion Rate Optimization (CRO) – Optimize your website to improve user experience and boost conversions.</li> */}
-          <li>Influencer & Affiliate Marketing – Leverage industry influencers and partners to expand your reach and credibility.</li>
-          <li>Online Reputation Management (ORM) – Monitor and manage your brand's online presence to maintain a positive reputation.</li>
+          <li>Search Engine Optimization (SEO)</li>
+          <li>Social Media Marketing (SMM)</li>
+          <li>Content Marketing</li>
+          <li>Influencer & Affiliate Marketing</li>
+          <li>Online Reputation Management (ORM)</li>
         </ul>
       ),
     },
@@ -43,11 +78,11 @@ const DigitalMarketing = () => {
       title: 'Our Digital Marketing Process',
       description: (
         <ul className="flip-card-list">
-          <li>Market Research & Analysis – Understanding your industry, competitors, and target audience.</li>
-          <li>Strategy Development – Crafting a customized digital marketing plan based on business goals.</li>
-          <li>Implementation & Execution – Launching marketing campaigns using industry best practices.</li>
-          <li>Monitoring & Optimization – Analyzing performance and making data-backed improvements.</li>
-          <li>Reporting & Insights – Providing detailed reports and insights for continuous growth.</li>
+          <li>Market Research & Analysis</li>
+          <li>Strategy Development</li>
+          <li>Implementation & Execution</li>
+          <li>Monitoring & Optimization</li>
+          <li>Reporting & Insights</li>
         </ul>
       ),
     },
@@ -55,18 +90,12 @@ const DigitalMarketing = () => {
       title: 'Why Choose TechXplorers for Digital Marketing?',
       description: (
         <ul className="flip-card-list">
-          <li>Expertise & Experience – A team of seasoned digital marketers with proven success in multiple industries.</li>
-          <li>Custom Strategies – Tailored marketing solutions to align with your business goals and target audience.</li>
-          <li>Data-Driven Approach – Leveraging analytics and insights to maximize campaign effectiveness.</li>
-          <li>Multi-Channel Marketing – Integrated strategies across search, social media, content, and more.</li>
-          <li>Transparent Reporting – Regular performance reports to track progress and optimize results.</li>
+          <li>Expertise & Experience</li>
+          <li>Custom Strategies</li>
+          <li>Data-Driven Approach</li>
+          <li>Multi-Channel Marketing</li>
+          <li>Transparent Reporting</li>
         </ul>
-      ),
-    },
-    {
-      title: 'Industries We Serve',
-      description: (
-        <p>We provide customized digital marketing strategies for businesses across multiple industries:</p>
       ),
     }
   ];
@@ -74,6 +103,7 @@ const DigitalMarketing = () => {
   return (
     <div className="digital-marketing-container">
       <CustomNavbar />
+      
       {/* Header Section */}
       <header className="header-section">
         <div className="image-with-text-overlay">
@@ -82,7 +112,7 @@ const DigitalMarketing = () => {
         </div>
       </header>
 
-      {/* Flip Cards Section */}
+      {/* Flip Cards */}
       <section className="cards-section">
         <h2 className="section-title">Explore Our Services</h2>
         <div className="cards-wrapper">
@@ -92,26 +122,86 @@ const DigitalMarketing = () => {
                 <div className="flip-card-front">
                   <h3>{card.title}</h3>
                 </div>
-                <div className="flip-card-back">
-                  {card.description}
-                </div>
+                <div className="flip-card-back">{card.description}</div>
               </div>
             </div>
           ))}
         </div>
-      
 
-    
-
-        {/* Contact Section */}
+        {/* Contact Buttons */}
         <div className="contact-container">
           <h2 className="headline">Want to know more or work with us?</h2>
           <button onClick={() => navigate('/contactus')} className="btn-lg btn-primary contact-button">
             Contact Us
-          </button>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;------or------ &nbsp; &nbsp; &nbsp;
-          <button className="btn-lg btn-primary contact-button">Apply Now</button>
+          </button>
+          &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;------or------ &nbsp; &nbsp; &nbsp;
+          <button onClick={() => setShowModal(true)} className="btn-lg btn-primary contact-button">
+            Apply Now
+          </button>
         </div>
       </section>
+
+      {/* Modal Form */}
+      <Modal show={showModal} onHide={() => setShowModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Digital Marketing</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form onSubmit={handleSubmit}>
+            <div className="mb-3">
+              <Form.Label className="fw-bold">First Name <span className="text-danger">*</span></Form.Label>
+              <Form.Control type="text" name="firstName" value={formData.firstName} onChange={handleChange} required />
+            </div>
+
+            <div className="mb-3">
+              <Form.Label className="fw-bold">Last Name <span className="text-danger">*</span></Form.Label>
+              <Form.Control type="text" name="lastName" value={formData.lastName} onChange={handleChange} required />
+            </div>
+
+            <div className="mb-3">
+              <Form.Label className="fw-bold">Mobile <span className="text-danger">*</span></Form.Label>
+              <Form.Control name="mobile" value={formData.mobile} onChange={handleChange} required />
+            </div>
+
+            <div className="mb-3">
+              <Form.Label className="fw-bold">Email <span className="text-danger">*</span></Form.Label>
+              <Form.Control type="email" name="email" value={formData.email} onChange={handleChange} required />
+            </div>
+
+            <div className="mb-3">
+              <label><strong>What service do you want?</strong></label>
+              <div className="d-flex flex-wrap gap-2 mt-2">
+                {[1, 2, 3, 4, 5, 6].map(num => (
+                  <Button
+                    key={num}
+                    variant={formData.service === `Service ${num}` ? 'primary' : 'outline-primary'}
+                    onClick={() => handleServiceSelect(`Service ${num}`)}
+                  >
+                    Service {num}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label><strong>Who are you?</strong></label>
+              <div className="d-flex flex-wrap gap-2 mt-2">
+                {['Individual', 'Business Owner', 'Startup Founder', 'Agency', 'Student', 'Other'].map(type => (
+                  <Button
+                    key={type}
+                    variant={formData.userType === type ? 'primary' : 'outline-primary'}
+                    onClick={() => handleUserTypeSelect(type)}
+                  >
+                    {type}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <Button type="submit" className="w-100 btn btn-primary">Submit</Button>
+          </Form>
+        </Modal.Body>
+      </Modal>
     </div>
   );
 };
