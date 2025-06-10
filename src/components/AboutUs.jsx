@@ -93,7 +93,7 @@ function AboutUs() {
       
 
       {/* Footer */}
-      <footer className="bg-white py-5">
+      <footer className="py-5">
         <Container>
           <Form className="d-flex justify-content-center align-items-center mb-5">
             <Form.Control
@@ -106,10 +106,10 @@ function AboutUs() {
           </Form>
 
           <div className="d-flex justify-content-center align-items-center">
-            <p className="mb-0 text-dark">Techxplorers ©2025</p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            <p className="mb-0">Techxplorers ©2025</p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
             <div>
-              <a href="#" className="text-dark me-2 text-decoration-none">Privacy & Legal</a>
-              <a href="#" className="text-dark text-decoration-none">Contact</a>
+              <a href="#" className=" me-2 text-decoration-none">Privacy & Legal</a>
+              <a href="#" className=" text-decoration-none">Contact</a>
             </div>
           </div>
         </Container>
