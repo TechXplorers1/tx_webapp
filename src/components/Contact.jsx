@@ -70,7 +70,7 @@ const ContactPage = () => {
                     {/* Form Container */}
                     <Col md={6}>
                         <div
-                            className="p-4"
+                            className="p-4 form"
                             style={{
                                 background: '#fff',
                                 border: '2px solid #e0e0e0',

@@ -5,6 +5,8 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import CustomNavbar from './Navbar';
 import '../styles/LandingPage.css';
+import { useTheme } from '../context/ThemeContext';
+
 
 // Import images
 import Image1 from '../assets/MobileDev.png';
@@ -44,10 +46,12 @@ const LandingPage = () => {
   const [servicesRef, servicesInView] = useInView({ triggerOnce: false, threshold: 0.1 });
   const [worldRef, worldInView] = useInView({ triggerOnce: true, threshold: 0.1 });
 
-  return (
-    <div className="landing-page">
-      <CustomNavbar />
+    const { isDarkMode } = useTheme();
 
+
+  return (
+    <div className={`landing-page ${isDarkMode ? 'dark-mode' : ''}`}>
+      <CustomNavbar />
       {/* Hero Carousel */}
       <div ref={carouselRef} className={`animated-section ${carouselInView ? 'zoom-in-content' : ''}`}>
         <Container fluid className="carousel-container my-5 px-0">

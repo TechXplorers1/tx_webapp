@@ -11,6 +11,11 @@ body {
   text-align: center;
 } */
 
+.dark-mode {
+  background-color: #2a2929 !important;
+  color: #f1f1f1 !important;
+}
+
 input::placeholder,
 textarea::placeholder,
 select {
@@ -28,7 +33,16 @@ button[type="submit"]:hover {
   background-color: #001570;
 }
 
-
+.dark-mode .nav-link-custom,
+.dark-mode .navbar-brand,
+.dark-mode h2,
+.dark-mode h3,
+.dark-mode p,
+.dark-mode li,
+.dark-mode label,
+.dark-mode span {
+  color: #f1f1f1 !important;
+}
 
 .contact-us-page {
   min-height: 100vh;

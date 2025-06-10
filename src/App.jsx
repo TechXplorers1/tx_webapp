@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import 'bootstrap-icons/font/bootstrap-icons.css';
+import { ThemeProvider } from './context/ThemeContext';
 
 import LandingPage from './components/LandingPage';
 import AboutUs from './components/AboutUs';
@@ -22,6 +23,7 @@ import JobSupportForm from './components/services/JobSupportContactForm';
 const App = () => {
   return (
     <div>
+      <ThemeProvider>
     <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/aboutus" element={<AboutUs />} />
@@ -41,6 +43,7 @@ const App = () => {
 
 
     </Routes>
+    </ThemeProvider>
     </div>
   );
 };

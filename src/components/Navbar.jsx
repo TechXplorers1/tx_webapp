@@ -5,6 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import ServicesDropdown from '../components/Services';
 import profileIcon from '../assets/Profile.png'; // Add this asset or use dynamic image
 import Image from 'react-bootstrap/Image';
+import { useTheme } from '../context/ThemeContext'; // Import theme hook
+
 
 
 
@@ -14,6 +16,7 @@ const CustomNavbar = ({ scrolled, aboutRef }) => {
 
 
   const navigate = useNavigate();
+  const { isDarkMode, toggleTheme } = useTheme(); // Get theme state
 
 
     const servicesTimeoutRef = useRef(null);
@@ -81,7 +84,7 @@ const handleClickOutside = (event) => {
   }, []);
 
   return (
-    <Navbar bg="light" expand="lg" className="fixed-top shadow-sm">
+    <Navbar bg="light" expand="lg" className={`fixed-top shadow-sm ${isDarkMode ? 'dark-navbar' : ''}`}>
       <Container fluid> {/* Changed to Container fluid for full width */}
         {/* Brand Logo */}
         <Navbar.Brand href="#home" className="fw-bold navbar-brand">
@@ -126,6 +129,20 @@ const handleClickOutside = (event) => {
         
           {/* Right-aligned items: Login + Profile */}
           <div className="d-flex align-items-center gap-3">
+            {/* Dark Mode Toggle */}
+            <div className="form-check form-switch">
+              <input
+                className="form-check-input"
+                type="checkbox"
+                role="switch"
+                id="darkModeToggle"
+                checked={isDarkMode}
+                onChange={toggleTheme}
+              />
+              <label className="form-check-label" htmlFor="darkModeToggle">
+                {isDarkMode ? '🌙' : '☀️'}
+              </label>
+            </div>
           <Button variant="primary" size="sm" className="ms-lg-3" onClick={() => navigate('/login')}>
             LOGIN
           </Button>
