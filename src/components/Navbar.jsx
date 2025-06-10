@@ -11,18 +11,18 @@ import { useTheme } from '../context/ThemeContext'; // Import theme hook
 
 
 const CustomNavbar = ({ scrolled, aboutRef }) => {
-    const [showServicesPopup, setShowServicesPopup] = useState(false);
-      const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [showServicesPopup, setShowServicesPopup] = useState(false);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
 
 
   const navigate = useNavigate();
   const { isDarkMode, toggleTheme } = useTheme(); // Get theme state
 
 
-    const servicesTimeoutRef = useRef(null);
-    const servicesRef = useRef(null);
-    const profileRef = useRef(null);
-        
+  const servicesTimeoutRef = useRef(null);
+  const servicesRef = useRef(null);
+  const profileRef = useRef(null);
+
 
   // --- Services handlers ---
   const handleServicesEnter = () => {
@@ -49,20 +49,20 @@ const CustomNavbar = ({ scrolled, aboutRef }) => {
     setShowServicesPopup(prev => !prev);
   };
 
-const handleClickOutside = (event) => {
-   const dropdownElement = servicesRef.current;
+  const handleClickOutside = (event) => {
+    const dropdownElement = servicesRef.current;
     const profileDropdown = profileRef.current;
-  if (
-    servicesRef.current &&
-    !servicesRef.current.contains(event.target) &&
-    (profileRef.current && !profileRef.current.contains(event.target)) &&
-    !event.target.closest('.services-popup-wrapper')
-  ) {
-    setShowServicesPopup(false);
-          setShowProfileDropdown(false);
+    if (
+      servicesRef.current &&
+      !servicesRef.current.contains(event.target) &&
+      (profileRef.current && !profileRef.current.contains(event.target)) &&
+      !event.target.closest('.services-popup-wrapper')
+    ) {
+      setShowServicesPopup(false);
+      setShowProfileDropdown(false);
 
-  }
-   // Hide profile dropdown
+    }
+    // Hide profile dropdown
     if (
       profileDropdown &&
       !profileDropdown.contains(event.target) &&
@@ -70,7 +70,7 @@ const handleClickOutside = (event) => {
     ) {
       setShowProfileDropdown(false);
     }
-};
+  };
 
   useEffect(() => {
     return () => {
@@ -106,7 +106,7 @@ const handleClickOutside = (event) => {
             <Nav.Link
               className="nav-link services-popup-wrapper nav-link-custom"
               onClick={handleServicesClick}
-                onMouseEnter={handleServicesEnter}
+              onMouseEnter={handleServicesEnter}
               onMouseLeave={handleServicesLeave}
             >
               <span>SERVICES</span>
@@ -126,9 +126,10 @@ const handleClickOutside = (event) => {
             <Nav.Link className="nav-link-custom" onClick={() => navigate('/aboutus')}>ABOUT US</Nav.Link>
             <Nav.Link className="nav-link-custom" onClick={() => navigate('/contactus')}>CONTACT</Nav.Link>
           </Nav>
-        
-          {/* Right-aligned items: Login + Profile */}
+
+          {/* Right-aligned items: Login only */}
           <div className="d-flex align-items-center gap-3">
+<<<<<<< HEAD
             {/* Dark Mode Toggle */}
             <div className="form-check form-switch">
               <input
@@ -167,7 +168,13 @@ const handleClickOutside = (event) => {
                 </div>
               )}
             </div>
+=======
+            <Button variant="primary" size="sm" className="ms-lg-3" onClick={() => navigate('/login')}>
+              LOGIN
+            </Button>
+>>>>>>> 546dff1d938720a8b6a3a81a95a3c30c3ec49be1
           </div>
+
         </Navbar.Collapse>
       </Container>
     </Navbar>

@@ -1,12 +1,50 @@
-import React from 'react';
+import React, { useState } from 'react';
 import img1 from '../../assets/ItTalentSupply.png';
-import '../../styles/Services/MobileAppDev.css'; // Reusing MobileAppDev styles
+import '../../styles/Services/MobileAppDev.css'; // Reusing styles
 import { useNavigate } from 'react-router-dom';
 import CustomNavbar from '../Navbar';
+import { Modal, Button, Form } from 'react-bootstrap';
 
 const ITTalentSupply = () => {
-      const navigate = useNavigate();
-  
+  const navigate = useNavigate();
+  const [showModal, setShowModal] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    mobile: '',
+    email: '',
+    service: '',
+    userType: '',
+  });
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
+
+  const handleServiceSelect = (service) => {
+    setFormData({ ...formData, service });
+  };
+
+  const handleUserTypeSelect = (userType) => {
+    setFormData({ ...formData, userType });
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    console.log('Form submitted:', formData);
+    alert('Form submitted successfully!');
+    setShowModal(false);
+    setFormData({
+      firstName: '',
+      lastName: '',
+      mobile: '',
+      email: '',
+      service: '',
+      userType: '',
+    });
+  };
+
   const cardsData = [
     {
       title: 'IT Talent Supply – TechXplorers Private Limited',
@@ -41,7 +79,6 @@ const ITTalentSupply = () => {
         </ul>
       ),
     },
-
     {
       title: 'Our Talent Supply Process',
       description: (
@@ -59,6 +96,7 @@ const ITTalentSupply = () => {
   return (
     <div className="ittalent-supply-container">
       <CustomNavbar />
+      
       {/* Header Section */}
       <header className="header-section">
         <div className="image-with-text-overlay">
@@ -84,20 +122,81 @@ const ITTalentSupply = () => {
             </div>
           ))}
         </div>
-     
 
-
-
-      {/* Contact Section */}
-     
+        {/* Contact Section */}
         <div className="contact-container">
           <h2 className="headline">Want to know more or work with us?</h2>
           <button onClick={() => navigate('/contactus')} className="contact-button btn-lg btn-primary">
             Contact Us
-          </button>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;------or------ &nbsp; &nbsp; &nbsp;
-          <button className="contact-button btn-lg btn-primary">Apply Now</button>
+          </button>
+          &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;------or------ &nbsp; &nbsp; &nbsp;
+          <button onClick={() => setShowModal(true)} className="contact-button btn-lg btn-primary">
+            Apply Now
+          </button>
         </div>
       </section>
+
+      {/* Modal Form */}
+      <Modal show={showModal} onHide={() => setShowModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>IT Talent Supply</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form onSubmit={handleSubmit}>
+            <Form.Group className="mb-3">
+              <Form.Label className="fw-bold">First Name <span className="text-danger">*</span></Form.Label>
+              <Form.Control type="text" name="firstName" value={formData.firstName} onChange={handleChange} required />
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label className="fw-bold">Last Name <span className="text-danger">*</span></Form.Label>
+              <Form.Control type="text" name="lastName" value={formData.lastName} onChange={handleChange} required />
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label className="fw-bold">Mobile <span className="text-danger">*</span></Form.Label>
+              <Form.Control name="mobile" value={formData.mobile} onChange={handleChange} required />
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label className="fw-bold">Email <span className="text-danger">*</span></Form.Label>
+              <Form.Control type="email" name="email" value={formData.email} onChange={handleChange} required />
+            </Form.Group>
+
+            <div className="mb-3">
+              <Form.Label className="fw-bold">What service do you want?</Form.Label>
+              <div className="d-flex flex-wrap gap-2 mt-2">
+                {[1, 2, 3, 4, 5, 6].map(num => (
+                  <Button
+                    key={num}
+                    variant={formData.service === `Service ${num}` ? 'primary' : 'outline-primary'}
+                    onClick={() => handleServiceSelect(`Service ${num}`)}
+                  >
+                    Service {num}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <Form.Label className="fw-bold">Who are you?</Form.Label>
+              <div className="d-flex flex-wrap gap-2 mt-2">
+                {['Individual', 'Business Owner', 'Startup Founder', 'Agency', 'Student', 'Other'].map(type => (
+                  <Button
+                    key={type}
+                    variant={formData.userType === type ? 'primary' : 'outline-primary'}
+                    onClick={() => handleUserTypeSelect(type)}
+                  >
+                    {type}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <Button type="submit" className="w-100 btn btn-primary">Submit</Button>
+          </Form>
+        </Modal.Body>
+      </Modal>
     </div>
   );
 };
