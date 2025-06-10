@@ -129,7 +129,6 @@ const CustomNavbar = ({ scrolled, aboutRef }) => {
 
           {/* Right-aligned items: Login only */}
           <div className="d-flex align-items-center gap-3">
-<<<<<<< HEAD
             {/* Dark Mode Toggle */}
             <div className="form-check form-switch">
               <input
@@ -168,11 +167,6 @@ const CustomNavbar = ({ scrolled, aboutRef }) => {
                 </div>
               )}
             </div>
-=======
-            <Button variant="primary" size="sm" className="ms-lg-3" onClick={() => navigate('/login')}>
-              LOGIN
-            </Button>
->>>>>>> 546dff1d938720a8b6a3a81a95a3c30c3ec49be1
           </div>
 
         </Navbar.Collapse>
