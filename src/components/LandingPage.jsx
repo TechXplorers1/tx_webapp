@@ -82,7 +82,7 @@ const LandingPage = () => {
         id="services"
       >
         <Container fluid className="px-0">
-          <Row className="gx-3">
+          <Row className="gx-3 mx-auto">
             <Col md={4} className="service-card">
               <div className="service-overlay-container position-relative">
                 <img
@@ -150,6 +150,8 @@ const LandingPage = () => {
                 ))}
               </MapContainer>
 
+              <div className={`map-overlay ${isDarkMode ? 'light' : 'light'}`}></div>
+
               <div className="operate-overlay">
                 <h3 className="operate-title">We operate in:</h3>
                 <div className="country-grid">
@@ -165,6 +167,18 @@ const LandingPage = () => {
           </div>
         </Container>
       </section>
+      <footer className="py-4">
+              <Container>
+                <div className="d-flex justify-content-center align-items-center mb-3">
+                  <p className="mb-0">Techxplorers ©️2025</p>
+                  &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+                  <div>
+                    <a href="#" className=" me-2 text-decoration-none">Privacy & Legal</a>
+                    <a href="#" className=" text-decoration-none">Contact</a>
+                  </div>
+                </div>
+              </Container>
+            </footer>
     </div>
   );
 };

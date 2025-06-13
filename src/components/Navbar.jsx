@@ -128,21 +128,20 @@ const CustomNavbar = ({ scrolled, aboutRef }) => {
           </Nav>
 
           {/* Right-aligned items: Login only */}
-          <div className="d-flex align-items-center gap-3">
-            {/* Dark Mode Toggle */}
-            <div className="form-check form-switch">
-              <input
-                className="form-check-input"
-                type="checkbox"
-                role="switch"
-                id="darkModeToggle"
-                checked={isDarkMode}
-                onChange={toggleTheme}
-              />
-              <label className="form-check-label" htmlFor="darkModeToggle">
-                {isDarkMode ? '🌙' : '☀️'}
-              </label>
-            </div>
+<div className="d-flex align-items-center gap-3">
+  {/* Dark Mode Toggle */}
+  <label className="dark-mode-toggle">
+    <input
+      type="checkbox"
+      id="darkModeToggle"
+      checked={isDarkMode}
+      onChange={toggleTheme}
+    />
+    <span className="slider round"></span>
+  </label>
+  <label htmlFor="darkModeToggle" className="dark-mode-label">
+    {isDarkMode ? 'Dark Mode' : 'Light Mode'}
+  </label>
           <Button variant="primary" size="sm" className="ms-lg-3" onClick={() => navigate('/login')}>
             LOGIN
           </Button>

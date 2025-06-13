@@ -31,8 +31,9 @@ const ContactPage = () => {
                 <Row>
                     <Col md={6}>
                         <Card className="mb-4 shadow-sm h-100">
-                            <Card.Body>
+                            <Card.Body >
                                 <iframe
+                                    className='rounded'
                                     title="Google Map 1"
                                     src="https://www.google.com/maps?q=Tech+Xplorers+Private+Limited,+3rd+Cross+Rd,+Anantapur,+India&output=embed"
                                     width="100%"
@@ -49,6 +50,7 @@ const ContactPage = () => {
                         <Card className="mb-4 shadow-sm h-100">
                             <Card.Body>
                                 <iframe
+                                    className='rounded'
                                     title="Google Map 2"
                                     src="https://www.google.com/maps?q=Techxplorers+Pvt+Ltd+new+branch,+Srinagar+Colony,+Anantapur,+India&output=embed"
                                     width="100%"
@@ -65,21 +67,20 @@ const ContactPage = () => {
             </Container>
 
             {/* Form + Mail Section */}
-            <Container className="my-5">
+            <Container className="my-5 contact-card">
                 <Row>
                     {/* Form Container */}
                     <Col md={6}>
                         <div
                             className="p-4 form"
                             style={{
-                                background: '#fff',
                                 border: '2px solid #e0e0e0',
                                 borderRadius: '20px',
-                                boxShadow: '0 4px 10px rgba(0,0,0,0.05)'
+                                boxShadow: '0 4px 10px rgba(0,0,0,0.05)',
                             }}
                         >
-                            <h2 className="fw-bold text-dark mb-2">Talk with TechXplorers</h2>
-                            <p className="text-secondary mb-4">BUILDING THE FUTURE WITH STYLE AND INNOVATION. JOIN US ON OUR JOURNEY!</p>
+                            <h2 className="fw-bold mb-2">Talk with TechXplorers</h2>
+                            <p className=" mb-4">BUILDING THE FUTURE WITH STYLE AND INNOVATION. JOIN US ON OUR JOURNEY!</p>
 
                             <Form onSubmit={handleSubmit}>
                                 <Row className="mb-3">
@@ -87,7 +88,7 @@ const ContactPage = () => {
                                         <Form.Control
                                             type="email"
                                             placeholder="Email*"
-                                            className="p-3 bg-light border-light"
+                                            className="p-3 border-light"
                                             style={{ borderRadius: '20px' }}
                                             required
                                         />
@@ -96,7 +97,7 @@ const ContactPage = () => {
                                         <Form.Control
                                             type="text"
                                             placeholder="Phone Number*"
-                                            className="p-3 bg-light border-light"
+                                            className="p-3 border-light"
                                             style={{ borderRadius: '20px' }}
                                             required
                                         />
@@ -150,11 +151,11 @@ const ContactPage = () => {
                         <div
                             className="p-4 d-flex flex-column justify-content-center align-items-center text-center"
                             style={{
-                                background: '#fff',
                                 border: '2px solid #e0e0e0',
                                 borderRadius: '20px',
                                 boxShadow: '0 4px 10px rgba(0,0,0,0.05)',
-                                height: '100%'
+                                height: '100%',
+                                
                             }}
                         >
                             <h2 className="fw-bold mb-4">CONTACT MAIL ID</h2>
@@ -170,7 +171,7 @@ const ContactPage = () => {
             {/* Footer */}
             <footer className=" py-5">
                 <Container className="d-flex justify-content-center align-items-center flex-wrap gap-3">
-                    <p className="mb-0">Techxplorers ©2025</p>
+                    <p className="mb-0">Techxplorers©️2025</p>
                     <div>
                         <a href="#" className=" me-2 text-decoration-none">Privacy & Legal</a>
                         <a href="#" className=" text-decoration-none">Contact</a>

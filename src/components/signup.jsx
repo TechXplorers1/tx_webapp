@@ -64,7 +64,7 @@ export default function SignupPage() {
       <JsNavbar />
 
       <div className="d-flex justify-content-center align-items-center vh-90">
-        <form onSubmit={handleSubmit} className="shadow-lg p-4 rounded bg-white signup-box">
+        <form onSubmit={handleSubmit} className="shadow-lg p-4 rounded signup-box">
           <h3 className="text-center fw-bold mb-3">Let's sign up!</h3>
 
           <button type="button" className="btn btn-light w-100 border mb-3 d-flex align-items-center justify-content-center gap-2">
@@ -142,7 +142,7 @@ export default function SignupPage() {
           <button type="submit" className="btn btn-info w-100 text-white fw-bold">Sign Up</button>
 
           <div className="text-center mt-3">
-            <span className="me-1 text-muted">Already Registered?</span>
+            <span className="me-1 ">Already Registered?</span>
             <a onClick={() => navigate('/login')} className="text-primary text-decoration-none" style={{ cursor: 'pointer' }}>
               Login
             </a>

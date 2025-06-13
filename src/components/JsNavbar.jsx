@@ -2,9 +2,11 @@ import React from 'react';
 import '../styles/Navbar.css';
 import { Navbar, Nav, Container } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from '../context/ThemeContext'; // Import theme hook
 
 const JsNavbar = () => {
   const navigate = useNavigate();
+    const { isDarkMode, toggleTheme } = useTheme(); // Get theme state
   
   return (
     <Navbar bg="light" expand="lg" className="fixed-top shadow-sm">
@@ -19,11 +21,30 @@ const JsNavbar = () => {
         {/* Toggle Button for Mobile View */}
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
 
+
+
         {/* Navbar Links (Centered) */}
         <Navbar.Collapse id="basic-navbar-nav">
+          
           <Nav className="mx-auto gap-lg-5 gap-3">
             {/* Empty Nav links - can be added later if needed */}
           </Nav>
+                  {/* Right-aligned items: Login only */}
+<div className="d-flex align-items-center gap-3">
+  {/* Dark Mode Toggle */}
+  <label className="dark-mode-toggle">
+    <input
+      type="checkbox"
+      id="darkModeToggle"
+      checked={isDarkMode}
+      onChange={toggleTheme}
+    />
+    <span className="slider round"></span>
+  </label>
+  <label htmlFor="darkModeToggle" className="dark-mode-label">
+    {isDarkMode ? 'Dark Mode' : 'Light Mode'}
+  </label> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</div>
         
           {/* Go to Home Text Link (Right-Aligned) */}
           <span 
@@ -36,6 +57,7 @@ const JsNavbar = () => {
         </Navbar.Collapse>
       </Container>
     </Navbar>
+    
   );
 };
 

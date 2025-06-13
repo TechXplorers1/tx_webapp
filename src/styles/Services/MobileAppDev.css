@@ -133,8 +133,9 @@ body {
 }
 
 .flip-card-front {
-  background-color: rgba(141, 94, 202, 0.829);
+  background-color: rgba(94, 179, 202, 0.829);
   color: white;
+
 }
 
 .flip-card-back {
@@ -149,7 +150,7 @@ body {
 }
 
 .flip-card-list {
-  list-style-type: circle;
+  list-style-type: none;
   padding-left: 1.2rem;
   font-size: 0.9rem;
   line-height: 1.4;
@@ -175,3 +176,4 @@ body {
   border-radius: 12px !important;
   min-width: 110px;
 }
+

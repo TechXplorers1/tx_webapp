@@ -133,7 +133,7 @@ body {
 }
 
 .flip-card-front {
-  background-color: rgba(141, 94, 202, 0.829);
+  background: linear-gradient(to bottom right, #3daeb2 50%, #063c62 100%);
   color: white;
 }
 
@@ -141,6 +141,7 @@ body {
   background-color: #f1f1f1;
   color: black;
   transform: rotateY(180deg);
+  border: 1px solid rgb(211, 202, 202);
 }
 
 .flip-card h3 {
@@ -149,7 +150,7 @@ body {
 }
 
 .flip-card-list {
-  list-style-type: circle;
+  list-style-type: none;
   padding-left: 1.2rem;
   font-size: 0.9rem;
   line-height: 1.4;

@@ -2,7 +2,7 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Georgia', sans-serif;
+    font-family: 'Times New Roman', Times, serif;
 }
 a{
     text-decoration: none;
@@ -53,10 +53,15 @@ body {
 .dark-mode .form-select,
 .dark-mode .service-overlay-text,
 .dark-mode .operate-overlay,
-.dark-mode .country-item {
+.dark-mode .country-item,
+.dark-mode .contact-card,
+.dark-mode .services-dropdown-container,
+.dark-mode .flip-card-back,
+.dark-mode .modal-service{
   background-color: #2c2c2c !important;
   color: #fff !important;
 }
+
 
 .dark-mode .form-control,
 .dark-mode .form-select {

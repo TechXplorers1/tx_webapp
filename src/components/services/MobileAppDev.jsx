@@ -139,11 +139,11 @@ const MobileAppDev = () => {
       {/* Contact Section */}
       <section className="contact-section">
         <div className="contact-container">
-          <h2 className="headline">Want to know more or work with us?</h2>
+          <h2 className="headline mb-3">Want to know more or work with us?</h2>
           <button onClick={() => navigate('/contactus')} className="contact-button btn-lg btn-primary">
             Contact Us
           </button>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;------or------ &nbsp; &nbsp; &nbsp;
-          <button onClick={() => setShowModal(true)} className="contact-button btn-lg btn-primary">
+          <button onClick={() => setShowModal(true)} className="contact-button btn-lg btn-primary mb-5">
             Apply Now
           </button>
         </div>
@@ -151,7 +151,7 @@ const MobileAppDev = () => {
 
       {/* Modal Form */}
       <Modal show={showModal} onHide={() => setShowModal(false)} centered>
-        <Modal.Header closeButton>
+        <Modal.Header className=" modal-service" closeButton>
           <Modal.Title>Mobile App Development</Modal.Title>
         </Modal.Header>
         <Modal.Body>

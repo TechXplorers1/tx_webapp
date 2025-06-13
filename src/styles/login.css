@@ -10,15 +10,17 @@ body, html {
 
 /* Login Page Background */
 .login-page {
-  background: linear-gradient(to bottom right, #ffffff 50%);
+  /* background: linear-gradient(to bottom right, #ffffff 50%); */
   min-height: 100vh;
 }
 
 /* Ensure the box takes up full width up to a limit */
 .login-box {
-  margin-top: 70px;
+  margin-top: 30px;
   width: 100%;
   max-width: 500px;
+      border:2px solid white;
+
 }
 
 /* Optional: Add responsiveness to smaller screens */

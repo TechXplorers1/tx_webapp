@@ -106,7 +106,7 @@ function AboutUs() {
           </Form>
 
           <div className="d-flex justify-content-center align-items-center">
-            <p className="mb-0">Techxplorers ©2025</p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            <p className="mb-0">Techxplorers©️2025</p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
             <div>
               <a href="#" className=" me-2 text-decoration-none">Privacy & Legal</a>
               <a href="#" className=" text-decoration-none">Contact</a>
