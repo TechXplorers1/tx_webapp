@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Container, Row, Col, Card, Button, Form } from 'react-bootstrap';
 import CustomNavbar from './Navbar'; // Update this path if needed
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faEnvelope } from '@fortawesome/free-solid-svg-icons';
 
 const ContactPage = () => {
     const [formSubmitted, setFormSubmitted] = useState(false);
@@ -159,9 +161,9 @@ const ContactPage = () => {
                             }}
                         >
                             <h2 className="fw-bold mb-4">CONTACT MAIL ID</h2>
-                            <p className="mb-3 fs-5"><a href="mailto:txhr@techxplores.in">txhr@techxplores.in</a></p>
-                            <p className="mb-3 fs-5"><a href="mailto:sales@techxplores.in">sales@techxplores.in</a></p>
-                            <p className="fs-5"><a href="mailto:support@techxplores.in">support@techxplores.in</a></p>
+                            <p className="mb-3 fs-5"> <FontAwesomeIcon icon={faEnvelope} className="me-2" /><a href="mailto:txhr@techxplores.in">txhr@techxplores.in</a></p>
+                            <p className="mb-3 fs-5">&nbsp;<FontAwesomeIcon icon={faEnvelope} className="me-2" /><a href="mailto:sales@techxplores.in">sales@techxplores.in</a></p>
+                            <p className="fs-5">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<FontAwesomeIcon icon={faEnvelope} className="me-2" /><a href="mailto:support@techxplores.in">support@techxplores.in</a></p>
 
                         </div>
                     </Col>

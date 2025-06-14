@@ -151,7 +151,8 @@ const MobileAppDev = () => {
 
       {/* Modal Form */}
       <Modal show={showModal} onHide={() => setShowModal(false)} centered>
-        <Modal.Header className=" modal-service" closeButton>
+        <div className=''>
+        <Modal.Header className=" modal-service " closeButton>
           <Modal.Title>Mobile App Development</Modal.Title>
         </Modal.Header>
         <Modal.Body>
@@ -246,6 +247,7 @@ const MobileAppDev = () => {
             </Button>
           </Form>
         </Modal.Body>
+        </div>
       </Modal>
     </div>
   );
