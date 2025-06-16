@@ -25,19 +25,32 @@ const ClientDashboard = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showInterviewsModal, setShowInterviewsModal] = useState(false);
   const [showResumeModal, setShowResumeModal] = useState(false);
+  // Removed: const [showWorksheetModal, setShowWorksheetModal] = useState(false);
 
   const toggleMenu = () => setMenuOpen(!menuOpen);
   const toggleInterviewsModal = () => setShowInterviewsModal(!showInterviewsModal);
   const toggleResumeModal = () => setShowResumeModal(!showResumeModal);
+  // Removed: const toggleWorksheetModal = () => setShowWorksheetModal(!showWorksheetModal);
 
   const profilePlaceholder = "https://via.placeholder.com/80/E0E0E0/808080?text=👤";
 
+  // --- Dynamic Chart Date Generation ---
+  const today = new Date(); // Gets the current date (e.g., June 16, 2025)
+  const chartLabels = [];
+  const monthNames = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(today);
+    date.setDate(today.getDate() + i); // Add 'i' days to the current date
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = monthNames[date.getMonth()];
+    const year = date.getFullYear();
+    chartLabels.push(`${day} ${month} ${year}`);
+  }
+  // --- End Dynamic Chart Date Generation ---
+
   const data = {
-    labels: [
-      '01 jun 2025', '01 jun 2025', '01 jun 2025',
-      '01 jun 2025', '01 jun 2025', '01 jun 2025',
-      '01 jun 2025'
-    ],
+    labels: chartLabels, // This now uses the dynamically generated dates
     datasets: [
       {
         label: 'linkedin',
@@ -60,7 +73,7 @@ const ClientDashboard = () => {
       },
       {
         label: 'company site',
-        data: [10, 12, 18, 20, 25, 23, 28],
+        data: [10, 12, 20, 6, 29, 23, 28],
         borderColor: 'purple',
         backgroundColor: 'purple',
         tension: 0.4,
@@ -70,7 +83,7 @@ const ClientDashboard = () => {
       },
       {
         label: 'glassdoor',
-        data: [20, 10, 14, 16, 15, 10, 30],
+        data: [20, 15, 8, 16, 15, 10, 30],
         borderColor: 'green',
         backgroundColor: 'green',
         tension: 0.4,
@@ -127,6 +140,8 @@ const ClientDashboard = () => {
     { id: 7, date: '2025-05-18', type: 'Portfolio Link', status: 'Added', details: 'Updated portfolio on resume' },
     { id: 8, date: '2025-05-15', type: 'Skills Section', status: 'Enhanced', details: 'Added new technical skills' },
   ];
+
+  // Removed: Mock data for Worksheet (worksheetData, worksheetDates)
 
   return (
     <div style={{ fontFamily: 'Segoe UI, sans-serif', background: '#fff', color: '#333', display: 'flex' }}>
@@ -208,6 +223,8 @@ const ClientDashboard = () => {
           </div>
         </div>
       )}
+
+      {/* Removed: Worksheet Modal Overlay */}
 
       {/* Sidebar Menu */}
       <div style={{
@@ -335,20 +352,23 @@ const ClientDashboard = () => {
             padding: '20px',
             boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
           }}>
-             <h4 style={{ marginBottom: '15px', textAlign: 'center', color: '#555' }}>Job Source Performance</h4>
-             <Line data={data} options={options} />
+            <h4 style={{ marginBottom: '15px', textAlign: 'center', color: '#555' }}>Job Source Performance</h4>
+            <Line data={data} options={options} />
           </div>
-          <button style={{
-            margin: '20px auto',
-            display: 'block',
-            background: '#00bfff',
-            color: 'white',
-            border: 'none',
-            padding: '10px 20px',
-            borderRadius: '5px',
-            boxShadow: '2px 2px 5px rgba(0,0,0,0.2)',
-            cursor: 'pointer'
-          }}>
+          <button
+            onClick={() => navigate('/clientworksheet')} // Changed back to navigate
+            style={{
+              margin: '20px auto',
+              display: 'block',
+              background: '#00bfff',
+              color: 'white',
+              border: 'none',
+              padding: '10px 20px',
+              borderRadius: '5px',
+              boxShadow: '2px 2px 5px rgba(0,0,0,0.2)',
+              cursor: 'pointer'
+            }}
+          >
             Work Sheet
           </button>
         </div>
@@ -440,7 +460,7 @@ const bottomLinkStyleLogout = {
   boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
 };
 
-// Styles for the new Modal/Overlay
+// Styles for existing Modals
 const modalOverlayStyle = {
   position: 'fixed',
   top: 0,
@@ -460,7 +480,7 @@ const modalContentStyle = {
   borderRadius: '10px',
   boxShadow: '0 5px 15px rgba(0, 0, 0, 0.3)',
   maxWidth: '90%',
-  width: '950px', // Increased width here from 800px to 950px
+  width: '950px',
   maxHeight: '90vh',
   overflowY: 'auto',
   position: 'relative'
@@ -496,6 +516,8 @@ const modalTableCellStyle = {
   textAlign: 'left',
   borderBottom: '1px solid #e9e9e9'
 };
+
+// Removed: Styles for NEW Worksheet Modal (worksheetTableStyle, etc.)
 
 const actionButtonStyle = {
   background: '#00bfff',

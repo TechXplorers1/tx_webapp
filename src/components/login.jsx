@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import JsNavbar from './JsNavbar';
 import { Button } from 'react-bootstrap';
 import { FcGoogle } from "react-icons/fc";
-import { MdEmail } from "react-icons/md";
+import { MdEmail } from "react-icons/md"; // Keeping this as it's in your provided code
 import { RiLockPasswordFill } from "react-icons/ri";
 import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
 
@@ -15,6 +15,7 @@ export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [emailError, setEmailError] = useState("");
     const [passwordError, setPasswordError] = useState("");
+    const [loginError, setLoginError] = useState(""); // Added state for general login errors
 
     const validatePassword = (value) => {
         if (value.length < 8) return 'Password must be at least 8 characters';
@@ -29,28 +30,45 @@ export default function LoginPage() {
         e.preventDefault();
         setEmailError("");
         setPasswordError("");
+        setLoginError(""); // Clear previous login errors
         let hasError = false;
 
+        // Basic email format validation
         if (!email.includes("@") || !email.includes(".")) {
             setEmailError("Please enter a valid email address");
             hasError = true;
         }
 
+        // Password complexity validation
         const passwordValidation = validatePassword(password);
         if (passwordValidation) {
             setPasswordError(passwordValidation);
             hasError = true;
         }
 
-        if (hasError) return;
+        if (hasError) return; // Stop if there are input validation errors
 
-        // Mark user as logged in
-        localStorage.setItem('isLoggedIn', 'true');
+        // --- Modified Mock Authentication and Role-Based Redirection ---
+        // Only "admin@gmail.com" gets the 'admin' role. All others get 'client' role.
+        // The password remains 'Password@123' for all valid logins.
 
-        console.log("User Logged in with Email:", email);
-
-        // Redirect to home page after successful login
-        navigate('/');
+        if (password === 'Password@123') { // Check the password first
+            if (email === 'admin@gmail.com') { // Specific check for admin email
+                localStorage.setItem('isLoggedIn', 'true');
+                localStorage.setItem('userRole', 'admin');
+                console.log("Admin Logged in:", email);
+                navigate('/admindashboard'); // Redirect to Admin Dashboard
+            } else {
+                // For any other email (with correct password), treat as a regular client
+                localStorage.setItem('isLoggedIn', 'true');
+                localStorage.setItem('userRole', 'client'); // Assign 'client' role by default
+                console.log("Client (or generic user) Logged in:", email);
+                navigate('/'); // Redirect to Client Dashboard
+            }
+        } else {
+            // If the password does not match
+            setLoginError("Invalid email or password.");
+        }
     };
 
     return (
@@ -71,7 +89,7 @@ export default function LoginPage() {
                         <div className="mb-3">
                             <label className="form-label">Email</label>
                             <div className="input-group">
-                                <span className="input-group-text"><MdEmail /></span>
+                                <span className="input-group-text"><MdEmail /></span> {/* MdEmail icon is still here as it was in your provided code */}
                                 <input
                                     type="email"
                                     className={`form-control ${emailError ? 'is-invalid' : ''}`}
@@ -105,6 +123,8 @@ export default function LoginPage() {
                             </div>
                             {passwordError && <div className="text-danger mt-1">{passwordError}</div>}
                         </div>
+
+                        {loginError && <p className="text-danger mb-3">{loginError}</p>} {/* Display general login error */}
 
                         <button type="submit" className="btn btn-info w-100 text-white fw-bold">Log In</button>
 

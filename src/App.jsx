@@ -9,6 +9,8 @@ import LoginPage from './components/login';
 import SignupPage from './components/signup';
 import Careers from './components/Careers';
 import ClientDashboard from './components/Dashboard/ClientDashboard';
+import AdminDashboard from './components/Dashboard/AdminDashboard';
+import ClientWorkSheet from './components/ClientWorksheet';
 import WebAppDev from './components/services/WebAppDev';
 import MobileAppDev from './components/services/MobileAppDev';
 import ITTalentSupply from './components/services/ItTalentSupply';
@@ -33,6 +35,8 @@ const App = () => {
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/careers" element={<Careers />} />
         <Route path="/clientdashboard" element={<ClientDashboard />} />
+        <Route path="/admindashboard" element={<AdminDashboard />} />
+        <Route path="/clientworksheet" element={<ClientWorkSheet/>} />
         <Route path="/userdashboard" element={<UserDashboard />} />
            {/* Services-Path */}
         <Route path="/services/mobile-app-development" element={<MobileAppDev />} />

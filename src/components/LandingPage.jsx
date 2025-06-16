@@ -173,8 +173,9 @@ const LandingPage = () => {
                   <p className="mb-0">Techxplorers ©️2025</p>
                   &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
                   <div>
-                    <a href="#" className=" me-2 text-decoration-none">Privacy & Legal</a>
-                    <a href="#" className=" text-decoration-none">Contact</a>
+                    <a href="" className=" me-2 text-decoration-none">Privacy & Legal</a>
+                    &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+                    <a href="/contactus" className=" text-decoration-none">Contact</a>
                   </div>
                 </div>
               </Container>
