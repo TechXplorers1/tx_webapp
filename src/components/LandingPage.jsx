@@ -150,7 +150,7 @@ const LandingPage = () => {
                 ))}
               </MapContainer>
 
-              <div className={`map-overlay ${isDarkMode ? 'light' : 'light'}`}></div>
+              {/* <div className={`map-overlay ${isDarkMode ? 'dark' : 'dark'}`}></div> */}
 
               <div className="operate-overlay">
                 <h3 className="operate-title">We operate in:</h3>
