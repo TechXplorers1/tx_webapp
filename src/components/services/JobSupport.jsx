@@ -12,7 +12,7 @@ const JobSupport = () => {
       title: 'Our IT Consulting Services',
       description: (
         <p>
-          We offer strategic IT consulting to help businesses streamline operations, enhance security, and adopt modern technologies for digital transformation.
+ We provide strategic IT consulting services to help businesses improve operational efficiency, boost cybersecurity, and embrace modern technologies. Our goal is to guide organizations through digital transformation by aligning IT solutions with business objectives, optimizing infrastructure, and ensuring seamless technology adoption to stay competitive in a rapidly evolving digital landscape.
         </p>
       ),
     },
@@ -33,8 +33,7 @@ const JobSupport = () => {
       title: 'Real-Time Job Support for IT Professionals',
       description: (
         <p>
-          Our job support services help IT professionals overcome technical challenges in real-time projects, ensuring career growth and project success.
-        </p>
+Our comprehensive job support services are designed to assist IT professionals in resolving real-time project challenges efficiently. Whether you're stuck with coding issues, deployment errors, or need architectural guidance, our expert team is available to provide step-by-step support. We aim to ensure not just the successful delivery of your project, but also continuous learning and career advancement through practical, hands-on help tailored to your needs.        </p>
       ),
     },
     {

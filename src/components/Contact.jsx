@@ -24,7 +24,7 @@ const ContactPage = () => {
     }
 
     return (
-        <div className="contact-us-page">
+        <div className="contact-us-page mt-5">
             <CustomNavbar />
 
             {/* Contact Locations Section */}

@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import JsNavbar from './JsNavbar';
 import { Button } from 'react-bootstrap';
 import { FcGoogle } from "react-icons/fc";
-import { MdEmail } from "react-icons/md";
+import { MdEmail } from "react-icons/md"; // Keeping this as it's in your provided code, but remember you asked to remove it previously.
 import { RiLockPasswordFill } from "react-icons/ri";
 import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
 
@@ -15,6 +15,7 @@ export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [emailError, setEmailError] = useState("");
     const [passwordError, setPasswordError] = useState("");
+    const [loginError, setLoginError] = useState(""); // Added state for general login errors
 
     const validatePassword = (value) => {
         if (value.length < 8) return 'Password must be at least 8 characters';
@@ -29,6 +30,7 @@ export default function LoginPage() {
         e.preventDefault();
         setEmailError("");
         setPasswordError("");
+        setLoginError(""); // Clear previous login errors
         let hasError = false;
 
         if (!email.includes("@") || !email.includes(".")) {
@@ -44,22 +46,46 @@ export default function LoginPage() {
 
         if (hasError) return;
 
-        // Mark user as logged in
-        localStorage.setItem('isLoggedIn', 'true');
+        // --- THE ONLY REQUIRED CHANGES START HERE ---
+        // Mock Authentication and Role-Based Redirection
+        // In a real application, you would send email/password to your backend API.
+        // The backend would authenticate and return the user's role.
 
-        console.log("User Logged in with Email:", email);
-
-        // Redirect to home page after successful login
-        navigate('/');
+        // Using the password "Password@123" as you requested
+        if (password === 'Password@123') {
+            if (email === 'admin@gmail.com') { // Check for admin email
+                localStorage.setItem('isLoggedIn', 'true');
+                localStorage.setItem('userRole', 'admin');
+                console.log("Admin Logged in:", email);
+                navigate('/admindashboard'); // Redirect to Admin Dashboard
+            } else if (email === 'client@example.com') { // Example for a regular client
+                localStorage.setItem('isLoggedIn', 'true');
+                localStorage.setItem('userRole', 'client');
+                console.log("Client Logged in:", email);
+                navigate('/clientdashboard'); // Redirect to Client Dashboard
+            } else if (email === 'user@example.com') { // Example for a generic user (also maps to client role in ProtectedRoute)
+                 localStorage.setItem('isLoggedIn', 'true');
+                 localStorage.setItem('userRole', 'client'); // Assign 'client' role for generic users to match ProtectedRoute
+                 console.log("Generic User Logged in:", email);
+                 navigate('/userdashboard'); // Redirect to User Dashboard
+            }
+            else {
+                // If email is valid format and password matches, but not a predefined role email
+                setLoginError("Invalid email or password.");
+            }
+        } else {
+            setLoginError("Invalid email or password."); // Password mismatch
+        }
+        // --- THE ONLY REQUIRED CHANGES END HERE ---
     };
 
     return (
-        <div className="login-page">
+        <div className="login-page mt-5">
             <JsNavbar />
 
             <div className="d-flex justify-content-center align-items-center vh-90">
-                <form onSubmit={handleSubmit} className="rounded bg-white signup-box">
-                    <div className="shadow-lg p-5 rounded bg-white login-box">
+                <form onSubmit={handleSubmit} className="rounded signup-box">
+                    <div className="shadow-lg p-5 rounded login-box">
                         <h3 className="text-center fw-bold mb-3">Welcome back!</h3>
                         <button type="button" className="btn btn-light w-100 border mb-3 d-flex align-items-center justify-content-center gap-2">
                             <FcGoogle size={20} />
@@ -71,7 +97,7 @@ export default function LoginPage() {
                         <div className="mb-3">
                             <label className="form-label">Email</label>
                             <div className="input-group">
-                                <span className="input-group-text"><MdEmail /></span>
+                                <span className="input-group-text"><MdEmail /></span> {/* MdEmail icon is still here as it was in your provided code */}
                                 <input
                                     type="email"
                                     className={`form-control ${emailError ? 'is-invalid' : ''}`}
@@ -106,10 +132,12 @@ export default function LoginPage() {
                             {passwordError && <div className="text-danger mt-1">{passwordError}</div>}
                         </div>
 
+                        {loginError && <p className="text-danger mb-3">{loginError}</p>} {/* Display general login error */}
+
                         <button type="submit" className="btn btn-info w-100 text-white fw-bold">Log In</button>
 
                         <div className="text-center mt-3">
-                            <span className="me-1 text-muted">Don't Have An Account?</span>
+                            <span className="me-1">Don't Have An Account?</span>
                             <a onClick={() => navigate('/signup')} className="text-primary text-decoration-none" style={{ cursor: "pointer" }}>
                                 Sign Up
                             </a>

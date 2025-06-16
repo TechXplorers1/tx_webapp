@@ -1,5 +1,4 @@
-
-.admin-dashboard {
+.manager-dashboard {
   background: linear-gradient(to bottom right, #ffffff 50%, #4fa1dc 100%);
   display: flex;
   flex-direction: column;
@@ -8,7 +7,7 @@
 }
 
 /* Header */
-.admin-header {
+.manager-header {
   padding: 25px 20px;
   display: flex;
   align-items: center;
@@ -23,7 +22,7 @@
 }
 
 
-.admin-logo {
+.manager-logo {
   height: 50px;
     position: absolute;
   left: 20px;
@@ -45,7 +44,7 @@
 }
 
 /* Sidebar */
-.admin-sidebar {
+.manager-sidebar {
   position: fixed;
   top: 60px;
   left: -250px;
@@ -58,7 +57,7 @@
   z-index: 1000;
 }
 
-.admin-sidebar.open {
+.manager-sidebar.open {
   left: 0;
 }
 
@@ -123,7 +122,7 @@
 }
 
 /* Main Content */
-.admin-main-content {
+.manager-main-content {
   margin-top: 70px;
   padding: 20px;
   margin-left: 0;
@@ -135,7 +134,7 @@
   margin-bottom: 20px;
 }
 
-.admin-card {
+.manager-card {
   padding: 25px;
   border-radius: 12px;
   color: white;
@@ -146,25 +145,25 @@
   margin-left: 50px;
 }
 
-.admin-card.green {
+.manager-card.green {
   background-color: #28a745;
   width: 620px;
   height: 180px;
 }
 
-.admin-card.cyan {
+.manager-card.cyan {
   background-color: #17a2b8;
   width: 620px;
   height: 180px;
 }
 
-.admin-card.navy {
+.manager-card.navy {
   background-color: #001f3f;
   width: 620px;
   height: 180px;
 }
 
-.admin-card.blue {
+.manager-card.blue {
   background-color: #007bff;
   width: 620px;
   height: 180px;

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Container, Row, Col, Carousel } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
@@ -33,6 +33,8 @@ const LandingPage = () => {
     { name: 'India', position: [28.6139, 77.209] },
   ];
 
+  const [selectedOffice, setSelectedOffice] = useState(null);
+
   const carouselItems = [
     { id: 1, image: Image1, alt: "TechXplorers Service 1", text: "Mobile Application Development", path: "/services/mobile-app-development" },
     { id: 2, image: Image2, alt: "TechXplorers Service 2", text: "Web Application Development", path: "/services/web-app-development" },
@@ -50,7 +52,7 @@ const LandingPage = () => {
 
 
   return (
-    <div className={`landing-page ${isDarkMode ? 'dark-mode' : ''}`}>
+    <div className={`landing-page mt-4 ${isDarkMode ? 'dark-mode' : ''}`}>
       <CustomNavbar />
       {/* Hero Carousel */}
       <div ref={carouselRef} className={`animated-section ${carouselInView ? 'zoom-in-content' : ''}`}>
@@ -150,7 +152,7 @@ const LandingPage = () => {
                 ))}
               </MapContainer>
 
-              {/* <div className={`map-overlay ${isDarkMode ? 'dark' : 'dark'}`}></div> */}
+              <div className={`map-overlay ${isDarkMode ? 'light' : 'light'}`}></div>
 
               <div className="operate-overlay">
                 <h3 className="operate-title">We operate in:</h3>

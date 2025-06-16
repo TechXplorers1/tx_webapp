@@ -60,7 +60,7 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="signup-page">
+    <div className="signup-page mt-5">
       <JsNavbar />
 
       <div className="d-flex justify-content-center align-items-center vh-90">

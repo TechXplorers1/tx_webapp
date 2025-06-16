@@ -23,7 +23,8 @@ const WebAppDev = () => {
       title: 'Our Web Application Development Services',
       description: (
         <p>
-          We offer end-to-end web application development solutions, ensuring your web platform is responsive, secure, and aligned with your business objectives.
+        We provide comprehensive end-to-end web application development solutions tailored to meet your business needs. Our team ensures that every web platform we build is fully responsive across devices, highly secure, scalable, and optimized for performance. From initial planning and UI/UX design to full-stack development and post-launch support, we align every aspect of your web application with your strategic goals and user expectations.
+
         </p>
       ),
     },
@@ -32,9 +33,9 @@ const WebAppDev = () => {
       description: (
         <ul className="flip-card-list">
           <li>We create web applications that align with your business needs, industry standards, and customer expectations.</li>
-          <li>Modern Tech Stack – We utilize React.js, Angular, Vue.js, Node.js, Python, Laravel, and PHP for scalable and efficient development.</li>
-          <li>Full-Stack Development – From front-end design to back-end architecture, we deliver complete web solutions.</li>
-          <li>Fast & Responsive – Optimized performance for quick loading times.</li>
+          <li><b>Modern Tech Stack</b> – We utilize React.js, Angular, Vue.js, Node.js, Python, Laravel, and PHP for scalable and efficient development.</li>
+          <li><b>Full-Stack Development</b> – From front-end design to back-end architecture, we deliver complete web solutions.</li>
+          <li><b>Fast & Responsive</b> – Optimized performance for quick loading times.</li>
         </ul>
       ),
     },
@@ -42,11 +43,11 @@ const WebAppDev = () => {
       title: 'Web Application Development Process',
       description: (
         <ul className="flip-card-list">
-          <li>Requirement Analysis & Planning – Understanding your business goals and project requirements.</li>
-          <li>UI/UX Design & Prototyping – Crafting intuitive and engaging interfaces for a seamless user experience.</li>
-          <li>Development & Testing – Coding, integration, and rigorous testing to ensure flawless functionality.</li>
-          <li>Deployment & Launch – Ensuring a smooth launch with cloud hosting, domain setup, and database configurations.</li>
-          <li>Ongoing Maintenance & Upgrades – Continuous monitoring, bug fixes, security updates, and feature enhancements.</li>
+          <li><b>Requirement Analysis & Planning</b> – Understanding your business goals and project requirements.</li>
+          <li><b>UI/UX Design & Prototyping</b> – Crafting intuitive and engaging interfaces for a seamless user experience.</li>
+          <li><b>Development & Testing</b> – Coding, integration, and rigorous testing to ensure flawless functionality.</li>
+          <li><b>Deployment & Launch</b> – Ensuring a smooth launch with cloud hosting, domain setup, and database configurations.</li>
+          <li><b>Ongoing Maintenance & Upgrades</b> – Continuous monitoring, bug fixes, security updates, and feature enhancements.</li>
         </ul>
       ),
     },
@@ -54,10 +55,10 @@ const WebAppDev = () => {
       title: 'Why Choose TechXplorers Pvt Ltd',
       description: (
         <ul className="flip-card-list">
-          <li>Expert Developers: Talented professionals skilled in full-stack web development.</li>
-          <li>User-Centric Design: Focus on seamless user experience and beautiful, functional designs.</li>
-          <li>Quality Assurance: Rigorous testing to ensure flawless app performance.</li>
-          <li>Confidentiality: Full protection of your business idea with NDAs.</li>
+          <li><b>Expert Developers:</b> Talented professionals skilled in full-stack web development.</li><br />
+          <li><b>User-Centric Design:</b> Focus on seamless user experience and beautiful, functional designs.</li><br />
+          <li><b>Quality Assurance:</b> Rigorous testing to ensure flawless app performance.</li><br />
+          <li><b>Confidentiality:</b> Full protection of your business idea with NDAs.</li>
         </ul>
       ),
     },
@@ -65,12 +66,8 @@ const WebAppDev = () => {
       title: 'Industries We Serve',
       description: (
         <ul className="flip-card-list">
-          <li>E-Commerce & Retail</li>
-          <li>Healthcare & Pharmaceuticals</li>
-          <li>Finance & Banking</li>
-          <li>Real Estate & Construction</li>
-          <li>Education & Training</li>
-          <li>Technology & SaaS</li>
+          TechXplorers proudly serves a wide range of industries including E-Commerce & Retail, Healthcare & Pharmaceuticals, Finance & Banking, Real Estate & Construction, Education & Training, and Technology & SaaS. Our tailored solutions are designed to meet the unique needs of each sector, empowering businesses to innovate, streamline operations, and drive sustainable growth in a competitive digital landscape.
+
         </ul>
       ),
     }
