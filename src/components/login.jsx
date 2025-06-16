@@ -33,30 +33,35 @@ export default function LoginPage() {
 
         if (!email.includes("@") || !email.includes(".")) {
             setEmailError("Please enter a valid email address");
-            hasError = false;
+            hasError = true;
         }
 
         const passwordValidation = validatePassword(password);
         if (passwordValidation) {
             setPasswordError(passwordValidation);
-            hasError = false;
+            hasError = true;
         }
 
         if (hasError) return;
 
-        console.log("User Registered with Email:", email);
-        navigate('/clientdashboard');
+        // Mark user as logged in
+        localStorage.setItem('isLoggedIn', 'true');
+
+        console.log("User Logged in with Email:", email);
+
+        // Redirect to home page after successful login
+        navigate('/');
     };
 
     return (
         <div className="login-page">
             <JsNavbar />
 
-            <div className="d-flex justify-content-center align-items-center vh-50">
-                <form onSubmit={handleSubmit} className=" rounded">
-                    <div className="shadow-lg p-5 rounded login-box">
+            <div className="d-flex justify-content-center align-items-center vh-90">
+                <form onSubmit={handleSubmit} className="rounded bg-white signup-box">
+                    <div className="shadow-lg p-5 rounded bg-white login-box">
                         <h3 className="text-center fw-bold mb-3">Welcome back!</h3>
-                        <button type="button" className=" btn btn-light w-100 border mb-3 d-flex align-items-center justify-content-center gap-2">
+                        <button type="button" className="btn btn-light w-100 border mb-3 d-flex align-items-center justify-content-center gap-2">
                             <FcGoogle size={20} />
                             Continue With Google
                         </button>
@@ -104,7 +109,7 @@ export default function LoginPage() {
                         <button type="submit" className="btn btn-info w-100 text-white fw-bold">Log In</button>
 
                         <div className="text-center mt-3">
-                            <span className="me-1">Don't Have An Account?</span>
+                            <span className="me-1 text-muted">Don't Have An Account?</span>
                             <a onClick={() => navigate('/signup')} className="text-primary text-decoration-none" style={{ cursor: "pointer" }}>
                                 Sign Up
                             </a>

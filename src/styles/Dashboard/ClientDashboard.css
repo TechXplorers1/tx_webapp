@@ -1,183 +1,55 @@
-/* Dashboard Container */
-.dashboard-container {
-    background: linear-gradient(to bottom right, #ffffff 50%);
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-    /* background: #f5f7fa; */
-  }
-  
-  /* Fixed Logo at Top - Full Width */
-  .logo-container {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    margin: 0;
-    padding: 25px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: white;
-    border-bottom: 1px solid #ddd;
-    z-index: 1000;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  }
-  
-  .logo {
-    height: 50px;
-    position: absolute;
-    left: 20px;
-  }
-  
-  .logo-heading {
-    margin: 0;
-    font-size: 24px;
-    font-weight: bold;
-  }
-  
-  /* Hamburger Button below Logo */
-  .hamburger-container {
-    padding: 10px 20px;
-    cursor: pointer;
-    background-color: transparent;
-    display: flex;
-    align-items: center;
-    position: fixed;
-    top: 80px; /* Adjusted this value to move below the logo */
-    left: 5px;
-    z-index: 999;
-  }
-  
-  .hamburger-icon {
-    font-size: 24px;
-  }
-  
-  /* Sidebar */
-  .sidebar {
-    position: fixed;
-    top: 72px;
-    left: -250px;
-    width: 250px;
-    height: calc(100% - 60px);
-    background-color: white;
-    border-right: 1px solid #ddd;
-    padding: 20px 10px;
-    transition: left 0.3s ease;
-    z-index: 998;
-  }
-  
-  .sidebar.open {
-    left: 0;
-  }
-  
-  .sidebar-close {
-    cursor: pointer;
-    font-size: 20px;
-    color: #333;
-    position: absolute;
-    right: 20px;
-    top: 15px;
-  }
-  
-  .sidebar h6 {
-    font-weight: bold;
-    margin-bottom: 20px;
-  }
-  
-  .plan-info-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
-    padding: 10px 0;
-  }
-  
-  .plan-box {
-    text-align: center;
-    flex: 1;
-  }
-  
-  .vertical-divider {
-    width: 1px;
-    background-color: #ccc;
-    height: 100%;
-  }
-  
-  .renew-button {
-    margin-top: 10px;
-    width: 100%;
-  }
-  
-  .support-section {
-    margin-top: 280px;
-    text-align: center;
-  }
-  
-  .logout-button {
-    margin-top: 10px;
-    width: 100%;
-  }
-  
-  /* Main Content */
-  .main-content {
-    margin-top: 70px;
-    padding: 20px;
-    transition: margin-left 0.3s ease;
-  }
-  
-  .card-main {
-    background-color: #ffffff;
-    padding: 25px;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    text-align: center;
-  }
-  
-  .card-main .card-number {
-    font-size: 40px;
-    font-weight: bold;
-    color: #333;
-  }
-  
-  /* Secondary Cards */
-  .card-secondary {
-    padding: 20px;
-    border-radius: 12px;
-    color: white;
-    font-weight: bold;
-    text-align: center;
-  }
-  
-  .card-main {
-    background-color: #007bff;
-  }
-  
-  .card-secondary.brown {
-    background-color: #8B4513;
-    height: 130px;
-    padding-top: 50px;
-  }
-  
-  .card-secondary.purple {
-    background-color: #800080;
-    height: 130px;
-    padding-top: 50px;
-  }
-  
-  /* Layout adjustments */
-  .g-4 {
-    gap: 1.5rem;
-  }
-  
-  /* Mobile adjustments */
-  @media (max-width: 768px) {
-    .sidebar {
-      left: -100%;
-      width: 70%;
-    }
-    .sidebar.open {
-      left: 0;
-    }
-  }
+/* ClientDashboard.css */
+
+.client-dashboard-container {
+  font-family: sans-serif;
+  background-color: #f0f2f5; /* Light grey background */
+  min-height: 100vh; /* Ensure it takes full height */
+  padding-top: 20px; /* Space from navbar */
+}
+
+/* Card styles */
+.client-dashboard-container .card {
+  border: none;
+  border-radius: 0.5rem;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.project-card {
+  border-left: 5px solid #007bff; /* Blue */
+}
+
+.invoice-card {
+  border-left: 5px solid #28a745; /* Green */
+}
+
+.quick-actions-card {
+  border-top: 5px solid #ffc107; /* Yellow */
+}
+
+/* Quick Action Buttons */
+.quick-action-button {
+  margin-bottom: 10px; /* Add spacing between buttons */
+  width: auto; /* Adjust width as needed */
+  flex-grow: 1; /* Allow buttons to grow and fill space */
+  max-width: 100%; /* Prevent overflow on small screens */
+  padding: 15px 20px;
+  font-size: 1.1rem;
+  border-radius: 0.3rem;
+  font-weight: bold;
+}
+
+/* Optional: Style the table headers for better readability */
+.table th {
+  background-color: #e9ecef; /* Lighter background for headers */
+  border-bottom: 2px solid #dee2e6;
+  font-weight: bold;
+}
+
+.table td {
+  vertical-align: middle;
+}
+
+/* Offcanvas custom animation (if you have one) */
+.custom-offcanvas-animation.offcanvas {
+  transition: transform 0.3s ease-out;
+}

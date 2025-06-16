@@ -229,9 +229,6 @@ input:checked + .slider:before {
   color: rgb(255, 255, 255);
 }
 
-
-
-
 /* From Uiverse.io by Galahhad */ 
 .theme-switch {
   --toggle-size: 10px;
