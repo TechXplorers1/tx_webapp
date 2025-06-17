@@ -1,137 +1,369 @@
-import React, { useState } from 'react';
-import { Container, Row, Col } from 'react-bootstrap';
-import { useNavigate } from 'react-router-dom'; // Import for navigation
-import '../../styles/Dashboard/AdminDashboard.css';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  FaUserCircle,
-  FaBars,
-  FaArrowLeft,
-  FaChevronDown,
-  FaChevronUp,
-} from 'react-icons/fa';
+  Chart as ChartJS,
+  ArcElement, // Required for Donut/Pie charts
+  Tooltip,
+  Legend
+} from 'chart.js';
+import { Doughnut } from 'react-chartjs-2';
+import { FaUsers, FaUserTie, FaUserCog, FaUserFriends, FaBell, FaSearch, FaBars } from 'react-icons/fa'; // Icons from react-icons
+import { CgProfile } from 'react-icons/cg'; // For the profile icon (more generic)
+
+ChartJS.register(ArcElement, Tooltip, Legend);
 
 const AdminDashboard = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [clientsDropdownOpen, setClientsDropdownOpen] = useState(false);
-  const navigate = useNavigate(); // Hook for navigation
+  const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [hoveredCardId, setHoveredCardId] = useState(null); // New state for tracking hovered card
 
-  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
-  const toggleClientsDropdown = () => setClientsDropdownOpen(!clientsDropdownOpen);
+  const toggleMenu = () => setMenuOpen(!menuOpen);
 
-   const handleLogout = () => {
-    // You can also clear any session or token here if needed
-    navigate('/'); // ← Redirects to the root or login route
+  // Placeholders (consider replacing with actual assets if available)
+  const logoPlaceholder = "https://placehold.co/40x40/0a193c/ffffff?text=TX";
+  const profilePlaceholder = "https://placehold.co/40x40/E0E0E0/808080?text=👤";
+
+  // Mock data for the Donut Chart, matching image values and colors
+  const donutChartData = {
+    labels: ['Team Leads', 'Employee', 'Clients', 'Manager'],
+    datasets: [{
+      data: [25, 250, 15, 11],
+      backgroundColor: [
+        '#FFC107',
+        '#87CEEB',
+        '#FF8C00',
+        '#3CB371'
+      ],
+      hoverOffset: 8,
+      borderColor: '#ffffff',
+      borderWidth: 2,
+    }]
   };
 
-  const goToManagers = () => {
-    navigate('/managers');
+  // Options for the Donut Chart
+  const donutChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'right',
+        labels: {
+          usePointStyle: true,
+          font: {
+            size: 14,
+            family: 'Segoe UI, sans-serif'
+          }
+        }
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            let label = context.label || '';
+            if (label) {
+              label += ': ';
+            }
+            if (context.raw !== null) {
+              label += context.raw;
+            }
+            return label;
+          }
+        },
+        titleFont: {
+          size: 16
+        },
+        bodyFont: {
+          size: 14
+        },
+        padding: 10,
+        cornerRadius: 5
+      }
+    },
+    cutout: '70%',
   };
 
-   const goToClients = () => {
-    navigate('/clients');
-  };
-   const goToEmployees = () => {
-    navigate('/employees');
-  };
-    const goToTeamLeads = () => {
-    navigate('/teamleads');
+  const handleLogout = () => {
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('userRole');
+    navigate('/login');
   };
 
-  
   return (
-    <div className="admin-dashboard">
-      {/* Header */}
-      <div className="admin-header">
-        <h2 className="logo-heading">Admin Dashboard</h2>
-      </div>
-
-      {/* Hamburger just below the logo */}
-      <div className="hamburger-btn" onClick={toggleSidebar}>
-        <FaBars size={24} />
-      </div>
-
-      {/* Sidebar */}
-      <div className={`admin-sidebar ${sidebarOpen ? 'open' : ''}`}>
-        <div className="sidebar-header">
-          <div className="sidebar-close-btn" onClick={toggleSidebar}>
-            <FaArrowLeft size={20} />
+    <div style={{
+      fontFamily: 'Segoe UI, sans-serif',
+      background: '#f0f2f5',
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+    }}>
+      {/* Top Navigation Bar */}
+      <header style={{
+        background: '#0a193c',
+        color: 'white',
+        padding: '10px 25px',
+        display: 'flex',
+        flexDirection: 'column',
+        boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+        height: 'auto',
+        position: 'sticky',
+        top: 0,
+        zIndex: 1000,
+        width: '100%'
+      }}>
+        {/* Top Row: Logo & Company Name */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '5px',
+          width: '100%'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+              <span style={{ fontSize: '18px', fontWeight: 'bold', lineHeight: '1.2' }}>TECHXPLORERS</span>
+              <span style={{ fontSize: '10px', opacity: 0.8, marginTop: '0px', paddingLeft: '60px' }}>Exploring The Future</span>
+            </div>
           </div>
-          <FaUserCircle size={50} className="user-icon" />
         </div>
 
-        <ul className="sidebar-menu">
-          <li>Dashboard</li>
-          <li onClick={goToClients}>
-            <span>Clients</span>
-            {/* {clientsDropdownOpen ? <FaChevronUp size={12} /> : <FaChevronDown size={12} />} */}
-          </li>
-          {/* {clientsDropdownOpen && (
-            <ul className="sub-menu">
-              <li>Registrations</li>
-              <li>Active Clients</li>
-              <li>Previous Clients</li>
-              <li>Rejected Clients</li>
-            </ul>
-          )} */}
-          <li onClick={goToManagers}>Managers</li>
-          <li onClick={goToTeamLeads}>Team Leads</li>
-          <li onClick={goToEmployees}>Employees</li>
-        </ul>
+        {/* Bottom Row: Hamburger Menu, Search Bar, Notification, Profile */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          width: '100%'
+        }}>
+          {/* Hamburger Menu */}
+          <button
+            onClick={toggleMenu}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'white',
+              fontSize: '24px',
+              cursor: 'pointer',
+              padding: '0'
+            }}
+          >
+            <FaBars />
+          </button>
 
-        <div className="sidebar-footer">
-          <p>Help & Support</p>
-          <button onClick={handleLogout} className="logout-btn">Log Out</button>
+          {/* Search Bar */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            background: '#2c3e50',
+            borderRadius: '25px',
+            padding: '8px 18px',
+            flexGrow: 1,
+            maxWidth: '400px',
+            margin: '0 20px'
+          }}>
+            <input
+              type="text"
+              placeholder="Search"
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'white',
+                outline: 'none',
+                width: '100%',
+                fontSize: '15px',
+                paddingLeft: '5px'
+              }}
+            />
+            <FaSearch style={{ color: '#ccc', marginLeft: '10px', fontSize: '16px' }} />
+          </div>
+
+          {/* Right side icons */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '25px' }}>
+            <FaBell style={{ fontSize: '20px', cursor: 'pointer' }} />
+            <CgProfile style={{ fontSize: '30px', color: '#fff', cursor: 'pointer' }} />
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content Area - Using CSS Grid */}
+      <div style={{
+        flexGrow: 1,
+        padding: '25px',
+        display: 'grid',
+        gridTemplateColumns: 'repeat(4, 1fr)',
+        gridTemplateRows: 'auto auto 1fr',
+        gap: '25px',
+        maxWidth: '1300px',
+        margin: '25px auto',
+      }}>
+
+        {/* Clients Card */}
+        <div
+          onMouseEnter={() => setHoveredCardId('clients')}
+          onMouseLeave={() => setHoveredCardId(null)}
+          style={{ ...cardStyle, ...(hoveredCardId === 'clients' ? cardHoverStyle : {}) }}
+        >
+          <h3 style={cardTitleStyle}>Clients</h3>
+          <FaUsers style={cardIconStyle} />
+        </div>
+
+        {/* Manager Card */}
+        <div
+          onMouseEnter={() => setHoveredCardId('manager')}
+          onMouseLeave={() => setHoveredCardId(null)}
+          style={{ ...cardStyle, ...(hoveredCardId === 'manager' ? cardHoverStyle : {}) }}
+        >
+          <h3 style={cardTitleStyle}>Manager</h3>
+          <FaUserTie style={cardIconStyle} />
+        </div>
+
+        {/* Team Leads Card */}
+        <div
+          onMouseEnter={() => setHoveredCardId('teamleads')}
+          onMouseLeave={() => setHoveredCardId(null)}
+          style={{ ...cardStyle, ...(hoveredCardId === 'teamleads' ? cardHoverStyle : {}) }}
+        >
+          <h3 style={cardTitleStyle}>Team Leads</h3>
+          <FaUserCog style={cardIconStyle} />
+        </div>
+
+        {/* Employee Card */}
+        <div
+          onMouseEnter={() => setHoveredCardId('employee')}
+          onMouseLeave={() => setHoveredCardId(null)}
+          style={{ ...cardStyle, ...(hoveredCardId === 'employee' ? cardHoverStyle : {}) }}
+        >
+          <h3 style={cardTitleStyle}>Employee</h3>
+          <FaUserFriends style={cardIconStyle} />
+        </div>
+
+        {/* Chart Section */}
+        <div style={{
+          gridColumn: 'span 2',
+          background: 'white',
+          borderRadius: '10px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+          padding: '25px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '400px',
+        }}>
+          <h3 style={{ marginBottom: '20px', color: '#333' }}>CHART</h3>
+          <div style={{ width: '100%', maxWidth: '500px', height: '350px' }}>
+            <Doughnut data={donutChartData} options={donutChartOptions} />
+          </div>
+        </div>
+
+        {/* About Section */}
+        <div style={{
+          gridColumn: 'span 2',
+          background: 'white',
+          borderRadius: '10px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+          padding: '25px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          minHeight: '400px',
+        }}>
+          <h3 style={{ marginBottom: '15px', color: '#333' }}>About</h3>
+          <p style={{ lineHeight: '1.6', color: '#555', marginBottom: '15px', fontSize: '1.0em' }}>
+            Gravida Massa Quis Malesuada Porta Diam Ex Quam Dui Lacus
+            Hendrerit Ultrices Sollicitudin. Faucibus Ut Varius In Non Sit Amet, Nec
+            Lobortis, Sapien Viverra In.
+          </p>
+          <p style={{ lineHeight: '1.6', color: '#555', fontSize: '1.0em' }}>
+            Tincidunt Eu Vitae Lorem. Dui Non Donec Sollicitudin, Leo. Dui Enim.
+            Placerat. Morbi Viverra Faucibus Nec Fringilla Quam Maximus Vehicula,
+            Varius Ac Nulla, Ac.
+          </p>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="admin-main-content">
-        <Container>
-          <Row className="card-row">
-            <Col md={6}>
-              <div className="admin-card green"
-                 onClick={goToClients}
-                style={{ cursor: 'pointer' }}
-              >
-                <p>Clients</p>
-                <h4>96</h4>
-              </div>
-            </Col>
-            <Col md={6}>
-              <div
-                className="admin-card cyan"
-                onClick={goToManagers}
-                style={{ cursor: 'pointer' }}
-              >
-                <p>Managers</p>
-                <h4>05</h4>
-              </div>
-            </Col>
-          </Row>
-          <Row className="card-row">
-            <Col md={6}>
-              <div className="admin-card navy"
-                onClick={goToTeamLeads}
-                style={{ cursor: 'pointer' }}
-              >
-                <p>Team Leads</p>
-                <h4>05</h4>
-              </div>
-            </Col>
-            <Col md={6}>
-              <div className="admin-card blue"
-               onClick={goToEmployees}
-                style={{ cursor: 'pointer' }}
-              >
-                <p>Employees</p>
-                <h4>30</h4>
-              </div>
-            </Col>
-          </Row>
-        </Container>
+      {/* Overlay for when menu is open */}
+      {menuOpen && (
+        <div
+          onClick={toggleMenu}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(0, 0, 0, 0.4)',
+            zIndex: 1002, // Higher than sidebar, so it's clickable
+          }}
+        />
+      )}
+      {/* Sidebar - This slides in from the left */}
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: menuOpen ? '0' : '-250px',
+        height: '100vh',
+        width: '250px',
+        background: '#fff',
+        boxShadow: '2px 0 10px rgba(0,0,0,0.3)',
+        zIndex: 1001, // Below overlay, above header and content
+        transition: 'left 0.3s ease',
+        padding: '20px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '15px'
+      }}>
+        <h4 style={{color: '#333'}}>Menu Options</h4>
+        <a href="#" style={menuLinkStyle}>Dashboard</a>
+        <a href="#" style={menuLinkStyle}>Reports</a>
+        <a href="#" style={menuLinkStyle}>Settings</a>
       </div>
     </div>
   );
+};
+
+// --- Inline Styles for Visual Consistency with Image ---
+const cardStyle = {
+  background: 'white',
+  borderRadius: '10px',
+  boxShadow: '0 4px 10px rgba(0,0,0,0.08)',
+  padding: '25px',
+  textAlign: 'left',
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent: 'space-between',
+  minHeight: '180px',
+  position: 'relative',
+  cursor: 'pointer',
+  transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out', // Keep transition for smooth effect
+  paddingBottom: '15px',
+};
+
+const cardHoverStyle = { // New style for hover effect
+  transform: 'translateY(-5px)', // Lift card slightly
+  boxShadow: '0 8px 20px rgba(0,0,0,0.15)', // More pronounced shadow
+};
+
+const cardTitleStyle = {
+  fontSize: '1.6em',
+  fontWeight: 'bold',
+  marginBottom: 'auto',
+  color: '#333'
+};
+
+const cardIconStyle = {
+  fontSize: '2.5em',
+  color: '#6c757d',
+  alignSelf: 'flex-end',
+  marginTop: '15px',
+};
+
+const menuLinkStyle = {
+  color: '#333',
+  textDecoration: 'none',
+  padding: '10px 15px',
+  borderRadius: '5px',
+  transition: 'background-color 0.2s',
+  '&:hover': {
+    backgroundColor: '#f0f0f0'
+  }
 };
 
 export default AdminDashboard;

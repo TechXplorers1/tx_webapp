@@ -380,7 +380,7 @@ const ClientDashboard = () => {
             style={{
               padding: '60px', // Increased padding
               borderRadius: '15px',
-              backgroundColor: '#a0541b',
+              backgroundColor: '#3f51b5',
               color: 'white',
               fontWeight: 'bold',
               textAlign: 'center',
@@ -398,7 +398,7 @@ const ClientDashboard = () => {
             style={{
               padding: '60px', // Increased padding
               borderRadius: '15px',
-              backgroundColor: '#8234af',
+              backgroundColor: '#009688',
               color: 'white',
               fontWeight: 'bold',
               textAlign: 'center',
