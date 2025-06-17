@@ -25,23 +25,21 @@ const ClientDashboard = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showInterviewsModal, setShowInterviewsModal] = useState(false);
   const [showResumeModal, setShowResumeModal] = useState(false);
-  // Removed: const [showWorksheetModal, setShowWorksheetModal] = useState(false);
 
   const toggleMenu = () => setMenuOpen(!menuOpen);
   const toggleInterviewsModal = () => setShowInterviewsModal(!showInterviewsModal);
   const toggleResumeModal = () => setShowResumeModal(!showResumeModal);
-  // Removed: const toggleWorksheetModal = () => setShowWorksheetModal(!showWorksheetModal);
 
   const profilePlaceholder = "https://via.placeholder.com/80/E0E0E0/808080?text=👤";
 
   // --- Dynamic Chart Date Generation ---
-  const today = new Date(); // Gets the current date (e.g., June 16, 2025)
+  const today = new Date();
   const chartLabels = [];
   const monthNames = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
 
   for (let i = 0; i < 7; i++) {
     const date = new Date(today);
-    date.setDate(today.getDate() + i); // Add 'i' days to the current date
+    date.setDate(today.getDate() + i);
     const day = String(date.getDate()).padStart(2, '0');
     const month = monthNames[date.getMonth()];
     const year = date.getFullYear();
@@ -50,7 +48,7 @@ const ClientDashboard = () => {
   // --- End Dynamic Chart Date Generation ---
 
   const data = {
-    labels: chartLabels, // This now uses the dynamically generated dates
+    labels: chartLabels,
     datasets: [
       {
         label: 'linkedin',
@@ -141,8 +139,6 @@ const ClientDashboard = () => {
     { id: 8, date: '2025-05-15', type: 'Skills Section', status: 'Enhanced', details: 'Added new technical skills' },
   ];
 
-  // Removed: Mock data for Worksheet (worksheetData, worksheetDates)
-
   return (
     <div style={{ fontFamily: 'Segoe UI, sans-serif', background: '#fff', color: '#333', display: 'flex' }}>
 
@@ -223,8 +219,6 @@ const ClientDashboard = () => {
           </div>
         </div>
       )}
-
-      {/* Removed: Worksheet Modal Overlay */}
 
       {/* Sidebar Menu */}
       <div style={{
@@ -356,7 +350,7 @@ const ClientDashboard = () => {
             <Line data={data} options={options} />
           </div>
           <button
-            onClick={() => navigate('/clientworksheet')} // Changed back to navigate
+            onClick={() => navigate('/clientworksheet')}
             style={{
               margin: '20px auto',
               display: 'block',
@@ -384,7 +378,7 @@ const ClientDashboard = () => {
           <div
             onClick={toggleInterviewsModal}
             style={{
-              padding: '40px',
+              padding: '60px', // Increased padding
               borderRadius: '15px',
               backgroundColor: '#a0541b',
               color: 'white',
@@ -402,7 +396,7 @@ const ClientDashboard = () => {
           <div
             onClick={toggleResumeModal}
             style={{
-              padding: '40px',
+              padding: '60px', // Increased padding
               borderRadius: '15px',
               backgroundColor: '#8234af',
               color: 'white',
@@ -516,8 +510,6 @@ const modalTableCellStyle = {
   textAlign: 'left',
   borderBottom: '1px solid #e9e9e9'
 };
-
-// Removed: Styles for NEW Worksheet Modal (worksheetTableStyle, etc.)
 
 const actionButtonStyle = {
   background: '#00bfff',

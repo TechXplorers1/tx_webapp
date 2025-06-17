@@ -60,16 +60,21 @@ export default function LoginPage() {
                 localStorage.setItem('userRole', 'admin');
                 console.log("Admin Logged in:", email);
                 navigate('/admindashboard'); // Redirect to Admin Dashboard
-            } else if (email === 'client@example.com') { // Example for a regular client
+            } else if (email === 'client@gmail.com') { // Example for a regular client
                 localStorage.setItem('isLoggedIn', 'true');
                 localStorage.setItem('userRole', 'client');
                 console.log("Client Logged in:", email);
                 navigate('/clientdashboard'); // Redirect to Client Dashboard
-            } else if (email === 'user@example.com') { // Example for a generic user (also maps to client role in ProtectedRoute)
+            } else if (email === 'manager@gmail.com') { // Example for a generic user (also maps to client role in ProtectedRoute)
                  localStorage.setItem('isLoggedIn', 'true');
                  localStorage.setItem('userRole', 'client'); // Assign 'client' role for generic users to match ProtectedRoute
                  console.log("Generic User Logged in:", email);
-                 navigate('/userdashboard'); // Redirect to User Dashboard
+                 navigate('/managers'); // Redirect to User Dashboard
+            }else if (email.includes('.tx')) {
+                localStorage.setItem('isLoggedIn', 'true');
+                localStorage.setItem('userRole', 'employee');
+                console.log("Employee Logged in:", email);
+                navigate('/employees');
             }
             else {
                 // If email is valid format and password matches, but not a predefined role email

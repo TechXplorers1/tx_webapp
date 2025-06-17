@@ -90,7 +90,7 @@ const ContactPage = () => {
                                         <Form.Control
                                             type="email"
                                             placeholder="Email*"
-                                            className="p-3 border-light"
+                                            className="p-3 bg-light border-light"
                                             style={{ borderRadius: '20px' }}
                                             required
                                         />
@@ -99,7 +99,7 @@ const ContactPage = () => {
                                         <Form.Control
                                             type="text"
                                             placeholder="Phone Number*"
-                                            className="p-3 border-light"
+                                            className="p-3 bg-light border-light"
                                             style={{ borderRadius: '20px' }}
                                             required
                                         />
@@ -157,7 +157,7 @@ const ContactPage = () => {
                                 borderRadius: '20px',
                                 boxShadow: '0 4px 10px rgba(0,0,0,0.05)',
                                 height: '100%',
-                                
+
                             }}
                         >
                             <h2 className="fw-bold mb-4">CONTACT MAIL ID</h2>
@@ -173,10 +173,12 @@ const ContactPage = () => {
             {/* Footer */}
             <footer className=" py-5">
                 <Container className="d-flex justify-content-center align-items-center flex-wrap gap-3">
-                    <p className="mb-0">Techxplorers©️2025</p>
+                    <p className="mb-2 mb-md-0">© {new Date().getFullYear()} TechXplorers Pvt. Ltd. All rights reserved.</p>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                     <div>
-                        <a href="#" className=" me-2 text-decoration-none">Privacy & Legal</a>
-                        <a href="#" className=" text-decoration-none">Contact</a>
+                        <a href="#" style={{ color: 'black' }} className="me-2 text-decoration-none">Privacy & Legal</a>
+                        &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+                        <a href="/contactus" style={{ color: 'black' }} className="text-decoration-none">Contact</a>
                     </div>
                 </Container>
             </footer>

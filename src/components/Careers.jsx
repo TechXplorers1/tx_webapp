@@ -89,8 +89,8 @@ function Careers() {
 
         <h2 className="careers-title">FEATURED JOBS</h2>
         <p className="careers-subtext text-center">
-        At TechXplorers, we're not just hiring — we're investing in explorers who want to build, learn, and grow. Whether you're a fresher, intern, or pro — there's a place for you here.
-        <p>👉 Apply Now | 🚀 Shape the future with us</p>
+          At TechXplorers, we're not just hiring — we're investing in explorers who want to build, learn, and grow. Whether you're a fresher, intern, or pro — there's a place for you here.
+          <p>👉 Apply Now | 🚀 Shape the future with us</p>
         </p>
       </Container>
 
@@ -282,12 +282,12 @@ function Careers() {
       <footer className="py-0">
         <Container>
           <div className="d-flex justify-content-center align-items-center">
-            <p className="mb-0">Techxplorers ©️2025</p>
+            <p className="mb-2 mb-md-0">© {new Date().getFullYear()} TechXplorers Pvt. Ltd. All rights reserved.</p>
             &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
             <div>
-              <a href="#" className=" me-2 text-decoration-none">Privacy & Legal</a>
+              <a href="#" style={{ color: 'black' }} className="me-2 text-decoration-none">Privacy & Legal</a>
               &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
-              <a href="/contactus" className=" text-decoration-none">Contact</a>
+              <a href="/contactus" style={{ color: 'black' }} className="text-decoration-none">Contact</a>
             </div>
           </div>
         </Container>
