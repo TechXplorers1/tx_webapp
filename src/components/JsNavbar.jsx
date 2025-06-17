@@ -60,7 +60,7 @@ const JsNavbar = () => {
 
             {/* Go to Home Text Link (Right-Aligned) */}
             <span
-              className="text-primary ms-lg-3"
+              className="text-primary fs-5"
               style={{ cursor: 'pointer' }}
               onClick={() => navigate('/')}
             >

@@ -1,10 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import mobileIcon from '../assets/mobile_app_dev.png';
-import webIcon from '../assets/web_app_dev.png';
-import marketingIcon from '../assets/digi_mark.png';
-import talentIcon from '../assets/it_talent_supply.png';
-import consultingIcon from '../assets/job_support.png';
+import mobileIcon from '../assets/mobileAppService.png';
+import webIcon from '../assets/webAppService.png';
+import marketingIcon from '../assets/digitalMarketingService.png';
+import talentIcon from '../assets/ItTalentSupplyService.png';
+import consultingIcon from '../assets/JobSupportingService.png';
 import '../styles/Services.css';
 
 const services = [
@@ -19,16 +19,38 @@ const ServicesDropdown = () => {
   return (
     <div className="services-popup-content">
       <div className="services-left">
-        <div className="services-dropdown">
-          {services.map((service, index) => (
-            <Link to={service.path} key={index} className="service-card-link">
-              <div className="service-card1">
-                <img src={service.icon} />
-                <span>{service.title}</span>
-              </div>
-            </Link>
-          ))}
-        </div>
+       <div className="services-dropdown">
+  <Link to="/services/mobile-app-development" className="service-card-link">
+    <div className="service-card1 custom-bg" style={{ backgroundImage: `url(${mobileIcon})` }}>
+      <span>Mobile Application Development</span>
+    </div>
+  </Link>
+
+  <Link to="/services/web-app-development" className="service-card-link">
+    <div className="service-card1 custom-bg" style={{ backgroundImage: `url(${webIcon})` }}>
+      <span>Web Application Development</span>
+    </div>
+  </Link>
+
+  <Link to="/services/digital-marketing" className="service-card-link">
+    <div className="service-card1 custom-bg" style={{ backgroundImage: `url(${marketingIcon})` }}>
+      <span>Digital Marketing</span>
+    </div>
+  </Link>
+
+  <Link to="/services/it-talent-supply" className="service-card-link">
+    <div className="service-card1 custom-bg" style={{ backgroundImage: `url(${talentIcon})` }}>
+      <span>IT Talent Supply</span>
+    </div>
+  </Link>
+
+  <Link to="/services/job-support" className="service-card-link">
+    <div className="service-card1 custom-bg" style={{ backgroundImage: `url(${consultingIcon})` }}>
+      <span>Job Support & IT Consulting</span>
+    </div>
+  </Link>
+</div>
+
       </div>
 
       <div className="services-right">

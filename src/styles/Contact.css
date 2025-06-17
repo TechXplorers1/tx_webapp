@@ -11,10 +11,10 @@ body {
   text-align: center;
 } */
 
-.dark-mode {
+/* .dark-mode {
   background-color: #2a2929 !important;
   color: #f1f1f1 !important;
-}
+} */
 
 input::placeholder,
 textarea::placeholder,
@@ -33,7 +33,7 @@ button[type="submit"]:hover {
   background-color: #001570;
 }
 
-.dark-mode .nav-link-custom,
+/* .dark-mode .nav-link-custom,
 .dark-mode .navbar-brand,
 .dark-mode h2,
 .dark-mode h3,
@@ -42,10 +42,10 @@ button[type="submit"]:hover {
 .dark-mode label,
 .dark-mode span {
   color: #f1f1f1 !important;
-}
+} */
 
 .contact-us-page {
-  min-height: 100vh;
+  /* min-height: 100vh; */
   display: flex;
   flex-direction: column;
   margin-top: 80px;
@@ -92,4 +92,15 @@ footer a:hover {
 /* Hover effect */
 .fa-envelope:hover {
   color: #0056b3; /* Darker blue on hover */
+}
+
+.email-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+}
+
+.email-card:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
 }

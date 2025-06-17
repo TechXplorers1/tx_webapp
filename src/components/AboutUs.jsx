@@ -6,11 +6,11 @@ import { useNavigate } from 'react-router-dom';
 import CustomNavbar from './Navbar';
 
 const videoUrls = [
-  'https://www.youtube.com/embed/dQw4w9WgXcQ',
+  'https://www.youtube.com/embed/O_9u1P5YjVc',
   'https://www.youtube.com/embed/Z1RJmh_OqeA',
-  'https://www.youtube.com/embed/EptnMYijPjc',
+  'https://www.youtube.com/embed/5rtujDjt50I',
   'https://www.youtube.com/embed/Tn6-PIqc4UM',
-  'https://www.youtube.com/embed/aaNq2NL6D4A',
+  'https://www.youtube.com/embed/CzRQ9mnmh44',
 ];
 
 import industry1 from '../assets/mobile1.png';
