@@ -50,7 +50,7 @@ const ITTalentSupply = () => {
       title: 'IT Talent Supply – TechXplorers Private Limited',
       description: (
         <p>
-          We connect companies with highly skilled IT professionals across various technologies and domains, ensuring you have the right talent to meet your project and business demands.
+         We specialize in connecting companies with highly skilled IT professionals across a wide range of technologies and domains. Our goal is to ensure you have the right talent in place to meet your evolving project needs and business objectives. Whether you require short-term support or long-term collaboration, we provide flexible, efficient staffing solutions that align with your goals and drive successful outcomes.
         </p>
       ),
     },
@@ -71,11 +71,11 @@ const ITTalentSupply = () => {
       title: 'Why Choose TechXplorers?',
       description: (
         <ul className="flip-card-list">
-          <li>Proven Track Record – Years of experience in sourcing and supplying elite IT professionals.</li>
-          <li>Global Reach – Access to a worldwide network of developers, engineers, and architects.</li>
-          <li>Tailored Matching – We assess your needs to ensure we provide the perfect fit for your team.</li>
-          <li>Scalable Hiring – From single freelancers to full teams, we support your growth at any scale.</li>
-          <li>Compliance & Support – Full legal compliance and continuous support during engagement.</li>
+          <li><b>Proven Track Record</b> – Years of experience in sourcing and supplying elite IT professionals.</li>
+          <li><b>Global Reach</b> – Access to a worldwide network of developers, engineers, and architects.</li>
+          <li><b>Tailored Matching</b> – We assess your needs to ensure we provide the perfect fit for your team.</li>
+          <li><b>Scalable Hiring</b> – From single freelancers to full teams, we support your growth at any scale.</li>
+          <li><b>Compliance & Support</b> – Full legal compliance and continuous support during engagement.</li>
         </ul>
       ),
     },
@@ -83,11 +83,11 @@ const ITTalentSupply = () => {
       title: 'Our Talent Supply Process',
       description: (
         <ul className="flip-card-list">
-          <li>Requirement Gathering – Understand your project scope and hiring goals.</li>
-          <li>Candidate Sourcing – Leverage our global talent pool to find the best fit.</li>
-          <li>Screening & Shortlisting – Technical assessments and interviews to ensure quality.</li>
-          <li>Matching & Onboarding – Seamless integration into your team or project.</li>
-          <li>Ongoing Management – Performance tracking, feedback, and support throughout the engagement.</li>
+          <li><b>Requirement Gathering</b> – Understand your project scope and hiring goals.</li>
+          <li><b>Candidate Sourcing</b> – Leverage our global talent pool to find the best fit.</li>
+          <li><b>Screening & Shortlisting</b> – Technical assessments and interviews to ensure quality.</li>
+          <li><b>Matching & Onboarding</b> – Seamless integration into your team or project.</li>
+          <li><b>Ongoing Management</b> – Performance tracking, feedback, and support throughout the engagement.</li>
         </ul>
       ),
     }

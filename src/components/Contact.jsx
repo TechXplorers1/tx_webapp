@@ -24,11 +24,11 @@ const ContactPage = () => {
     }
 
     return (
-        <div className="contact-us-page">
+        <div className="contact-us-page mt-5">
             <CustomNavbar />
 
             {/* Contact Locations Section */}
-            <Container className="my-5">
+            <Container className="my-5 mt-5 pt-5">
                 <h1 className="text-center mb-3">OUR CONTACT LOCATIONS</h1>
                 <Row>
                     <Col md={6}>

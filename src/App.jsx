@@ -9,7 +9,6 @@ import LoginPage from './components/login';
 import SignupPage from './components/signup';
 import Careers from './components/Careers';
 import ClientDashboard from './components/Dashboard/ClientDashboard';
-import AdminDashboard from './components/Dashboard/AdminDashboard';
 import ClientWorkSheet from './components/ClientWorksheet';
 import WebAppDev from './components/services/WebAppDev';
 import MobileAppDev from './components/services/MobileAppDev';
@@ -18,6 +17,15 @@ import DigitalMarketing from './components/services/DigitalMarketing';
 import JobSupport from './components/services/JobSupport';
 import JobSupportForm from './components/services/JobSupportContactForm';
 import UserDashboard from './components/Dashboard/UserDashboard';
+import AdminDashboard from './components/Dashboard/AdminDashboard';
+import ManagerData from './components/Dashboard/ManagerData';
+import TeamLeadData from './components/Dashboard/TeamLeadData';
+import EmployeeData from './components/Dashboard/EmployeeData';
+// import ClientWorkSheet from './components/ClientWorksheet';
+
+
+
+
 
 
 
@@ -45,6 +53,13 @@ const App = () => {
         <Route path="/services/it-talent-supply" element={<ITTalentSupply />} />
         <Route path="/services/job-support" element={<JobSupport />} />
         <Route path="/services/job-contact-form" element={<JobSupportForm />} />
+           {/* DashBoards */}
+        <Route path="/admindashboard" element={<AdminDashboard />} />
+        <Route path="/managers" element={<ManagerData />} />
+        <Route path="/teamleads" element={<TeamLeadData />} />
+        <Route path="/employees" element={<EmployeeData />} />
+        {/* <Route path="/clientworksheet" element={<ClientWorkSheet/>} /> */}
+
 
 
 

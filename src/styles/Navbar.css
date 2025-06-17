@@ -152,6 +152,7 @@ body{
   display: inline-block;
   width: 60px;
   height: 34px;
+  top:5px;
 }
 
 .dark-mode-toggle input {
@@ -163,12 +164,12 @@ body{
 .slider {
   position: absolute;
   cursor: pointer;
-  top: 0;
+  top: 3px;
   left: 0;
   right: 0;
   bottom: 0;
   background-color: #f1ecec;
-  transition: 0.4s;
+  transition: 1.01s;
   border-radius: 34px;
 }
 
@@ -177,9 +178,10 @@ body{
   content: "";
   height: 26px;
   width: 26px;
-  left: 4px;
+  top:2px;
+  left: 8px;
   bottom: 4px;
-  background-color: rgb(181, 162, 114);
+  background-color: rgb(221, 144, 0);
   transition: 0.4s;
   border-radius: 50%;
 }
@@ -193,12 +195,15 @@ input:focus + .slider {
 }
 
 input:checked + .slider:before {
-  transform: translateX(26px);
+  transform: translateX(28px);
 }
 
 /* Rounded Slider */
 .slider.round {
   border-radius: 34px;
+  width:70px;
+  height: 30px;
+  
 }
 
 .slider.round:before {

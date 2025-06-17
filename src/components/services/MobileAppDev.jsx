@@ -23,23 +23,14 @@ const MobileAppDev = () => {
       title: 'Android App Development',
       description: (
         <p>
-          Android, developed by Google, powers a wide variety of smartphones. TechXplorers Pvt Ltd provides expert Android app development services, creating high-quality, custom apps tailored to your business needs.
+Android, developed by Google, powers millions of smartphones globally. At TechXplorers Pvt Ltd, we specialize in expert Android app development, delivering high-quality, custom mobile solutions that align with your unique business goals. From user-friendly interfaces to robust backend integration, our apps are designed to perform seamlessly across Android devices, helping you engage users effectively and drive business growth.
         </p>
       ),
     },
     {
       title: 'Android App Development Services',
       description: (
-        <ul className="flip-card-list">
-          <li>Bluetooth Low Energy (BLE) Powered Devices</li>
-          <li>Music and Video Apps</li>
-          <li>Health and Fitness Apps</li>
-          <li>Security Apps</li>
-          <li>Location-based Apps</li>
-          <li>GPS Tracking & Dispatch Apps</li>
-          <li>Social Media Apps</li>
-          <li>Custom Android App Development</li>
-        </ul>
+       <p>TechXplorers specializes in developing a wide range of applications tailored to diverse user needs. These include Bluetooth Low Energy (BLE) powered devices, music and video apps, health and fitness applications, security apps, and location-based services. The team also builds GPS tracking and dispatch apps, social media platforms, and offers custom Android app development to suit unique client requirements.</p>
       ),
     },
     {
@@ -53,26 +44,20 @@ const MobileAppDev = () => {
     {
       title: 'iOS App Development Services',
       description: (
-        <ul className="flip-card-list">
-          <li>Bluetooth Low Energy (BLE) Powered Devices</li>
-          <li>Music and Video Apps</li>
-          <li>Health and Fitness Apps</li>
-          <li>Security Apps</li>
-          <li>Location-based Apps</li>
-          <li>GPS Tracking & Dispatch Apps</li>
-          <li>Social Media Apps</li>
-          <li>Custom iOS App Development</li>
-        </ul>
+       <p>
+
+TechXplorers specializes in a wide range of mobile solutions including Bluetooth Low Energy (BLE) powered devices, music and video apps, health and fitness applications, security apps, and location-based services. We also develop GPS tracking and dispatch systems, social media applications, and offer custom iOS app development tailored to specific business needs.
+</p>
       ),
     },
     {
       title: 'Why Choose TechXplorers Pvt Ltd',
       description: (
         <ul className="flip-card-list">
-          <li>Expert Developers: Talented professionals skilled in both Android and iOS app development.</li>
-          <li>User-Centric Design: Focus on seamless user experience and beautiful, functional designs.</li>
-          <li>Quality Assurance: Rigorous testing to ensure flawless app performance.</li>
-          <li>Confidentiality: Full protection of your business idea with NDAs.</li>
+          <li><b>Expert Developers:</b> Talented professionals skilled in both Android and iOS app development.</li>
+          <li><b>User-Centric Design:</b> Focus on seamless user experience and beautiful, functional designs.</li>
+          <li><b>Quality Assurance:</b> Rigorous testing to ensure flawless app performance.</li>
+          <li><b>Confidentiality:</b> Full protection of your business idea with NDAs.</li>
         </ul>
       ),
     },

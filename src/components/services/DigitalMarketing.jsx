@@ -50,51 +50,31 @@ const DigitalMarketing = () => {
     {
       title: 'Our Digital Marketing Services',
       description: (
-        <ul className="flip-card-list">
-          <li>Search Engine Optimization (SEO)</li>
-          <li>Social Media Marketing (SMM)</li>
-          <li>Content Marketing</li>
-          <li>Influencer & Affiliate Marketing</li>
-          <li>Online Reputation Management (ORM)</li>
-        </ul>
+        <p>TechXplorers offers a wide range of digital marketing services, including Search Engine Optimization (SEO) to improve website visibility on search engines, Social Media Marketing (SMM) to engage audiences across platforms, and Content Marketing to deliver valuable, targeted information. We also specialize in Influencer & Affiliate Marketing to amplify brand reach through trusted voices, along with Online Reputation Management (ORM) to maintain and enhance your brand’s image in the digital world.</p>
       ),
     },
     {
       title: 'Industries We Serve',
       description: (
         <ul className="flip-card-list">
-          <li>E-Commerce & Retail</li>
-          <li>Healthcare & Pharmaceuticals</li>
-          <li>Finance & Banking</li>
-          <li>Real Estate & Construction</li>
-          <li>Education & Training</li>
-          <li>Technology & SaaS</li>
-          <li>Hospitality & Travel</li>
-          <li>Automotive & Manufacturing</li>
+         TechXplorers offers services across a diverse range of industries, including E-Commerce & Retail, Healthcare & Pharmaceuticals, Finance & Banking, Real Estate & Construction, Education & Training, Technology & SaaS, Hospitality & Travel, and Automotive & Manufacturing.
+
         </ul>
       ),
     },
     {
       title: 'Our Digital Marketing Process',
       description: (
-        <ul className="flip-card-list">
-          <li>Market Research & Analysis</li>
-          <li>Strategy Development</li>
-          <li>Implementation & Execution</li>
-          <li>Monitoring & Optimization</li>
-          <li>Reporting & Insights</li>
-        </ul>
+  <p>The process includes <b>Market Research & Analysis</b>, followed by Strategy Development to outline a clear roadmap. Once the strategy is in place, focus shifts to **Implementation & Execution**, ensuring all plans are put into action effectively. This is supported by continuous **Monitoring & Optimization** to enhance performance, and culminates in comprehensive **Reporting & Insights** that inform future decisions.
+</p>
       ),
     },
     {
       title: 'Why Choose TechXplorers for Digital Marketing?',
       description: (
         <ul className="flip-card-list">
-          <li>Expertise & Experience</li>
-          <li>Custom Strategies</li>
-          <li>Data-Driven Approach</li>
-          <li>Multi-Channel Marketing</li>
-          <li>Transparent Reporting</li>
+         TechXplorers stands out through its **expertise and experience**, offering clients **custom strategies** tailored to their unique goals. With a strong **data-driven approach**, we ensure every decision is backed by analytics. Our **multi-channel marketing** capabilities help businesses reach audiences effectively across platforms, all while maintaining **transparent reporting** to keep clients informed and empowered.
+
         </ul>
       ),
     }
