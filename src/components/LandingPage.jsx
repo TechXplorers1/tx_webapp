@@ -48,7 +48,7 @@ const LandingPage = () => {
   const [servicesRef, servicesInView] = useInView({ triggerOnce: false, threshold: 0.1 });
   const [worldRef, worldInView] = useInView({ triggerOnce: true, threshold: 0.1 });
 
-    const { isDarkMode } = useTheme();
+  const { isDarkMode } = useTheme();
 
 
   return (
@@ -143,7 +143,7 @@ const LandingPage = () => {
               >
                 <TileLayer
                   attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>  contributors'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
                 {offices.map((office, index) => (
                   <Marker key={index} position={office.position}>
@@ -170,17 +170,18 @@ const LandingPage = () => {
         </Container>
       </section>
       <footer className="py-4">
-              <Container>
-                <div className="d-flex justify-content-center align-items-center mb-3">
-                  <p className="mb-0">Techxplorers ©️2025</p>
-                  &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
-                  <div>
-                    <a href="#" className=" me-2 text-decoration-none">Privacy & Legal</a>
-                    <a href="#" className=" text-decoration-none">Contact</a>
-                  </div>
-                </div>
-              </Container>
-            </footer>
+        <Container>
+          <div className="d-flex justify-content-center align-items-center mb-3">
+            <p className="mb-2 mb-md-0">© {new Date().getFullYear()} TechXplorers Pvt. Ltd. All rights reserved.</p>
+            &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+            <div>
+              <a href="#" style={{ color: 'black' }} className="me-2 text-decoration-none">Privacy & Legal</a>
+              &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+              <a href="/contactus" style={{ color: 'black' }} className="text-decoration-none">Contact</a>
+            </div>
+          </div>
+        </Container>
+      </footer>
     </div>
   );
 };
