@@ -112,7 +112,7 @@ const AdminDashboard = () => {
     }}>
       {/* Top Navigation Bar */}
       <header style={{
-        background: '#0a193c',
+        background: '#1B3370',
         color: 'white',
         padding: '10px 25px',
         display: 'flex',
@@ -166,7 +166,7 @@ const AdminDashboard = () => {
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            background: '#2c3e50',
+            background: '#ffffff',
             borderRadius: '25px',
             padding: '8px 18px',
             flexGrow: 1,
