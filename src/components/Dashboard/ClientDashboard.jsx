@@ -336,7 +336,7 @@ const ClientDashboard = () => {
           </div>
         </header>
 
-        <h2 style={{ marginBottom: '15px', textAlign: 'center', color: '#333' }}>USER DASHBOARD</h2>
+        <h2 style={{ marginBottom: '15px', textAlign: 'center', color: '#171717' }}>USER DASHBOARD</h2>
 
         {/* Chart Section */}
         <div style={{ width: '100%', maxWidth: '900px', margin: 'auto', marginBottom: '20px' }}>

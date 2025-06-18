@@ -175,9 +175,9 @@ const LandingPage = () => {
             <p className="mb-2 mb-md-0">© {new Date().getFullYear()} TechXplorers Pvt. Ltd. All rights reserved.</p>
             &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
             <div>
-              <a href="#" style={{ color: 'black' }} className="me-2 text-decoration-none">Privacy & Legal</a>
+              <a href="#"  className="me-2 text-decoration-none">Privacy & Legal</a>
               &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
-              <a href="/contactus" style={{ color: 'black' }} className="text-decoration-none">Contact</a>
+              <a href="/contactus"  className="text-decoration-none">Contact</a>
             </div>
           </div>
         </Container>

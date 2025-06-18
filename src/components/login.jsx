@@ -92,7 +92,7 @@ export default function LoginPage() {
 
             <div className="d-flex justify-content-center align-items-center vh-90">
                 <form onSubmit={handleSubmit} className="rounded signup-box">
-                    <div className="shadow-lg p-5 rounded login-box">
+                    <div className="shadow-lg p-5 rounded">
                         <h3 className="text-center fw-bold mb-3">Welcome back!</h3>
                         <button type="button" className="btn btn-light w-100 border mb-3 d-flex align-items-center justify-content-center gap-2">
                             <FcGoogle size={20} />

@@ -6,7 +6,7 @@
 }
 a{
     text-decoration: none;
-    color: inherit;
+    color:#000;
 }
 
 
@@ -33,6 +33,7 @@ body {
 .dark-mode h2,
 .dark-mode h3,
 .dark-mode p,
+.dark-mode a,
 .dark-mode li,
 .dark-mode label {
   color: #f1f1f1 !important;

@@ -11,6 +11,10 @@ body {
   color: #333;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
+a{
+    text-decoration: none;
+    color:#000;
+}
 
 /* Dark mode styles */
 .dark-mode {
@@ -27,6 +31,7 @@ body {
 .dark-mode h2,
 .dark-mode h3,
 .dark-mode p,
+.dark-mode a,
 .dark-mode li,
 .dark-mode label{
   color: #f1f1f1 !important;

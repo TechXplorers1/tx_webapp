@@ -7,6 +7,10 @@
   padding-top: 20px; /* Space from navbar */
 }
 
+h2{
+  color:#28a745;
+}
+
 /* Card styles */
 .client-dashboard-container .card {
   border: none;

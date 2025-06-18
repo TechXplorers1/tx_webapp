@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import '../styles/Navbar.css';
 import { Navbar, Nav, Container, Button, Dropdown } from 'react-bootstrap';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link,NavLink, useLocation } from 'react-router-dom';
 import ServicesDropdown from '../components/Services';
 import profileIcon from '../assets/Profile.png';
 import Image from 'react-bootstrap/Image';
@@ -107,7 +107,9 @@ const CustomNavbar = () => {
 
         <Navbar.Collapse id="basic-navbar-nav">
           <Nav className="mx-auto gap-lg-5 gap-3">
-            <Nav.Link className="nav-link-custom" onClick={() => navigate('/')}>HOME</Nav.Link>
+            <NavLink to="/" className={({ isActive }) => `nav-link-custom ${isActive ? 'active' : ''}`}>
+  HOME
+</NavLink>
 
             <Nav.Link
               className="nav-link services-popup-wrapper nav-link-custom"
@@ -128,9 +130,15 @@ const CustomNavbar = () => {
               )}
             </Nav.Link>
 
-            <Nav.Link className="nav-link-custom" onClick={() => navigate('/careers')}>CAREER</Nav.Link>
-            <Nav.Link className="nav-link-custom" onClick={() => navigate('/aboutus')}>ABOUT US</Nav.Link>
-            <Nav.Link className="nav-link-custom" onClick={() => navigate('/contactus')}>CONTACT</Nav.Link>
+                <NavLink to="/careers" className={({ isActive }) => `nav-link-custom ${isActive ? 'active' : ''}`}>
+              CAREER
+            </NavLink>
+            <NavLink to="/aboutus" className={({ isActive }) => `nav-link-custom ${isActive ? 'active' : ''}`}>
+              ABOUT US
+            </NavLink>
+            <NavLink to="/contactus" className={({ isActive }) => `nav-link-custom ${isActive ? 'active' : ''}`}>
+              CONTACT
+            </NavLink>
           </Nav>
 
           <div className="d-flex align-items-center gap-3">

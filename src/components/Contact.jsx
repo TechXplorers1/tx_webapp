@@ -35,7 +35,7 @@ const ContactPage = () => {
 
             {/* Contact Locations Section */}
             <Container className="my-5 mt-5 pt-5">
-                <Container className="my-5 mt-5 pt-5">
+                <Container className="my-3 mt-3 pt-3">
                     <h1 className="text-center mb-3">OUR CONTACT LOCATIONS</h1>
                     <Row>
                         <Col md={6} data-aos="zoom-in">
@@ -87,8 +87,8 @@ const ContactPage = () => {
                                     boxShadow: '0 4px 10px rgba(0,0,0,0.05)',
                                 }}
                             >
-                                <h2 className="fw-bold mb-2">TALK WITH TECHXPLORERS</h2>
-                                <p className=" mb-4">BUILDING THE FUTURE WITH STYLE AND INNOVATION. JOIN US ON OUR JOURNEY!</p>
+                                <h2 className="fw-bold mb-2">Talk With Techxplorers</h2>
+                                <p className=" mb-4">Building the future with style and innovation. Join us on our journey!</p>
 
                                 <Form onSubmit={handleSubmit}>
                                     <Row className="mb-3">
@@ -166,7 +166,7 @@ const ContactPage = () => {
 
                                 }}
                             >
-                                <h2 className="fw-bold mb-4">CONTACT MAIL ID</h2>
+                                <h2 className="fw-bold mb-4">Contact Mail ID</h2>
                                 {[
                                     {
                                         email: "txhr@techxplores.in",

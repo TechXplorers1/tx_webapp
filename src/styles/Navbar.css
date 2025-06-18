@@ -28,19 +28,25 @@ body{
 
 /* Nav Links Styling */
 .nav-link-custom {
-  font-weight: 500;
+  font-weight: 600;
   color: #333 !important;
-  padding: 0.5rem 1rem !important;
-  transition: all 0.3s ease;
+  padding: 0.6rem 1.2rem !important;
+  border-radius: 6px;
+  transition: all 0.3s ease-in-out;
+  position: relative;
+  text-decoration: none;
 }
 
 .nav-link-custom:hover, 
 .nav-link-custom:focus {
-  color: #007bff !important;
+    color: #fff !important;
+  background-color: #007bff;
+  box-shadow: 0 8px 20px rgba(0, 123, 255, 0.25);
+  z-index: 2;
 }
 
 .nav-link-custom.active {
-  color: #007bff !important;
+  color: #22e3f1 !important;
   font-weight: 600;
 }
 
