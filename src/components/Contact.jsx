@@ -35,7 +35,7 @@ const ContactPage = () => {
 
             {/* Contact Locations Section */}
             <Container className="my-5 mt-5 pt-5">
-                <Container className="my-5 mt-5 pt-5">
+                <Container className="my-5">
                     <h1 className="text-center mb-3">OUR CONTACT LOCATIONS</h1>
                     <Row>
                         <Col md={6} data-aos="zoom-in">

@@ -15,7 +15,7 @@ ChartJS.register(ArcElement, Tooltip, Legend);
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [hoveredCardId, setHoveredCardId] = useState(null); // New state for tracking hovered card
+  const [hoveredCardId, setHoveredCardId] = useState(null); // State for tracking hovered card
 
   const toggleMenu = () => setMenuOpen(!menuOpen);
 
@@ -87,6 +87,21 @@ const AdminDashboard = () => {
     navigate('/login');
   };
 
+  // New: Function to handle card clicks
+  const handleCardClick = (cardType) => {
+    console.log(`${cardType} card clicked!`);
+    // Example: You can navigate to a different route based on the card type
+    // if (cardType === 'clients') {
+    //   navigate('/admin/clients');
+    // } else if (cardType === 'manager') {
+    //   navigate('/admin/managers');
+    // } else if (cardType === 'teamleads') {
+    //   navigate('/admin/teamleads');
+    // } else if (cardType === 'employee') {
+    //   navigate('/admin/employees');
+    // }
+  };
+
   return (
     <div style={{
       fontFamily: 'Segoe UI, sans-serif',
@@ -120,7 +135,7 @@ const AdminDashboard = () => {
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
               <span style={{ fontSize: '18px', fontWeight: 'bold', lineHeight: '1.2' }}>TECHXPLORERS</span>
-              <span style={{ fontSize: '10px', opacity: 0.8, marginTop: '0px', paddingLeft: '60px' }}>Exploring The Future</span>
+              <span style={{ fontSize: '10px', opacity: 0.8, marginTop: '0px', paddingLeft: '42px' }}>Exploring The Future</span>
             </div>
           </div>
         </div>
@@ -198,6 +213,7 @@ const AdminDashboard = () => {
         <div
           onMouseEnter={() => setHoveredCardId('clients')}
           onMouseLeave={() => setHoveredCardId(null)}
+          onClick={() => handleCardClick('clients')} 
           style={{ ...cardStyle, ...(hoveredCardId === 'clients' ? cardHoverStyle : {}) }}
         >
           <h3 style={cardTitleStyle}>Clients</h3>
@@ -208,6 +224,7 @@ const AdminDashboard = () => {
         <div
           onMouseEnter={() => setHoveredCardId('manager')}
           onMouseLeave={() => setHoveredCardId(null)}
+          onClick={() => handleCardClick('manager')}
           style={{ ...cardStyle, ...(hoveredCardId === 'manager' ? cardHoverStyle : {}) }}
         >
           <h3 style={cardTitleStyle}>Manager</h3>
@@ -218,6 +235,7 @@ const AdminDashboard = () => {
         <div
           onMouseEnter={() => setHoveredCardId('teamleads')}
           onMouseLeave={() => setHoveredCardId(null)}
+          onClick={() => handleCardClick('teamleads')}
           style={{ ...cardStyle, ...(hoveredCardId === 'teamleads' ? cardHoverStyle : {}) }}
         >
           <h3 style={cardTitleStyle}>Team Leads</h3>
@@ -228,6 +246,7 @@ const AdminDashboard = () => {
         <div
           onMouseEnter={() => setHoveredCardId('employee')}
           onMouseLeave={() => setHoveredCardId(null)}
+          onClick={() => handleCardClick('employee')}
           style={{ ...cardStyle, ...(hoveredCardId === 'employee' ? cardHoverStyle : {}) }}
         >
           <h3 style={cardTitleStyle}>Employee</h3>
@@ -279,6 +298,27 @@ const AdminDashboard = () => {
         </div>
       </div>
 
+      {/* Logout Button (bottom, centered) */}
+      <div style={{ textAlign: 'center', padding: '20px 0 40px 0' }}>
+        <button
+          onClick={handleLogout}
+          style={{
+            background: '#dc3545',
+            color: 'white',
+            border: 'none',
+            padding: '12px 25px',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontSize: '1.1em',
+            fontWeight: 'bold',
+            boxShadow: '0 4px 10px rgba(220, 53, 69, 0.3)',
+            transition: 'background-color 0.3s ease'
+          }}
+        >
+          Log Out
+        </button>
+      </div>
+
       {/* Overlay for when menu is open */}
       {menuOpen && (
         <div
@@ -290,7 +330,7 @@ const AdminDashboard = () => {
             width: '100vw',
             height: '100vh',
             background: 'rgba(0, 0, 0, 0.4)',
-            zIndex: 1002, // Higher than sidebar, so it's clickable
+            zIndex: 1002,
           }}
         />
       )}
@@ -303,7 +343,7 @@ const AdminDashboard = () => {
         width: '250px',
         background: '#fff',
         boxShadow: '2px 0 10px rgba(0,0,0,0.3)',
-        zIndex: 1001, // Below overlay, above header and content
+        zIndex: 1001,
         transition: 'left 0.3s ease',
         padding: '20px',
         display: 'flex',
