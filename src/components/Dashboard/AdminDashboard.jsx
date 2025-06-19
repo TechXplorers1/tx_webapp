@@ -18,9 +18,48 @@ const AdminDashboard = () => {
   const [hoveredCardId, setHoveredCardId] = useState(null); // State for tracking hovered card
   const [showClientDetailsModal, setShowClientDetailsModal] = useState(false); // State for Client Details modal
   const [clientFilter, setClientFilter] = useState('registered'); // Initial state: 'registered'
+  const [contentLoaded, setContentLoaded] = useState(false); // State to trigger entrance animations
 
   // State to hold the selected manager for each client in the modal's dropdowns
   const [selectedManagerPerClient, setSelectedManagerPerClient] = useState({});
+
+  // --- Effect to trigger entrance animations after component mounts ---
+  useEffect(() => {
+    setContentLoaded(true);
+  }, []);
+
+  // --- Effect to save and restore scroll position on refresh ---
+  useEffect(() => {
+    // Function to save scroll position
+    const saveScrollPosition = () => {
+      sessionStorage.setItem('scrollPosition', window.scrollY);
+    };
+
+    // Restore scroll position on component mount
+    const restoreScrollPosition = () => {
+      const savedScrollY = sessionStorage.getItem('scrollPosition');
+      if (savedScrollY) {
+        window.scrollTo(0, parseInt(savedScrollY, 10));
+        sessionStorage.removeItem('scrollPosition'); // Clean up after restoring
+      }
+    };
+
+    // Attach event listener for beforeunload to save scroll position
+    window.addEventListener('beforeunload', saveScrollPosition);
+
+    // Restore scroll position when component mounts (after initial render)
+    restoreScrollPosition();
+
+    // Clean up event listener when component unmounts
+    return () => {
+      window.removeEventListener('beforeunload', saveScrollPosition);
+    };
+  }, []); // Empty dependency array ensures this runs only once on mount and cleanup on unmount
+
+  // --- Debugging useEffect for menuOpen state changes ---
+  useEffect(() => {
+    console.log("Menu state changed to:", menuOpen);
+  }, [menuOpen]);
 
   // --- Client Data as State (Ensured consistent lowercase status values) ---
   const [clients, setClients] = useState([
@@ -47,13 +86,16 @@ const AdminDashboard = () => {
     { id: 11, name: 'Karen Hall', mobile: '6667778888', email: 'karen.h@example.com', jobsApplyFor: 'Graphic Designer', registeredDate: '2025-05-17', country: 'Australia', visaStatus: 'Working Holiday', status: 'rejected', displayStatuses: ['rejected'], assignedTo: null, manager: null },
     { id: 14, name: 'Laura Martinez', mobile: '5566778899', email: 'laura@example.com', jobsApplyFor: 'Cloud Architect', registeredDate: '2025-05-20', country: 'Spain', visaStatus: 'Student Visa', status: 'rejected', displayStatuses: ['rejected'], assignedTo: null, manager: null },
 
-    // Restored Clients (2 entries) - Note: Their status *is* 'restored', but they also display in 'registered'
-    { id: 6, name: 'Emily Davis', mobile: '1122334455', email: 'emily@example.com', jobsApplyFor: 'Data Analyst', registeredDate: '2025-05-10', country: 'India', visaStatus: 'Citizen', status: 'restored', displayStatuses: ['restored'], assignedTo: 'Manager A', manager: null }, // Removed 'registered' from initial restored client displayStatuses to accurately test restore flow
-    { id: 16, name: 'Chris Evans', mobile: '1122334455', email: 'chris.e@example.com', jobsApplyFor: 'Marketing Specialist', registeredDate: '2025-05-14', country: 'Brazil', visaStatus: 'Tourist Visa', status: 'restored', displayStatuses: ['restored'], assignedTo: 'Manager B', manager: null }, // Removed 'registered' from initial restored client displayStatuses
+    // Restored Clients (2 entries)
+    { id: 6, name: 'Emily Davis', mobile: '1122334455', email: 'emily@example.com', jobsApplyFor: 'Data Analyst', registeredDate: '2025-05-10', country: 'India', visaStatus: 'Citizen', status: 'restored', displayStatuses: ['restored'], assignedTo: 'Manager A', manager: null },
+    { id: 16, name: 'Chris Evans', mobile: '1122334455', email: 'chris.e@example.com', jobsApplyFor: 'Marketing Specialist', registeredDate: '2025-05-14', country: 'Brazil', visaStatus: 'Tourist Visa', status: 'restored', displayStatuses: ['restored'], assignedTo: 'Manager B', manager: null },
   ]);
 
 
-  const toggleMenu = () => setMenuOpen(!menuOpen);
+  const toggleMenu = () => {
+    console.log("Toggle menu clicked. Before update, menuOpen was:", menuOpen);
+    setMenuOpen(prevMenuOpen => !prevMenuOpen);
+  };
   const toggleClientDetailsModal = () => setShowClientDetailsModal(!showClientDetailsModal);
 
   // Placeholders (consider replacing with actual assets if available)
@@ -111,7 +153,7 @@ const AdminDashboard = () => {
   };
 
   // --- Action Handlers that update state WITHOUT changing filter automatically ---
-  const updateClientData = (clientId, updates) => { // Removed newFilterStatus param
+  const updateClientData = (clientId, updates) => {
     setClients(prevClients =>
       prevClients.map(client =>
         client.id === clientId
@@ -131,7 +173,6 @@ const AdminDashboard = () => {
   const handleDeclineClient = (clientId) => {
     console.log(`Client ${clientId} Declined! Staying on current table.`);
     // Declined client -> status becomes 'rejected', displayStatuses updated
-    // The key change here: NO newFilterStatus is passed, so the filter doesn't change.
     updateClientData(clientId, { status: 'rejected', displayStatuses: ['rejected'] });
   };
 
@@ -139,7 +180,7 @@ const AdminDashboard = () => {
   const handleAssignClient = (clientId) => {
     const managerToAssign = selectedManagerPerClient[clientId];
     if (!managerToAssign) {
-      alert("Please select a manager before assigning."); // Using alert for now, consider a custom modal
+      console.warn("Please select a manager before assigning.");
       return;
     }
     console.log(`Client ${clientId} assigned to ${managerToAssign}! Moving to Active.`);
@@ -167,6 +208,7 @@ const AdminDashboard = () => {
     }));
   };
 
+
   // --- Helper to get client data value by header name (refined for robustness) ---
   const getClientValue = (client, header) => {
     let value;
@@ -178,13 +220,39 @@ const AdminDashboard = () => {
       case 'Registered Date': value = client.registeredDate; break;
       case 'Country': value = client.country; break;
       case 'Visa Status': value = client.visaStatus; break;
-      case 'Assign To': value = client.assignedTo; break;
-      case 'Manager': value = client.manager; break;
+      case 'Assign To':
+        // If it's an unassigned or restored client, always show the select box
+        if (client.displayStatuses.includes('unassigned') || client.displayStatuses.includes('restored')) {
+          return (
+            <select
+              style={{
+                padding: '6px 8px',
+                borderRadius: '5px',
+                border: '1px solid #ccc',
+                backgroundColor: '#fff',
+                fontSize: '0.85em',
+                width: '100%', // Make it take full width of cell
+              }}
+              value={selectedManagerPerClient[client.id] || ''} // Use selected or empty string
+              onChange={(e) => handleManagerSelectChange(client.id, e.target.value)}
+            >
+              <option value="">Select Manager</option>
+              <option value="Manager A">Manager A</option>
+              <option value="Manager B">Manager B</option>
+              <option value="Manager C">Manager C</option>
+            </select>
+          );
+        } else {
+          // For other client types, just display the assigned manager or '-'
+          value = client.assignedTo;
+        }
+        break;
+      case 'Manager': value = client.manager; break; // This is for 'active' clients
       case 'Actions': return null; // Actions are rendered by renderActions, not directly from data
       default: value = null; // Fallback for unknown headers
     }
-    // Return '-' for undefined, null, or empty string values
-    return value !== undefined && value !== null && value !== '' ? value : '-';
+    // Return '-' for undefined, null, or empty string values, unless it's a JSX element
+    return React.isValidElement(value) ? value : (value !== undefined && value !== null && value !== '' ? value : '-');
   };
 
   // --- Table Configuration based on Client Filter ---
@@ -193,32 +261,38 @@ const AdminDashboard = () => {
       headers: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Actions'],
       renderActions: (client) => (
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap' }}>
-          <button onClick={() => handleAcceptClient(client.id)} style={{ ...actionButtonStyle, background: '#28a745' }}>Accept</button>
-          <button onClick={() => handleDeclineClient(client.id)} style={{ ...actionButtonStyle, background: '#dc3545' }}>Decline</button>
+          <button
+            onClick={() => handleAcceptClient(client.id)}
+            style={{ ...actionButtonStyle, background: '#28a745' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#218838'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#28a745'}
+            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          >Accept</button>
+          <button
+            onClick={() => handleDeclineClient(client.id)}
+            style={{ ...actionButtonStyle, background: '#dc3545' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#c82333'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#dc3545'}
+            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          >Decline</button>
         </div>
       )
     },
     unassigned: {
       headers: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Assign To', 'Actions'],
       renderActions: (client) => (
+        // Only the Assign button is here now
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap', alignItems: 'center' }}>
-          <select
-            style={{
-              padding: '6px 8px',
-              borderRadius: '5px',
-              border: '1px solid #ccc',
-              backgroundColor: '#fff',
-              fontSize: '0.85em',
-            }}
-            value={selectedManagerPerClient[client.id] || ''} // Use value prop for controlled component
-            onChange={(e) => handleManagerSelectChange(client.id, e.target.value)}
-          >
-            <option value="">Select Manager</option>
-            <option value="Manager A">Manager A</option>
-            <option value="Manager B">Manager B</option>
-            <option value="Manager C">Manager C</option>
-          </select>
-          <button onClick={() => handleAssignClient(client.id)} style={{ ...actionButtonStyle, background: '#007bff' }}>Assign</button>
+          <button
+            onClick={() => handleAssignClient(client.id)}
+            style={{ ...actionButtonStyle, background: '#007bff' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0069d9'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#007bff'}
+            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          >Assign</button>
         </div>
       )
     },
@@ -232,31 +306,30 @@ const AdminDashboard = () => {
       headers: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Actions'],
       renderActions: (client) => (
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap' }}>
-          <button onClick={() => handleRestoreClient(client.id)} style={{ ...actionButtonStyle, background: '#28a745' }}>Restore</button>
+          <button
+            onClick={() => handleRestoreClient(client.id)}
+            style={{ ...actionButtonStyle, background: '#28a745' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#218838'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#28a745'}
+            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          >Restore</button>
         </div>
       )
     },
     restored: {
       headers: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Assign To', 'Actions'],
       renderActions: (client) => (
-         <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap', alignItems: 'center' }}>
-          <select
-            style={{
-              padding: '6px 8px',
-              borderRadius: '5px',
-              border: '1px solid #ccc',
-              backgroundColor: '#fff',
-              fontSize: '0.85em',
-            }}
-            value={selectedManagerPerClient[client.id] || ''} // Use value prop for controlled component
-            onChange={(e) => handleManagerSelectChange(client.id, e.target.value)}
-          >
-            <option value="">Select Manager</option>
-            <option value="Manager A">Manager A</option>
-            <option value="Manager B">Manager B</option>
-            <option value="Manager C">Manager C</option>
-          </select>
-          <button onClick={() => handleAssignClient(client.id)} style={{ ...actionButtonStyle, background: '#007bff' }}>Assign</button>
+        // Only the Assign button is here now
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap', alignItems: 'center' }}>
+          <button
+            onClick={() => handleAssignClient(client.id)}
+            style={{ ...actionButtonStyle, background: '#007bff' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0069d9'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#007bff'}
+            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          >Assign</button>
         </div>
       )
     },
@@ -277,10 +350,11 @@ const AdminDashboard = () => {
       minHeight: '100vh',
       display: 'flex',
       flexDirection: 'column',
+      overflowX: 'hidden', // Ensure no horizontal scrollbar due to initial off-screen elements
     }}>
       {/* Top Navigation Bar */}
       <header style={{
-        background: '#1B3370',
+        background: '#0a193c',
         color: 'white',
         padding: '10px 25px',
         display: 'flex',
@@ -289,7 +363,7 @@ const AdminDashboard = () => {
         height: 'auto',
         position: 'sticky',
         top: 0,
-        zIndex: 1000,
+        zIndex: 1000, // Header z-index
         width: '100%'
       }}>
         {/* Top Row: Logo & Company Name */}
@@ -306,16 +380,18 @@ const AdminDashboard = () => {
               <span style={{ fontSize: '10px', opacity: 0.8, marginTop: '0px', paddingLeft: '42px' }}>Exploring The Future</span>
             </div>
           </div>
+          {/* Note: Notification and Profile icons are now in the bottom row */}
         </div>
 
-        {/* Bottom Row: Hamburger Menu, Search Bar, Notification, Profile */}
+        {/* Bottom Row: Hamburger Menu, Search Bar (centered), Notification, Profile */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
-          width: '100%'
+          justifyContent: 'space-between', // Distributes items to ends, and flex-grow centers middle
+          width: '100%',
+          marginTop: '10px', // Space between top and bottom rows
         }}>
-          {/* Hamburger Menu */}
+          {/* Left: Hamburger Menu */}
           <button
             onClick={toggleMenu}
             style={{
@@ -324,46 +400,58 @@ const AdminDashboard = () => {
               color: 'white',
               fontSize: '24px',
               cursor: 'pointer',
-              padding: '0'
+              padding: '0',
+              position: 'relative', // Essential for z-index
+              zIndex: 1004, // High z-index to ensure it's on top for clicks
             }}
           >
             <FaBars />
           </button>
 
-          {/* Search Bar */}
+          {/* Center: Search Bar (now a static icon) */}
           <div style={{
+            flexGrow: 1, // Allows this div to take up available space
             display: 'flex',
-            alignItems: 'center',
-            background: '#ffffff',
-            borderRadius: '25px',
-            padding: '8px 18px',
-            flexGrow: 1,
-            maxWidth: '400px',
-            margin: '0 20px'
+            justifyContent: 'center', // Centers the content (search bar) within this div
+            margin: '0 15px', // Add horizontal margin to prevent it from touching edges
           }}>
-            <input
-              type="text"
-              placeholder="Search"
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'white',
-                outline: 'none',
-                width: '100%',
-                fontSize: '15px',
-                paddingLeft: '5px'
-              }}
-            />
-            <FaSearch style={{ color: '#ccc', marginLeft: '10px', fontSize: '16px' }} />
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              background: '#ffffff',
+              cursor: 'pointer',
+              borderRadius: '25px',
+              padding: '8px 18px',
+              maxWidth: '400px', // Retain max width
+              width: '100%', // Ensure it takes available width up to max
+            }}>
+              <input
+                type="text"
+                placeholder="Search"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'black',
+                  outline: 'none',
+                  width: '100%',
+                  fontSize: '15px',
+                  paddingLeft: '5px',
+                  cursor: 'default' // Indicate it's not interactive
+                }}
+              />
+              {/* Removed: Search query clear button */}
+              <FaSearch style={{ color: '#ccc', marginLeft: '10px', fontSize: '16px' }} />
+            </div>
           </div>
 
-          {/* Right side icons */}
+          {/* Right: Notification and Profile icons */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '25px' }}>
             <FaBell style={{ fontSize: '20px', cursor: 'pointer' }} />
             <CgProfile style={{ fontSize: '30px', color: '#fff', cursor: 'pointer' }} />
           </div>
         </div>
       </header>
+
 
       {/* Main Content Area - Using CSS Grid */}
       <div style={{
@@ -382,7 +470,14 @@ const AdminDashboard = () => {
           onMouseEnter={() => setHoveredCardId('clients')}
           onMouseLeave={() => setHoveredCardId(null)}
           onClick={() => handleCardClick('clients')}
-          style={{ ...cardStyle, ...(hoveredCardId === 'clients' ? cardHoverStyle : {}) }}
+          style={{
+            ...cardStyle,
+            ...(hoveredCardId === 'clients' ? cardHoverStyle : {}),
+            // Entrance Animation
+            opacity: contentLoaded ? 1 : 0,
+            transform: contentLoaded ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.9)',
+            transitionDelay: contentLoaded ? '0s' : '0s', // No delay on exit, delay on entry
+          }}
         >
           <h3 style={cardTitleStyle}>Clients</h3>
           <FaUsers style={cardIconStyle} />
@@ -393,7 +488,14 @@ const AdminDashboard = () => {
           onMouseEnter={() => setHoveredCardId('manager')}
           onMouseLeave={() => setHoveredCardId(null)}
           onClick={() => handleCardClick('manager')}
-          style={{ ...cardStyle, ...(hoveredCardId === 'manager' ? cardHoverStyle : {}) }}
+          style={{
+            ...cardStyle,
+            ...(hoveredCardId === 'manager' ? cardHoverStyle : {}),
+            // Entrance Animation
+            opacity: contentLoaded ? 1 : 0,
+            transform: contentLoaded ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.9)',
+            transitionDelay: contentLoaded ? '0.05s' : '0s',
+          }}
         >
           <h3 style={cardTitleStyle}>Manager</h3>
           <FaUserTie style={cardIconStyle} />
@@ -404,7 +506,14 @@ const AdminDashboard = () => {
           onMouseEnter={() => setHoveredCardId('teamleads')}
           onMouseLeave={() => setHoveredCardId(null)}
           onClick={() => handleCardClick('teamleads')}
-          style={{ ...cardStyle, ...(hoveredCardId === 'teamleads' ? cardHoverStyle : {}) }}
+          style={{
+            ...cardStyle,
+            ...(hoveredCardId === 'teamleads' ? cardHoverStyle : {}),
+            // Entrance Animation
+            opacity: contentLoaded ? 1 : 0,
+            transform: contentLoaded ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.9)',
+            transitionDelay: contentLoaded ? '0.1s' : '0s',
+          }}
         >
           <h3 style={cardTitleStyle}>Team Leads</h3>
           <FaUserCog style={cardIconStyle} />
@@ -415,7 +524,14 @@ const AdminDashboard = () => {
           onMouseEnter={() => setHoveredCardId('employee')}
           onMouseLeave={() => setHoveredCardId(null)}
           onClick={() => handleCardClick('employee')}
-          style={{ ...cardStyle, ...(hoveredCardId === 'employee' ? cardHoverStyle : {}) }}
+          style={{
+            ...cardStyle,
+            ...(hoveredCardId === 'employee' ? cardHoverStyle : {}),
+            // Entrance Animation
+            opacity: contentLoaded ? 1 : 0,
+            transform: contentLoaded ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.9)',
+            transitionDelay: contentLoaded ? '0.15s' : '0s',
+          }}
         >
           <h3 style={cardTitleStyle}>Employee</h3>
           <FaUserFriends style={cardIconStyle} />
@@ -423,16 +539,10 @@ const AdminDashboard = () => {
 
         {/* Chart Section */}
         <div style={{
-          gridColumn: 'span 2',
-          background: 'white',
-          borderRadius: '10px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-          padding: '25px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '400px',
+          ...chartSectionStyle,
+          opacity: contentLoaded ? 1 : 0,
+          transform: contentLoaded ? 'translateX(0)' : 'translateX(-50px)',
+          transitionDelay: contentLoaded ? '0.2s' : '0s',
         }}>
           <h3 style={{ marginBottom: '20px', color: '#333' }}>CHART</h3>
           <div style={{ width: '100%', maxWidth: '500px', height: '350px' }}>
@@ -442,15 +552,10 @@ const AdminDashboard = () => {
 
         {/* About Section */}
         <div style={{
-          gridColumn: 'span 2',
-          background: 'white',
-          borderRadius: '10px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-          padding: '25px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          minHeight: '400px',
+          ...aboutSectionStyle,
+          opacity: contentLoaded ? 1 : 0,
+          transform: contentLoaded ? 'translateX(0)' : 'translateX(50px)',
+          transitionDelay: contentLoaded ? '0.25s' : '0s',
         }}>
           <h3 style={{ marginBottom: '15px', color: '#333' }}>About</h3>
           <p style={{ lineHeight: '1.6', color: '#555', marginBottom: '15px', fontSize: '1.0em' }}>
@@ -466,31 +571,10 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Logout Button (bottom, centered) */}
-      <div style={{ textAlign: 'center', padding: '20px 0 40px 0' }}>
-        <button
-          onClick={handleLogout}
-          style={{
-            background: '#dc3545',
-            color: 'white',
-            border: 'none',
-            padding: '12px 25px',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: '1.1em',
-            fontWeight: 'bold',
-            boxShadow: '0 4px 10px rgba(220, 53, 69, 0.3)',
-            transition: 'background-color 0.3s ease'
-          }}
-        >
-          Log Out
-        </button>
-      </div>
-
       {/* Overlay for when menu is open */}
       {menuOpen && (
         <div
-          onClick={toggleMenu}
+          onClick={toggleMenu} // Clicking overlay also closes menu
           style={{
             position: 'fixed',
             top: 0,
@@ -498,7 +582,7 @@ const AdminDashboard = () => {
             width: '100vw',
             height: '100vh',
             background: 'rgba(0, 0, 0, 0.4)',
-            zIndex: 1002,
+            zIndex: 1002, // Lower than sidebar, higher than content
           }}
         />
       )}
@@ -511,26 +595,84 @@ const AdminDashboard = () => {
         width: '250px',
         background: '#fff',
         boxShadow: '2px 0 10px rgba(0,0,0,0.3)',
-        zIndex: 1001,
+        zIndex: 1003, // Ensure sidebar is above content but below overlay
         transition: 'left 0.3s ease',
         padding: '20px',
         display: 'flex',
         flexDirection: 'column',
         gap: '15px'
       }}>
-        <h4 style={{color: '#333'}}>Menu Options</h4>
-        <a href="#" style={menuLinkStyle}>Dashboard</a>
-        <a href="#" style={menuLinkStyle}>Reports</a>
-        <a href="#" style={menuLinkStyle}>Settings</a>
+        <h4 style={{ color: '#333' }}>Menu Options</h4>
+        {/* Dashboard link (without dropdown logic) */}
+        <a
+          href="/admindashboard"
+          style={menuLinkBaseStyle}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f0f0f0'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+        >
+          Dashboard
+        </a>
+
+        <a
+          href="/reports"
+          style={menuLinkBaseStyle}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f0f0f0'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+        >Reports</a>
+      
+      <div style={{ marginTop: 'auto' }}>
+          <button
+            onClick={() => {
+              localStorage.removeItem('isLoggedIn');
+              navigate('/');
+              toggleMenu();
+            }}
+            style={{
+              background: '#f1f5f9',
+              color: '#ef4444',
+              border: 'none',
+              padding: '12px 24px',
+              borderRadius: '8px',
+              fontSize: '0.9375rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              width: '100%',
+              margin: '16px 0 24px 0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'background-color 0.2s',
+              ':hover': {
+                backgroundColor: '#fee2e2'
+              }
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginRight: '8px' }}>
+              <path d="M6 14H3.33333C2.97971 14 2.64057 13.8595 2.39052 13.6095C2.14048 13.3594 2 13.0203 2 12.6667V3.33333C2 2.97971 2.14048 2.64057 2.39052 2.39052C2.64057 2.14048 2.97971 2 3.33333 2H6M10.6667 11.3333L14 8M14 8L10.6667 4.66667M14 8H6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Log Out
+          </button>
+        </div>
       </div>
 
       {/* Client Details Modal */}
       {showClientDetailsModal && (
-        <div style={modalOverlayStyle}>
-          <div style={modalContentStyle}>
-            <button onClick={toggleClientDetailsModal} style={modalCloseButtonStyle}>
+        <div style={{ ...modalOverlayStyle, opacity: showClientDetailsModal ? 1 : 0 }}>
+          <div style={{
+            ...modalContentStyle,
+            transform: showClientDetailsModal ? 'scale(1)' : 'scale(0.95)',
+            opacity: showClientDetailsModal ? 1 : 0
+          }}>
+            <button
+              onClick={toggleClientDetailsModal}
+              style={modalCloseButtonStyle}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e2e8f0'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+              onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.9)'}
+              onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M13 1L1 13M1 1L13 13" stroke="#64748B" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M13 1L1 13M1 1L13 13" stroke="#64748B" strokeWidth="2" strokeLinecap="round" />
               </svg>
             </button>
             <div style={{
@@ -563,8 +705,9 @@ const AdminDashboard = () => {
               maxWidth: '900px',
               fontSize: '14px',
               margin: '0 auto 20px auto',
-              overflowX: 'auto',
-              whiteSpace: 'nowrap',
+              overflowX: 'auto', // Keep auto for very narrow screens
+              whiteSpace: 'nowrap', // Keep nowrap for default single line behavior
+              flexWrap: 'wrap', // Allow wrapping for better responsiveness if content overflows
               justifyContent: 'center',
             }}>
               {[
@@ -592,7 +735,7 @@ const AdminDashboard = () => {
                     transition: 'all .15s ease-in-out',
                     backgroundColor: clientFilter === option.value ? '#fff' : 'transparent',
                     fontWeight: clientFilter === option.value ? '600' : 'normal',
-                    margin: '0 2px',
+                    margin: '0 2px 5px 2px', // Added bottom margin for wrapping
                   }}
                 >
                   <input
@@ -600,10 +743,12 @@ const AdminDashboard = () => {
                     name="client-filter"
                     value={option.value}
                     checked={clientFilter === option.value}
-                    onChange={(e) => setClientFilter(e.target.value)} // Set filter ONLY on explicit radio button click
+                    onChange={(e) => {
+                      setClientFilter(e.target.value);
+                    }}
                     style={{ display: 'none' }}
                   />
-                  <span style={{ whiteSpace: 'nowrap' }}>{option.label} ({option.count})</span>
+                  <span style={{ whiteSpace: 'nowrap' }}>{option.label} ({clients.filter(c => c.displayStatuses.includes(option.value)).length})</span>
                 </label>
               ))}
             </div>
@@ -628,7 +773,8 @@ const AdminDashboard = () => {
                 <thead>
                   <tr>
                     {tableConfig[clientFilter].headers.map(header => (
-                      <th key={header} style={{...modalTableHeaderStyle,
+                      <th key={header} style={{
+                        ...modalTableHeaderStyle,
                         borderTopLeftRadius: header === tableConfig[clientFilter].headers[0] ? '8px' : '0',
                         borderTopRightRadius: header === tableConfig[clientFilter].headers[tableConfig[clientFilter].headers.length - 1] ? '8px' : '0',
                       }}>
@@ -664,7 +810,7 @@ const AdminDashboard = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={tableConfig[clientFilter].headers.length} style={{...modalTableCellStyle, textAlign: 'center', color: '#666'}}>
+                      <td colSpan={tableConfig[clientFilter].headers.length} style={{ ...modalTableCellStyle, textAlign: 'center', color: '#666' }}>
                         No {clientFilter} clients found.
                       </td>
                     </tr>
@@ -692,13 +838,13 @@ const cardStyle = {
   minHeight: '180px',
   position: 'relative',
   cursor: 'pointer',
-  transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+  transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out, opacity 0.4s ease-out', // Smoother transition
   paddingBottom: '15px',
 };
 
-const cardHoverStyle = {
-  transform: 'translateY(-5px)',
-  boxShadow: '0 8px 20px rgba(0,0,0,0.15)',
+const cardHoverStyle = { // New style for hover effect
+  transform: 'translateY(-8px) scale(1.02)', // More pronounced lift and slight scale
+  boxShadow: '0 12px 25px rgba(0,0,0,0.2)', // More pronounced shadow
 };
 
 const cardTitleStyle = {
@@ -715,16 +861,30 @@ const cardIconStyle = {
   marginTop: '15px',
 };
 
-const menuLinkStyle = {
+const menuLinkBaseStyle = { // Base style for menu links
   color: '#333',
   textDecoration: 'none',
   padding: '10px 15px',
   borderRadius: '5px',
   transition: 'background-color 0.2s',
-  '&:hover': {
-    backgroundColor: '#f0f0f0'
-  }
+  display: 'block', // Make it a block element to take full width
 };
+
+const logoutButtonInSidebarStyle = {
+  background: 'transparent', // No background by default
+  color: '#dc3545', // Red text color
+  border: 'none',
+  padding: '10px 15px',
+  borderRadius: '5px',
+  cursor: 'pointer',
+  fontSize: '1em',
+  fontWeight: 'bold',
+  textAlign: 'left',
+  width: '100%', // Take full width of sidebar
+  transition: 'background-color 0.2s ease, transform 0.2s ease',
+  marginTop: 'auto', // Push it to the bottom of the sidebar
+};
+
 
 const modalOverlayStyle = {
   position: 'fixed',
@@ -737,7 +897,8 @@ const modalOverlayStyle = {
   display: 'flex',
   justifyContent: 'center',
   alignItems: 'center',
-  zIndex: 1000
+  zIndex: 1000,
+  transition: 'opacity 0.3s ease', // Transition for fade in/out
 };
 
 const modalContentStyle = {
@@ -750,7 +911,11 @@ const modalContentStyle = {
   maxHeight: '90vh',
   overflowY: 'auto',
   position: 'relative',
-  border: '1px solid #cbd5e1'
+  border: '1px solid #cbd5e1',
+  // Initial state for animation (will transition to final values)
+  transition: 'transform 0.5s ease-out, opacity 0.5s ease-out',
+  transform: 'scale(0.95)', // Start slightly smaller
+  opacity: 0, // Start invisible
 };
 
 const modalCloseButtonStyle = {
@@ -765,9 +930,9 @@ const modalCloseButtonStyle = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  transition: 'background-color 0.2s',
+  transition: 'background-color 0.2s, transform 0.1s', // Added transform transition
   color: '#64748b',
-  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
 };
 
 const modalTableStyle = {
@@ -820,7 +985,38 @@ const actionButtonStyle = {
   whiteSpace: 'nowrap',
   flexShrink: 0,
   boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-  transition: 'background-color 0.2s'
+  transition: 'background-color 0.2s ease, transform 0.1s ease',
+};
+
+const chartSectionStyle = {
+  gridColumn: 'span 2',
+  background: 'white',
+  borderRadius: '10px',
+  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+  padding: '25px',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minHeight: '400px',
+  transition: 'opacity 0.5s ease-out, transform 0.5s ease-out',
+  transform: 'translateX(-50px)', // Start off-left for animation
+  opacity: 0,
+};
+
+const aboutSectionStyle = {
+  gridColumn: 'span 2',
+  background: 'white',
+  borderRadius: '10px',
+  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+  padding: '25px',
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent: 'center',
+  minHeight: '400px',
+  transition: 'opacity 0.5s ease-out, transform 0.5s ease-out',
+  transform: 'translateX(50px)', // Start off-right for animation
+  opacity: 0,
 };
 
 export default AdminDashboard;

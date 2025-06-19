@@ -21,6 +21,7 @@ import AdminDashboard from './components/Dashboard/AdminDashboard';
 import ManagerData from './components/Dashboard/ManagerData';
 import TeamLeadData from './components/Dashboard/TeamLeadData';
 import EmployeeData from './components/Dashboard/EmployeeData';
+import Reports from './components/Reports';
 // import ClientWorkSheet from './components/ClientWorksheet';
 
 
@@ -55,6 +56,7 @@ const App = () => {
         <Route path="/services/job-contact-form" element={<JobSupportForm />} />
            {/* DashBoards */}
         <Route path="/admindashboard" element={<AdminDashboard />} />
+        <Route path="/reports" element={<Reports />} />
         <Route path="/managers" element={<ManagerData />} />
         <Route path="/teamleads" element={<TeamLeadData />} />
         <Route path="/employees" element={<EmployeeData />} />
