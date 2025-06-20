@@ -23,6 +23,10 @@ const AdminDashboard = () => {
   // State to hold the selected manager for each client in the modal's dropdowns
   const [selectedManagerPerClient, setSelectedManagerPerClient] = useState({});
 
+  // New states for editing manager in Active Clients
+  const [editingClientId, setEditingClientId] = useState(null);
+  const [tempSelectedManager, setTempSelectedManager] = useState('');
+
   // --- Effect to trigger entrance animations after component mounts ---
   useEffect(() => {
     setContentLoaded(true);
@@ -200,12 +204,39 @@ const AdminDashboard = () => {
     updateClientData(clientId, { status: 'restored', displayStatuses: ['restored', 'registered'], assignedTo: null, manager: null });
   };
 
-  // Handler for dropdown change
+  // Handler for dropdown change (for initial assignment)
   const handleManagerSelectChange = (clientId, managerName) => {
     setSelectedManagerPerClient(prev => ({
       ...prev,
       [clientId]: managerName,
     }));
+  };
+
+  // Handler for dropdown change (for editing active client manager)
+  const handleTempManagerSelectChange = (managerName) => {
+    setTempSelectedManager(managerName);
+  };
+
+  const handleEditManager = (client) => {
+    setEditingClientId(client.id);
+    setTempSelectedManager(client.manager || ''); // Initialize with current manager
+  };
+
+  const handleSaveManagerChange = (clientId) => {
+    if (!tempSelectedManager) {
+      console.warn("Please select a manager to save.");
+      return;
+    }
+    console.log(`Saving manager change for client ${clientId} to ${tempSelectedManager}`);
+    updateClientData(clientId, { assignedTo: tempSelectedManager, manager: tempSelectedManager });
+    setEditingClientId(null); // Exit edit mode
+    setTempSelectedManager(''); // Clear temp state
+  };
+
+  const handleCancelEdit = () => {
+    console.log("Cancelling edit.");
+    setEditingClientId(null); // Exit edit mode
+    setTempSelectedManager(''); // Clear temp state
   };
 
 
@@ -247,7 +278,33 @@ const AdminDashboard = () => {
           value = client.assignedTo;
         }
         break;
-      case 'Manager': value = client.manager; break; // This is for 'active' clients
+      case 'Manager':
+        // If this is an active client and we are in edit mode for this client
+        if (client.status === 'active' && editingClientId === client.id) {
+          return (
+            <select
+              style={{
+                padding: '6px 8px',
+                borderRadius: '5px',
+                border: '1px solid #ccc',
+                backgroundColor: '#fff',
+                fontSize: '0.85em',
+                width: '100%',
+              }}
+              value={tempSelectedManager}
+              onChange={(e) => handleTempManagerSelectChange(e.target.value)}
+            >
+              <option value="">Select Manager</option>
+              <option value="Manager A">Manager A</option>
+              <option value="Manager B">Manager B</option>
+              <option value="Manager C">Manager C</option>
+              <option value="Sarah Connor">Sarah Connor</option> {/* Include existing managers from data */}
+            </select>
+          );
+        } else {
+          value = client.manager;
+        }
+        break;
       case 'Actions': return null; // Actions are rendered by renderActions, not directly from data
       default: value = null; // Fallback for unknown headers
     }
@@ -259,6 +316,7 @@ const AdminDashboard = () => {
   const tableConfig = {
     registered: {
       headers: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Actions'],
+      widths: ['12%', '10%', '15%', '15%', '10%', '8%', '10%', '20%'],
       renderActions: (client) => (
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap' }}>
           <button
@@ -282,6 +340,7 @@ const AdminDashboard = () => {
     },
     unassigned: {
       headers: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Assign To', 'Actions'],
+      widths: ['11%', '9%', '13%', '13%', '9%', '7%', '9%', '14%', '15%'],
       renderActions: (client) => (
         // Only the Assign button is here now
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap', alignItems: 'center' }}>
@@ -298,12 +357,48 @@ const AdminDashboard = () => {
     },
     active: {
       headers: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Manager', 'Actions'],
-      renderActions: (client) => (
-        <span style={{ color: '#666', fontSize: '0.9em' }}>--</span> // No direct actions for active clients in image
-      )
+      widths: ['11%', '9%', '13%', '13%', '9%', '7%', '9%', '14%', '15%'],
+      renderActions: (client) => {
+        if (editingClientId === client.id) {
+          return (
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap', alignItems: 'center' }}>
+              <button
+                onClick={() => handleSaveManagerChange(client.id)}
+                style={{ ...actionButtonStyle, background: '#28a745' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#218838'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#28a745'}
+                onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+                onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              >Save</button>
+              <button
+                onClick={handleCancelEdit}
+                style={{ ...actionButtonStyle, background: '#6c757d' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#5a6268'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#6c757d'}
+                onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+                onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              >Cancel</button>
+            </div>
+          );
+        } else {
+          return (
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap', alignItems: 'center' }}>
+              <button
+                onClick={() => handleEditManager(client)}
+                style={{ ...actionButtonStyle, background: '#007bff' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0069d9'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#007bff'}
+                onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+                onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              >Edit</button>
+            </div>
+          );
+        }
+      }
     },
     rejected: {
       headers: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Actions'],
+      widths: ['12%', '10%', '15%', '15%', '10%', '8%', '10%', '20%'],
       renderActions: (client) => (
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap' }}>
           <button
@@ -319,9 +414,10 @@ const AdminDashboard = () => {
     },
     restored: {
       headers: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Assign To', 'Actions'],
+      widths: ['11%', '9%', '13%', '13%', '9%', '7%', '9%', '14%', '15%'],
       renderActions: (client) => (
-        // Only the Assign button is here now
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap', alignItems: 'center' }}>
+         // Only the Assign button is here now
+         <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap', alignItems: 'center' }}>
           <button
             onClick={() => handleAssignClient(client.id)}
             style={{ ...actionButtonStyle, background: '#007bff' }}
@@ -439,7 +535,6 @@ const AdminDashboard = () => {
                   cursor: 'default' // Indicate it's not interactive
                 }}
               />
-              {/* Removed: Search query clear button */}
               <FaSearch style={{ color: '#ccc', marginLeft: '10px', fontSize: '16px' }} />
             </div>
           </div>
@@ -697,7 +792,7 @@ const AdminDashboard = () => {
               position: 'relative',
               display: 'flex',
               borderRadius: '0.5rem',
-              backgroundColor: '#EEE',
+              backgroundColor: '#EEE', // Overall background for the radio group container
               boxSizing: 'border-box',
               boxShadow: '0 0 0px 1px rgba(0, 0, 0, 0.06)',
               padding: '0.25rem',
@@ -705,18 +800,18 @@ const AdminDashboard = () => {
               maxWidth: '900px',
               fontSize: '14px',
               margin: '0 auto 20px auto',
-              overflowX: 'auto', // Keep auto for very narrow screens
-              whiteSpace: 'nowrap', // Keep nowrap for default single line behavior
-              flexWrap: 'wrap', // Allow wrapping for better responsiveness if content overflows
+              overflowX: 'auto',
+              whiteSpace: 'nowrap',
+              flexWrap: 'wrap',
               justifyContent: 'center',
             }}>
               {[
                 // Counts are dynamically calculated from the 'clients' state based on displayStatuses
-                { label: 'Registered Clients', value: 'registered', count: clients.filter(c => c.displayStatuses.includes('registered')).length },
-                { label: 'Unassigned Clients', value: 'unassigned', count: clients.filter(c => c.displayStatuses.includes('unassigned')).length },
-                { label: 'Active Clients', value: 'active', count: clients.filter(c => c.displayStatuses.includes('active')).length },
-                { label: 'Rejected Clients', value: 'rejected', count: clients.filter(c => c.displayStatuses.includes('rejected')).length },
-                { label: 'Restore Clients', value: 'restored', count: clients.filter(c => c.displayStatuses.includes('restored')).length },
+                { label: 'Registered Clients', value: 'registered', count: clients.filter(c => c.displayStatuses.includes('registered')).length, activeBg: '#E6F0FF', activeColor: '#3A60EE', badgeBg: '#3A60EE' },
+                { label: 'Unassigned Clients', value: 'unassigned', count: clients.filter(c => c.displayStatuses.includes('unassigned')).length, activeBg: '#E6E6E6', activeColor: '#334155', badgeBg: '#9AA0A6' },
+                { label: 'Active Clients', value: 'active', count: clients.filter(c => c.displayStatuses.includes('active')).length, activeBg: '#D9F5E6', activeColor: '#28A745', badgeBg: '#28A745' },
+                { label: 'Rejected Clients', value: 'rejected', count: clients.filter(c => c.displayStatuses.includes('rejected')).length, activeBg: '#FFEDEE', activeColor: '#DC3545', badgeBg: '#DC3545' },
+                { label: 'Restore Clients', value: 'restored', count: clients.filter(c => c.displayStatuses.includes('restored')).length, activeBg: '#F0E6FF', activeColor: '#6A40EE', badgeBg: '#6A40EE' },
               ].map((option) => (
                 <label
                   key={option.value}
@@ -731,9 +826,10 @@ const AdminDashboard = () => {
                     borderRadius: '0.5rem',
                     border: 'none',
                     padding: '.5rem 10px',
-                    color: 'rgba(51, 65, 85, 1)',
                     transition: 'all .15s ease-in-out',
-                    backgroundColor: clientFilter === option.value ? '#fff' : 'transparent',
+                    // Dynamic background and text color based on active state
+                    backgroundColor: clientFilter === option.value ? option.activeBg : 'transparent',
+                    color: clientFilter === option.value ? option.activeColor : 'rgba(51, 65, 85, 1)',
                     fontWeight: clientFilter === option.value ? '600' : 'normal',
                     margin: '0 2px 5px 2px', // Added bottom margin for wrapping
                   }}
@@ -748,7 +844,13 @@ const AdminDashboard = () => {
                     }}
                     style={{ display: 'none' }}
                   />
-                  <span style={{ whiteSpace: 'nowrap' }}>{option.label} ({clients.filter(c => c.displayStatuses.includes(option.value)).length})</span>
+                  <span style={{ whiteSpace: 'nowrap', marginRight: '8px' }}>{option.label}</span>
+                  <span style={{
+                    ...badgeStyle,
+                    backgroundColor: clientFilter === option.value ? option.badgeBg : '#9AA0A6', // Default grey for inactive badges
+                  }}>
+                    {option.count}
+                  </span>
                 </label>
               ))}
             </div>
@@ -768,15 +870,14 @@ const AdminDashboard = () => {
               {clientFilter === 'rejected' && `Rejected Clients`}
               {clientFilter === 'restored' && `Restored Clients`} ({filteredClients.length})
             </h4>
-            <div style={{ overflowX: 'auto' }}>
+            <div style={{ overflowX: 'auto', borderRadius: '8px' }}>
               <table style={modalTableStyle}>
                 <thead>
                   <tr>
-                    {tableConfig[clientFilter].headers.map(header => (
+                    {tableConfig[clientFilter].headers.map((header, index) => (
                       <th key={header} style={{
                         ...modalTableHeaderStyle,
-                        borderTopLeftRadius: header === tableConfig[clientFilter].headers[0] ? '8px' : '0',
-                        borderTopRightRadius: header === tableConfig[clientFilter].headers[tableConfig[clientFilter].headers.length - 1] ? '8px' : '0',
+                        width: tableConfig[clientFilter].widths[index], // Apply fixed width from config
                       }}>
                         {header}
                       </th>
@@ -788,18 +889,12 @@ const AdminDashboard = () => {
                     filteredClients.map((client, index) => (
                       <tr key={client.id} style={{
                         backgroundColor: index % 2 === 0 ? '#ffffff' : '#eff2f7',
-                        ...modalTableRowStyle,
                       }}>
                         {tableConfig[clientFilter].headers.map((header, colIndex) => (
                           <td
                             key={`${client.id}-${header}`} // Unique key for cells
                             style={{
                               ...modalTableCellStyle,
-                              // Apply border radius to the first/last cell of the first/last row
-                              borderTopLeftRadius: (colIndex === 0 && index === 0) ? '12px' : '0',
-                              borderBottomLeftRadius: (colIndex === 0 && index === filteredClients.length - 1) ? '12px' : '0',
-                              borderTopRightRadius: (colIndex === tableConfig[clientFilter].headers.length - 1 && index === 0) ? '12px' : '0',
-                              borderBottomRightRadius: (colIndex === tableConfig[clientFilter].headers.length - 1 && index === filteredClients.length - 1) ? '12px' : '0',
                             }}
                           >
                             {/* Render actions if header is 'Actions', otherwise get value from client data */}
@@ -937,9 +1032,12 @@ const modalCloseButtonStyle = {
 
 const modalTableStyle = {
   width: '100%',
-  borderCollapse: 'separate',
-  borderSpacing: '0 12px',
+  borderCollapse: 'collapse',
+  borderSpacing: '0',
   marginTop: '20px',
+  borderRadius: '8px',
+  overflow: 'hidden',
+  tableLayout: 'fixed', // Key change for fixed column widths
 };
 
 const modalTableHeaderStyle = {
@@ -951,7 +1049,6 @@ const modalTableHeaderStyle = {
   fontWeight: '700',
   textTransform: 'uppercase',
   letterSpacing: '0.7px',
-  border: 'none',
   position: 'sticky',
   top: '0',
   zIndex: '10',
@@ -960,18 +1057,12 @@ const modalTableHeaderStyle = {
 const modalTableCellStyle = {
   padding: '18px 10px',
   textAlign: 'left',
-  border: 'none',
   fontSize: '0.9rem',
   color: '#334155',
-  borderBottom: '1px solid #f1f5f9',
 };
 
 const modalTableRowStyle = {
-  boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
   transition: 'transform 0.2s, box-shadow 0.2s',
-  // Pseudo-selectors like :first-child, :last-child are not directly supported in inline styles.
-  // The border radius logic has been moved to the individual `<td>` elements in the `map` function
-  // to ensure they apply correctly to the first/last cells of the first/last rows.
 };
 
 const actionButtonStyle = {
@@ -1017,6 +1108,23 @@ const aboutSectionStyle = {
   transition: 'opacity 0.5s ease-out, transform 0.5s ease-out',
   transform: 'translateX(50px)', // Start off-right for animation
   opacity: 0,
+};
+
+// --- Style for the count badges ---
+const badgeStyle = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minWidth: '20px', // Ensure it's wide enough for single digits
+  height: '20px',
+  borderRadius: '50%',
+  color: 'white', // Text color for the badge
+  fontSize: '0.75em',
+  fontWeight: 'bold',
+  padding: '0 6px',
+  marginLeft: '5px',
+  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+  transition: 'background-color 0.15s ease',
 };
 
 export default AdminDashboard;
