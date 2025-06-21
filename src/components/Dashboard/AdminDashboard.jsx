@@ -5,10 +5,19 @@ import {
   ArcElement, // Required for Donut/Pie charts
   Tooltip,
   Legend
-} from 'chart.js';
+} from 'chart.js'; 
 import { Doughnut } from 'react-chartjs-2';
 import { FaUsers, FaUserTie, FaUserCog, FaUserFriends, FaBell, FaSearch, FaBars } from 'react-icons/fa'; // Icons from react-icons
+import {
+  FaUserCircle,
+  FaArrowLeft,
+  FaChevronDown,
+  FaChevronUp,
+  FaArrowUp
+} from 'react-icons/fa';
 import { CgProfile } from 'react-icons/cg'; // For the profile icon (more generic)
+import { Table, Button, Form, InputGroup, Dropdown, Modal } from 'react-bootstrap';
+
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -16,50 +25,153 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [hoveredCardId, setHoveredCardId] = useState(null); // State for tracking hovered card
+    const [confirmationOpen, setConfirmationOpen] = useState(false);
+      const [managerToDeactivate, setManagerToDeactivate] = useState(null);
+            const [teamLeadToDeactivate, setTeamLeadToDeactivate] = useState(null);
+            const [employeeToDeactivate, setEmployeeToDeactivate] = useState(null);
+
+
+
   const [showClientDetailsModal, setShowClientDetailsModal] = useState(false); // State for Client Details modal
+  const [showManagersDetailsModal, setShowManagersDetailsModal] = useState(false); // State for Manager Details modal
+    const [showTeamLeadsDetailsModal, setShowTeamLeadsDetailsModal] = useState(false); // State for Team Lead Details modal
+      const [showEmployeesDetailsModal, setShowEmployeesDetailsModal] = useState(false); // State for Team Lead Details modal
+
+
+
+
   const [clientFilter, setClientFilter] = useState('registered'); // Initial state: 'registered'
-  const [contentLoaded, setContentLoaded] = useState(false); // State to trigger entrance animations
+  
+
+  const [isManagerEditing, setIsManagerEditing] = useState(false);
+  const [isTeamLeadEditing, setIsTeamLeadEditing] = useState(false);
+  const [isEmployeeEditing, setIsEmployeeEditing] = useState(false);
+
+
+
+  const [showManagerModal, setShowManagerModal] = useState(false);
+  const [showTeamLeadModal, setShowTeamLeadModal] = useState(false);
+  const [showEmployeeModal, setShowEmployeeModal] = useState(false);
+
+
+
+
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [selectedManagerIndex, setSelectedManagerIndex] = useState(null);
+  const [selectedPeople, setSelectedPeople] = useState([]);
+
+  const [showAssignModal, setShowAssignModal] = useState(false);
+const [selectedManagerData, setSelectedManagerData] = useState(null);
+
+
+  const [originalTeamLeads, setOriginalTeamLeads] = useState([]);
+  const [originalEmployees, setOriginalEmployees] = useState([]);
+  const [originalInterns, setOriginalInterns] = useState([]);
+
+  const [filteredTeamLeads, setFilteredTeamLeads] = useState([]);
+  const [filteredEmployees, setFilteredEmployees] = useState([]);
+  const [filteredInterns, setFilteredInterns] = useState([]);
+
+  const [teamLeadSearch, setTeamLeadSearch] = useState('');
+  const [employeeSearch, setEmployeeSearch] = useState('');
+  const [internSearch, setInternSearch] = useState('');
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [expandedManager, setExpandedManager] = useState(null);
+
+    const [currentManagerIndex, setCurrentManagerIndex] = useState(null);
+      const [currentTeamLeadIndex, setCurrentTeamLeadIndex] = useState(null);
+  const [currentEmployeeIndex, setCurrentEmployeeIndex] = useState(null);
+
+
+const [isActivating, setIsActivating] = useState(false);
+const [activationIndex, setActivationIndex] = useState(null);
+
+  const [toggleIndex, setToggleIndex] = useState(null);
+
+
+ const toggleManagerActivation = (index) => {
+    const manager = managers[index];
+    setManagerToDeactivate(index);
+    
+    if (manager.active) {
+      // Show deactivation confirmation
+      setIsActivating(false);
+      setConfirmationOpen(true);
+    } else {
+      // Show activation confirmation
+      setIsActivating(true);
+      setConfirmationOpen(true);
+    }
+  };
+
+ const toggleTeamLeadActivation = (index) => {
+    const teamLead = teamLeads[index];
+    setTeamLeadToDeactivate(index);
+    
+    if (teamLead.active) {
+      // Show deactivation confirmation
+      setIsActivating(false);
+      setConfirmationOpen(true);
+    } else {
+      // Show activation confirmation
+      setIsActivating(true);
+      setConfirmationOpen(true);
+    }
+  };
+
+
+   const toggleEmployeeActivation = (index) => {
+    const employee = employees[index];
+    setEmployeeToDeactivate(index);
+    
+    if (employee.active) {
+      // Show deactivation confirmation
+      setIsActivating(false);
+      setConfirmationOpen(true);
+    } else {
+      // Show activation confirmation
+      setIsActivating(true);
+      setConfirmationOpen(true);
+    }
+  };
+
+
+
+ const confirmManagerToggle = () => {
+    if (managerToDeactivate !== null) {
+      const updatedManagers = [...managers];
+      updatedManagers[managerToDeactivate].active = !updatedManagers[managerToDeactivate].active;
+      setManagers(updatedManagers);
+      setConfirmationOpen(false);
+      setManagerToDeactivate(null);
+    }
+  };
+
+
+   const confirmTeamLeadToggle = () => {
+    if (managerToDeactivate !== null) {
+      const updatedTeamLeads = [...teamLeads];
+      updatedTeamLeads[teamLeadToDeactivate].active = !updatedTeamLeads[managerToDeactivate].active;
+      setTeamLeads(updatedTeamLeads);
+      setConfirmationOpen(false);
+      setManagerToDeactivate(null);
+    }
+  };
+
+    const confirmEmployeeToggle = () => {
+    if (employeeToDeactivate !== null) {
+      const updatedEmployees = [...employees];
+      updatedEmployees[employeeToDeactivate].active = !updatedTeamLeads[employeeToDeactivate].active;
+      setTeamLeads(updatedEmployees);
+      setConfirmationOpen(false);
+      setEmployeeToDeactivate(null);
+    }
+  };
+
 
   // State to hold the selected manager for each client in the modal's dropdowns
   const [selectedManagerPerClient, setSelectedManagerPerClient] = useState({});
-
-  // --- Effect to trigger entrance animations after component mounts ---
-  useEffect(() => {
-    setContentLoaded(true);
-  }, []);
-
-  // --- Effect to save and restore scroll position on refresh ---
-  useEffect(() => {
-    // Function to save scroll position
-    const saveScrollPosition = () => {
-      sessionStorage.setItem('scrollPosition', window.scrollY);
-    };
-
-    // Restore scroll position on component mount
-    const restoreScrollPosition = () => {
-      const savedScrollY = sessionStorage.getItem('scrollPosition');
-      if (savedScrollY) {
-        window.scrollTo(0, parseInt(savedScrollY, 10));
-        sessionStorage.removeItem('scrollPosition'); // Clean up after restoring
-      }
-    };
-
-    // Attach event listener for beforeunload to save scroll position
-    window.addEventListener('beforeunload', saveScrollPosition);
-
-    // Restore scroll position when component mounts (after initial render)
-    restoreScrollPosition();
-
-    // Clean up event listener when component unmounts
-    return () => {
-      window.removeEventListener('beforeunload', saveScrollPosition);
-    };
-  }, []); // Empty dependency array ensures this runs only once on mount and cleanup on unmount
-
-  // --- Debugging useEffect for menuOpen state changes ---
-  useEffect(() => {
-    console.log("Menu state changed to:", menuOpen);
-  }, [menuOpen]);
 
   // --- Client Data as State (Ensured consistent lowercase status values) ---
   const [clients, setClients] = useState([
@@ -86,17 +198,185 @@ const AdminDashboard = () => {
     { id: 11, name: 'Karen Hall', mobile: '6667778888', email: 'karen.h@example.com', jobsApplyFor: 'Graphic Designer', registeredDate: '2025-05-17', country: 'Australia', visaStatus: 'Working Holiday', status: 'rejected', displayStatuses: ['rejected'], assignedTo: null, manager: null },
     { id: 14, name: 'Laura Martinez', mobile: '5566778899', email: 'laura@example.com', jobsApplyFor: 'Cloud Architect', registeredDate: '2025-05-20', country: 'Spain', visaStatus: 'Student Visa', status: 'rejected', displayStatuses: ['rejected'], assignedTo: null, manager: null },
 
-    // Restored Clients (2 entries)
-    { id: 6, name: 'Emily Davis', mobile: '1122334455', email: 'emily@example.com', jobsApplyFor: 'Data Analyst', registeredDate: '2025-05-10', country: 'India', visaStatus: 'Citizen', status: 'restored', displayStatuses: ['restored'], assignedTo: 'Manager A', manager: null },
-    { id: 16, name: 'Chris Evans', mobile: '1122334455', email: 'chris.e@example.com', jobsApplyFor: 'Marketing Specialist', registeredDate: '2025-05-14', country: 'Brazil', visaStatus: 'Tourist Visa', status: 'restored', displayStatuses: ['restored'], assignedTo: 'Manager B', manager: null },
+    // Restored Clients (2 entries) - Note: Their status *is* 'restored', but they also display in 'registered'
+    { id: 6, name: 'Emily Davis', mobile: '1122334455', email: 'emily@example.com', jobsApplyFor: 'Data Analyst', registeredDate: '2025-05-10', country: 'India', visaStatus: 'Citizen', status: 'restored', displayStatuses: ['restored'], assignedTo: 'Manager A', manager: null }, // Removed 'registered' from initial restored client displayStatuses to accurately test restore flow
+    { id: 16, name: 'Chris Evans', mobile: '1122334455', email: 'chris.e@example.com', jobsApplyFor: 'Marketing Specialist', registeredDate: '2025-05-14', country: 'Brazil', visaStatus: 'Tourist Visa', status: 'restored', displayStatuses: ['restored'], assignedTo: 'Manager B', manager: null }, // Removed 'registered' from initial restored client displayStatuses
   ]);
 
 
-  const toggleMenu = () => {
-    console.log("Toggle menu clicked. Before update, menuOpen was:", menuOpen);
-    setMenuOpen(prevMenuOpen => !prevMenuOpen);
+    const [managers, setManagers] = useState([
+    {
+      firstname: "Sreenivasulu",
+      lastname: "S",
+      mobile: "+91 9874561230",
+      email: "seenu@gmail.com",
+      password: "07072023@Tx123",
+      role: "Manager",
+      active: true,
+      assignedPeople: [
+        { firstname: 'Murali', lastname: 'M', mobile: '+91 987456123', email: 'murali@gmail.com', role: 'Team Lead' },
+        { firstname: 'Madhu', lastname: 'A', mobile: '+91 987456123', email: 'madhuemployee@gmail.com', role: 'Employee' }
+      ]
+    },
+    {
+      firstname: "Vamsi",
+      lastname: "V",
+      mobile: "+91 7894561230",
+      email: "vamsi@gmail.com",
+      password: "07072023@TxSm",
+      role: "Manager",
+      active: true,
+      assignedPeople: [
+        { firstname: 'Kavitha', lastname: 'K', mobile: '+91 987456123', email: 'kavitha@gmail.com', role: 'Team Lead' },
+        { firstname: 'santhosh', lastname: 'S', mobile: '+91 987456123', email: 'santhoshemployee@gmail.com', role: 'Employee' }
+      ]
+    },
+      {
+      firstname: "Kavitha",
+      lastname: "K",
+      mobile: "+91 7894561230",
+      email: "kavitha@gmail.com",
+      password: "07072023@TxSm",
+      role: "Manager",
+      active: true,
+      assignedPeople: [
+        { firstname: 'meera', lastname: 'm', mobile: '+91 987456123', email: 'meera@gmail.com', role: 'Team Lead' },
+        { firstname: 'vijay', lastname: 'v', mobile: '+91 987456123', email: 'vijayemployee@gmail.com', role: 'Employee' }
+      ]
+    },
+  ]);
+
+  const [newManager, setNewManager] = useState({
+    firstname: '',
+    lastname: '',
+    mobile: '',
+    email: '',
+    password: '',
+    role: 'Manager',
+    active: true
+  });
+
+
+    const [teamLeads, setTeamLeads] = useState([
+    { firstname: 'Vaishnavi', lastname: 'V', mobile: '+91 9874561230', email: 'vaishnavi@gmail.com', password: '07072023@TxRm', role: 'Team Lead', active: true },
+    { firstname: 'Murali', lastname: 'reddy', mobile: '+91 9874561230', email: 'murali@gmail.com', password: '07072023@TxRm', role: 'Team Lead', active: true },
+    { firstname: 'Sai Krishna', lastname: 'kumar', mobile: '+91 9874561230', email: 'sai@gmail.com', password: '07072023@TxRm', role: 'Team Lead', active: true },
+  ]);
+
+  const [newTeamLead, setNewTeamLead] = useState({
+    firstname: '',
+    lastname: '',
+    mobile: '',
+    email: '',
+    password: '',
+    role: 'Team Lead',
+    active: true,
+  });
+
+
+    const [employees, setEmployees] = useState([
+    { firstName: 'Humer', lastName: 'R', mobile: '+91 9874561230', email: 'humermployee@gmail.com', password: '07072023@TxRm', role: 'Employee', active: true },
+    { firstName: 'Chaveen', lastName: 'Reddy', mobile: '+91 9874561230', email: 'chaveenemployee@gmail.com', password: '07072023@TxRm', role: 'Employee', active: true },
+    { firstName: 'Bharath', lastName: 'Surya', mobile: '+91 9874561230', email: 'bharathemployee@gmail.com', password: '07072023@TxRm', role: 'Employee', active: true },
+    { firstName: 'Sandeep', lastName: 'Kumar', mobile: '+91 9874561230', email: 'sandeepemployee@gmail.com', password: '07072023@TxRm', role: 'Employee', active: true },
+    { firstName: 'Neelam', lastName: 'Sai Krishna', mobile: '+91 9874561230', email: 'saiemployee@gmail.com', password: '07072023@TxRm', role: 'Intern', active: true },
+  ]);
+
+    const [newEmployee, setNewEmployee] = useState({
+    firstName: '',
+    lastName: '',
+    mobile: '',
+    email: '',
+    password: '',
+    role: '',
+    active: true,
+  });
+
+
+
+
+
+
+  useEffect(() => {
+    const initialTeamLeads = [
+      { firstname: 'Murali', lastname: 'M', mobile: '+91 9874561230', email: 'murali@gmail.com', role: 'Team Lead' },
+      { firstname: 'Vamsi', lastname: 'V', mobile: '+91 9874561230', email: 'vamsi@gmail.com', role: 'Team Lead' },
+      { firstname: 'Kavitha', lastname: 'K', mobile: '+91 9874561230', email: 'kavitha@gmail.com', role: 'Team Lead' },
+      { firstname: 'Bharath', lastname: 'B', mobile: '+91 9874561230', email: 'bharath@gmail.com', role: 'Team Lead' },
+      { firstname: 'SaiKrishna', lastname: 'S', mobile: '+91 9874561230', email: 'saikrishna@gmail.com', role: 'Team Lead' },
+      { firstname: 'Vyshnavi', lastname: 'V', mobile: '+91 9874561230', email: 'vyshnavi@gmail.com', role: 'Team Lead' }
+    ];
+
+    const initialEmployees = [
+      { firstname: 'Madhu', lastname: 'M', mobile: '+91 9874561230', email: 'madhuemployee@gmail.com', role: 'Employee' },
+      { firstname: 'krishna', lastname: 'K', mobile: '+91 9874561230', email: 'krishnaemployee@gmail.com', role: 'Employee' },
+      { firstname: 'arun', lastname: 'A', mobile: '+91 9874561230', email: 'arunemployee@gmail.com', role: 'Employee' },
+      { firstname: 'dharani', lastname: 'D', mobile: '+91 9874561230', email: 'dharaniemployee@gmail.com', role: 'Employee' },
+      { firstname: 'rajitha', lastname: 'R', mobile: '+91 9874561230', email: 'rajithaemployee@gmail.com', role: 'Employee' },
+      { firstname: 'siva', lastname: 'S', mobile: '+91 9874561230', email: 'sivaemployee@gmail.com', role: 'Employee' },
+      { firstname: 'ashok', lastname: 'A', mobile: '+91 9874561230', email: 'ashokemployee@gmail.com', role: 'Employee' },
+      { firstname: 'deepak', lastname: 'D', mobile: '+91 9874561230', email: 'deepakemployee@gmail.com', role: 'Employee' },
+      { firstname: 'santhosh', lastname: 'S', mobile: '+91 9874561230', email: 'santhoshemployee@gmail.com', role: 'Employee' }
+    ];
+
+    const initialInterns = [
+      { firstname: 'Sandeep', lastname: 'S', mobile: '+91 9874561230', email: 'sandeepmployee@gmail.com', role: 'Intern' },
+      { firstname: 'Humer', lastname: 'H', mobile: '+91 9874561230', email: 'humeremployee@gmail.com', role: 'Intern' },
+      { firstname: 'Chaveen', lastname: 'C', mobile: '+91 9874561230', email: 'chaveenemployee@gmail.com', role: 'Intern' }
+    ];
+
+
+    setOriginalTeamLeads(initialTeamLeads);
+    setOriginalEmployees(initialEmployees);
+    setOriginalInterns(initialInterns);
+  }, []);
+
+  const getAllAssignedPeople = () => {
+    return managers.flatMap(manager => manager.assignedPeople || []);
   };
+
+
+
+  const togglePersonSelection = (person) => {
+    setSelectedPeople((prev) =>
+      prev.some(p => p.email === person.email)
+        ? prev.filter(p => p.email !== person.email)
+        : [...prev, person]
+    );
+  };
+
+
+
+
+
+  const toggleMenu = () => setMenuOpen(!menuOpen);
   const toggleClientDetailsModal = () => setShowClientDetailsModal(!showClientDetailsModal);
+  const toggleManagersDetailsModal = () => setShowManagersDetailsModal(!showManagersDetailsModal);
+    const toggleTeamLeadsDetailsModal = () => setShowTeamLeadsDetailsModal(!showTeamLeadsDetailsModal);
+    const toggleEmployeesDetailsModal = () => setShowEmployeesDetailsModal(!showEmployeesDetailsModal);
+
+
+
+  const toggleManagerExpand = (index) => {
+  const manager = managers[index];
+  setSelectedManagerData(manager);
+  setShowAssignModal(true);  };
+
+  const handleManagerAssignDone = () => {
+    const updatedManagers = [...managers];
+    updatedManagers[selectedManagerIndex].assignedPeople = selectedPeople;
+    setManagers(updatedManagers);
+    setAssignModalOpen(false);
+  };
+
+
+    const handleTeamLeadAssignDone = () => {
+    const updatedManagers = [...managers];
+    updatedManagers[selectedManagerIndex].assignedPeople = selectedPeople;
+    setManagers(updatedManagers);
+    setAssignModalOpen(false);
+  };
+
 
   // Placeholders (consider replacing with actual assets if available)
   const logoPlaceholder = "https://placehold.co/40x40/0a193c/ffffff?text=TX";
@@ -144,16 +424,38 @@ const AdminDashboard = () => {
     navigate('/login');
   };
 
-  const handleCardClick = (cardType) => {
+  const handleClientCardClick = (cardType) => {
     console.log(`${cardType} card clicked!`);
     if (cardType === 'clients') {
       setShowClientDetailsModal(true);
       setClientFilter('registered'); // Default to 'registered' when modal opens
     }
   };
+  const handleManagersCardClick = (cardType) => {
+    console.log(`${cardType} card clicked!`);
+    if (cardType === 'manager') {
+      setShowManagersDetailsModal(true);
+      // setClientFilter('registered'); // Default to 'registered' when modal opens
+    }
+  };
+    const handleTeamLeadsCardClick = (cardType) => {
+    console.log(`${cardType} card clicked!`);
+    if (cardType === 'teamleads') {
+      setShowTeamLeadsDetailsModal(true);
+      // setClientFilter('registered'); // Default to 'registered' when modal opens
+    }
+  };
+
+      const handleEmployeesCardClick = (cardType) => {
+    console.log(`${cardType} card clicked!`);
+    if (cardType === 'employees') {
+      setShowEmployeesDetailsModal(true);
+      // setClientFilter('registered'); // Default to 'registered' when modal opens
+    }
+  };
 
   // --- Action Handlers that update state WITHOUT changing filter automatically ---
-  const updateClientData = (clientId, updates) => {
+  const updateClientData = (clientId, updates) => { // Removed newFilterStatus param
     setClients(prevClients =>
       prevClients.map(client =>
         client.id === clientId
@@ -173,6 +475,7 @@ const AdminDashboard = () => {
   const handleDeclineClient = (clientId) => {
     console.log(`Client ${clientId} Declined! Staying on current table.`);
     // Declined client -> status becomes 'rejected', displayStatuses updated
+    // The key change here: NO newFilterStatus is passed, so the filter doesn't change.
     updateClientData(clientId, { status: 'rejected', displayStatuses: ['rejected'] });
   };
 
@@ -180,7 +483,7 @@ const AdminDashboard = () => {
   const handleAssignClient = (clientId) => {
     const managerToAssign = selectedManagerPerClient[clientId];
     if (!managerToAssign) {
-      console.warn("Please select a manager before assigning.");
+      alert("Please select a manager before assigning."); // Using alert for now, consider a custom modal
       return;
     }
     console.log(`Client ${clientId} assigned to ${managerToAssign}! Moving to Active.`);
@@ -209,6 +512,150 @@ const AdminDashboard = () => {
   };
 
 
+  const handleManagerShowModal = () => setShowManagerModal(true);
+  const handleManagerCloseModal = () => {
+    setShowManagerModal(false);
+    setIsManagerEditing(false);
+    setCurrentManagerIndex(null);
+  
+    setNewManager({ firstname: '', lastname: '', mobile: '', email: '', password: '', role: 'Manager', active: true });
+
+
+  };
+
+
+
+  const handleTeamLeadShowModal = () => setShowTeamLeadModal(true);
+  const handleTeamLeadCloseModal = () => {
+    setShowTeamLeadModal(false);
+    setIsTeamLeadEditing(false);
+    setCurrentTeamLeadIndex(null);
+    
+       setNewTeamLead({ firstname: '', lastname: '', mobile: '', email: '', password: '', role: 'Team Lead', active: true });
+
+  };
+
+
+
+    const handleEmployeeShowModal = () => setShowEmployeeModal(true);
+  const handleEmployeeCloseModal = () => {
+    setShowEmployeeModal(false);
+    setIsEmployeeEditing(false);
+   
+    
+    setCurrentEmployeeIndex(null);
+
+           setNewEmployee({ firstName: '', lastName: '', mobile: '', email: '', password: '', role: '', active: true });
+
+  };
+
+
+
+
+
+
+
+  
+
+  const handleManagerInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewManager((prev) => ({ ...prev, [name]: value }));
+  };
+    const handleTeamLeadInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewTeamLead((prev) => ({ ...prev, [name]: value }));
+  };
+    const handleEmployeeInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewEmployee((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleAddManager = () => {
+    const { firstname, lastname, mobile, email, password } = newManager;
+    if (!firstname || !lastname || !mobile || !email || !password) {
+      alert('Please fill all fields');
+      return;
+    }
+
+    if (isManagerEditing) {
+      const updatedManagers = [...managers];
+      updatedManagers[currentManagerIndex] = newManager;
+      setManagers(updatedManagers);
+    } else {
+      setManagers([...managers, { ...newManager, assignedPeople: [] }]);
+    }
+
+    handleManagerCloseModal();
+  };
+
+  const handleAddTeamLead = () => {
+    const { firstname, lastname, mobile, email, password } = newTeamLead;
+    if (!firstname || !lastname || !mobile || !email || !password) {
+      alert('Please fill all fields');
+      return;
+    }
+
+   
+    if (isTeamLeadEditing) {
+       const updatedTeamLeads = [...teamLeads];
+      updatedTeamLeads[currentTeamLeadIndex] = newTeamLead;
+      setTeamLeads(updatedTeamLeads);
+    } else {
+      setTeamLeads([...teamLeads, { ...newTeamLead }]);
+    }
+
+    
+    handleTeamLeadCloseModal();
+  };
+
+
+
+    const handleAddEmployee = () => {
+    const { firstName, lastName, mobile, email, password } = newEmployee;
+    if (!firstName || !lastName || !mobile || !email || !password) {
+      alert('Please fill all fields');
+      return;
+    }
+
+    if (isEmployeeEditing) {
+      const updatedEmployees = [...employees];
+      updatedEmployees[currentEmployeeIndex] = newEmployee;
+      setEmployees(updatedEmployees);
+    } else {
+      setEmployees([...employees, { ...newEmployee }]);
+    }
+
+    handleEmployeeCloseModal();
+  };
+
+
+
+  const openAssignModal = (index) => {
+    setSelectedManagerIndex(index);
+    const previouslyAssigned = managers[index].assignedPeople || [];
+    setSelectedPeople(previouslyAssigned);
+
+    const allAssigned = getAllAssignedPeople();
+
+    // Filter people - show only unassigned or those already assigned to this manager
+    setFilteredTeamLeads(originalTeamLeads.filter(tl =>
+      !allAssigned.some(a => a.email === tl.email) ||
+      previouslyAssigned.some(pa => pa.email === tl.email)
+    ));
+
+    setFilteredEmployees(originalEmployees.filter(emp =>
+      !allAssigned.some(a => a.email === emp.email) ||
+      previouslyAssigned.some(pa => pa.email === emp.email))
+    );
+
+    setFilteredInterns(originalInterns.filter(int =>
+      !allAssigned.some(a => a.email === int.email) ||
+      previouslyAssigned.some(pa => pa.email === int.email)
+    ));
+
+    setAssignModalOpen(true);
+  };
+
   // --- Helper to get client data value by header name (refined for robustness) ---
   const getClientValue = (client, header) => {
     let value;
@@ -220,39 +667,13 @@ const AdminDashboard = () => {
       case 'Registered Date': value = client.registeredDate; break;
       case 'Country': value = client.country; break;
       case 'Visa Status': value = client.visaStatus; break;
-      case 'Assign To':
-        // If it's an unassigned or restored client, always show the select box
-        if (client.displayStatuses.includes('unassigned') || client.displayStatuses.includes('restored')) {
-          return (
-            <select
-              style={{
-                padding: '6px 8px',
-                borderRadius: '5px',
-                border: '1px solid #ccc',
-                backgroundColor: '#fff',
-                fontSize: '0.85em',
-                width: '100%', // Make it take full width of cell
-              }}
-              value={selectedManagerPerClient[client.id] || ''} // Use selected or empty string
-              onChange={(e) => handleManagerSelectChange(client.id, e.target.value)}
-            >
-              <option value="">Select Manager</option>
-              <option value="Manager A">Manager A</option>
-              <option value="Manager B">Manager B</option>
-              <option value="Manager C">Manager C</option>
-            </select>
-          );
-        } else {
-          // For other client types, just display the assigned manager or '-'
-          value = client.assignedTo;
-        }
-        break;
-      case 'Manager': value = client.manager; break; // This is for 'active' clients
+      case 'Assign To': value = client.assignedTo; break;
+      case 'Manager': value = client.manager; break;
       case 'Actions': return null; // Actions are rendered by renderActions, not directly from data
       default: value = null; // Fallback for unknown headers
     }
-    // Return '-' for undefined, null, or empty string values, unless it's a JSX element
-    return React.isValidElement(value) ? value : (value !== undefined && value !== null && value !== '' ? value : '-');
+    // Return '-' for undefined, null, or empty string values
+    return value !== undefined && value !== null && value !== '' ? value : '-';
   };
 
   // --- Table Configuration based on Client Filter ---
@@ -261,38 +682,32 @@ const AdminDashboard = () => {
       headers: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Actions'],
       renderActions: (client) => (
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap' }}>
-          <button
-            onClick={() => handleAcceptClient(client.id)}
-            style={{ ...actionButtonStyle, background: '#28a745' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#218838'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#28a745'}
-            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-          >Accept</button>
-          <button
-            onClick={() => handleDeclineClient(client.id)}
-            style={{ ...actionButtonStyle, background: '#dc3545' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#c82333'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#dc3545'}
-            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-          >Decline</button>
+          <button onClick={() => handleAcceptClient(client.id)} style={{ ...actionButtonStyle, background: '#28a745' }}>Accept</button>
+          <button onClick={() => handleDeclineClient(client.id)} style={{ ...actionButtonStyle, background: '#dc3545' }}>Decline</button>
         </div>
       )
     },
     unassigned: {
       headers: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Assign To', 'Actions'],
       renderActions: (client) => (
-        // Only the Assign button is here now
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap', alignItems: 'center' }}>
-          <button
-            onClick={() => handleAssignClient(client.id)}
-            style={{ ...actionButtonStyle, background: '#007bff' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0069d9'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#007bff'}
-            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-          >Assign</button>
+          <select
+            style={{
+              padding: '6px 8px',
+              borderRadius: '5px',
+              border: '1px solid #ccc',
+              backgroundColor: '#fff',
+              fontSize: '0.85em',
+            }}
+            value={selectedManagerPerClient[client.id] || ''} // Use value prop for controlled component
+            onChange={(e) => handleManagerSelectChange(client.id, e.target.value)}
+          >
+            <option value="">Select Manager</option>
+            <option value="Manager A">Manager A</option>
+            <option value="Manager B">Manager B</option>
+            <option value="Manager C">Manager C</option>
+          </select>
+          <button onClick={() => handleAssignClient(client.id)} style={{ ...actionButtonStyle, background: '#007bff' }}>Assign</button>
         </div>
       )
     },
@@ -306,30 +721,31 @@ const AdminDashboard = () => {
       headers: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Actions'],
       renderActions: (client) => (
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap' }}>
-          <button
-            onClick={() => handleRestoreClient(client.id)}
-            style={{ ...actionButtonStyle, background: '#28a745' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#218838'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#28a745'}
-            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-          >Restore</button>
+          <button onClick={() => handleRestoreClient(client.id)} style={{ ...actionButtonStyle, background: '#28a745' }}>Restore</button>
         </div>
       )
     },
     restored: {
       headers: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Assign To', 'Actions'],
       renderActions: (client) => (
-        // Only the Assign button is here now
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap', alignItems: 'center' }}>
-          <button
-            onClick={() => handleAssignClient(client.id)}
-            style={{ ...actionButtonStyle, background: '#007bff' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0069d9'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#007bff'}
-            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-          >Assign</button>
+          <select
+            style={{
+              padding: '6px 8px',
+              borderRadius: '5px',
+              border: '1px solid #ccc',
+              backgroundColor: '#fff',
+              fontSize: '0.85em',
+            }}
+            value={selectedManagerPerClient[client.id] || ''} // Use value prop for controlled component
+            onChange={(e) => handleManagerSelectChange(client.id, e.target.value)}
+          >
+            <option value="">Select Manager</option>
+            <option value="Manager A">Manager A</option>
+            <option value="Manager B">Manager B</option>
+            <option value="Manager C">Manager C</option>
+          </select>
+          <button onClick={() => handleAssignClient(client.id)} style={{ ...actionButtonStyle, background: '#007bff' }}>Assign</button>
         </div>
       )
     },
@@ -350,11 +766,10 @@ const AdminDashboard = () => {
       minHeight: '100vh',
       display: 'flex',
       flexDirection: 'column',
-      overflowX: 'hidden', // Ensure no horizontal scrollbar due to initial off-screen elements
     }}>
       {/* Top Navigation Bar */}
       <header style={{
-        background: '#0a193c',
+        background: '#1B3370',
         color: 'white',
         padding: '10px 25px',
         display: 'flex',
@@ -363,7 +778,7 @@ const AdminDashboard = () => {
         height: 'auto',
         position: 'sticky',
         top: 0,
-        zIndex: 1000, // Header z-index
+        zIndex: 1000,
         width: '100%'
       }}>
         {/* Top Row: Logo & Company Name */}
@@ -380,18 +795,16 @@ const AdminDashboard = () => {
               <span style={{ fontSize: '10px', opacity: 0.8, marginTop: '0px', paddingLeft: '42px' }}>Exploring The Future</span>
             </div>
           </div>
-          {/* Note: Notification and Profile icons are now in the bottom row */}
         </div>
 
-        {/* Bottom Row: Hamburger Menu, Search Bar (centered), Notification, Profile */}
+        {/* Bottom Row: Hamburger Menu, Search Bar, Notification, Profile */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between', // Distributes items to ends, and flex-grow centers middle
-          width: '100%',
-          marginTop: '10px', // Space between top and bottom rows
+          justifyContent: 'space-between',
+          width: '100%'
         }}>
-          {/* Left: Hamburger Menu */}
+          {/* Hamburger Menu */}
           <button
             onClick={toggleMenu}
             style={{
@@ -400,58 +813,46 @@ const AdminDashboard = () => {
               color: 'white',
               fontSize: '24px',
               cursor: 'pointer',
-              padding: '0',
-              position: 'relative', // Essential for z-index
-              zIndex: 1004, // High z-index to ensure it's on top for clicks
+              padding: '0'
             }}
           >
             <FaBars />
           </button>
 
-          {/* Center: Search Bar (now a static icon) */}
+          {/* Search Bar */}
           <div style={{
-            flexGrow: 1, // Allows this div to take up available space
             display: 'flex',
-            justifyContent: 'center', // Centers the content (search bar) within this div
-            margin: '0 15px', // Add horizontal margin to prevent it from touching edges
+            alignItems: 'center',
+            background: '#ffffff',
+            borderRadius: '25px',
+            padding: '8px 18px',
+            flexGrow: 1,
+            maxWidth: '400px',
+            margin: '0 20px'
           }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              background: '#ffffff',
-              cursor: 'pointer',
-              borderRadius: '25px',
-              padding: '8px 18px',
-              maxWidth: '400px', // Retain max width
-              width: '100%', // Ensure it takes available width up to max
-            }}>
-              <input
-                type="text"
-                placeholder="Search"
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'black',
-                  outline: 'none',
-                  width: '100%',
-                  fontSize: '15px',
-                  paddingLeft: '5px',
-                  cursor: 'default' // Indicate it's not interactive
-                }}
-              />
-              {/* Removed: Search query clear button */}
-              <FaSearch style={{ color: '#ccc', marginLeft: '10px', fontSize: '16px' }} />
-            </div>
+            <input
+              type="text"
+              placeholder="Search"
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'white',
+                outline: 'none',
+                width: '100%',
+                fontSize: '15px',
+                paddingLeft: '5px'
+              }}
+            />
+            <FaSearch style={{ color: '#ccc', marginLeft: '10px', fontSize: '16px' }} />
           </div>
 
-          {/* Right: Notification and Profile icons */}
+          {/* Right side icons */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '25px' }}>
             <FaBell style={{ fontSize: '20px', cursor: 'pointer' }} />
             <CgProfile style={{ fontSize: '30px', color: '#fff', cursor: 'pointer' }} />
           </div>
         </div>
       </header>
-
 
       {/* Main Content Area - Using CSS Grid */}
       <div style={{
@@ -469,15 +870,8 @@ const AdminDashboard = () => {
         <div
           onMouseEnter={() => setHoveredCardId('clients')}
           onMouseLeave={() => setHoveredCardId(null)}
-          onClick={() => handleCardClick('clients')}
-          style={{
-            ...cardStyle,
-            ...(hoveredCardId === 'clients' ? cardHoverStyle : {}),
-            // Entrance Animation
-            opacity: contentLoaded ? 1 : 0,
-            transform: contentLoaded ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.9)',
-            transitionDelay: contentLoaded ? '0s' : '0s', // No delay on exit, delay on entry
-          }}
+          onClick={() => handleClientCardClick('clients')}
+          style={{ ...cardStyle, ...(hoveredCardId === 'clients' ? cardHoverStyle : {}) }}
         >
           <h3 style={cardTitleStyle}>Clients</h3>
           <FaUsers style={cardIconStyle} />
@@ -487,15 +881,8 @@ const AdminDashboard = () => {
         <div
           onMouseEnter={() => setHoveredCardId('manager')}
           onMouseLeave={() => setHoveredCardId(null)}
-          onClick={() => handleCardClick('manager')}
-          style={{
-            ...cardStyle,
-            ...(hoveredCardId === 'manager' ? cardHoverStyle : {}),
-            // Entrance Animation
-            opacity: contentLoaded ? 1 : 0,
-            transform: contentLoaded ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.9)',
-            transitionDelay: contentLoaded ? '0.05s' : '0s',
-          }}
+          onClick={() => handleManagersCardClick('manager')}
+          style={{ ...cardStyle, ...(hoveredCardId === 'manager' ? cardHoverStyle : {}) }}
         >
           <h3 style={cardTitleStyle}>Manager</h3>
           <FaUserTie style={cardIconStyle} />
@@ -505,15 +892,8 @@ const AdminDashboard = () => {
         <div
           onMouseEnter={() => setHoveredCardId('teamleads')}
           onMouseLeave={() => setHoveredCardId(null)}
-          onClick={() => handleCardClick('teamleads')}
-          style={{
-            ...cardStyle,
-            ...(hoveredCardId === 'teamleads' ? cardHoverStyle : {}),
-            // Entrance Animation
-            opacity: contentLoaded ? 1 : 0,
-            transform: contentLoaded ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.9)',
-            transitionDelay: contentLoaded ? '0.1s' : '0s',
-          }}
+          onClick={() => handleTeamLeadsCardClick('teamleads')}
+          style={{ ...cardStyle, ...(hoveredCardId === 'teamleads' ? cardHoverStyle : {}) }}
         >
           <h3 style={cardTitleStyle}>Team Leads</h3>
           <FaUserCog style={cardIconStyle} />
@@ -521,17 +901,10 @@ const AdminDashboard = () => {
 
         {/* Employee Card */}
         <div
-          onMouseEnter={() => setHoveredCardId('employee')}
+          onMouseEnter={() => setHoveredCardId('employees')}
           onMouseLeave={() => setHoveredCardId(null)}
-          onClick={() => handleCardClick('employee')}
-          style={{
-            ...cardStyle,
-            ...(hoveredCardId === 'employee' ? cardHoverStyle : {}),
-            // Entrance Animation
-            opacity: contentLoaded ? 1 : 0,
-            transform: contentLoaded ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.9)',
-            transitionDelay: contentLoaded ? '0.15s' : '0s',
-          }}
+          onClick={() => handleEmployeesCardClick('employees')}
+          style={{ ...cardStyle, ...(hoveredCardId === 'employees' ? cardHoverStyle : {}) }}
         >
           <h3 style={cardTitleStyle}>Employee</h3>
           <FaUserFriends style={cardIconStyle} />
@@ -539,10 +912,16 @@ const AdminDashboard = () => {
 
         {/* Chart Section */}
         <div style={{
-          ...chartSectionStyle,
-          opacity: contentLoaded ? 1 : 0,
-          transform: contentLoaded ? 'translateX(0)' : 'translateX(-50px)',
-          transitionDelay: contentLoaded ? '0.2s' : '0s',
+          gridColumn: 'span 2',
+          background: 'white',
+          borderRadius: '10px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+          padding: '25px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '400px',
         }}>
           <h3 style={{ marginBottom: '20px', color: '#333' }}>CHART</h3>
           <div style={{ width: '100%', maxWidth: '500px', height: '350px' }}>
@@ -552,10 +931,15 @@ const AdminDashboard = () => {
 
         {/* About Section */}
         <div style={{
-          ...aboutSectionStyle,
-          opacity: contentLoaded ? 1 : 0,
-          transform: contentLoaded ? 'translateX(0)' : 'translateX(50px)',
-          transitionDelay: contentLoaded ? '0.25s' : '0s',
+          gridColumn: 'span 2',
+          background: 'white',
+          borderRadius: '10px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+          padding: '25px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          minHeight: '400px',
         }}>
           <h3 style={{ marginBottom: '15px', color: '#333' }}>About</h3>
           <p style={{ lineHeight: '1.6', color: '#555', marginBottom: '15px', fontSize: '1.0em' }}>
@@ -571,10 +955,31 @@ const AdminDashboard = () => {
         </div>
       </div>
 
+      {/* Logout Button (bottom, centered) */}
+      <div style={{ textAlign: 'center', padding: '20px 0 40px 0' }}>
+        <button
+          onClick={handleLogout}
+          style={{
+            background: '#dc3545',
+            color: 'white',
+            border: 'none',
+            padding: '12px 25px',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontSize: '1.1em',
+            fontWeight: 'bold',
+            boxShadow: '0 4px 10px rgba(220, 53, 69, 0.3)',
+            transition: 'background-color 0.3s ease'
+          }}
+        >
+          Log Out
+        </button>
+      </div>
+
       {/* Overlay for when menu is open */}
       {menuOpen && (
         <div
-          onClick={toggleMenu} // Clicking overlay also closes menu
+          onClick={toggleMenu}
           style={{
             position: 'fixed',
             top: 0,
@@ -582,7 +987,7 @@ const AdminDashboard = () => {
             width: '100vw',
             height: '100vh',
             background: 'rgba(0, 0, 0, 0.4)',
-            zIndex: 1002, // Lower than sidebar, higher than content
+            zIndex: 1002,
           }}
         />
       )}
@@ -595,7 +1000,7 @@ const AdminDashboard = () => {
         width: '250px',
         background: '#fff',
         boxShadow: '2px 0 10px rgba(0,0,0,0.3)',
-        zIndex: 1003, // Ensure sidebar is above content but below overlay
+        zIndex: 1001,
         transition: 'left 0.3s ease',
         padding: '20px',
         display: 'flex',
@@ -603,74 +1008,16 @@ const AdminDashboard = () => {
         gap: '15px'
       }}>
         <h4 style={{ color: '#333' }}>Menu Options</h4>
-        {/* Dashboard link (without dropdown logic) */}
-        <a
-          href="/admindashboard"
-          style={menuLinkBaseStyle}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f0f0f0'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-        >
-          Dashboard
-        </a>
-
-        <a
-          href="/reports"
-          style={menuLinkBaseStyle}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f0f0f0'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-        >Reports</a>
-      
-      <div style={{ marginTop: 'auto' }}>
-          <button
-            onClick={() => {
-              localStorage.removeItem('isLoggedIn');
-              navigate('/');
-              toggleMenu();
-            }}
-            style={{
-              background: '#f1f5f9',
-              color: '#ef4444',
-              border: 'none',
-              padding: '12px 24px',
-              borderRadius: '8px',
-              fontSize: '0.9375rem',
-              fontWeight: '600',
-              cursor: 'pointer',
-              width: '100%',
-              margin: '16px 0 24px 0',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'background-color 0.2s',
-              ':hover': {
-                backgroundColor: '#fee2e2'
-              }
-            }}
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginRight: '8px' }}>
-              <path d="M6 14H3.33333C2.97971 14 2.64057 13.8595 2.39052 13.6095C2.14048 13.3594 2 13.0203 2 12.6667V3.33333C2 2.97971 2.14048 2.64057 2.39052 2.39052C2.64057 2.14048 2.97971 2 3.33333 2H6M10.6667 11.3333L14 8M14 8L10.6667 4.66667M14 8H6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            Log Out
-          </button>
-        </div>
+        <a href="#" style={menuLinkStyle}>Dashboard</a>
+        <a href="#" style={menuLinkStyle}>Reports</a>
+        <a href="#" style={menuLinkStyle}>Settings</a>
       </div>
 
       {/* Client Details Modal */}
       {showClientDetailsModal && (
-        <div style={{ ...modalOverlayStyle, opacity: showClientDetailsModal ? 1 : 0 }}>
-          <div style={{
-            ...modalContentStyle,
-            transform: showClientDetailsModal ? 'scale(1)' : 'scale(0.95)',
-            opacity: showClientDetailsModal ? 1 : 0
-          }}>
-            <button
-              onClick={toggleClientDetailsModal}
-              style={modalCloseButtonStyle}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e2e8f0'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
-              onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.9)'}
-              onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-            >
+        <div style={modalOverlayStyle}>
+          <div style={modalContentStyle}>
+            <button onClick={toggleClientDetailsModal} style={modalCloseButtonStyle}>
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M13 1L1 13M1 1L13 13" stroke="#64748B" strokeWidth="2" strokeLinecap="round" />
               </svg>
@@ -705,9 +1052,8 @@ const AdminDashboard = () => {
               maxWidth: '900px',
               fontSize: '14px',
               margin: '0 auto 20px auto',
-              overflowX: 'auto', // Keep auto for very narrow screens
-              whiteSpace: 'nowrap', // Keep nowrap for default single line behavior
-              flexWrap: 'wrap', // Allow wrapping for better responsiveness if content overflows
+              overflowX: 'auto',
+              whiteSpace: 'nowrap',
               justifyContent: 'center',
             }}>
               {[
@@ -735,7 +1081,7 @@ const AdminDashboard = () => {
                     transition: 'all .15s ease-in-out',
                     backgroundColor: clientFilter === option.value ? '#fff' : 'transparent',
                     fontWeight: clientFilter === option.value ? '600' : 'normal',
-                    margin: '0 2px 5px 2px', // Added bottom margin for wrapping
+                    margin: '0 2px',
                   }}
                 >
                   <input
@@ -743,12 +1089,10 @@ const AdminDashboard = () => {
                     name="client-filter"
                     value={option.value}
                     checked={clientFilter === option.value}
-                    onChange={(e) => {
-                      setClientFilter(e.target.value);
-                    }}
+                    onChange={(e) => setClientFilter(e.target.value)} // Set filter ONLY on explicit radio button click
                     style={{ display: 'none' }}
                   />
-                  <span style={{ whiteSpace: 'nowrap' }}>{option.label} ({clients.filter(c => c.displayStatuses.includes(option.value)).length})</span>
+                  <span style={{ whiteSpace: 'nowrap' }}>{option.label} ({option.count})</span>
                 </label>
               ))}
             </div>
@@ -821,6 +1165,789 @@ const AdminDashboard = () => {
           </div>
         </div>
       )}
+
+
+      {/* Manager Details Modal */}
+      {showManagersDetailsModal && (
+        <div style={modalOverlayStyle}>
+          <div style={modalContentStyle}>
+            <button onClick={toggleManagersDetailsModal} style={modalCloseButtonStyle}>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M13 1L1 13M1 1L13 13" stroke="#64748B" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </button>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '25px',
+              paddingRight: '60px' // Padding to prevent content from overlapping the close button
+            }}>
+              <h3 style={{
+                margin: 0,
+                color: '#1e293b',
+                fontSize: '1.6rem',
+                fontWeight: '700'
+              }}>
+                Manager Details
+              </h3>
+            </div>
+
+            <div className="container mt-4">
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <InputGroup className="w-50">
+                  <Form.Control
+                    placeholder="Search"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </InputGroup>
+                <Button variant="success" onClick={handleManagerShowModal}>+ Add Manager</Button>
+              </div>
+
+              <Table striped hover responsive className="text-center align-middle">
+                <thead className="table-secondary">
+                  <tr className='py-5'>
+                    <th>FIRST NAME</th>
+                    <th>LAST NAME</th>
+                    <th>MOBILE</th>
+                    <th>EMAIL</th>
+                    <th>PASSWORD</th>
+                    <th>ROLE</th>
+                    <th>PEOPLE</th>
+                    <th>EDIT</th>
+                    <th>STATUS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {managers
+                    .filter((manager) =>
+                      [manager.firstname, manager.lastname, manager.email, manager.mobile].some((field) =>
+                        field.toLowerCase().includes(searchTerm.toLowerCase())
+                      )
+                    ).map((manager, index) => (
+                      <React.Fragment key={index}>
+                        <tr key={index}>
+                          <td>
+                            <div className="d-flex justify-content-between align-items-center">
+                              {manager.firstname}
+                              <Button
+                                variant="link"
+                                onClick={() => toggleManagerExpand(index)}
+                                className="p-0"
+                              >
+                                {expandedManager === index ? <FaChevronUp /> : <FaChevronDown />}
+                              </Button>
+                            </div>
+                          </td>
+                          <td>{manager.lastname}</td>
+                          <td>{manager.mobile}</td>
+                          <td>{manager.email}</td>
+                          <td>{manager.password}</td>
+                          <td>{manager.role}</td>
+                          <td>
+                            <Button size="sm" variant="success" onClick={() => openAssignModal(index)}>
+                              Add Employees ({manager.assignedPeople?.length || 0})
+                            </Button>
+                          </td>
+                          <td>
+                            <Button
+                              variant="link"
+                              className="text-decoration-none"
+                              onClick={() => {
+                                setIsManagerEditing(true);
+                                setCurrentManagerIndex(index);
+                                setNewManager(manager);
+                                setShowManagerModal(true);
+                              }}
+                            >
+                              ✏️
+                            </Button>
+                          </td>
+                          <td>
+                            <div className="d-flex align-items-center justify-content-center">
+                              <span className="me-2">{manager.active ? 'Active' : 'Inactive'}</span>
+                              <Form.Check
+                                type="switch"
+                                id={`active-switch-${index}`}
+                                checked={manager.active}
+                                onChange={() => toggleManagerActivation(index)}
+                              />
+                            </div>
+                          </td>
+                        </tr>
+                        {expandedManager === index && (
+                          <tr>
+                            <td colSpan="8">
+                              <div className="p-3">
+                                <h5>Assigned Team Leads & Employees</h5>
+                                <Table  striped   size="lg">
+                                  <thead>
+                                    <tr>
+                                      <th>S.No</th>
+                                      <th>FirstName</th>
+                                      <th>LastName</th>
+                                      <th>Mobile</th>
+                                      <th>Email</th>
+                                      <th>Role</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {manager.assignedPeople?.length > 0 ? (
+                                      manager.assignedPeople.map((person, idx) => (
+                                        <tr key={`assigned-${idx}`}>
+                                          <td>{idx + 1}</td>
+                                          <td>{person.firstname}</td>
+                                          <td>{person.lastname}</td>
+                                          <td>{person.mobile}</td>
+                                          <td>{person.email}</td>
+                                          <td>{person.role}</td>
+                                        </tr>
+                                      ))
+                                    ) : (
+                                      <tr>
+                                        <td colSpan="5" className="text-muted">No people assigned yet</td>
+                                      </tr>
+                                    )}
+                                  </tbody>
+                                </Table>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    ))}
+                </tbody>
+              </Table>
+            </div>
+
+
+
+
+            {/* Modal for Add/Edit Manager */}
+            <Modal show={showManagerModal} onHide={handleManagerCloseModal} centered backdrop="static" keyboard={false}>
+              <Modal.Header closeButton>
+                <Modal.Title>{isManagerEditing ? 'Edit Manager' : 'Add Manager'}</Modal.Title>
+              </Modal.Header>
+              <Modal.Body>
+                <Form>
+                  <Form.Group className="mb-3">
+                    <Form.Label>First Name</Form.Label>
+                    <Form.Control type="text" name="firstname" value={newManager.firstname} onChange={handleManagerInputChange} />
+                  </Form.Group>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Last Name</Form.Label>
+                    <Form.Control type="text" name="lastname" value={newManager.lastname} onChange={handleManagerInputChange} />
+                  </Form.Group>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Mobile</Form.Label>
+                    <Form.Control type="text" name="mobile" value={newManager.mobile} onChange={handleManagerInputChange} />
+                  </Form.Group>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Email</Form.Label>
+                    <Form.Control type="email" name="email" value={newManager.email} onChange={handleManagerInputChange} />
+                  </Form.Group>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Password</Form.Label>
+                    <Form.Control type="password" name="password" value={newManager.password} onChange={handleManagerInputChange} />
+                  </Form.Group>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Role</Form.Label>
+                    <Form.Control
+                      type="text"
+                      name="role"
+                      value={newManager.role}
+                      readOnly
+                    />
+                  </Form.Group>
+                </Form>
+              </Modal.Body>
+              <Modal.Footer>
+                <Button variant="secondary" onClick={handleManagerCloseModal}>Cancel</Button>
+                <Button variant="primary" onClick={handleAddManager}>
+                  {isManagerEditing ? 'Update Manager' : 'Add Manager'}
+                </Button>
+              </Modal.Footer>
+            </Modal>
+
+            {/* Update the Confirmation Modal */}
+       <Modal show={confirmationOpen} onHide={() => setConfirmationOpen(false)} centered backdrop="static" keyboard={false}>
+        <Modal.Header closeButton>
+          <Modal.Title>
+            {isActivating ? 'Confirm Activation' : 'Confirm Deactivation'} Manager
+          </Modal.Title>
+        </Modal.Header>
+       <Modal.Body>
+          Are you sure you want to {isActivating ? 'activate' : 'deactivate'} this Manager?
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setConfirmationOpen(false)}>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={confirmManagerToggle}>
+            Yes, {isActivating ? 'Activate' : 'Deactivate'}
+          </Button>
+        </Modal.Footer>
+       </Modal>
+
+            {/* Modal: Assign People */}
+            <Modal show={assignModalOpen} onHide={() => setAssignModalOpen(false)} centered backdrop="static" keyboard={false} size="lg">
+              <Modal.Header closeButton>
+                <Modal.Title>Assign People</Modal.Title>
+              </Modal.Header>
+              <Modal.Body>
+                <h5>Team Leads</h5>
+                <InputGroup className="mb-3">
+                  <InputGroup.Text><FaSearch /></InputGroup.Text>
+                  <Form.Control
+                    placeholder="Search Team Leads by name or email"
+                    value={teamLeadSearch}
+                    onChange={(e) => setTeamLeadSearch(e.target.value)}
+                  />
+                </InputGroup>
+                <Table  striped size="sm">
+                  <thead>
+                    <tr>
+                      <th>Select</th>
+                      <th>FirstName</th>
+                      <th>LastName</th>
+                      <th>Mobile</th>
+                      <th>Email</th>
+                      <th>Role</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredTeamLeads
+                      .filter(p =>
+                        p.firstname.toLowerCase().includes(teamLeadSearch.toLowerCase()) ||
+                        p.email.toLowerCase().includes(teamLeadSearch.toLowerCase())
+                      )
+                      .map((person, idx) => (
+                        <tr key={`tl-${idx}`}>
+                          <td>
+                            <Form.Check
+                              type="checkbox"
+                              checked={selectedPeople.some(p => p.email === person.email)}
+                              onChange={() => togglePersonSelection(person)}
+                            />
+                          </td>
+                          <td>{person.firstname}</td>
+                          <td>{person.lastname}</td>
+                          <td>{person.mobile}</td>
+                          <td>{person.email}</td>
+                          <td>{person.role}</td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </Table>
+
+                <h5 className="mt-4">Employees</h5>
+                <InputGroup className="mb-3">
+                  <InputGroup.Text><FaSearch /></InputGroup.Text>
+                  <Form.Control
+                    placeholder="Search Employees by name or email"
+                    value={employeeSearch}
+                    onChange={(e) => setEmployeeSearch(e.target.value)}
+                  />
+                </InputGroup>
+                <Table  striped size="sm">
+                  <thead>
+                    <tr>
+                      <th>Select</th>
+                      <th>FirstName</th>
+                      <th>LastName</th>
+                      <th>Mobile</th>
+                      <th>Email</th>
+                      <th>Role</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredEmployees
+                      .filter(p =>
+                        p.firstname.toLowerCase().includes(employeeSearch.toLowerCase()) ||
+                        p.email.toLowerCase().includes(employeeSearch.toLowerCase())
+                      )
+                      .map((person, index) => (
+                        <tr key={`emp-${index}`}>
+                          <td>
+                            <Form.Check
+                              type="checkbox"
+                              checked={selectedPeople.some(p => p.email === person.email)}
+                              onChange={() => togglePersonSelection(person)}
+                            />
+                          </td>
+                          <td>{person.firstname}</td>
+                          <td>{person.lastname}</td>
+                          <td>{person.mobile}</td>
+                          <td>{person.email}</td>
+                          <td>{person.role}</td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </Table>
+
+                <h5 className="mt-4">Interns</h5>
+                <InputGroup className="mb-3">
+                  <InputGroup.Text><FaSearch /></InputGroup.Text>
+                  <Form.Control
+                    placeholder="Search Interns by name or email"
+                    value={internSearch}
+                    onChange={(e) => setInternSearch(e.target.value)}
+                  />
+                </InputGroup>
+                <Table  striped  size="sm">
+                  <thead>
+                    <tr>
+                      <th>Select</th>
+                      <th>FirstName</th>
+                      <th>LastName</th>
+                      <th>Mobile</th>
+                      <th>Email</th>
+                      <th>Role</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredInterns
+                      .filter(p =>
+                        p.firstname.toLowerCase().includes(internSearch.toLowerCase()) ||
+                        p.email.toLowerCase().includes(internSearch.toLowerCase())
+                      )
+                      .map((person, index) => (
+                        <tr key={`int-${index}`}>
+                          <td>
+                            <Form.Check
+                              type="checkbox"
+                              checked={selectedPeople.some(p => p.email === person.email)}
+                              onChange={() => togglePersonSelection(person)}
+                            />
+                          </td>
+                          <td>{person.firstname}</td>
+                          <td>{person.lastname}</td>
+                          <td>{person.mobile}</td>
+                          <td>{person.email}</td>
+                          <td>{person.role}</td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </Table>
+              </Modal.Body>
+              <Modal.Footer>
+                <Button variant="primary" onClick={handleManagerAssignDone}>Done</Button>
+              </Modal.Footer>
+            </Modal>
+
+{/* Manager Details Modal */}
+{selectedManagerData && (
+  <Modal show={showAssignModal} onHide={() => setShowAssignModal(false)} centered size="lg">
+    <Modal.Header closeButton>
+      <Modal.Title>Assigned Team Leads & Employees</Modal.Title>
+    </Modal.Header>
+    <Modal.Body>
+      <h5 className="mb-3">Manager: {selectedManagerData.firstname} {selectedManagerData.lastname}</h5>
+      
+      {/* Assigned People Table */}
+      {selectedManagerData.assignedPeople?.length > 0 ? (
+        <Table striped hover responsive>
+          <thead>
+            <tr>
+              <th>S.No</th>
+              <th>First Name</th>
+              <th>Last Name</th>
+              <th>Mobile</th>
+              <th>Email</th>
+              <th>Role</th>
+            </tr>
+          </thead>
+          <tbody>
+            {selectedManagerData.assignedPeople.map((person, idx) => (
+              <tr key={`assigned-${idx}`}>
+                <td>{idx + 1}</td>
+                <td>{person.firstname}</td>
+                <td>{person.lastname}</td>
+                <td>{person.mobile}</td>
+                <td>{person.email}</td>
+                <td>{person.role}</td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      ) : (
+        <p className="text-muted">No people assigned yet.</p>
+      )}
+    </Modal.Body>
+    <Modal.Footer>
+      <Button variant="secondary" onClick={() => setShowAssignModal(false)}>
+        Close
+      </Button>
+    </Modal.Footer>
+  </Modal>
+)}
+
+
+
+          </div>
+        </div>
+      )}
+
+
+
+      {/* TeamLead Details Modal */}
+      {showTeamLeadsDetailsModal && (
+        <div style={modalOverlayStyle}>
+          <div style={modalContentStyle}>
+            <button onClick={toggleTeamLeadsDetailsModal} style={modalCloseButtonStyle}>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M13 1L1 13M1 1L13 13" stroke="#64748B" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            </button>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '25px',
+              paddingRight: '60px' // Padding to prevent content from overlapping the close button
+            }}>
+              <h3 style={{
+                margin: 0,
+                color: '#1e293b',
+                fontSize: '1.6rem',
+                fontWeight: '700'
+              }}>
+                Team Leads Details
+              </h3>
+            </div>
+
+           <div className="container mt-4">
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <InputGroup className="w-50">
+            <Form.Control
+              placeholder="Search"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </InputGroup>
+          <Button variant="success" onClick={handleTeamLeadShowModal}>+ Add TeamLead</Button>
+        </div>
+
+        <Table striped hover responsive className="text-center align-middle">
+          <thead className="table-secondary">
+            <tr>
+              <th>FIRST NAME</th>
+              <th>LAST NAME</th>
+              <th>MOBILE</th>
+              <th>EMAIL</th>
+              <th>PASSWORD</th>
+              <th>ROLE</th>
+              <th>EDIT</th>
+              <th>STATUS</th>
+              {/* <th>PROMOTE</th> */}
+            </tr>
+          </thead>
+          <tbody>
+            {teamLeads
+              .filter((teamlead) =>
+                [teamlead.firstname, teamlead.lastname, teamlead.email, teamlead.mobile].some((field) =>
+                  field.toLowerCase().includes(searchTerm.toLowerCase())
+                )
+              )
+              .map((teamlead, index) => (
+                <tr key={index}>
+                  <td>{teamlead.firstname}</td>
+                  <td>{teamlead.lastname}</td>
+                  <td>{teamlead.mobile}</td>
+                  <td>{teamlead.email}</td>
+                  <td>{teamlead.password}</td>
+                  <td>{teamlead.role}</td>
+                  <td>
+                    <Button
+                      variant="link"
+                      className="text-decoration-none"
+                      onClick={() => {
+                        setIsTeamLeadEditing(true);
+                        setCurrentTeamLeadIndex(index);
+                        setNewTeamLead(teamlead);
+                        setShowTeamLeadModal(true);
+                      }}
+                    >
+                      ✏️
+                    </Button>
+                  </td>
+                  <td>
+                    <div className="d-flex align-items-center justify-content-center">
+                      <span className="me-2">{teamlead.active ? 'Active' : 'Inactive'}</span>
+                      <Form.Check
+                        type="switch"
+                        id={`active-switch-${index}`}
+                        checked={teamlead.active}
+                        onChange={() => toggleTeamLeadActivation(index)}
+                      />
+                    </div>
+                  </td>
+                  {/* <td>
+                    <Button
+                      variant="success"
+                      size="sm"
+                      onClick={() => handlePromoteTeamLead(index)}
+                      disabled={!teamlead.active}
+                      title="Promote to Manager"
+                    >
+                      <FaArrowUp /> Promote
+                    </Button>
+                  </td> */}
+                </tr>
+              ))}
+          </tbody>
+        </Table>
+      </div>
+
+      {/* Add/Edit Modal */}
+      <Modal show={showTeamLeadModal} onHide={handleTeamLeadCloseModal} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>{isTeamLeadEditing ? 'Edit TeamLead' : 'Add TeamLead'}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form>
+            <Form.Group className="mb-3">
+              <Form.Label>First Name</Form.Label>
+              <Form.Control type="text" name="firstname" value={newTeamLead.firstname} onChange={handleTeamLeadInputChange} />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Last Name</Form.Label>
+              <Form.Control type="text" name="lastname" value={newTeamLead.lastname} onChange={handleTeamLeadInputChange} />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Mobile</Form.Label>
+              <Form.Control type="text" name="mobile" value={newTeamLead.mobile} onChange={handleTeamLeadInputChange} />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Email</Form.Label>
+              <Form.Control type="email" name="email" value={newTeamLead.email} onChange={handleTeamLeadInputChange} />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Password</Form.Label>
+              <Form.Control type="password" name="password" value={newTeamLead.password} onChange={handleTeamLeadInputChange} />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Role</Form.Label>
+              <Form.Control type="text" name="role" value={newTeamLead.role} readOnly />
+            </Form.Group>
+
+                <Button variant="secondary" onClick={handleTeamLeadCloseModal}>Cancel</Button>
+            <Button variant="primary" onClick={handleAddTeamLead}>
+              {isTeamLeadEditing ? 'Update TeamLead' : 'Add TeamLead'}
+            </Button>
+          </Form>
+        </Modal.Body>
+      </Modal>
+
+      {/* Confirmation Modals */}
+      <Modal show={confirmationOpen} onHide={() => setConfirmationOpen(false)} centered backdrop="static" keyboard={false}>
+        <Modal.Header closeButton>
+          <Modal.Title>{isActivating ? 'Confirm Activation' : 'Confirm Deactivation'} Team Lead</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          Are you sure you want to {isActivating ? 'activate' : 'deactivate'} this team lead?
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setConfirmationOpen(false)}>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={confirmTeamLeadToggle}>
+            Yes, {isActivating ? 'Activate' : 'Deactivate'}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+     
+
+
+
+          </div>
+        </div>
+      )}
+
+
+
+{/* Employee Details Modal */}
+      {showEmployeesDetailsModal && (
+        <div style={modalOverlayStyle}>
+          <div style={modalContentStyle}>
+            <button onClick={toggleEmployeesDetailsModal} style={modalCloseButtonStyle}>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M13 1L1 13M1 1L13 13" stroke="#64748B" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            </button>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '25px',
+              paddingRight: '60px' // Padding to prevent content from overlapping the close button
+            }}>
+              <h3 style={{
+                margin: 0,
+                color: '#1e293b',
+                fontSize: '1.6rem',
+                fontWeight: '700'
+              }}>
+                Employee Details
+              </h3>
+            </div>
+
+              <div className="container mt-4">
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <InputGroup className="w-50">
+            <Form.Control
+              placeholder="Search"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </InputGroup>
+
+          <Button variant="success" onClick={handleEmployeeShowModal}>+ Add Employee</Button>
+        </div>
+
+        <Table striped hover responsive className="text-center align-middle">
+          <thead className="table-secondary">
+            <tr>
+              <th>FIRST NAME</th>
+              <th>LAST NAME</th>
+              <th>MOBILE</th>
+              <th>EMAIL</th>
+              <th>PASSWORD</th>
+              <th>ROLE</th>
+              <th>EDIT</th>
+              <th>STATUS</th>
+            </tr>
+          </thead>
+          <tbody>
+            {employees
+              .filter((employee) =>
+                [employee.firstName, employee.lastName, employee.email, employee.mobile]
+                  .some((field) => field.toLowerCase().includes(searchTerm.toLowerCase()))
+              ).map((employee, index) => (
+                <tr key={index} >
+                  <td>{employee.firstName}</td>
+                  <td>{employee.lastName}</td>
+                  <td>{employee.mobile}</td>
+                  <td>{employee.email}</td>
+                  <td>{employee.password}</td>
+                  <td>{employee.role}</td>
+                  <td>
+                    <Button
+                      variant="link"
+                      className="text-decoration-none"
+                      onClick={() => {
+                        setIsEmployeeEditing(true);
+                        setCurrentEmployeeIndex(index);
+                        setNewEmployee(employee);
+                        setShowEmployeeModal(true);
+                      }}
+                    >
+                      ✏️
+                    </Button>
+                  </td>
+                  <td>
+                    <div className="d-flex align-items-center justify-content-center">
+                      <span className="me-2">{employee.active ? 'Active' : 'Inactive'}</span>
+                      <Form.Check
+                        type="switch"
+                        id={`active-switch-${index}`}
+                        checked={employee.active}
+                        onChange={() => toggleEmployeeActivation(index)}
+                      />
+                    </div>
+                  </td>
+                </tr>
+              ))}
+          </tbody>
+        </Table>
+      </div>
+
+      {/* Modal for Add/Edit Employee */}
+      <Modal show={showEmployeeModal} onHide={handleEmployeeCloseModal} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>{isEmployeeEditing ? 'Edit Employee' : 'Add Employee'}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form>
+            <Form.Group className="mb-3">
+              <Form.Label>First Name</Form.Label>
+              <Form.Control type="text" name="firstName" value={newEmployee.firstName} onChange={handleEmployeeInputChange} />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Last Name</Form.Label>
+              <Form.Control type="text" name="lastName" value={newEmployee.lastName} onChange={handleEmployeeInputChange} />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Mobile</Form.Label>
+              <Form.Control type="text" name="mobile" value={newEmployee.mobile} onChange={handleEmployeeInputChange} />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Email</Form.Label>
+              <Form.Control type="email" name="email" value={newEmployee.email} onChange={handleEmployeeInputChange} />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Password</Form.Label>
+              <Form.Control type="password" name="password" value={newEmployee.password} onChange={handleEmployeeInputChange} />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Role</Form.Label>
+              <Form.Select name="role" value={newEmployee.role} onChange={handleEmployeeInputChange}>
+                <option value="Employee">Employee</option>
+                <option value="Intern">Intern</option>
+              </Form.Select>
+            </Form.Group>
+          </Form>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleEmployeeCloseModal}>Cancel</Button>
+          <Button variant="primary" onClick={handleAddEmployee}>
+            {isEmployeeEditing ? 'Update Employee' : 'Add Employee'}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+           
+          </div>
+        </div>
+      )}
+
+
+
+   {/* Confirmation Modals */}
+      <Modal show={confirmationOpen} onHide={() => setConfirmationOpen(false)} centered backdrop="static" keyboard={false}>
+        <Modal.Header closeButton>
+          <Modal.Title>{isActivating ? 'Confirm Activation' : 'Confirm Deactivation'} Employee</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          Are you sure you want to {isActivating ? 'activate' : 'deactivate'} this Employee?
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setConfirmationOpen(false)}>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={confirmEmployeeToggle}>
+            Yes, {isActivating ? 'Activate' : 'Deactivate'}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     </div>
   );
 };
@@ -838,13 +1965,13 @@ const cardStyle = {
   minHeight: '180px',
   position: 'relative',
   cursor: 'pointer',
-  transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out, opacity 0.4s ease-out', // Smoother transition
+  transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
   paddingBottom: '15px',
 };
 
-const cardHoverStyle = { // New style for hover effect
-  transform: 'translateY(-8px) scale(1.02)', // More pronounced lift and slight scale
-  boxShadow: '0 12px 25px rgba(0,0,0,0.2)', // More pronounced shadow
+const cardHoverStyle = {
+  transform: 'translateY(-5px)',
+  boxShadow: '0 8px 20px rgba(0,0,0,0.15)',
 };
 
 const cardTitleStyle = {
@@ -861,30 +1988,16 @@ const cardIconStyle = {
   marginTop: '15px',
 };
 
-const menuLinkBaseStyle = { // Base style for menu links
+const menuLinkStyle = {
   color: '#333',
   textDecoration: 'none',
   padding: '10px 15px',
   borderRadius: '5px',
   transition: 'background-color 0.2s',
-  display: 'block', // Make it a block element to take full width
+  '&:hover': {
+    backgroundColor: '#f0f0f0'
+  }
 };
-
-const logoutButtonInSidebarStyle = {
-  background: 'transparent', // No background by default
-  color: '#dc3545', // Red text color
-  border: 'none',
-  padding: '10px 15px',
-  borderRadius: '5px',
-  cursor: 'pointer',
-  fontSize: '1em',
-  fontWeight: 'bold',
-  textAlign: 'left',
-  width: '100%', // Take full width of sidebar
-  transition: 'background-color 0.2s ease, transform 0.2s ease',
-  marginTop: 'auto', // Push it to the bottom of the sidebar
-};
-
 
 const modalOverlayStyle = {
   position: 'fixed',
@@ -897,8 +2010,7 @@ const modalOverlayStyle = {
   display: 'flex',
   justifyContent: 'center',
   alignItems: 'center',
-  zIndex: 1000,
-  transition: 'opacity 0.3s ease', // Transition for fade in/out
+  zIndex: 1000
 };
 
 const modalContentStyle = {
@@ -911,11 +2023,7 @@ const modalContentStyle = {
   maxHeight: '90vh',
   overflowY: 'auto',
   position: 'relative',
-  border: '1px solid #cbd5e1',
-  // Initial state for animation (will transition to final values)
-  transition: 'transform 0.5s ease-out, opacity 0.5s ease-out',
-  transform: 'scale(0.95)', // Start slightly smaller
-  opacity: 0, // Start invisible
+  border: '1px solid #cbd5e1'
 };
 
 const modalCloseButtonStyle = {
@@ -930,9 +2038,9 @@ const modalCloseButtonStyle = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  transition: 'background-color 0.2s, transform 0.1s', // Added transform transition
+  transition: 'background-color 0.2s',
   color: '#64748b',
-  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
 };
 
 const modalTableStyle = {
@@ -985,38 +2093,7 @@ const actionButtonStyle = {
   whiteSpace: 'nowrap',
   flexShrink: 0,
   boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-  transition: 'background-color 0.2s ease, transform 0.1s ease',
-};
-
-const chartSectionStyle = {
-  gridColumn: 'span 2',
-  background: 'white',
-  borderRadius: '10px',
-  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-  padding: '25px',
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'center',
-  minHeight: '400px',
-  transition: 'opacity 0.5s ease-out, transform 0.5s ease-out',
-  transform: 'translateX(-50px)', // Start off-left for animation
-  opacity: 0,
-};
-
-const aboutSectionStyle = {
-  gridColumn: 'span 2',
-  background: 'white',
-  borderRadius: '10px',
-  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-  padding: '25px',
-  display: 'flex',
-  flexDirection: 'column',
-  justifyContent: 'center',
-  minHeight: '400px',
-  transition: 'opacity 0.5s ease-out, transform 0.5s ease-out',
-  transform: 'translateX(50px)', // Start off-right for animation
-  opacity: 0,
+  transition: 'background-color 0.2s'
 };
 
 export default AdminDashboard;
