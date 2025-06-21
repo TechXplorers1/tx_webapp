@@ -27,6 +27,9 @@ const AdminDashboard = () => {
   const [editingClientId, setEditingClientId] = useState(null);
   const [tempSelectedManager, setTempSelectedManager] = useState('');
 
+  // State to track window width for responsive design
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+
   // --- Effect to trigger entrance animations after component mounts ---
   useEffect(() => {
     setContentLoaded(true);
@@ -59,6 +62,15 @@ const AdminDashboard = () => {
       window.removeEventListener('beforeunload', saveScrollPosition);
     };
   }, []); // Empty dependency array ensures this runs only once on mount and cleanup on unmount
+
+  // --- Effect to update windowWidth on resize ---
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // --- Debugging useEffect for menuOpen state changes ---
   useEffect(() => {
@@ -138,8 +150,7 @@ const AdminDashboard = () => {
           }
         }
       }
-    },
-    cutout: '70%',
+    }
   };
 
   const handleLogout = () => {
@@ -316,9 +327,9 @@ const AdminDashboard = () => {
   const tableConfig = {
     registered: {
       headers: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Actions'],
-      widths: ['12%', '10%', '15%', '15%', '10%', '8%', '10%', '20%'],
+      widths: ['12%', '10%', '16%', '16%', '12%', '9%', '12%', '13%'], // Sums to 100%
       renderActions: (client) => (
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap' }}>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'flex-end' }}>
           <button
             onClick={() => handleAcceptClient(client.id)}
             style={{ ...actionButtonStyle, background: '#28a745' }}
@@ -340,10 +351,9 @@ const AdminDashboard = () => {
     },
     unassigned: {
       headers: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Assign To', 'Actions'],
-      widths: ['11%', '9%', '13%', '13%', '9%', '7%', '9%', '14%', '15%'],
+      widths: ['12%', '10%', '15%', '14%', '12%', '7%', '8%', '12%', '10%'], // Sums to 100%
       renderActions: (client) => (
-        // Only the Assign button is here now
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'flex-end' }}>
           <button
             onClick={() => handleAssignClient(client.id)}
             style={{ ...actionButtonStyle, background: '#007bff' }}
@@ -357,11 +367,11 @@ const AdminDashboard = () => {
     },
     active: {
       headers: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Manager', 'Actions'],
-      widths: ['11%', '9%', '13%', '13%', '9%', '7%', '9%', '14%', '15%'],
+      widths: ['10%','10%','12%','14%','14%','9%','10%','14%','7%'], // Sums to 100%
       renderActions: (client) => {
         if (editingClientId === client.id) {
           return (
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'flex-end' }}>
               <button
                 onClick={() => handleSaveManagerChange(client.id)}
                 style={{ ...actionButtonStyle, background: '#28a745' }}
@@ -382,7 +392,7 @@ const AdminDashboard = () => {
           );
         } else {
           return (
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'flex-end' }}>
               <button
                 onClick={() => handleEditManager(client)}
                 style={{ ...actionButtonStyle, background: '#007bff' }}
@@ -398,9 +408,9 @@ const AdminDashboard = () => {
     },
     rejected: {
       headers: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Actions'],
-      widths: ['12%', '10%', '15%', '15%', '10%', '8%', '10%', '20%'],
+      widths: ['12%', '10%', '16%', '16%', '14%', '10%', '10%', '12%'], // Sums to 100%
       renderActions: (client) => (
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap' }}>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'flex-end' }}>
           <button
             onClick={() => handleRestoreClient(client.id)}
             style={{ ...actionButtonStyle, background: '#28a745' }}
@@ -414,10 +424,9 @@ const AdminDashboard = () => {
     },
     restored: {
       headers: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Assign To', 'Actions'],
-      widths: ['11%', '9%', '13%', '13%', '9%', '7%', '9%', '14%', '15%'],
+      widths: ['11%', '9%', '13%', '13%', '12%', '8%', '11%', '11%', '12%'], // Sums to 100%
       renderActions: (client) => (
-         // Only the Assign button is here now
-         <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap', alignItems: 'center' }}>
+         <div style={{ display: 'flex', gap: '10px', flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'flex-end' }}>
           <button
             onClick={() => handleAssignClient(client.id)}
             style={{ ...actionButtonStyle, background: '#007bff' }}
@@ -454,40 +463,36 @@ const AdminDashboard = () => {
         color: 'white',
         padding: '10px 25px',
         display: 'flex',
-        flexDirection: 'column',
+        flexDirection: 'column', // Stack children vertically for rows
         boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
         height: 'auto',
         position: 'sticky',
         top: 0,
-        zIndex: 1000, // Header z-index
+        zIndex: 1000,
         width: '100%'
       }}>
-        {/* Top Row: Logo & Company Name */}
+        {/* Row 1: Logo and Company Name (Left Corner) */}
         <div style={{
           display: 'flex',
+          justifyContent: 'flex-start', // Align logo to the start (left)
           alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '5px',
-          width: '100%'
+          width: '100%', // Take full width of header
+          paddingBottom: '5px', // Small space between this row and the next
         }}>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-              <span style={{ fontSize: '18px', fontWeight: 'bold', lineHeight: '1.2' }}>TECHXPLORERS</span>
-              <span style={{ fontSize: '10px', opacity: 0.8, marginTop: '0px', paddingLeft: '42px' }}>Exploring The Future</span>
-            </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+            <span style={{ fontSize: '18px', fontWeight: 'bold', lineHeight: '1.2' }}>TECHXPLORERS</span>
+            <span style={{ fontSize: '10px', opacity: 0.8, marginTop: '0px', paddingLeft:'42px' }}>Exploring The Future</span>
           </div>
-          {/* Note: Notification and Profile icons are now in the bottom row */}
         </div>
 
-        {/* Bottom Row: Hamburger Menu, Search Bar (centered), Notification, Profile */}
+        {/* Row 2: Hamburger Menu, Search Bar, Notification, Profile */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between', // Distributes items to ends, and flex-grow centers middle
-          width: '100%',
-          marginTop: '10px', // Space between top and bottom rows
+          justifyContent: 'space-between', // Distribute items horizontally
+          width: '100%', // Take full width of header
         }}>
-          {/* Left: Hamburger Menu */}
+          {/* Hamburger Menu (Left) */}
           <button
             onClick={toggleMenu}
             style={{
@@ -497,19 +502,18 @@ const AdminDashboard = () => {
               fontSize: '24px',
               cursor: 'pointer',
               padding: '0',
-              position: 'relative', // Essential for z-index
-              zIndex: 1004, // High z-index to ensure it's on top for clicks
+              flexShrink: 0, // Prevent shrinking
             }}
           >
             <FaBars />
           </button>
 
-          {/* Center: Search Bar (now a static icon) */}
+          {/* Search Bar (Centered) */}
           <div style={{
             flexGrow: 1, // Allows this div to take up available space
             display: 'flex',
-            justifyContent: 'center', // Centers the content (search bar) within this div
-            margin: '0 15px', // Add horizontal margin to prevent it from touching edges
+            justifyContent: 'center', // Centers the search bar within this div
+            margin: '0 15px', // Horizontal margin to give space
           }}>
             <div style={{
               display: 'flex',
@@ -518,12 +522,14 @@ const AdminDashboard = () => {
               cursor: 'pointer',
               borderRadius: '25px',
               padding: '8px 18px',
-              maxWidth: '400px', // Retain max width
-              width: '100%', // Ensure it takes available width up to max
+              maxWidth: windowWidth < 640 ? '200px' : '400px', // Responsive max-width
+              width: '100%',
             }}>
               <input
                 type="text"
                 placeholder="Search"
+                value={""}
+                readOnly
                 style={{
                   background: 'none',
                   border: 'none',
@@ -532,15 +538,20 @@ const AdminDashboard = () => {
                   width: '100%',
                   fontSize: '15px',
                   paddingLeft: '5px',
-                  cursor: 'default' // Indicate it's not interactive
+                  cursor: 'default'
                 }}
               />
               <FaSearch style={{ color: '#ccc', marginLeft: '10px', fontSize: '16px' }} />
             </div>
           </div>
 
-          {/* Right: Notification and Profile icons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '25px' }}>
+          {/* Notification and Profile Icons (Right) */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '25px', // Space between icons
+            flexShrink: 0, // Prevent shrinking
+          }}>
             <FaBell style={{ fontSize: '20px', cursor: 'pointer' }} />
             <CgProfile style={{ fontSize: '30px', color: '#fff', cursor: 'pointer' }} />
           </div>
@@ -551,12 +562,15 @@ const AdminDashboard = () => {
       {/* Main Content Area - Using CSS Grid */}
       <div style={{
         flexGrow: 1,
-        padding: '25px',
+        padding: windowWidth < 640 ? '15px' : '25px', // Smaller padding on small screens
         display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
+        gridTemplateColumns:
+          windowWidth < 640 ? '1fr' : // Single column on small screens
+          windowWidth < 1024 ? 'repeat(2, 1fr)' : // Two columns on medium screens
+          'repeat(4, 1fr)', // Four columns on large screens
         gridTemplateRows: 'auto auto 1fr',
-        gap: '25px',
-        maxWidth: '1300px',
+        gap: windowWidth < 640 ? '15px' : '25px', // Smaller gap on small screens
+        maxWidth: windowWidth < 1024 ? '95%' : '1300px', // Max width adapts
         margin: '25px auto',
       }}>
 
@@ -635,12 +649,13 @@ const AdminDashboard = () => {
         {/* Chart Section */}
         <div style={{
           ...chartSectionStyle,
+          gridColumn: windowWidth < 1024 ? 'span 1' : 'span 2', // Full width or 2 columns
           opacity: contentLoaded ? 1 : 0,
           transform: contentLoaded ? 'translateX(0)' : 'translateX(-50px)',
           transitionDelay: contentLoaded ? '0.2s' : '0s',
         }}>
           <h3 style={{ marginBottom: '20px', color: '#333' }}>CHART</h3>
-          <div style={{ width: '100%', maxWidth: '500px', height: '350px' }}>
+          <div style={{ width: '100%', maxWidth: windowWidth < 640 ? '250px' : '500px', height: '350px' }}>
             <Doughnut data={donutChartData} options={donutChartOptions} />
           </div>
         </div>
@@ -648,6 +663,7 @@ const AdminDashboard = () => {
         {/* About Section */}
         <div style={{
           ...aboutSectionStyle,
+          gridColumn: windowWidth < 1024 ? 'span 1' : 'span 2', // Full width or 2 columns
           opacity: contentLoaded ? 1 : 0,
           transform: contentLoaded ? 'translateX(0)' : 'translateX(50px)',
           transitionDelay: contentLoaded ? '0.25s' : '0s',
@@ -714,12 +730,13 @@ const AdminDashboard = () => {
           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f0f0f0'}
           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
         >Reports</a>
-      
+
       <div style={{ marginTop: 'auto' }}>
           <button
             onClick={() => {
               localStorage.removeItem('isLoggedIn');
-              navigate('/');
+              localStorage.removeItem('userRole');
+              navigate('/login');
               toggleMenu();
             }}
             style={{
@@ -737,13 +754,16 @@ const AdminDashboard = () => {
               alignItems: 'center',
               justifyContent: 'center',
               transition: 'background-color 0.2s',
-              ':hover': {
-                backgroundColor: '#fee2e2'
-              }
+              // Corrected pseudo-class syntax for inline styles
+              ...(true && {
+                ':hover': {
+                  backgroundColor: '#fee2e2'
+                }
+              })
             }}
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginRight: '8px' }}>
-              <path d="M6 14H3.33333C2.97971 14 2.64057 13.8595 2.39052 13.6095C2.14048 13.3594 2 13.0203 2 12.6667V3.33333C2 2.97971 2.14048 2.64057 2.39052 2.39052C2.64057 2.14048 2.97971 2 3.33333 2H6M10.6667 11.3333L14 8M14 8L10.6667 4.66667M14 8H6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M6 14H3.33333C2.97971 14 2.64057 13.8595 2.39052 13.6095C2.14048 13.3594 2 13.0203 2 12.6667V3.33333C2 2.97971 2.14048 2.64057 2.39052 2.39052C2.64057 2.14048 2.97971 2 3.33333 2H6M10.6667 11.3333L14 8M14 8L10.6667 4.66667M14 8H6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
             Log Out
           </button>
@@ -752,11 +772,14 @@ const AdminDashboard = () => {
 
       {/* Client Details Modal */}
       {showClientDetailsModal && (
-        <div style={{ ...modalOverlayStyle, opacity: showClientDetailsModal ? 1 : 0 }}>
+        <div style={modalOverlayStyle}>
           <div style={{
             ...modalContentStyle,
-            transform: showClientDetailsModal ? 'scale(1)' : 'scale(0.95)',
-            opacity: showClientDetailsModal ? 1 : 0
+            width: windowWidth < 768 ? '95%' : '1400px', // Wider on large, fills small
+            maxWidth: '1400px', // Ensure it doesn't exceed this
+            transform: contentLoaded ? 'scale(1)' : 'scale(0.95)', // Apply entrance animation to modal
+            opacity: contentLoaded ? 1 : 0, // Apply entrance animation to modal
+            transition: 'transform 0.5s ease-out, opacity 0.5s ease-out', // Ensure transition is here
           }}>
             <button
               onClick={toggleClientDetailsModal}
@@ -878,6 +901,7 @@ const AdminDashboard = () => {
                       <th key={header} style={{
                         ...modalTableHeaderStyle,
                         width: tableConfig[clientFilter].widths[index], // Apply fixed width from config
+                        textAlign: header === 'Actions' ? 'right' : 'left', // Align Actions header to right
                       }}>
                         {header}
                       </th>
@@ -895,6 +919,7 @@ const AdminDashboard = () => {
                             key={`${client.id}-${header}`} // Unique key for cells
                             style={{
                               ...modalTableCellStyle,
+                              textAlign: header === 'Actions' ? 'right' : 'left', // Align Actions cells to right
                             }}
                           >
                             {/* Render actions if header is 'Actions', otherwise get value from client data */}
@@ -998,7 +1023,7 @@ const modalOverlayStyle = {
 
 const modalContentStyle = {
   background: '#ffffff',
-  padding: '40px',
+  padding: '30px', // Reduced padding
   borderRadius: '20px',
   boxShadow: '0 25px 50px rgba(0, 0, 0, 0.25)',
   maxWidth: '95%',
@@ -1007,10 +1032,6 @@ const modalContentStyle = {
   overflowY: 'auto',
   position: 'relative',
   border: '1px solid #cbd5e1',
-  // Initial state for animation (will transition to final values)
-  transition: 'transform 0.5s ease-out, opacity 0.5s ease-out',
-  transform: 'scale(0.95)', // Start slightly smaller
-  opacity: 0, // Start invisible
 };
 
 const modalCloseButtonStyle = {
@@ -1042,7 +1063,7 @@ const modalTableStyle = {
 
 const modalTableHeaderStyle = {
   padding: '14px 10px',
-  textAlign: 'left',
+  textAlign: 'left', // Default for most headers
   backgroundColor: '#e2e8f0',
   color: '#334155',
   fontSize: '0.875rem',
@@ -1056,9 +1077,11 @@ const modalTableHeaderStyle = {
 
 const modalTableCellStyle = {
   padding: '18px 10px',
-  textAlign: 'left',
+  textAlign: 'left', // Default for most cells
   fontSize: '0.9rem',
   color: '#334155',
+  wordBreak: 'break-word', // Added for long content in cells
+  verticalAlign: 'middle', // Added for vertical alignment
 };
 
 const modalTableRowStyle = {

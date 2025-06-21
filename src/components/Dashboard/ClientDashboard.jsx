@@ -34,28 +34,30 @@ const ClientDashboard = () => {
   const toggleResumeModal = () => setShowResumeModal(!showResumeModal);
   const togglePaymentModal = () => setShowPaymentModal(!showPaymentModal);
 
-  const profilePlaceholder = "https://placehold.co/96x96/E0E0E0/808080?text=�";
+  const profilePlaceholder = "https://imageio.forbes.com/specials-images/imageserve/5c7d7829a7ea434b351ba0b6/0x0.jpg?format=jpg&crop=1837,1839,x206,y250,safe&height=416&width=416&fit=bounds";
 
   // --- Dynamic Chart Date Generation ---
-  const today = new Date();
-  const chartLabels = [];
-  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const generateChartLabelsForPastDays = (numDays) => {
+    const labels = [];
+    const today = new Date();
+    const options = { day: '2-digit', month: 'short' }; // Format as "DD Mon"
 
-  for (let i = 0; i < 7; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() + i);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = monthNames[date.getMonth()];
-    const year = date.getFullYear();
-    chartLabels.push(`${day} ${month} ${year}`);
-  }
+    for (let i = numDays - 1; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      labels.push(date.toLocaleDateString('en-US', options));
+    }
+    return labels;
+  };
+
+  const chartLabels = generateChartLabelsForPastDays(7); // Last 7 days
 
   const data = {
     labels: chartLabels,
     datasets: [
       {
         label: 'LinkedIn',
-        data: [25, 20, 22, 28, 26, 24, 27],
+        data: [25, 20, 22, 28, 26, 24, 27], // 7 data points for 7 days
         borderColor: '#0A66C2',
         backgroundColor: '#0A66C2',
         tension: 0.4,
@@ -65,7 +67,7 @@ const ClientDashboard = () => {
       },
       {
         label: 'Indeed',
-        data: [5, 10, 15, 20, 25, 22, 15],
+        data: [5, 10, 15, 20, 25, 22, 15], // 7 data points for 7 days
         borderColor: '#2164F4',
         backgroundColor: '#2164F4',
         tension: 0.4,
@@ -74,7 +76,7 @@ const ClientDashboard = () => {
       },
       {
         label: 'Company Site',
-        data: [10, 12, 20, 6, 29, 23, 28],
+        data: [10, 12, 20, 6, 29, 23, 28], // 7 data points for 7 days
         borderColor: '#6A0DAD',
         backgroundColor: '#6A0DAD',
         tension: 0.4,
@@ -84,7 +86,7 @@ const ClientDashboard = () => {
       },
       {
         label: 'Glassdoor',
-        data: [20, 15, 8, 16, 15, 10, 30],
+        data: [20, 15, 8, 16, 15, 10, 30], // 7 data points for 7 days
         borderColor: '#0CAA41',
         backgroundColor: '#0CAA41',
         tension: 0.4,
@@ -93,7 +95,7 @@ const ClientDashboard = () => {
       },
       {
         label: 'Other',
-        data: [15, 25, 18, 26, 22, 28, 18],
+        data: [15, 25, 18, 26, 22, 28, 18], // 7 data points for 7 days
         borderColor: '#FF6B00',
         backgroundColor: '#FF6B00',
         tension: 0.4,
@@ -131,15 +133,20 @@ const ClientDashboard = () => {
     scales: {
       y: {
         beginAtZero: true,
-        min: 5,
-        max: 30,
+        min: 0,
+        max: 35,
         grid: {
           color: 'rgba(0,0,0,0.05)'
         }
       },
       x: {
         grid: {
-          display: false
+          display: true, // Display vertical grid lines
+          color: 'rgba(0,0,0,0.1)',
+          drawOnChartArea: true,
+          drawTicks: false,
+          lineWidth: 1,
+          borderDash: [5, 5],
         }
       }
     },
@@ -152,14 +159,14 @@ const ClientDashboard = () => {
 
   // Mock data for Scheduled Interviews
   const scheduledInterviews = [
-    { id: 1, date: '2025-06-15', time: '10:00 AM', company: 'Innovate Solutions', role: 'Software Developer', interviewer: 'Alice Johnson', type: 'Virtual' },
-    { id: 2, date: '2025-06-18', time: '02:30 PM', company: 'Global Tech Corp', role: 'UX Designer', interviewer: 'Bob Williams', type: 'In-person' },
-    { id: 3, date: '2025-06-20', time: '11:00 AM', company: 'Data Insights Ltd.', role: 'Data Analyst', interviewer: 'Charlie Brown', type: 'Virtual' },
-    { id: 4, date: '2025-06-22', time: '09:00 AM', company: 'FutureTech Inc.', role: 'Project Manager', interviewer: 'David Lee', type: 'Virtual' },
-    { id: 5, date: '2025-06-25', time: '01:00 PM', company: 'Digital Innovators', role: 'DevOps Engineer', interviewer: 'Eve Davis', type: 'In-person' },
-    { id: 6, date: '2025-06-28', time: '03:45 PM', company: 'Quant Computing', role: 'Machine Learning Scientist', interviewer: 'Frank White', type: 'Virtual' },
-    { id: 7, date: '2025-07-01', time: '10:30 AM', company: 'CyberSec Solutions', role: 'Cybersecurity Analyst', interviewer: 'Grace Kim', type: 'Virtual' },
-    { id: 8, date: '2025-07-03', time: '04:00 PM', company: 'HealthTech Connect', role: 'Mobile App Developer', interviewer: 'Henry Green', type: 'In-person' },
+    { id: 1, date: '2025-06-15', time: '10:00 AM', company: 'Innovate Solutions', role: 'Software Developer', recruiterMailId: 'alice.j@innovate.com', round: 'Round 1' },
+    { id: 2, date: '2025-06-18', time: '02:30 PM', company: 'Global Tech Corp', role: 'UX Designer', recruiterMailId: 'bob.w@globaltech.com', round: 'Round 2' },
+    { id: 3, date: '2025-06-20', time: '11:00 AM', company: 'Data Insights Ltd.', role: 'Data Analyst', recruiterMailId: 'charlie.b@datainsights.com', round: 'Final Round' },
+    { id: 4, date: '2025-06-22', time: '09:00 AM', company: 'FutureTech Inc.', role: 'Project Manager', recruiterMailId: 'david.l@futuretech.net', round: 'Round 1' },
+    { id: 5, date: '2025-06-25', time: '01:00 PM', company: 'Digital Innovators', role: 'DevOps Engineer', recruiterMailId: 'eve.d@digitalinnov.io', round: 'Round 3' },
+    { id: 6, date: '2025-06-28', time: '03:45 PM', company: 'Quant Computing', role: 'Machine Learning Scientist', recruiterMailId: 'frank.w@quantcomp.ai', round: 'Round 2' },
+    { id: 7, date: '2025-07-01', time: '10:30 AM', company: 'CyberSec Solutions', role: 'Cybersecurity Analyst', recruiterMailId: 'grace.k@cybersec.com', round: 'Round 1' },
+    { id: 8, date: '2025-07-03', time: '04:00 PM', company: 'HealthTech Connect', role: 'Mobile App Developer', recruiterMailId: 'henry.g@healthtech.org', round: 'Final Round' },
   ];
 
   // Mock data for Resume & Job Portal Updates
@@ -173,6 +180,19 @@ const ClientDashboard = () => {
     { id: 7, date: '2025-05-18', type: 'Portfolio Link', status: 'Added', details: 'Updated portfolio on resume' },
     { id: 8, date: '2025-05-15', type: 'Skills Section', status: 'Enhanced', details: 'Added new technical skills' },
   ];
+
+  // Filtered resume updates to show only type 'Resume'
+  const filteredResumeUpdates = resumeUpdates.filter(update => update.type === 'Resume');
+
+  // Find the latest resume update date
+  const latestResumeUpdate = filteredResumeUpdates.length > 0
+    ? new Date(Math.max(...filteredResumeUpdates.map(update => new Date(update.date))))
+    : null;
+
+  const formattedLatestResumeDate = latestResumeUpdate
+    ? latestResumeUpdate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    : 'N/A';
+
 
   // Map plans to prices and features for display
   const planOptions = {
@@ -225,6 +245,11 @@ const ClientDashboard = () => {
   // Get current selected plan details for display below radio buttons
   const currentSelectedPlanDetails = planOptions[selectedRadioPlan];
 
+  // Handler for downloading resume
+  const handleDownloadResume = () => {
+    alert('Downloading the latest resume... (This is a placeholder action)');
+  };
+
 
   return (
     <div style={{
@@ -234,6 +259,33 @@ const ClientDashboard = () => {
       minHeight: '100vh',
       display: 'flex'
     }}>
+      {/* Styles for the download button animation */}
+      <style>
+        {`
+        .download-button {
+          background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+          color: white;
+          border: none;
+          padding: 12px 24px;
+          border-radius: 8px;
+          font-size: 1rem;
+          font-weight: 600;
+          cursor: pointer;
+          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+          transition: transform 0.3s ease-out, box-shadow 0.3s ease-out;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+        }
+
+        .download-button:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+          background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+        }
+        `}
+      </style>
 
       {/* Sidebar Overlay */}
       {menuOpen && (
@@ -277,8 +329,8 @@ const ClientDashboard = () => {
                     <th style={modalTableHeaderStyle}>Time</th>
                     <th style={modalTableHeaderStyle}>Company</th>
                     <th style={modalTableHeaderStyle}>Role</th>
-                    <th style={modalTableHeaderStyle}>Interviewer</th>
-                    <th style={modalTableHeaderStyle}>Type</th>
+                    <th style={modalTableHeaderStyle}>Recruiter Mail ID</th>
+                    <th style={modalTableHeaderStyle}>Round</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -290,31 +342,26 @@ const ClientDashboard = () => {
                       <td style={modalTableCellStyle}>{interview.time}</td>
                       <td style={{...modalTableCellStyle, fontWeight: '600'}}>{interview.company}</td>
                       <td style={modalTableCellStyle}>{interview.role}</td>
-                      <td style={modalTableCellStyle}>{interview.interviewer}</td>
+                      <td style={modalTableCellStyle}>{interview.recruiterMailId}</td>
                       <td style={modalTableCellStyle}>
                         <div style={{
                           display: 'inline-flex',
                           alignItems: 'center',
                           padding: '4px 12px',
                           borderRadius: '16px',
-                          backgroundColor: interview.type === 'Virtual' ? '#EFF6FF' : '#ECFDF5',
-                          color: interview.type === 'Virtual' ? '#1D4ED8' : '#047857',
+                          backgroundColor:
+                            interview.round === 'Round 1' ? '#EFF6FF' :
+                            interview.round === 'Round 2' ? '#ECFDF5' :
+                            interview.round === 'Round 3' ? '#FEF3C7' : '#F3E8FF',
+                          color:
+                            interview.round === 'Round 1' ? '#1D4ED8' :
+                            interview.round === 'Round 2' ? '#047857' :
+                            interview.round === 'Round 3' ? '#92400E' : '#6B21A8',
                           fontSize: '0.75rem',
                           fontWeight: '600',
                           textTransform: 'uppercase'
                         }}>
-                          {interview.type === 'Virtual' ? (
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ marginRight: '4px' }}>
-                              <path d="M11 6C11 8.76142 8.76142 11 6 11C3.23858 11 1 8.76142 1 6C1 3.23858 3.23858 1 6 1C8.76142 1 11 3.23858 11 6Z" stroke="currentColor" strokeWidth="1.5"/>
-                              <path d="M8 6C8 7.10457 7.10457 8 6 8C4.89543 8 4 7.10457 4 6C4 4.89543 4.89543 4 6 4C7.10457 4 8 4.89543 8 6Z" stroke="currentColor" strokeWidth="1.5"/>
-                            </svg>
-                          ) : (
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ marginRight: '4px' }}>
-                              <path d="M9.5 3H2.5C2.22386 3 2 3.22386 2 3.5V8.5C2 8.77614 2.22386 9 2.5 9H9.5C9.77614 9 10 8.77614 10 8.5V3.5C10 3.22386 9.77614 3 9.5 3Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                              <path d="M4 6H5M7 6H8M6 6V7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                          )}
-                          {interview.type}
+                          {interview.round}
                         </div>
                       </td>
                     </tr>
@@ -342,7 +389,7 @@ const ClientDashboard = () => {
               fontSize: '1.5rem',
               fontWeight: '600'
             }}>
-              Resume & Job Portal Updates
+              Resume Updates
             </h3>
             <div style={{ overflowX: 'auto' }}>
               <table style={modalTableStyle}>
@@ -355,7 +402,7 @@ const ClientDashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {resumeUpdates.map((update) => (
+                  {filteredResumeUpdates.map((update) => (
                     <tr key={update.id} style={modalTableRowStyle}>
                       <td style={modalTableCellStyle}>
                         <div style={{ fontWeight: '500' }}>{update.date}</div>
@@ -401,6 +448,25 @@ const ClientDashboard = () => {
                   ))}
                 </tbody>
               </table>
+            </div>
+            {/* Download Button with Animation (using a CSS class now) */}
+            <div style={{ textAlign: 'center', marginTop: '30px' }}>
+              <button
+                onClick={handleDownloadResume}
+                className="download-button" // Applying the CSS class
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                Download Latest Resume
+              </button>
+              {latestResumeUpdate && (
+                <p style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '10px' }}>
+                  Last updated: {formattedLatestResumeDate}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -554,7 +620,7 @@ const ClientDashboard = () => {
           fontSize: '1.25rem',
           color: '#1e293b'
         }}>
-          DASHBOARD
+          Mukesh Ambani
         </h4>
 
         {/* Plan Details */}
@@ -829,8 +895,6 @@ const ClientDashboard = () => {
               maxWidth: '100%',
               minWidth: '300px',
               transition: 'transform 0.3s, box-shadow 0.3s',
-              position: 'relative',
-              overflow: 'hidden',
               // Corrected pseudo-class syntax for inline styles
               ...(true && {
                 ':hover': {
@@ -924,7 +988,7 @@ const ClientDashboard = () => {
                 <path d="M9 12H15M9 16H15M10 3H14C15.1046 3 16 3.89543 16 5V20C16 20.5523 15.5523 21 15 21H9C8.44772 21 8 20.5523 8 20V5C8 3.89543 8.89543 3 10 3Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
               <div style={{ fontSize: '1.25rem', letterSpacing: '0.5px' }}>
-                UPDATED RESUME & JOB PORTAL FILE
+                RESUME UPDATES
               </div>
               <div style={{
                 fontSize: '0.875rem',
@@ -932,7 +996,7 @@ const ClientDashboard = () => {
                 marginTop: '8px',
                 fontWeight: '400'
               }}>
-                {resumeUpdates.length} recent updates
+                {filteredResumeUpdates.length} recent updates
               </div>
             </div>
           </div>
@@ -995,6 +1059,7 @@ const modalTableStyle = {
   width: '100%',
   borderCollapse: 'separate',
   borderSpacing: '0 8px',
+  minWidth: '700px', // Adjusted table width
 };
 
 const modalTableHeaderStyle = {
