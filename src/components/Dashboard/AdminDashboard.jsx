@@ -414,8 +414,7 @@ const [activationIndex, setActivationIndex] = useState(null);
           }
         }
       }
-    },
-    cutout: '70%',
+    }
   };
 
   const handleLogout = () => {
@@ -503,7 +502,7 @@ const [activationIndex, setActivationIndex] = useState(null);
     updateClientData(clientId, { status: 'restored', displayStatuses: ['restored', 'registered'], assignedTo: null, manager: null });
   };
 
-  // Handler for dropdown change
+  // Handler for dropdown change (for initial assignment)
   const handleManagerSelectChange = (clientId, managerName) => {
     setSelectedManagerPerClient(prev => ({
       ...prev,
@@ -680,6 +679,7 @@ const [activationIndex, setActivationIndex] = useState(null);
   const tableConfig = {
     registered: {
       headers: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Actions'],
+      widths: ['12%', '10%', '16%', '16%', '12%', '9%', '12%', '13%'], // Sums to 100%
       renderActions: (client) => (
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap' }}>
           <button onClick={() => handleAcceptClient(client.id)} style={{ ...actionButtonStyle, background: '#28a745' }}>Accept</button>
@@ -689,6 +689,7 @@ const [activationIndex, setActivationIndex] = useState(null);
     },
     unassigned: {
       headers: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Assign To', 'Actions'],
+      widths: ['12%', '10%', '15%', '14%', '12%', '7%', '8%', '12%', '10%'], // Sums to 100%
       renderActions: (client) => (
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap', alignItems: 'center' }}>
           <select
@@ -713,12 +714,48 @@ const [activationIndex, setActivationIndex] = useState(null);
     },
     active: {
       headers: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Manager', 'Actions'],
-      renderActions: (client) => (
-        <span style={{ color: '#666', fontSize: '0.9em' }}>--</span> // No direct actions for active clients in image
-      )
+      widths: ['10%','10%','12%','14%','14%','9%','10%','14%','7%'], // Sums to 100%
+      renderActions: (client) => {
+        if (editingClientId === client.id) {
+          return (
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => handleSaveManagerChange(client.id)}
+                style={{ ...actionButtonStyle, background: '#28a745' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#218838'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#28a745'}
+                onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+                onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              >Save</button>
+              <button
+                onClick={handleCancelEdit}
+                style={{ ...actionButtonStyle, background: '#6c757d' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#5a6268'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#6c757d'}
+                onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+                onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              >Cancel</button>
+            </div>
+          );
+        } else {
+          return (
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => handleEditManager(client)}
+                style={{ ...actionButtonStyle, background: '#007bff' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0069d9'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#007bff'}
+                onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+                onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              >Edit</button>
+            </div>
+          );
+        }
+      }
     },
     rejected: {
       headers: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Actions'],
+      widths: ['12%', '10%', '16%', '16%', '14%', '10%', '10%', '12%'], // Sums to 100%
       renderActions: (client) => (
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap' }}>
           <button onClick={() => handleRestoreClient(client.id)} style={{ ...actionButtonStyle, background: '#28a745' }}>Restore</button>
@@ -727,6 +764,7 @@ const [activationIndex, setActivationIndex] = useState(null);
     },
     restored: {
       headers: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Assign To', 'Actions'],
+      widths: ['11%', '9%', '13%', '13%', '12%', '8%', '11%', '11%', '12%'], // Sums to 100%
       renderActions: (client) => (
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap', alignItems: 'center' }}>
           <select
@@ -773,21 +811,22 @@ const [activationIndex, setActivationIndex] = useState(null);
         color: 'white',
         padding: '10px 25px',
         display: 'flex',
-        flexDirection: 'column',
+        flexDirection: 'column', // Stack children vertically for rows
         boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
         height: 'auto',
         position: 'sticky',
         top: 0,
         zIndex: 1000,
+        zIndex: 1000,
         width: '100%'
       }}>
-        {/* Top Row: Logo & Company Name */}
+        {/* Row 1: Logo and Company Name (Left Corner) */}
         <div style={{
           display: 'flex',
+          justifyContent: 'flex-start', // Align logo to the start (left)
           alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '5px',
-          width: '100%'
+          width: '100%', // Take full width of header
+          paddingBottom: '5px', // Small space between this row and the next
         }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
@@ -857,12 +896,15 @@ const [activationIndex, setActivationIndex] = useState(null);
       {/* Main Content Area - Using CSS Grid */}
       <div style={{
         flexGrow: 1,
-        padding: '25px',
+        padding: windowWidth < 640 ? '15px' : '25px', // Smaller padding on small screens
         display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
+        gridTemplateColumns:
+          windowWidth < 640 ? '1fr' : // Single column on small screens
+          windowWidth < 1024 ? 'repeat(2, 1fr)' : // Two columns on medium screens
+          'repeat(4, 1fr)', // Four columns on large screens
         gridTemplateRows: 'auto auto 1fr',
-        gap: '25px',
-        maxWidth: '1300px',
+        gap: windowWidth < 640 ? '15px' : '25px', // Smaller gap on small screens
+        maxWidth: windowWidth < 1024 ? '95%' : '1300px', // Max width adapts
         margin: '25px auto',
       }}>
 
@@ -924,7 +966,7 @@ const [activationIndex, setActivationIndex] = useState(null);
           minHeight: '400px',
         }}>
           <h3 style={{ marginBottom: '20px', color: '#333' }}>CHART</h3>
-          <div style={{ width: '100%', maxWidth: '500px', height: '350px' }}>
+          <div style={{ width: '100%', maxWidth: windowWidth < 640 ? '250px' : '500px', height: '350px' }}>
             <Doughnut data={donutChartData} options={donutChartOptions} />
           </div>
         </div>
@@ -1044,7 +1086,7 @@ const [activationIndex, setActivationIndex] = useState(null);
               position: 'relative',
               display: 'flex',
               borderRadius: '0.5rem',
-              backgroundColor: '#EEE',
+              backgroundColor: '#EEE', // Overall background for the radio group container
               boxSizing: 'border-box',
               boxShadow: '0 0 0px 1px rgba(0, 0, 0, 0.06)',
               padding: '0.25rem',
@@ -1058,11 +1100,11 @@ const [activationIndex, setActivationIndex] = useState(null);
             }}>
               {[
                 // Counts are dynamically calculated from the 'clients' state based on displayStatuses
-                { label: 'Registered Clients', value: 'registered', count: clients.filter(c => c.displayStatuses.includes('registered')).length },
-                { label: 'Unassigned Clients', value: 'unassigned', count: clients.filter(c => c.displayStatuses.includes('unassigned')).length },
-                { label: 'Active Clients', value: 'active', count: clients.filter(c => c.displayStatuses.includes('active')).length },
-                { label: 'Rejected Clients', value: 'rejected', count: clients.filter(c => c.displayStatuses.includes('rejected')).length },
-                { label: 'Restore Clients', value: 'restored', count: clients.filter(c => c.displayStatuses.includes('restored')).length },
+                { label: 'Registered Clients', value: 'registered', count: clients.filter(c => c.displayStatuses.includes('registered')).length, activeBg: '#E6F0FF', activeColor: '#3A60EE', badgeBg: '#3A60EE' },
+                { label: 'Unassigned Clients', value: 'unassigned', count: clients.filter(c => c.displayStatuses.includes('unassigned')).length, activeBg: '#E6E6E6', activeColor: '#334155', badgeBg: '#9AA0A6' },
+                { label: 'Active Clients', value: 'active', count: clients.filter(c => c.displayStatuses.includes('active')).length, activeBg: '#D9F5E6', activeColor: '#28A745', badgeBg: '#28A745' },
+                { label: 'Rejected Clients', value: 'rejected', count: clients.filter(c => c.displayStatuses.includes('rejected')).length, activeBg: '#FFEDEE', activeColor: '#DC3545', badgeBg: '#DC3545' },
+                { label: 'Restore Clients', value: 'restored', count: clients.filter(c => c.displayStatuses.includes('restored')).length, activeBg: '#F0E6FF', activeColor: '#6A40EE', badgeBg: '#6A40EE' },
               ].map((option) => (
                 <label
                   key={option.value}
@@ -1077,9 +1119,10 @@ const [activationIndex, setActivationIndex] = useState(null);
                     borderRadius: '0.5rem',
                     border: 'none',
                     padding: '.5rem 10px',
-                    color: 'rgba(51, 65, 85, 1)',
                     transition: 'all .15s ease-in-out',
-                    backgroundColor: clientFilter === option.value ? '#fff' : 'transparent',
+                    // Dynamic background and text color based on active state
+                    backgroundColor: clientFilter === option.value ? option.activeBg : 'transparent',
+                    color: clientFilter === option.value ? option.activeColor : 'rgba(51, 65, 85, 1)',
                     fontWeight: clientFilter === option.value ? '600' : 'normal',
                     margin: '0 2px',
                   }}
@@ -1112,15 +1155,15 @@ const [activationIndex, setActivationIndex] = useState(null);
               {clientFilter === 'rejected' && `Rejected Clients`}
               {clientFilter === 'restored' && `Restored Clients`} ({filteredClients.length})
             </h4>
-            <div style={{ overflowX: 'auto' }}>
+            <div style={{ overflowX: 'auto', borderRadius: '8px' }}>
               <table style={modalTableStyle}>
                 <thead>
                   <tr>
-                    {tableConfig[clientFilter].headers.map(header => (
+                    {tableConfig[clientFilter].headers.map((header, index) => (
                       <th key={header} style={{
                         ...modalTableHeaderStyle,
-                        borderTopLeftRadius: header === tableConfig[clientFilter].headers[0] ? '8px' : '0',
-                        borderTopRightRadius: header === tableConfig[clientFilter].headers[tableConfig[clientFilter].headers.length - 1] ? '8px' : '0',
+                        width: tableConfig[clientFilter].widths[index], // Apply fixed width from config
+                        textAlign: header === 'Actions' ? 'right' : 'left', // Align Actions header to right
                       }}>
                         {header}
                       </th>
@@ -1132,18 +1175,13 @@ const [activationIndex, setActivationIndex] = useState(null);
                     filteredClients.map((client, index) => (
                       <tr key={client.id} style={{
                         backgroundColor: index % 2 === 0 ? '#ffffff' : '#eff2f7',
-                        ...modalTableRowStyle,
                       }}>
                         {tableConfig[clientFilter].headers.map((header, colIndex) => (
                           <td
                             key={`${client.id}-${header}`} // Unique key for cells
                             style={{
                               ...modalTableCellStyle,
-                              // Apply border radius to the first/last cell of the first/last row
-                              borderTopLeftRadius: (colIndex === 0 && index === 0) ? '12px' : '0',
-                              borderBottomLeftRadius: (colIndex === 0 && index === filteredClients.length - 1) ? '12px' : '0',
-                              borderTopRightRadius: (colIndex === tableConfig[clientFilter].headers.length - 1 && index === 0) ? '12px' : '0',
-                              borderBottomRightRadius: (colIndex === tableConfig[clientFilter].headers.length - 1 && index === filteredClients.length - 1) ? '12px' : '0',
+                              textAlign: header === 'Actions' ? 'right' : 'left', // Align Actions cells to right
                             }}
                           >
                             {/* Render actions if header is 'Actions', otherwise get value from client data */}
@@ -2015,7 +2053,7 @@ const modalOverlayStyle = {
 
 const modalContentStyle = {
   background: '#ffffff',
-  padding: '40px',
+  padding: '30px', // Reduced padding
   borderRadius: '20px',
   boxShadow: '0 25px 50px rgba(0, 0, 0, 0.25)',
   maxWidth: '95%',
@@ -2045,21 +2083,23 @@ const modalCloseButtonStyle = {
 
 const modalTableStyle = {
   width: '100%',
-  borderCollapse: 'separate',
-  borderSpacing: '0 12px',
+  borderCollapse: 'collapse',
+  borderSpacing: '0',
   marginTop: '20px',
+  borderRadius: '8px',
+  overflow: 'hidden',
+  tableLayout: 'fixed', // Key change for fixed column widths
 };
 
 const modalTableHeaderStyle = {
   padding: '14px 10px',
-  textAlign: 'left',
+  textAlign: 'left', // Default for most headers
   backgroundColor: '#e2e8f0',
   color: '#334155',
   fontSize: '0.875rem',
   fontWeight: '700',
   textTransform: 'uppercase',
   letterSpacing: '0.7px',
-  border: 'none',
   position: 'sticky',
   top: '0',
   zIndex: '10',
@@ -2067,19 +2107,15 @@ const modalTableHeaderStyle = {
 
 const modalTableCellStyle = {
   padding: '18px 10px',
-  textAlign: 'left',
-  border: 'none',
+  textAlign: 'left', // Default for most cells
   fontSize: '0.9rem',
   color: '#334155',
-  borderBottom: '1px solid #f1f5f9',
+  wordBreak: 'break-word', // Added for long content in cells
+  verticalAlign: 'middle', // Added for vertical alignment
 };
 
 const modalTableRowStyle = {
-  boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
   transition: 'transform 0.2s, box-shadow 0.2s',
-  // Pseudo-selectors like :first-child, :last-child are not directly supported in inline styles.
-  // The border radius logic has been moved to the individual `<td>` elements in the `map` function
-  // to ensure they apply correctly to the first/last cells of the first/last rows.
 };
 
 const actionButtonStyle = {
@@ -2097,3 +2133,4 @@ const actionButtonStyle = {
 };
 
 export default AdminDashboard;
+

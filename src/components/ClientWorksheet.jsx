@@ -1,20 +1,87 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import { Modal, Button, Form, Row, Col } from 'react-bootstrap';
+import { FaSearch, FaCalendarAlt } from 'react-icons/fa'; // Import FaSearch and FaCalendarAlt icons
+
+// Placeholder for DateRangeCalendar if it's not actually used or available
+// In a real application, ensure this import path is correct and the file exists.
+// import DateRangeCalendar from './DateRangeCalendar'; // Uncomment if DateRangeCalendar.jsx exists
+
+// Mock DateRangeCalendar for demonstration if the file is not provided
+const DateRangeCalendar = ({ initialStartDate, initialEndDate, onSelectRange }) => {
+  const [start, setStart] = useState(initialStartDate);
+  const [end, setEnd] = useState(initialEndDate);
+
+  useEffect(() => {
+    onSelectRange(start, end);
+  }, [start, end, onSelectRange]);
+
+  const handleStartDateChange = (e) => {
+    const newDate = e.target.value ? new Date(e.target.value) : null;
+    setStart(newDate);
+  };
+
+  const handleEndDateChange = (e) => {
+    const newDate = e.target.value ? new Date(e.target.value) : null;
+    setEnd(newDate);
+  };
+
+  const formatToInputDate = (date) => {
+    if (!date) return '';
+    const d = new Date(date);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
+  return (
+    <div style={{ padding: '15px', border: '1px solid #eee', borderRadius: '8px' }}>
+      <p style={{ fontWeight: 'bold', marginBottom: '10px' }}>Select Date Range:</p>
+      <Form.Group controlId="tempStartDate" className="mb-3">
+        <Form.Label>From Date:</Form.Label>
+        <Form.Control
+          type="date"
+          value={formatToInputDate(start)}
+          onChange={handleStartDateChange}
+        />
+      </Form.Group>
+      <Form.Group controlId="tempEndDate" className="mb-3">
+        <Form.Label>To Date:</Form.Label>
+        <Form.Control
+          type="date"
+          value={formatToInputDate(end)}
+          onChange={handleEndDateChange}
+        />
+      </Form.Group>
+    </div>
+  );
+};
+
 
 // --- HELPER FUNCTIONS (MOVED OUTSIDE COMPONENT FOR GLOBAL SCOPE) ---
 
 // Format date as DD-MM-YYYY
 const formatDate = (date) => {
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const year = date.getFullYear();
+  if (!date) return ''; // Handle empty date
+  const d = new Date(date);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
   return `${day}-${month}-${year}`;
 };
 
-// Generate 7-day date range
+// Format date string from DD-MM-YYYY to YYYY-MM-DD for Date constructor
+const convertDDMMYYYYtoYYYYMMDD = (dateString) => {
+    if (!dateString) return '';
+    const parts = dateString.split('-'); // ["DD", "MM", "YYYY"]
+    if (parts.length === 3) {
+        return `${parts[2]}-${parts[1]}-${parts[0]}`; // "YYYY-MM-DD"
+    }
+    return dateString; // Return as is if format is unexpected
+};
+
+
+// Generate 7-day date range for the ribbon
 const generateDateRange = (startDate) => {
   const dates = [];
   for (let i = 0; i < 7; i++) {
@@ -28,60 +95,81 @@ const generateDateRange = (startDate) => {
 // --- SAMPLE APPLICATIONS DATA (MOVED OUTSIDE COMPONENT FOR ACCESSIBILITY) ---
 const applicationsData = {
   [formatDate(new Date())]: [ // Today's date
-    { id: 1, website: 'LinkedIn', position: 'Frontend Developer', company: 'Tech Corp', link: '#' },
-    { id: 10, website: 'Company Site', position: 'Fullstack Engineer', company: 'Innovate Solutions', link: '#' },
-    { id: 11, website: 'Indeed', position: 'DevOps Specialist', company: 'CloudWorks', link: '#' },
-    { id: 12, website: 'Glassdoor', position: 'QA Engineer', company: 'Quality First', link: '#' },
-    { id: 13, website: 'LinkedIn', position: 'Product Designer', company: 'Creative Minds', link: '#' },
+    { id: 1, website: 'LinkedIn', position: 'Frontend Developer', company: 'Tech Corp', link: '#', dateAdded: formatDate(new Date()), jobDescription: 'Develop and maintain web applications using React.js, proficient in HTML, CSS, JavaScript, and modern front-end build tools.' },
+    { id: 10, website: 'Company Site', position: 'Fullstack Engineer', company: 'Innovate Solutions', link: '#', dateAdded: formatDate(new Date()), jobDescription: 'Design, develop, and deploy full-stack applications with expertise in Node.js, Python, and database management (SQL/NoSQL).' },
+    { id: 11, website: 'Indeed', position: 'DevOps Specialist', company: 'CloudWorks', link: '#', dateAdded: formatDate(new Date()), jobDescription: 'Implement and manage CI/CD pipelines, automate infrastructure using tools like Docker, Kubernetes, and Ansible. Cloud platform experience (AWS/Azure/GCP) is a plus.' },
+    { id: 12, website: 'Glassdoor', position: 'QA Engineer', company: 'Quality First', link: '#', dateAdded: formatDate(new Date()), jobDescription: 'Execute test plans, identify and document software defects, and contribute to the overall quality assurance process for web and mobile applications.' },
+    { id: 13, website: 'LinkedIn', position: 'Product Designer', company: 'Creative Minds', link: '#', dateAdded: formatDate(new Date()), jobDescription: 'Create intuitive and engaging user experiences through wireframes, prototypes, and user flows. Proficient in Figma, Sketch, or Adobe XD.' },
   ],
   [formatDate(new Date(new Date().setDate(new Date().getDate() - 1)))]: [ // Yesterday
-    { id: 2, website: 'Indeed', position: 'Backend Engineer', company: 'Data Systems', link: '#' },
-    { id: 14, website: 'Company Site', position: 'Data Scientist', company: 'Analytics Inc.', link: '#' },
+    { id: 2, website: 'Indeed', position: 'Backend Engineer', company: 'Data Systems', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 1))), jobDescription: 'Develop robust server-side logic and APIs using Java Spring Boot. Experience with RESTful services and microservices architecture is required.' },
+    { id: 14, website: 'Company Site', position: 'Data Scientist', company: 'Analytics Inc.', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 1))), jobDescription: 'Analyze large datasets to extract actionable insights. Build predictive models using machine learning techniques and Python/R.' },
   ],
   [formatDate(new Date(new Date().setDate(new Date().getDate() - 2)))]: [ // Two days ago
-    { id: 3, website: 'Glassdoor', position: 'Product Manager', company: 'Innovate Inc', link: '#' },
-    { id: 4, website: 'AngelList', position: 'Startup Engineer', company: 'New Ventures', link: '#' },
-    { id: 15, website: 'LinkedIn', position: 'Mobile Developer', company: 'AppGenius', link: '#' },
+    { id: 3, website: 'Glassdoor', position: 'Product Manager', company: 'Innovate Inc', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 2))), jobDescription: 'Define product vision, strategy, and roadmap. Collaborate with engineering, design, and marketing teams to deliver successful products.' },
+    { id: 4, website: 'AngelList', position: 'Startup Engineer', company: 'New Ventures', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 2))), jobDescription: 'Work across the stack in a fast-paced startup environment. Opportunity to contribute to all phases of product development.' },
+    { id: 15, website: 'LinkedIn', position: 'Mobile Developer', company: 'AppGenius', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 2))), jobDescription: 'Develop native iOS or Android applications. Strong knowledge of Swift/Kotlin and mobile UI/UX principles.' },
   ],
   [formatDate(new Date(new Date().setDate(new Date().getDate() - 3)))]: [ // Three days ago
-    { id: 16, website: 'Indeed', position: 'Network Administrator', company: 'SecureNet', link: '#' },
+    { id: 16, website: 'Indeed', position: 'Network Administrator', company: 'SecureNet', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 3))), jobDescription: 'Manage and maintain network infrastructure, troubleshoot connectivity issues, and ensure network security and performance.' },
   ],
   [formatDate(new Date(new Date().setDate(new Date().getDate() - 4)))]: [ // Four days ago
-    { id: 17, website: 'Company Site', position: 'Cybersecurity Analyst', company: 'Guardian Systems', link: '#' },
-    { id: 18, website: 'LinkedIn', position: 'Technical Writer', company: 'DocuWrite', link: '#' },
+    { id: 17, website: 'Company Site', position: 'Cybersecurity Analyst', company: 'Guardian Systems', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 4))), jobDescription: 'Monitor security systems, respond to incidents, and implement security measures to protect organizational data and systems.' },
+    { id: 18, website: 'LinkedIn', position: 'Technical Writer', company: 'DocuWrite', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 4))), jobDescription: 'Produce clear, concise, and comprehensive technical documentation for software products, including user manuals and API documentation.' },
   ],
   [formatDate(new Date(new Date().setDate(new Date().getDate() - 5)))]: [ // Five days ago
-    { id: 19, website: 'Glassdoor', position: 'Scrum Master', company: 'Agile Teams', link: '#' },
+    { id: 19, website: 'Glassdoor', position: 'Scrum Master', company: 'Agile Teams', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 5))), jobDescription: 'Facilitate agile ceremonies, remove impediments, and coach development teams in Scrum principles and practices to maximize delivery.' },
   ],
   [formatDate(new Date(new Date().setDate(new Date().getDate() - 6)))]: [ // Six days ago
-    { id: 20, website: 'Indeed', position: 'Cloud Engineer', company: 'Sky Computing', link: '#' },
-    { id: 21, website: 'Other', position: 'Marketing Specialist', company: 'Brand Boost', link: '#' },
+    { id: 20, website: 'Indeed', position: 'Cloud Engineer', company: 'Sky Computing', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 6))), jobDescription: 'Design, deploy, and manage cloud-based solutions on AWS, Azure, or GCP. Experience with cloud automation and cost optimization.' },
+    { id: 21, website: 'Other', position: 'Marketing Specialist', company: 'Brand Boost', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 6))), jobDescription: 'Develop and execute digital marketing campaigns, analyze market trends, and manage social media presence to enhance brand visibility.' },
   ],
   // Add more applications for dates in the future or past as needed for testing scrolling
   [formatDate(new Date(new Date().setDate(new Date().getDate() + 1)))]: [ // Tomorrow
-    { id: 22, website: 'LinkedIn', position: 'Senior Software Architect', company: 'Innovate Tomorrow', link: '#' }
+    { id: 22, website: 'LinkedIn', position: 'Senior Software Architect', company: 'Innovate Tomorrow', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() + 1))), jobDescription: 'Lead the architectural design and development of complex software systems, ensuring scalability, reliability, and performance.' }
   ],
   [formatDate(new Date(new Date().setDate(new Date().getDate() + 2)))]: [ // Day after tomorrow
-    { id: 23, website: 'Indeed', position: 'Lead Data Scientist', company: 'Future AI', link: '#' }
+    { id: 23, website: 'Indeed', position: 'Lead Data Scientist', company: 'Future AI', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() + 2))), jobDescription: 'Lead a team of data scientists to develop and deploy advanced analytical solutions and machine learning models.' }
   ],
 };
 
 
 const ClientWorksheet = () => {
   const navigate = useNavigate();
-  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(null); // For the daily date navigation ribbon
   const [dateRange, setDateRange] = useState([]);
   const [currentStartDate, setCurrentStartDate] = useState(new Date());
 
-  // Filter states (now arrays for multi-selection)
+  // Categorical Filter states (kept for modal functionality, though modal button removed)
   const [filterWebsites, setFilterWebsites] = useState([]);
   const [filterPositions, setFilterPositions] = useState([]);
   const [filterCompanies, setFilterCompanies] = useState([]);
 
-  // Consolidated modal visibility state
+  // State for search term
+  const [searchTerm, setSearchTerm] = useState('');
+  // State to control hover effect on search icon
+  const [isSearchHovered, setIsSearchHovered] = useState(false);
+
+  // States for date range filtering (DD-MM-YYYY string for display, internal logic uses Date objects)
+  const [startDateFilter, setStartDateFilter] = useState('');
+  const [endDateFilter, setEndDateFilter] = useState('');
+
+  // New state for the custom date range modal visibility
+  const [showDateRangeModal, setShowDateRangeModal] = useState(false);
+  // Temporary states for date inputs within the date range modal (Date objects for calendar component)
+  const [tempStartDate, setTempStartDate] = useState(null); // Date object for calendar
+  const [tempEndDate, setTempEndDate] = useState(null);   // Date object for calendar
+
+
+  // State for Job Description Modal
+  const [showJobDescriptionModal, setShowJobDescriptionModal] = useState(false);
+  const [currentJobDescription, setCurrentJobDescription] = useState('');
+
+
+  // Consolidated modal visibility state (kept for categorical filters if ever re-enabled)
   const [showFilterModal, setShowFilterModal] = useState(false);
 
-  // Temporary selected options within the modal (for apply/cancel logic)
+  // Temporary selected options within the categorical filter modal
   const [tempSelectedWebsites, setTempSelectedWebsites] = useState([]);
   const [tempSelectedPositions, setTempSelectedPositions] = useState([]);
   const [tempSelectedCompanies, setTempSelectedCompanies] = useState([]);
@@ -120,9 +208,8 @@ const ClientWorksheet = () => {
     setUniqueCompanies(Array.from(allCompanies).sort());
   }, []); // Empty dependency array means this runs once on mount
 
-  // --- Handlers for the single combined filter modal ---
+  // --- Handlers for the consolidated categorical filter modal (no longer directly accessible from a button) ---
   const handleOpenFilterModal = () => {
-    // Initialize temporary selections with current active filters
     setTempSelectedWebsites([...filterWebsites]);
     setTempSelectedPositions([...filterPositions]);
     setTempSelectedCompanies([...filterCompanies]);
@@ -131,7 +218,7 @@ const ClientWorksheet = () => {
 
   const handleCloseFilterModal = () => setShowFilterModal(false);
 
-  const handleApplyFilters = () => {
+  const handleApplyCategoricalFilters = () => {
     setFilterWebsites(tempSelectedWebsites);
     setFilterPositions(tempSelectedPositions);
     setFilterCompanies(tempSelectedCompanies);
@@ -145,17 +232,32 @@ const ClientWorksheet = () => {
     setTempSelectedCompanies([]);
   };
 
+  // Helper to determine if any global filter (search, date range, or categorical) is active
+  const isGlobalFilterActive = useMemo(() => {
+    return searchTerm !== '' ||
+           startDateFilter !== '' ||
+           endDateFilter !== '' ||
+           filterWebsites.length > 0 ||
+           filterPositions.length > 0 ||
+           filterCompanies.length > 0;
+  }, [searchTerm, startDateFilter, endDateFilter, filterWebsites, filterPositions, filterCompanies]);
+
   // Function to clear ALL applied filters and reset temp states (for main page button)
   const clearAllFilters = () => {
-    setFilterWebsites([]);
+    setSearchTerm('');
+    setStartDateFilter('');
+    setEndDateFilter('');
+    setFilterWebsites([]); // Clear categorical filters too on global clear
     setFilterPositions([]);
     setFilterCompanies([]);
-    setTempSelectedWebsites([]); // Also clear temp states for consistency
+    setTempStartDate(null); // Clear temp states for date range modal
+    setTempEndDate(null);   // Clear temp states for date range modal
+    setTempSelectedWebsites([]); // Clear temp states for categorical modal
     setTempSelectedPositions([]);
     setTempSelectedCompanies([]);
   };
 
-  // Checkbox change handlers for temporary selections within the modal
+  // Checkbox change handlers for temporary selections within the categorical modal
   const handleWebsiteCheckboxChange = (event) => {
     const { value, checked } = event.target;
     setTempSelectedWebsites(prev =>
@@ -177,8 +279,60 @@ const ClientWorksheet = () => {
     );
   };
 
+  // Handler for search input changes
+  const handleSearchChange = (event) => {
+    setSearchTerm(event.target.value);
+  };
+
+  // --- Handlers for the NEW Date Range Picker Modal ---
+  const handleOpenDateRangeModal = () => {
+    // Convert DD-MM-YYYY strings back to Date objects for the calendar component
+    setTempStartDate(startDateFilter ? new Date(convertDDMMYYYYtoYYYYMMDD(startDateFilter)) : null);
+    setTempEndDate(endDateFilter ? new Date(convertDDMMYYYYtoYYYYMMDD(endDateFilter)) : null);
+    setShowDateRangeModal(true);
+  };
+
+  const handleCloseDateRangeModal = () => {
+    setShowDateRangeModal(false);
+  };
+
+  // Callback from DateRangeCalendar when a range is selected
+  const handleDateRangeChangeFromCalendar = useCallback((start, end) => {
+    setTempStartDate(start);
+    setTempEndDate(end);
+  }, []);
+
+  const handleApplyDateRange = () => {
+    // Validate dates before applying (optional, but good practice)
+    if (tempStartDate && tempEndDate && tempStartDate > tempEndDate) {
+      console.error('Start date cannot be after end date.');
+      // You might want to show a user-friendly error message here
+      return;
+    }
+    // Set the main filter states (converted back to DD-MM-YYYY strings for consistency)
+    setStartDateFilter(tempStartDate ? formatDate(tempStartDate) : '');
+    setEndDateFilter(tempEndDate ? formatDate(tempEndDate) : '');
+    setShowDateRangeModal(false);
+  };
+
+  const handleClearDateRangeInModal = () => {
+    setTempStartDate(null);
+    setTempEndDate(null);
+  };
+
+  // --- Handlers for Job Description Modal ---
+  const handleOpenJobDescriptionModal = (description) => {
+    setCurrentJobDescription(description);
+    setShowJobDescriptionModal(true);
+  };
+
+  const handleCloseJobDescriptionModal = () => {
+    setShowJobDescriptionModal(false);
+    setCurrentJobDescription('');
+  };
+
+
   const downloadApplicationsData = () => {
-    // Now download filteredApplicationsForDisplay, which can be all data or specific date data
     if (!filteredApplicationsForDisplay.length) return;
 
     const dataToExport = filteredApplicationsForDisplay.map((app, index) => ({
@@ -186,13 +340,13 @@ const ClientWorksheet = () => {
       'Website': app.website,
       'Position': app.position,
       'Company': app.company,
-      'Link': app.link
+      'Link': app.link,
+      'Job Description': app.jobDescription // Include job description in download
     }));
 
     const ws = XLSX.utils.json_to_sheet(dataToExport);
     const wb = XLSX.utils.book_new();
-    // Dynamically name the sheet based on what's displayed
-    const sheetName = isAnyFilterActive() ? 'Filtered Applications' : `Applications ${selectedDate}`;
+    const sheetName = isGlobalFilterActive ? 'Filtered Applications' : `Applications ${selectedDate}`;
     XLSX.utils.book_append_sheet(wb, ws, sheetName);
     XLSX.writeFile(wb, `JobApplications_${sheetName.replace(/\s/g, '_')}.xlsx`);
   };
@@ -209,29 +363,101 @@ const ClientWorksheet = () => {
     newStartDate.setDate(newStartDate.getDate() + 7);
 
     const today = new Date();
-    if (newStartDate.getTime() <= today.getTime()) {
+    // Only allow navigating to future weeks if there's actual data in those weeks
+    // For simplicity here, we only check against today's date to prevent going too far into future
+    if (newStartDate.getTime() <= today.getTime() || Object.keys(applicationsData).some(date => new Date(convertDDMMYYYYtoYYYYMMDD(date)).getTime() >= newStartDate.getTime())) {
       setCurrentStartDate(newStartDate);
       setDateRange(generateDateRange(newStartDate));
     }
   };
 
-  // Helper to check if any filter is active
-  const isAnyFilterActive = () => {
-    return filterWebsites.length > 0 || filterPositions.length > 0 || filterCompanies.length > 0;
+  // Flatten all applications once and add their original date
+  const allApplicationsFlattened = useMemo(() => {
+    const flattened = [];
+    for (const dateKey in applicationsData) {
+      if (Object.prototype.hasOwnProperty.call(applicationsData, dateKey)) {
+        applicationsData[dateKey].forEach(app => {
+          flattened.push({ ...app, dateAdded: dateKey }); // Add the original date string to each app (DD-MM-YYYY)
+        });
+      }
+    }
+    return flattened;
+  }, [applicationsData]);
+
+
+  // Apply all filters to the relevant base set of applications
+  const filteredApplicationsForDisplay = useMemo(() => {
+    let baseApps = [];
+
+    const isDateRangeFilterSet = startDateFilter !== '' && endDateFilter !== '';
+
+    if (isGlobalFilterActive) {
+        // If any global filter (search, categorical, or date range picker) is active, filter from all data.
+        baseApps = allApplicationsFlattened;
+    } else if (selectedDate) {
+        // If only a ribbon date is selected (and no global filters active), use that date's data.
+        baseApps = applicationsData[selectedDate] || [];
+    } else {
+        // Default case, if no filters active and no ribbon date selected, show data for today.
+        baseApps = applicationsData[formatDate(new Date())] || []; // Fallback to today's data
+    }
+
+
+    return baseApps.filter(app => {
+      const matchesWebsite = filterWebsites.length === 0 || filterWebsites.includes(app.website);
+      const matchesPosition = filterPositions.length === 0 || filterPositions.includes(app.position);
+      const matchesCompany = filterCompanies.length === 0 || filterCompanies.includes(app.company);
+
+      const lowerCaseSearchTerm = searchTerm.toLowerCase();
+      const matchesSearchTerm =
+        searchTerm === '' ||
+        app.website.toLowerCase().includes(lowerCaseSearchTerm) ||
+        app.position.toLowerCase().includes(lowerCaseSearchTerm) ||
+        app.company.toLowerCase().includes(lowerCaseSearchTerm) ||
+        (app.jobDescription && app.jobDescription.toLowerCase().includes(lowerCaseSearchTerm)); // Search in job description
+
+
+      // Date Range Filter logic (applies only if startDateFilter or endDateFilter are explicitly set)
+      let matchesDateRange = true;
+      if (startDateFilter || endDateFilter) {
+          // Convert DD-MM-YYYY (app.dateAdded) to YYYY-MM-DD for Date constructor comparability
+          // And normalize to start/end of day for accurate range comparison
+          const appDate = new Date(convertDDMMYYYYtoYYYYMMDD(app.dateAdded));
+          appDate.setHours(0, 0, 0, 0); // Normalize to start of day
+
+          const start = startDateFilter ? new Date(convertDDMMYYYYtoYYYYMMDD(startDateFilter)) : null;
+          const end = endDateFilter ? new Date(convertDDMMYYYYtoYYYYMMDD(endDateFilter)) : null;
+
+          if (start) start.setHours(0, 0, 0, 0);
+          if (end) end.setHours(23, 59, 59, 999);
+
+          matchesDateRange =
+              (!start || appDate >= start) &&
+              (!end || appDate <= end);
+      }
+
+      // Combine all conditions
+      return matchesWebsite && matchesPosition && matchesCompany && matchesSearchTerm && matchesDateRange;
+    });
+  }, [selectedDate, applicationsData, filterWebsites, filterPositions, filterCompanies, searchTerm, startDateFilter, endDateFilter, allApplicationsFlattened, isGlobalFilterActive]);
+
+
+  // Update the title dynamically based on active filters
+  const getApplicationsSectionTitle = () => {
+    const hasDateRangeFilter = startDateFilter && endDateFilter;
+    const hasSearchTerm = searchTerm !== '';
+    const hasCategoricalFilters = filterWebsites.length > 0 || filterPositions.length > 0 || filterCompanies.length > 0;
+
+    if (hasDateRangeFilter) {
+      return `Filtered Applications (From ${startDateFilter} - To ${endDateFilter})`;
+    } else if (hasSearchTerm || hasCategoricalFilters) {
+      return 'Filtered Applications (by search and/or other criteria)';
+    } else if (selectedDate) {
+      return `Applications for ${selectedDate}`;
+    }
+    return 'Job Applications'; // Default title if nothing selected/filtered
   };
 
-  // Determine the base applications to filter (all or just selected date)
-  const baseApplicationsForFiltering = isAnyFilterActive()
-    ? Object.values(applicationsData).flat() // Flatten all applications from all dates
-    : (selectedDate ? applicationsData[selectedDate] || [] : []); // Only selected date's applications
-
-  // Apply filters to the base set of applications
-  const filteredApplicationsForDisplay = baseApplicationsForFiltering.filter(app => {
-    const matchesWebsite = filterWebsites.length === 0 || filterWebsites.includes(app.website);
-    const matchesPosition = filterPositions.length === 0 || filterPositions.includes(app.position);
-    const matchesCompany = filterCompanies.length === 0 || filterCompanies.includes(app.company);
-    return matchesWebsite && matchesPosition && matchesCompany;
-  });
 
   return (
     <div style={{
@@ -376,134 +602,245 @@ const ClientWorksheet = () => {
         borderRadius: '8px',
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
       }}>
-        {(selectedDate || isAnyFilterActive()) && (
-          <>
-            {/* Centered Heading */}
-            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: '0 auto', color: '#333' }}>
-                {isAnyFilterActive() ? 'Filtered Applications (across all dates)' : `Applications for ${selectedDate}`}
-              </h3>
-            </div>
+        {/* Centered Heading */}
+        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+          <h3 style={{ margin: '0 auto', color: '#333' }}>
+            {getApplicationsSectionTitle()}
+          </h3>
+        </div>
 
-            {/* Download Button (Left) and Filter/Clear Buttons (Right) */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '15px',
-              flexWrap: 'wrap',
-              gap: '10px'
-            }}>
-              {/* Download Button - Left Aligned */}
+        {/* Download Button (Left), and Search Bar + Date Range (Right) */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between', // Pushes left group and right group to ends
+          alignItems: 'center',
+          marginBottom: '15px',
+          flexWrap: 'wrap', // Allows wrapping on smaller screens
+          gap: '10px' // Gap between items when wrapped
+        }}>
+          {/* Left Group: Download button */}
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button
+              onClick={downloadApplicationsData}
+              disabled={!filteredApplicationsForDisplay.length}
+              style={{
+                backgroundColor: '#007bff',
+                color: 'white',
+                border: 'none',
+                padding: '8px 16px',
+                borderRadius: '6px',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                opacity: !filteredApplicationsForDisplay.length ? 0.5 : 1,
+                transition: 'all 0.2s',
+                flexShrink: 0 // Prevent shrinking
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Download
+            </button>
+
+            {/* Clear All Filters Button (Always present with global filters) */}
+            {isGlobalFilterActive && (
               <button
-                onClick={downloadApplicationsData}
-                disabled={!filteredApplicationsForDisplay.length}
+                onClick={clearAllFilters}
                 style={{
-                  backgroundColor: '#007bff',
+                  backgroundColor: '#6c757d',
                   color: 'white',
                   border: 'none',
-                  padding: '8px 16px',
+                  padding: '8px 12px',
                   borderRadius: '6px',
                   fontSize: '0.875rem',
-                  fontWeight: '500',
                   cursor: 'pointer',
+                  transition: 'background-color 0.2s',
+                  whiteSpace: 'nowrap',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  opacity: !filteredApplicationsForDisplay.length ? 0.5 : 1,
-                  transition: 'all 0.2s',
-                  order: 1
+                  gap: '5px'
                 }}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                Download
+                <i className="bi bi-x-circle"></i>
+                Clear All Filters
               </button>
+            )}
+          </div>
 
-              {/* Filter and Clear All Filters Buttons - Right Aligned */}
-              <div style={{
+          {/* Right Group: Search Bar + Date Range Picker */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px', // Gap between search and date picker
+            flexWrap: 'wrap', // Allow wrapping for responsiveness
+            justifyContent: 'flex-end', // Aligns this entire group to the right
+            flexGrow: 1, // Allows this group to take available space
+          }}>
+            {/* Search Bar (Hover-to-reveal) */}
+            <div
+              onMouseEnter={() => setIsSearchHovered(true)}
+              onMouseLeave={() => setIsSearchHovered(false)}
+              style={{
                 display: 'flex',
-                gap: '10px',
                 alignItems: 'center',
-                flexWrap: 'wrap',
-                order: 2
-              }}>
-                <button style={filterButtonStyle} onClick={handleOpenFilterModal}>
-                  <i className="bi bi-funnel-fill" style={{ marginRight: '5px' }}></i>
-                  Filter
-                </button>
-
-                <button
-                  onClick={clearAllFilters}
-                  style={{
-                    backgroundColor: '#6c757d',
-                    color: 'white',
-                    border: 'none',
-                    padding: '8px 12px',
-                    borderRadius: '6px',
-                    fontSize: '0.875rem',
-                    cursor: 'pointer',
-                    transition: 'background-color 0.2s',
-                    whiteSpace: 'nowrap',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '5px'
-                  }}
-                >
-                  <i className="bi bi-x-circle"></i>
-                  Clear All Filters
-                </button>
-              </div>
+                background: '#ffffff',
+                borderRadius: '25px',
+                padding: '8px 18px',
+                border: '1px solid #ccc',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                minWidth: '40px', // Initial width for just the icon
+                maxWidth: '300px', // Max width for search input
+                transition: 'min-width 0.3s ease-in-out', // Smooth transition for width change
+                overflow: 'hidden', // Hide overflow content during transition
+                cursor: 'pointer',
+              }}
+            >
+              <input
+                type="text"
+                placeholder="Search data..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  outline: 'none',
+                  flexGrow: 1, // Allow input to take available space
+                  fontSize: '1rem',
+                  padding: isSearchHovered ? '0 10px 0 0' : '0', // Add padding when hovered
+                  width: isSearchHovered ? '100%' : '0px', // Expand width on hover
+                  opacity: isSearchHovered ? 1 : 0, // Fade in on hover
+                  transition: 'width 0.3s ease-in-out, padding 0.3s ease-in-out, opacity 0.3s ease-in-out',
+                  color: '#333',
+                  whiteSpace: 'nowrap', // Prevent text wrapping
+                }}
+              />
+              <FaSearch style={{ color: '#ccc', fontSize: '1.1rem', flexShrink: 0 }} />
             </div>
 
-            {filteredApplicationsForDisplay.length > 0 ? (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{
-                  width: '100%',
-                  minWidth: '700px',
-                  borderCollapse: 'collapse',
-                }}>
-                  <thead>
-                    <tr style={{ backgroundColor: '#007bff', color: 'white' }}>
-                      <th style={{ padding: '12px', textAlign: 'center' }}>S.No</th>
-                      <th style={{ padding: '12px', textAlign: 'center' }}>Website</th>
-                      <th style={{ padding: '12px', textAlign: 'center' }}>Position</th>
-                      <th style={{ padding: '12px', textAlign: 'center' }}>Company</th>
-                      <th style={{ padding: '12px', textAlign: 'center' }}>Link</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredApplicationsForDisplay.map((app, index) => (
-                      <tr
-                        key={app.id}
-                        style={{
-                          borderBottom: '1px solid #eee',
-                          backgroundColor: index % 2 === 0 ? '#fdfdfd' : '#f0f8ff' // Light alternating colors
-                        }}
+            {/* Combined Date Range Picker Icon Trigger */}
+            <div
+              onClick={handleOpenDateRangeModal}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center', // Center the icon
+                background: '#ffffff',
+                borderRadius: '6px',
+                padding: '8px 12px',
+                border: '1px solid #ccc',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                flexShrink: 0,
+                width: '40px', // Fixed width for icon only
+                height: '40px', // Fixed height for icon only
+                cursor: 'pointer',
+              }}
+            >
+              <FaCalendarAlt style={{
+                fontSize: '1.1rem',
+                color: (startDateFilter && endDateFilter) ? '#007bff' : '#666', // Dynamic color
+                transition: 'color 0.2s', // Smooth color transition
+              }} />
+            </div>
+          </div>
+        </div>
+
+        {filteredApplicationsForDisplay.length > 0 ? (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{
+              width: '100%',
+              minWidth: '700px',
+              borderCollapse: 'collapse',
+            }}>
+              <thead>
+                <tr style={{ backgroundColor: '#007bff', color: 'white' }}>
+                  <th style={{ padding: '12px', textAlign: 'center' }}>S.No</th>
+                  <th style={{ padding: '12px', textAlign: 'center' }}>Website</th>
+                  <th style={{ padding: '12px', textAlign: 'center' }}>Position</th>
+                  <th style={{ padding: '12px', textAlign: 'center' }}>Company</th>
+                  <th style={{ padding: '12px', textAlign: 'center' }}>Link</th>
+                  <th style={{ padding: '12px', textAlign: 'center' }}>Job Description</th> {/* New Header */}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredApplicationsForDisplay.map((app, index) => (
+                  <tr
+                    key={app.id}
+                    style={{
+                      borderBottom: '1px solid #eee',
+                      backgroundColor: index % 2 === 0 ? '#fdfdfd' : '#f0f8ff' // Light alternating colors
+                    }}
+                  >
+                    <td style={{ padding: '12px' }}>{index + 1}</td>
+                    <td style={{ padding: '12px' }}>{app.website}</td>
+                    <td style={{ padding: '12px' }}>{app.position}</td>
+                    <td style={{ padding: '12px' }}>{app.company}</td>
+                    <td style={{ padding: '12px' }}>
+                      <a href={app.link} target="_blank" rel="noopener noreferrer" style={{ color: '#007bff', textDecoration: 'none' }}>
+                        Link
+                      </a>
+                    </td>
+                    <td style={{ padding: '12px' }}>
+                      <Button
+                        variant="link"
+                        onClick={() => handleOpenJobDescriptionModal(app.jobDescription)}
+                        style={{ padding: '0', border: 'none', color: '#007bff', textDecoration: 'underline' }}
                       >
-                        <td style={{ padding: '12px' }}>{index + 1}</td>
-                        <td style={{ padding: '12px' }}>{app.website}</td>
-                        <td style={{ padding: '12px' }}>{app.position}</td>
-                        <td style={{ padding: '12px' }}>{app.company}</td>
-                        <td style={{ padding: '12px' }}>
-                          <a href={app.link} target="_blank" rel="noopener noreferrer" style={{ color: '#007bff', textDecoration: 'none' }}>
-                            Link
-                          </a>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p style={{ textAlign: 'center', color: '#666' }}>No applications found for this date with the current filters.</p>
-            )}
-          </>
+                        View
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p style={{ textAlign: 'center', color: '#666' }}>No applications found for this date with the current filters.</p>
         )}
       </div>
 
-      {/* --- Consolidated Filter Modal --- */}
+      {/* --- Date Range Picker Modal --- */}
+      <Modal show={showDateRangeModal} onHide={handleCloseDateRangeModal} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Select Date Range</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <DateRangeCalendar
+            initialStartDate={tempStartDate}
+            initialEndDate={tempEndDate}
+            onSelectRange={handleDateRangeChangeFromCalendar}
+          />
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleClearDateRangeInModal} style={modalClearButtonStyle}>
+            Clear
+          </Button>
+          <Button variant="primary" onClick={handleApplyDateRange}>
+            Apply
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* --- Job Description View Modal --- */}
+      <Modal show={showJobDescriptionModal} onHide={handleCloseJobDescriptionModal} centered size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title>Job Description</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p style={{ whiteSpace: 'pre-wrap' }}>{currentJobDescription}</p>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleCloseJobDescriptionModal}>
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* --- Consolidated Categorical Filter Modal (Still present, but not accessible from a button) --- */}
+      {/* Keeping this modal and its related states/logic in case you wish to re-enable categorical filtering later */}
       <Modal show={showFilterModal} onHide={handleCloseFilterModal} centered size="lg">
         <Modal.Header closeButton>
           <Modal.Title>Apply Filters</Modal.Title>
@@ -574,7 +911,7 @@ const ClientWorksheet = () => {
           <Button variant="secondary" onClick={handleClearTempFiltersInModal} style={modalClearButtonStyle}>
             <i className="bi bi-trash"></i> Clear Selections
           </Button>
-          <Button variant="primary" onClick={handleApplyFilters}>
+          <Button variant="primary" onClick={handleApplyCategoricalFilters}>
             Apply Filters
           </Button>
         </Modal.Footer>
@@ -585,7 +922,7 @@ const ClientWorksheet = () => {
 };
 
 // --- Styles ---
-const filterButtonStyle = {
+const filterButtonStyle = { // This style is technically unused now as the button is gone
   backgroundColor: '#007bff',
   color: 'white',
   border: 'none',
