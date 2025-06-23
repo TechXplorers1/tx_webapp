@@ -5,7 +5,7 @@ import {
   ArcElement, // Required for Donut/Pie charts
   Tooltip,
   Legend
-} from 'chart.js'; 
+} from 'chart.js';
 import { Doughnut } from 'react-chartjs-2';
 import { FaUsers, FaUserTie, FaUserCog, FaUserFriends, FaBell, FaSearch, FaBars } from 'react-icons/fa'; // Icons from react-icons
 import {
@@ -25,23 +25,20 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [hoveredCardId, setHoveredCardId] = useState(null); // State for tracking hovered card
-    const [confirmationOpen, setConfirmationOpen] = useState(false);
-      const [managerToDeactivate, setManagerToDeactivate] = useState(null);
-            const [teamLeadToDeactivate, setTeamLeadToDeactivate] = useState(null);
-            const [employeeToDeactivate, setEmployeeToDeactivate] = useState(null);
-
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
+  const [managerToDeactivate, setManagerToDeactivate] = useState(null);
+  const [teamLeadToDeactivate, setTeamLeadToDeactivate] = useState(null);
+  const [employeeToDeactivate, setEmployeeToDeactivate] = useState(null);
 
 
   const [showClientDetailsModal, setShowClientDetailsModal] = useState(false); // State for Client Details modal
   const [showManagersDetailsModal, setShowManagersDetailsModal] = useState(false); // State for Manager Details modal
-    const [showTeamLeadsDetailsModal, setShowTeamLeadsDetailsModal] = useState(false); // State for Team Lead Details modal
-      const [showEmployeesDetailsModal, setShowEmployeesDetailsModal] = useState(false); // State for Team Lead Details modal
-
-
+  const [showTeamLeadsDetailsModal, setShowTeamLeadsDetailsModal] = useState(false); // State for Team Lead Details modal
+  const [showEmployeesDetailsModal, setShowEmployeesDetailsModal] = useState(false); // State for Employee Details modal
 
 
   const [clientFilter, setClientFilter] = useState('registered'); // Initial state: 'registered'
-  
+
 
   // New states for editing manager in Active Clients
   const [editingClientId, setEditingClientId] = useState(null);
@@ -51,6 +48,7 @@ const AdminDashboard = () => {
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
   // --- Effect to trigger entrance animations after component mounts ---
+  const [contentLoaded, setContentLoaded] = useState(false);
   useEffect(() => {
     setContentLoaded(true);
   }, []);
@@ -76,7 +74,7 @@ const AdminDashboard = () => {
 
     // Restore scroll position when component mounts (after initial render)
     restoreScrollPosition();
-														   
+
 
     // Clean up event listener when component unmounts
     return () => {
@@ -98,11 +96,10 @@ const AdminDashboard = () => {
     console.log("Menu state changed to:", menuOpen);
   }, [menuOpen]);
 
-  const [contentLoaded, setContentLoaded] = useState(false); // State to trigger entrance animations
+
   const [isManagerEditing, setIsManagerEditing] = useState(false);
   const [isTeamLeadEditing, setIsTeamLeadEditing] = useState(false);
   const [isEmployeeEditing, setIsEmployeeEditing] = useState(false);
-
 
 
   const [showManagerModal, setShowManagerModal] = useState(false);
@@ -110,14 +107,12 @@ const AdminDashboard = () => {
   const [showEmployeeModal, setShowEmployeeModal] = useState(false);
 
 
-
-
-  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [assignModalOpen, setAssignModalOpen] = useState(false); // For the modal to assign people to a manager
   const [selectedManagerIndex, setSelectedManagerIndex] = useState(null);
   const [selectedPeople, setSelectedPeople] = useState([]);
 
-  const [showAssignModal, setShowAssignModal] = useState(false);
-const [selectedManagerData, setSelectedManagerData] = useState(null);
+  const [showManagerAssignedPeopleModal, setShowManagerAssignedPeopleModal] = useState(false); // For the modal to view assigned people
+  const [selectedManagerData, setSelectedManagerData] = useState(null);
 
 
   const [originalTeamLeads, setOriginalTeamLeads] = useState([]);
@@ -132,24 +127,22 @@ const [selectedManagerData, setSelectedManagerData] = useState(null);
   const [employeeSearch, setEmployeeSearch] = useState('');
   const [internSearch, setInternSearch] = useState('');
 
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(''); // Used for searching in modals
   const [expandedManager, setExpandedManager] = useState(null);
 
-    const [currentManagerIndex, setCurrentManagerIndex] = useState(null);
-      const [currentTeamLeadIndex, setCurrentTeamLeadIndex] = useState(null);
+
+  const [currentManagerIndex, setCurrentManagerIndex] = useState(null);
+  const [currentTeamLeadIndex, setCurrentTeamLeadIndex] = useState(null);
   const [currentEmployeeIndex, setCurrentEmployeeIndex] = useState(null);
 
 
-const [isActivating, setIsActivating] = useState(false);
-const [activationIndex, setActivationIndex] = useState(null);
-
-  const [toggleIndex, setToggleIndex] = useState(null);
+  const [isActivating, setIsActivating] = useState(false);
 
 
- const toggleManagerActivation = (index) => {
+  const toggleManagerActivation = (index) => {
     const manager = managers[index];
     setManagerToDeactivate(index);
-    
+
     if (manager.active) {
       // Show deactivation confirmation
       setIsActivating(false);
@@ -161,10 +154,10 @@ const [activationIndex, setActivationIndex] = useState(null);
     }
   };
 
- const toggleTeamLeadActivation = (index) => {
+  const toggleTeamLeadActivation = (index) => {
     const teamLead = teamLeads[index];
     setTeamLeadToDeactivate(index);
-    
+
     if (teamLead.active) {
       // Show deactivation confirmation
       setIsActivating(false);
@@ -177,10 +170,10 @@ const [activationIndex, setActivationIndex] = useState(null);
   };
 
 
-   const toggleEmployeeActivation = (index) => {
+  const toggleEmployeeActivation = (index) => {
     const employee = employees[index];
     setEmployeeToDeactivate(index);
-    
+
     if (employee.active) {
       // Show deactivation confirmation
       setIsActivating(false);
@@ -193,8 +186,7 @@ const [activationIndex, setActivationIndex] = useState(null);
   };
 
 
-
- const confirmManagerToggle = () => {
+  const confirmManagerToggle = () => {
     if (managerToDeactivate !== null) {
       const updatedManagers = [...managers];
       updatedManagers[managerToDeactivate].active = !updatedManagers[managerToDeactivate].active;
@@ -205,21 +197,21 @@ const [activationIndex, setActivationIndex] = useState(null);
   };
 
 
-   const confirmTeamLeadToggle = () => {
-    if (managerToDeactivate !== null) {
+  const confirmTeamLeadToggle = () => {
+    if (teamLeadToDeactivate !== null) {
       const updatedTeamLeads = [...teamLeads];
-      updatedTeamLeads[teamLeadToDeactivate].active = !updatedTeamLeads[managerToDeactivate].active;
+      updatedTeamLeads[teamLeadToDeactivate].active = !updatedTeamLeads[teamLeadToDeactivate].active;
       setTeamLeads(updatedTeamLeads);
       setConfirmationOpen(false);
-      setManagerToDeactivate(null);
+      setTeamLeadToDeactivate(null);
     }
   };
 
-    const confirmEmployeeToggle = () => {
+  const confirmEmployeeToggle = () => {
     if (employeeToDeactivate !== null) {
       const updatedEmployees = [...employees];
-      updatedEmployees[employeeToDeactivate].active = !updatedTeamLeads[employeeToDeactivate].active;
-      setTeamLeads(updatedEmployees);
+      updatedEmployees[employeeToDeactivate].active = !updatedEmployees[employeeToDeactivate].active; // Corrected: Use updatedEmployees
+      setEmployees(updatedEmployees); // Corrected: Set employees state
       setConfirmationOpen(false);
       setEmployeeToDeactivate(null);
     }
@@ -260,55 +252,56 @@ const [activationIndex, setActivationIndex] = useState(null);
   ]);
 
 
-   const toggleMenu = () => {
+  const toggleMenu = () => {
     console.log("Toggle menu clicked. Before update, menuOpen was:", menuOpen);
-    setMenuOpen(prevMenuOpen => !prevMenuOpen)};
+    setMenuOpen(prevMenuOpen => !prevMenuOpen);
+  };
 
-    const [managers, setManagers] = useState([
+  const [managers, setManagers] = useState([
     {
-      firstname: "Sreenivasulu",
-      lastname: "S",
+      firstName: "Sreenivasulu",
+      lastName: "S",
       mobile: "+91 9874561230",
       email: "seenu@gmail.com",
       password: "07072023@Tx123",
       role: "Manager",
       active: true,
       assignedPeople: [
-        { firstname: 'Murali', lastname: 'M', mobile: '+91 987456123', email: 'murali@gmail.com', role: 'Team Lead' },
-        { firstname: 'Madhu', lastname: 'A', mobile: '+91 987456123', email: 'madhuemployee@gmail.com', role: 'Employee' }
+        { firstName: 'Murali', lastName: 'M', mobile: '+91 987456123', email: 'murali@gmail.com', role: 'Team Lead' },
+        { firstName: 'Madhu', lastName: 'A', mobile: '+91 987456123', email: 'madhuemployee@gmail.com', role: 'Employee' }
       ]
     },
     {
-      firstname: "Vamsi",
-      lastname: "V",
+      firstName: "Vamsi",
+      lastName: "V",
       mobile: "+91 7894561230",
       email: "vamsi@gmail.com",
       password: "07072023@TxSm",
       role: "Manager",
       active: true,
       assignedPeople: [
-        { firstname: 'Kavitha', lastname: 'K', mobile: '+91 987456123', email: 'kavitha@gmail.com', role: 'Team Lead' },
-        { firstname: 'santhosh', lastname: 'S', mobile: '+91 987456123', email: 'santhoshemployee@gmail.com', role: 'Employee' }
+        { firstName: 'Kavitha', lastName: 'K', mobile: '+91 987456123', email: 'kavitha@gmail.com', role: 'Team Lead' },
+        { firstName: 'santhosh', lastName: 'S', mobile: '+91 987456123', email: 'santhoshemployee@gmail.com', role: 'Employee' }
       ]
     },
-      {
-      firstname: "Kavitha",
-      lastname: "K",
+    {
+      firstName: "Kavitha",
+      lastName: "K",
       mobile: "+91 7894561230",
       email: "kavitha@gmail.com",
       password: "07072023@TxSm",
       role: "Manager",
       active: true,
       assignedPeople: [
-        { firstname: 'meera', lastname: 'm', mobile: '+91 987456123', email: 'meera@gmail.com', role: 'Team Lead' },
-        { firstname: 'vijay', lastname: 'v', mobile: '+91 987456123', email: 'vijayemployee@gmail.com', role: 'Employee' }
+        { firstName: 'meera', lastName: 'm', mobile: '+91 987456123', email: 'meera@gmail.com', role: 'Team Lead' },
+        { firstName: 'vijay', lastName: 'v', mobile: '+91 987456123', email: 'vijayemployee@gmail.com', role: 'Employee' }
       ]
     },
   ]);
 
   const [newManager, setNewManager] = useState({
-    firstname: '',
-    lastname: '',
+    firstName: '',
+    lastName: '',
     mobile: '',
     email: '',
     password: '',
@@ -317,15 +310,15 @@ const [activationIndex, setActivationIndex] = useState(null);
   });
 
 
-    const [teamLeads, setTeamLeads] = useState([
-    { firstname: 'Vaishnavi', lastname: 'V', mobile: '+91 9874561230', email: 'vaishnavi@gmail.com', password: '07072023@TxRm', role: 'Team Lead', active: true },
-    { firstname: 'Murali', lastname: 'reddy', mobile: '+91 9874561230', email: 'murali@gmail.com', password: '07072023@TxRm', role: 'Team Lead', active: true },
-    { firstname: 'Sai Krishna', lastname: 'kumar', mobile: '+91 9874561230', email: 'sai@gmail.com', password: '07072023@TxRm', role: 'Team Lead', active: true },
+  const [teamLeads, setTeamLeads] = useState([
+    { firstName: 'Vaishnavi', lastName: 'V', mobile: '+91 9874561230', email: 'vaishnavi@gmail.com', password: '07072023@TxRm', role: 'Team Lead', active: true },
+    { firstName: 'Murali', lastName: 'reddy', mobile: '+91 9874561230', email: 'murali@gmail.com', password: '07072023@TxRm', role: 'Team Lead', active: true },
+    { firstName: 'Sai Krishna', lastName: 'kumar', mobile: '+91 9874561230', email: 'sai@gmail.com', password: '07072023@TxRm', role: 'Team Lead', active: true },
   ]);
 
   const [newTeamLead, setNewTeamLead] = useState({
-    firstname: '',
-    lastname: '',
+    firstName: '',
+    lastName: '',
     mobile: '',
     email: '',
     password: '',
@@ -334,15 +327,16 @@ const [activationIndex, setActivationIndex] = useState(null);
   });
 
 
-    const [employees, setEmployees] = useState([
+  const [employees, setEmployees] = useState([
     { firstName: 'Humer', lastName: 'R', mobile: '+91 9874561230', email: 'humermployee@gmail.com', password: '07072023@TxRm', role: 'Employee', active: true },
     { firstName: 'Chaveen', lastName: 'Reddy', mobile: '+91 9874561230', email: 'chaveenemployee@gmail.com', password: '07072023@TxRm', role: 'Employee', active: true },
     { firstName: 'Bharath', lastName: 'Surya', mobile: '+91 9874561230', email: 'bharathemployee@gmail.com', password: '07072023@TxRm', role: 'Employee', active: true },
     { firstName: 'Sandeep', lastName: 'Kumar', mobile: '+91 9874561230', email: 'sandeepemployee@gmail.com', password: '07072023@TxRm', role: 'Employee', active: true },
     { firstName: 'Neelam', lastName: 'Sai Krishna', mobile: '+91 9874561230', email: 'saiemployee@gmail.com', password: '07072023@TxRm', role: 'Intern', active: true },
+    { firstName: 'Prakash', lastName: 'Kumar', mobile: '+91 9874561230', email: 'prakashployee@gmail.com', password: '07072023@TxRm', role: 'Employee', active: true },
   ]);
 
-    const [newEmployee, setNewEmployee] = useState({
+  const [newEmployee, setNewEmployee] = useState({
     firstName: '',
     lastName: '',
     mobile: '',
@@ -353,36 +347,32 @@ const [activationIndex, setActivationIndex] = useState(null);
   });
 
 
-
-
-
-
   useEffect(() => {
     const initialTeamLeads = [
-      { firstname: 'Murali', lastname: 'M', mobile: '+91 9874561230', email: 'murali@gmail.com', role: 'Team Lead' },
-      { firstname: 'Vamsi', lastname: 'V', mobile: '+91 9874561230', email: 'vamsi@gmail.com', role: 'Team Lead' },
-      { firstname: 'Kavitha', lastname: 'K', mobile: '+91 9874561230', email: 'kavitha@gmail.com', role: 'Team Lead' },
-      { firstname: 'Bharath', lastname: 'B', mobile: '+91 9874561230', email: 'bharath@gmail.com', role: 'Team Lead' },
-      { firstname: 'SaiKrishna', lastname: 'S', mobile: '+91 9874561230', email: 'saikrishna@gmail.com', role: 'Team Lead' },
-      { firstname: 'Vyshnavi', lastname: 'V', mobile: '+91 9874561230', email: 'vyshnavi@gmail.com', role: 'Team Lead' }
+      { firstName: 'Murali', lastName: 'M', mobile: '+91 9874561230', email: 'murali@gmail.com', role: 'Team Lead' },
+      { firstName: 'Vamsi', lastName: 'V', mobile: '+91 9874561230', email: 'vamsi@gmail.com', role: 'Team Lead' },
+      { firstName: 'Kavitha', lastName: 'K', mobile: '+91 9874561230', email: 'kavitha@gmail.com', role: 'Team Lead' },
+      { firstName: 'Bharath', lastName: 'B', mobile: '+91 9874561230', email: 'bharath@gmail.com', role: 'Team Lead' },
+      { firstName: 'SaiKrishna', lastName: 'S', mobile: '+91 9874561230', email: 'saikrishna@gmail.com', role: 'Team Lead' },
+      { firstName: 'Vyshnavi', lastName: 'V', mobile: '+91 9874561230', email: 'vyshnavi@gmail.com', role: 'Team Lead' }
     ];
 
     const initialEmployees = [
-      { firstname: 'Madhu', lastname: 'M', mobile: '+91 9874561230', email: 'madhuemployee@gmail.com', role: 'Employee' },
-      { firstname: 'krishna', lastname: 'K', mobile: '+91 9874561230', email: 'krishnaemployee@gmail.com', role: 'Employee' },
-      { firstname: 'arun', lastname: 'A', mobile: '+91 9874561230', email: 'arunemployee@gmail.com', role: 'Employee' },
-      { firstname: 'dharani', lastname: 'D', mobile: '+91 9874561230', email: 'dharaniemployee@gmail.com', role: 'Employee' },
-      { firstname: 'rajitha', lastname: 'R', mobile: '+91 9874561230', email: 'rajithaemployee@gmail.com', role: 'Employee' },
-      { firstname: 'siva', lastname: 'S', mobile: '+91 9874561230', email: 'sivaemployee@gmail.com', role: 'Employee' },
-      { firstname: 'ashok', lastname: 'A', mobile: '+91 9874561230', email: 'ashokemployee@gmail.com', role: 'Employee' },
-      { firstname: 'deepak', lastname: 'D', mobile: '+91 9874561230', email: 'deepakemployee@gmail.com', role: 'Employee' },
-      { firstname: 'santhosh', lastname: 'S', mobile: '+91 9874561230', email: 'santhoshemployee@gmail.com', role: 'Employee' }
+      { firstName: 'Madhu', lastName: 'M', mobile: '+91 9874561230', email: 'madhuemployee@gmail.com', role: 'Employee' },
+      { firstName: 'krishna', lastName: 'K', mobile: '+91 9874561230', email: 'krishnaemployee@gmail.com', role: 'Employee' },
+      { firstName: 'arun', lastName: 'A', mobile: '+91 9874561230', email: 'arunemployee@gmail.com', role: 'Employee' },
+      { firstName: 'dharani', lastName: 'D', mobile: '+91 9874561230', email: 'dharaniemployee@gmail.com', role: 'Employee' },
+      { firstName: 'rajitha', lastName: 'R', mobile: '+91 9874561230', email: 'rajithaemployee@gmail.com', role: 'Employee' },
+      { firstName: 'siva', lastName: 'S', mobile: '+91 9874561230', email: 'sivaemployee@gmail.com', role: 'Employee' },
+      { firstName: 'ashok', lastName: 'A', mobile: '+91 9874561230', email: 'ashokemployee@gmail.com', role: 'Employee' },
+      { firstName: 'deepak', lastName: 'D', mobile: '+91 9874561230', email: 'deepakemployee@gmail.com', role: 'Employee' },
+      { firstName: 'santhosh', lastName: 'S', mobile: '+91 9874561230', email: 'santhoshemployee@gmail.com', role: 'Employee' }
     ];
 
     const initialInterns = [
-      { firstname: 'Sandeep', lastname: 'S', mobile: '+91 9874561230', email: 'sandeepmployee@gmail.com', role: 'Intern' },
-      { firstname: 'Humer', lastname: 'H', mobile: '+91 9874561230', email: 'humeremployee@gmail.com', role: 'Intern' },
-      { firstname: 'Chaveen', lastname: 'C', mobile: '+91 9874561230', email: 'chaveenemployee@gmail.com', role: 'Intern' }
+      { firstName: 'Sandeep', lastName: 'S', mobile: '+91 9874561230', email: 'sandeepmployee@gmail.com', role: 'Intern' },
+      { firstName: 'Humer', lastName: 'H', mobile: '+91 9874561230', email: 'humeremployee@gmail.com', role: 'Intern' },
+      { firstName: 'Chaveen', lastName: 'C', mobile: '+91 9874561230', email: 'chaveenemployee@gmail.com', role: 'Intern' }
     ];
 
 
@@ -396,7 +386,6 @@ const [activationIndex, setActivationIndex] = useState(null);
   };
 
 
-
   const togglePersonSelection = (person) => {
     setSelectedPeople((prev) =>
       prev.some(p => p.email === person.email)
@@ -406,36 +395,24 @@ const [activationIndex, setActivationIndex] = useState(null);
   };
 
 
-
-
-
   const toggleClientDetailsModal = () => setShowClientDetailsModal(!showClientDetailsModal);
   const toggleManagersDetailsModal = () => setShowManagersDetailsModal(!showManagersDetailsModal);
-    const toggleTeamLeadsDetailsModal = () => setShowTeamLeadsDetailsModal(!showTeamLeadsDetailsModal);
-    const toggleEmployeesDetailsModal = () => setShowEmployeesDetailsModal(!showEmployeesDetailsModal);
-
+  const toggleTeamLeadsDetailsModal = () => setShowTeamLeadsDetailsModal(!showTeamLeadsDetailsModal);
+  const toggleEmployeesDetailsModal = () => setShowEmployeesDetailsModal(!showEmployeesDetailsModal);
 
 
   const toggleManagerExpand = (index) => {
-  const manager = managers[index];
-  setSelectedManagerData(manager);
-  setShowAssignModal(true);  };
+    const manager = managers[index];
+    setSelectedManagerData(manager);
+    setShowManagerAssignedPeopleModal(true); // Open the modal to view assigned people
+  };
 
   const handleManagerAssignDone = () => {
     const updatedManagers = [...managers];
     updatedManagers[selectedManagerIndex].assignedPeople = selectedPeople;
     setManagers(updatedManagers);
-    setAssignModalOpen(false);
+    setAssignModalOpen(false); // Close the assignment modal
   };
-
-
-    const handleTeamLeadAssignDone = () => {
-    const updatedManagers = [...managers];
-    updatedManagers[selectedManagerIndex].assignedPeople = selectedPeople;
-    setManagers(updatedManagers);
-    setAssignModalOpen(false);
-  };
-
 
   // Placeholders (consider replacing with actual assets if available)
   const logoPlaceholder = "https://placehold.co/40x40/0a193c/ffffff?text=TX";
@@ -493,22 +470,19 @@ const [activationIndex, setActivationIndex] = useState(null);
     console.log(`${cardType} card clicked!`);
     if (cardType === 'manager') {
       setShowManagersDetailsModal(true);
-      // setClientFilter('registered'); // Default to 'registered' when modal opens
     }
   };
-    const handleTeamLeadsCardClick = (cardType) => {
+  const handleTeamLeadsCardClick = (cardType) => {
     console.log(`${cardType} card clicked!`);
     if (cardType === 'teamleads') {
       setShowTeamLeadsDetailsModal(true);
-      // setClientFilter('registered'); // Default to 'registered' when modal opens
     }
   };
 
-      const handleEmployeesCardClick = (cardType) => {
+  const handleEmployeesCardClick = (cardType) => {
     console.log(`${cardType} card clicked!`);
     if (cardType === 'employees') {
       setShowEmployeesDetailsModal(true);
-      // setClientFilter('registered'); // Default to 'registered' when modal opens
     }
   };
 
@@ -575,96 +549,82 @@ const [activationIndex, setActivationIndex] = useState(null);
     setShowManagerModal(false);
     setIsManagerEditing(false);
     setCurrentManagerIndex(null);
-  
-    setNewManager({ firstname: '', lastname: '', mobile: '', email: '', password: '', role: 'Manager', active: true });
 
-
+    setNewManager({ firstName: '', lastName: '', mobile: '', email: '', password: '', role: 'Manager', active: true });
   };
 
 
-    // Handler for dropdown change (for editing active client manager)
+  // Handler for dropdown change (for editing active client manager)
   const handleTempManagerSelectChange = (managerName) => {
     setTempSelectedManager(managerName);
-	
+
   };
 
 
-    const handleEditManager = (client) => {
+  const handleEditManager = (client) => {
     setEditingClientId(client.id);
     setTempSelectedManager(client.manager || ''); // Initialize with current manager
 
   };
 
-   const handleSaveManagerChange = (clientId) => {
+  const handleSaveManagerChange = (clientId) => {
     if (!tempSelectedManager) {
       console.warn("Please select a manager to save.");
-	  
+
       return;
     }
     console.log(`Saving manager change for client ${clientId} to ${tempSelectedManager}`);
     updateClientData(clientId, { assignedTo: tempSelectedManager, manager: tempSelectedManager });
     setEditingClientId(null); // Exit edit mode
     setTempSelectedManager(''); // Clear temp state
-					  
+
   };
 
   const handleCancelEdit = () => {
     console.log("Cancelling edit.");
     setEditingClientId(null); // Exit edit mode
     setTempSelectedManager(''); // Clear temp state
-			 
-				   
   };
-
 
   const handleTeamLeadShowModal = () => setShowTeamLeadModal(true);
   const handleTeamLeadCloseModal = () => {
     setShowTeamLeadModal(false);
     setIsTeamLeadEditing(false);
     setCurrentTeamLeadIndex(null);
-    
-       setNewTeamLead({ firstname: '', lastname: '', mobile: '', email: '', password: '', role: 'Team Lead', active: true });
+
+    setNewTeamLead({ firstName: '', lastName: '', mobile: '', email: '', password: '', role: 'Team Lead', active: true });
 
   };
 
 
-
-    const handleEmployeeShowModal = () => setShowEmployeeModal(true);
+  const handleEmployeeShowModal = () => setShowEmployeeModal(true);
   const handleEmployeeCloseModal = () => {
     setShowEmployeeModal(false);
     setIsEmployeeEditing(false);
-   
-    
+
     setCurrentEmployeeIndex(null);
 
-           setNewEmployee({ firstName: '', lastName: '', mobile: '', email: '', password: '', role: '', active: true });
+    setNewEmployee({ firstName: '', lastName: '', mobile: '', email: '', password: '', role: '', active: true });
 
   };
 
-
-
-
-
-
-
-  
 
   const handleManagerInputChange = (e) => {
     const { name, value } = e.target;
     setNewManager((prev) => ({ ...prev, [name]: value }));
   };
-    const handleTeamLeadInputChange = (e) => {
+  const handleTeamLeadInputChange = (e) => {
     const { name, value } = e.target;
     setNewTeamLead((prev) => ({ ...prev, [name]: value }));
   };
-    const handleEmployeeInputChange = (e) => {
+  const handleEmployeeInputChange = (e) => {
     const { name, value } = e.target;
     setNewEmployee((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleAddManager = () => {
-    const { firstname, lastname, mobile, email, password } = newManager;
-    if (!firstname || !lastname || !mobile || !email || !password) {
+    const { firstName, lastName, mobile, email, password } = newManager; // Use firstName, lastName
+    if (!firstName || !lastName || !mobile || !email || !password) {
       alert('Please fill all fields');
       return;
     }
@@ -681,28 +641,27 @@ const [activationIndex, setActivationIndex] = useState(null);
   };
 
   const handleAddTeamLead = () => {
-    const { firstname, lastname, mobile, email, password } = newTeamLead;
-    if (!firstname || !lastname || !mobile || !email || !password) {
+    const { firstName, lastName, mobile, email, password } = newTeamLead; // Use firstName, lastName
+    if (!firstName || !lastName || !mobile || !email || !password) {
       alert('Please fill all fields');
       return;
     }
 
-   
+
     if (isTeamLeadEditing) {
-       const updatedTeamLeads = [...teamLeads];
+      const updatedTeamLeads = [...teamLeads];
       updatedTeamLeads[currentTeamLeadIndex] = newTeamLead;
       setTeamLeads(updatedTeamLeads);
     } else {
       setTeamLeads([...teamLeads, { ...newTeamLead }]);
     }
 
-    
+
     handleTeamLeadCloseModal();
   };
 
 
-
-    const handleAddEmployee = () => {
+  const handleAddEmployee = () => {
     const { firstName, lastName, mobile, email, password } = newEmployee;
     if (!firstName || !lastName || !mobile || !email || !password) {
       alert('Please fill all fields');
@@ -719,7 +678,6 @@ const [activationIndex, setActivationIndex] = useState(null);
 
     handleEmployeeCloseModal();
   };
-
 
 
   const openAssignModal = (index) => {
@@ -748,193 +706,265 @@ const [activationIndex, setActivationIndex] = useState(null);
     setAssignModalOpen(true);
   };
 
-  // --- Helper to get client data value by header name (refined for robustness) ---
-  const getClientValue = (client, header) => {
-    let value;
-    switch (header) {
-      case 'Name': value = client.name; break;
-      case 'Mobile': value = client.mobile; break;
-      case 'Email': value = client.email; break;
-      case 'Jobs Apply For': value = client.jobsApplyFor; break;
-      case 'Registered Date': value = client.registeredDate; break;
-      case 'Country': value = client.country; break;
-      case 'Visa Status': value = client.visaStatus; break;
-    case 'Assign To':
-        // If it's an unassigned or restored client, always show the select box
-        if (client.displayStatuses.includes('unassigned') || client.displayStatuses.includes('restored')) {
+  // --- Helper to get data value by header name (refined for robustness) ---
+  const getValue = (item, header) => {
+    // Client-specific properties
+    if (item.hasOwnProperty('name')) { // Check if it's a client object
+      switch (header) {
+        case 'Name': return item.name;
+        case 'Mobile': return item.mobile;
+        case 'Email': return item.email;
+        case 'Jobs Apply For': return item.jobsApplyFor;
+        case 'Registered Date': return item.registeredDate;
+        case 'Country': return item.country;
+        case 'Visa Status': return item.visaStatus;
+        case 'Assign To':
+          if (item.displayStatuses.includes('unassigned') || item.displayStatuses.includes('restored')) {
+            return (
+              <select
+                style={{
+                  padding: '6px 8px',
+                  borderRadius: '5px',
+                  border: '1px solid #ccc',
+                  backgroundColor: '#fff',
+                  fontSize: '0.85em',
+                  width: '100%',
+                }}
+                value={selectedManagerPerClient[item.id] || ''}
+                onChange={(e) => handleManagerSelectChange(item.id, e.target.value)}
+              >
+                <option value="">Select Manager</option>
+                {managers.map((mgr, idx) => (
+                  <option key={idx} value={`${mgr.firstName} ${mgr.lastName}`}>
+                    {mgr.firstName} {mgr.lastName}
+                  </option>
+                ))}
+              </select>
+            );
+          }
+          return item.assignedTo || '-';
+        case 'Manager':
+          if (item.status === 'active' && editingClientId === item.id) {
+            return (
+              <select
+                style={{
+                  padding: '6px 8px',
+                  borderRadius: '5px',
+                  border: '1px solid #ccc',
+                  backgroundColor: '#fff',
+                  fontSize: '0.85em',
+                  width: '100%',
+                }}
+                value={tempSelectedManager}
+                onChange={(e) => handleTempManagerSelectChange(e.target.value)}
+              >
+                <option value="">Select Manager</option>
+                {managers.map((mgr, idx) => (
+                  <option key={idx} value={`${mgr.firstName} ${mgr.lastName}`}>
+                    {mgr.firstName} {mgr.lastName}
+                  </option>
+                ))}
+              </select>
+            );
+          }
+          return item.manager || '-';
+        case 'Actions': return null; // Actions are handled by renderActions directly
+        default: return item[header.toLowerCase().replace(/\s/g, '')] || '-'; // Fallback
+      }
+    } else { // For Manager, Team Lead, Employee data
+      switch (header) {
+        case 'FIRST NAME': return item.firstName;
+        case 'LAST NAME': return item.lastName;
+        case 'MOBILE': return item.mobile;
+        case 'EMAIL': return item.email;
+        case 'PASSWORD': return item.password;
+        case 'ROLE': return item.role;
+        case 'PEOPLE':
           return (
-            <select
-              style={{
-                padding: '6px 8px',
-                borderRadius: '5px',
-                border: '1px solid #ccc',
-                backgroundColor: '#fff',
-                fontSize: '0.85em',
-                width: '100%', // Make it take full width of cell
-              }}
-              value={selectedManagerPerClient[client.id] || ''} // Use selected or empty string
-              onChange={(e) => handleManagerSelectChange(client.id, e.target.value)}
-            >
-              <option value="">Select Manager</option>
-              <option value="Manager A">Manager A</option>
-              <option value="Manager B">Manager B</option>
-              <option value="Manager C">Manager C</option>
-            </select>
+            <Button size="sm" variant="success" onClick={() => openAssignModal(item.index)}>
+              Add Employees ({item.assignedPeople?.length || 0})
+            </Button>
           );
-        } else {
-          // For other client types, just display the assigned manager or '-'
-          value = client.assignedTo;
-        }
-        break;
-      case 'Manager':
-        // If this is an active client and we are in edit mode for this client
-        if (client.status === 'active' && editingClientId === client.id) {
+        case 'EDIT':
+          let handleEdit;
+          if (item.role === 'Manager') {
+            handleEdit = () => {
+              setIsManagerEditing(true);
+              setCurrentManagerIndex(item.index);
+              setNewManager(managers[item.index]);
+              setShowManagerModal(true);
+            };
+          } else if (item.role === 'Team Lead') {
+            handleEdit = () => {
+              setIsTeamLeadEditing(true);
+              setCurrentTeamLeadIndex(item.index);
+              setNewTeamLead(teamLeads[item.index]);
+              setShowTeamLeadModal(true);
+            };
+          } else { // Employee or Intern
+            handleEdit = () => {
+              setIsEmployeeEditing(true);
+              setCurrentEmployeeIndex(item.index);
+              setNewEmployee(employees[item.index]);
+              setShowEmployeeModal(true);
+            };
+          }
           return (
-            <select
-              style={{
-                padding: '6px 8px',
-                borderRadius: '5px',
-                border: '1px solid #ccc',
-                backgroundColor: '#fff',
-                fontSize: '0.85em',
-                width: '100%',
-              }}
-              value={tempSelectedManager}
-              onChange={(e) => handleTempManagerSelectChange(e.target.value)}
+            <Button
+              variant="link"
+              className="text-decoration-none"
+              onClick={handleEdit}
             >
-              <option value="">Select Manager</option>
-              <option value="Manager A">Manager A</option>
-              <option value="Manager B">Manager B</option>
-              <option value="Manager C">Manager C</option>
-              <option value="Sarah Connor">Sarah Connor</option> {/* Include existing managers from data */}
-            </select>
+              ✏️
+            </Button>
           );
-        } else {
-          value = client.manager;
-        }
-        break;
-      case 'Actions': return null; // Actions are rendered by renderActions, not directly from data
-      default: value = null; // Fallback for unknown headers
+        case 'STATUS':
+          let toggleActivation;
+          if (item.role === 'Manager') {
+            toggleActivation = () => toggleManagerActivation(item.index);
+          } else if (item.role === 'Team Lead') {
+            toggleActivation = () => toggleTeamLeadActivation(item.index);
+          } else { // Employee or Intern
+            toggleActivation = () => toggleEmployeeActivation(item.index);
+          }
+          return (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ marginRight: '8px' }}>{item.active ? 'Active' : 'Inactive'}</span>
+              <Form.Check
+                type="switch"
+                id={`${item.role.toLowerCase()}-active-switch-${item.index}`}
+                checked={item.active}
+                onChange={toggleActivation}
+              />
+            </div>
+          );
+        default: return '-';
+      }
     }
-    // Return '-' for undefined, null, or empty string values, unless it's a JSX element
-    return React.isValidElement(value) ? value : (value !== undefined && value !== null && value !== '' ? value : '-');
   };
 
-  // --- Table Configuration based on Client Filter ---
+
+  // --- Table Configurations for ALL modals, including Clients ---
   const tableConfig = {
     registered: {
       headers: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Actions'],
-      widths: ['12%', '10%', '16%', '16%', '12%', '9%', '12%', '13%'], // Sums to 100%
+      widths: ['auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto'],
       renderActions: (client) => (
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
           <button
             onClick={() => handleAcceptClient(client.id)}
-            style={{ ...actionButtonStyle, background: '#28a745' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#218838'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#28a745'}
-            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-          >Accept</button>
+            style={{ ...actionButtonStyle, background: '#28a745', ':hover': { backgroundColor: '#218838' } }}
+            className="button-hover-effect"
+          >
+            Accept
+          </button>
           <button
             onClick={() => handleDeclineClient(client.id)}
-            style={{ ...actionButtonStyle, background: '#dc3545' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#c82333'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#dc3545'}
-            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-          >Decline</button>
+            style={{ ...actionButtonStyle, background: '#dc3545', ':hover': { backgroundColor: '#c82333' } }}
+            className="button-hover-effect"
+          >
+            Decline
+          </button>
         </div>
       )
     },
     unassigned: {
       headers: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Assign To', 'Actions'],
-      widths: ['12%', '10%', '15%', '14%', '12%', '7%', '8%', '12%', '10%'], // Sums to 100%
+      widths: ['auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto'],
       renderActions: (client) => (
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
           <button
             onClick={() => handleAssignClient(client.id)}
-            style={{ ...actionButtonStyle, background: '#007bff' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0069d9'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#007bff'}
-            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-          >Assign</button>
+            style={{ ...actionButtonStyle, background: '#007bff', ':hover': { backgroundColor: '#0056b3' } }}
+            disabled={!selectedManagerPerClient[client.id]} // Disable if no manager selected
+            className="button-hover-effect"
+          >
+            Assign
+          </button>
         </div>
       )
     },
     active: {
       headers: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Manager', 'Actions'],
-      widths: ['10%','10%','12%','14%','14%','9%','10%','14%','7%'], // Sums to 100%
-      renderActions: (client) => {
-        if (editingClientId === client.id) {
-          return (
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'flex-end' }}>
+      widths: ['auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto'],
+      renderActions: (client) => (
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
+          {editingClientId === client.id ? (
+            <>
               <button
                 onClick={() => handleSaveManagerChange(client.id)}
-                style={{ ...actionButtonStyle, background: '#28a745' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#218838'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#28a745'}
-                onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-                onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-              >Save</button>
+                style={{ ...actionButtonStyle, background: '#28a745', ':hover': { backgroundColor: '#218838' } }}
+                className="button-hover-effect"
+                disabled={!tempSelectedManager}
+              >
+                Save
+              </button>
               <button
                 onClick={handleCancelEdit}
-                style={{ ...actionButtonStyle, background: '#6c757d' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#5a6268'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#6c757d'}
-                onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-                onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-              >Cancel</button>
-            </div>
-          );
-        } else {
-          return (
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'flex-end' }}>
+                style={{ ...actionButtonStyle, background: '#6c757d', ':hover': { backgroundColor: '#5a6268' } }}
+                className="button-hover-effect"
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
+            <>
               <button
                 onClick={() => handleEditManager(client)}
-                style={{ ...actionButtonStyle, background: '#007bff' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0069d9'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#007bff'}
-                onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-                onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-              >Edit</button>
-            </div>
-          );
-        }
-      }
+                style={{ ...actionButtonStyle, background: '#007bff', ':hover': { backgroundColor: '#0056b3' } }}
+                className="button-hover-effect"
+              >
+                Edit Manager
+              </button>
+            </>
+          )}
+        </div>
+      )
     },
     rejected: {
       headers: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Actions'],
-      widths: ['12%', '10%', '16%', '16%', '14%', '10%', '10%', '12%'], // Sums to 100%
+      widths: ['auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto'],
       renderActions: (client) => (
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
           <button
             onClick={() => handleRestoreClient(client.id)}
-            style={{ ...actionButtonStyle, background: '#28a745' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#218838'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#28a745'}
-            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-          >Restore</button>
+            style={{ ...actionButtonStyle, background: '#6f42c1', ':hover': { backgroundColor: '#563d7c' } }}
+            className="button-hover-effect"
+          >
+            Restore
+          </button>
         </div>
       )
     },
     restored: {
       headers: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Assign To', 'Actions'],
-      widths: ['11%', '9%', '13%', '13%', '12%', '8%', '11%', '11%', '12%'], // Sums to 100%
+      widths: ['auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto'],
       renderActions: (client) => (
-         <div style={{ display: 'flex', gap: '10px', flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
           <button
             onClick={() => handleAssignClient(client.id)}
-            style={{ ...actionButtonStyle, background: '#007bff' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0069d9'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#007bff'}
-            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-          >Assign</button>
+            style={{ ...actionButtonStyle, background: '#007bff', ':hover': { backgroundColor: '#0056b3' } }}
+            disabled={!selectedManagerPerClient[client.id]}
+            className="button-hover-effect"
+          >
+            Assign
+          </button>
         </div>
       )
     },
+    // Manager, Team Lead, Employee table configurations are kept separate
+    manager: {
+      headers: ['FIRST NAME', 'LAST NAME', 'MOBILE', 'EMAIL', 'PASSWORD', 'ROLE', 'PEOPLE', 'EDIT', 'STATUS'],
+      widths: ['10%', '10%', '12%', '15%', '12%', '8%', '18%', '6%', '10%'], // Adjusted widths
+    },
+    teamlead: {
+      headers: ['FIRST NAME', 'LAST NAME', 'MOBILE', 'EMAIL', 'PASSWORD', 'ROLE', 'EDIT', 'STATUS'],
+      widths: ['12%', '12%', '14%', '20%', '16%', '10%', '8%', '10%'],
+    },
+    employee: {
+      headers: ['FIRST NAME', 'LAST NAME', 'MOBILE', 'EMAIL', 'PASSWORD', 'ROLE', 'EDIT', 'STATUS'],
+      widths: ['12%', '12%', '14%', '20%', '16%', '10%', '8%', '10%'],
+    }
   };
 
 
@@ -953,8 +983,222 @@ const [activationIndex, setActivationIndex] = useState(null);
       minHeight: '100vh',
       display: 'flex',
       flexDirection: 'column',
-       overflowX: 'hidden', // Ensure no horizontal scrollbar due to initial off-screen elements
+      overflowX: 'hidden', // Ensure no horizontal scrollbar due to initial off-screen elements
     }}>
+      {/* Centralized CSS styles for hover effects and animations */}
+      <style>
+        {`
+        /* General hover effect for buttons */
+        .button-hover-effect:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+
+        /* Tab button specific active and hover styles */
+        .tab-button.active {
+            border-bottom: 2px solid #3b82f6;
+            color: #3b82f6;
+        }
+        .tab-button:hover {
+            color: #3b82f6;
+        }
+
+        /* Card hover effect */
+        .card-hover:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 12px 25px rgba(0,0,0,0.2);
+        }
+
+        /* Action button specific styles and animation */
+        .action-button:hover {
+            background-color: #218838 !important; /* Specific hover colors from inline styles */
+        }
+        .action-button:active {
+            transform: scale(0.95);
+        }
+
+        /* Download button specific styles and animation */
+        .download-button {
+          background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+          color: white;
+          border: none;
+          padding: 8px 16px; /* Slightly smaller padding for card button */
+          border-radius: 8px;
+          font-size: 0.875rem; /* Smaller font size for card button */
+          font-weight: 600;
+          cursor: pointer;
+          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+          transition: transform 0.3s ease-out, box-shadow 0.3s ease-out, background 0.3s ease-out;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px; /* Smaller gap */
+          width: 100%; /* Make button fill its container in the card */
+          text-align: center;
+        }
+
+        .download-button:hover {
+          transform: translateY(-2px); /* Slightly less movement */
+          box-shadow: 0 6px 12px rgba(0,0,0,0.15); /* Slightly less intense shadow */
+          background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+        }
+        .download-button:disabled {
+          background: #cbd5e1; /* Greyed out background */
+          cursor: not-allowed;
+          box-shadow: none;
+        }
+        .download-button:disabled:hover {
+          transform: none; /* No movement on hover when disabled */
+          box-shadow: none;
+          background: #cbd5e1; /* Stays greyed out on hover */
+        }
+
+        /* View button specific hover */
+        .view-button:hover {
+          background-color: #c4e0ff !important;
+        }
+
+        /* Activity button specific hover */
+        .activity-button:hover {
+          background-color: #e2e8f0 !important;
+        }
+
+        /* Bootstrap Modal Overrides */
+        .modal.show .modal-dialog {
+          transform: none !important; /* Override Bootstrap's default transform for centering */
+        }
+
+        /* Custom dialog class for consistent size and positioning */
+        .custom-modal-dialog {
+            max-width: 95% !important;
+            width: 1400px !important;
+            margin: 1.75rem auto; /* Center it with default Bootstrap margin */
+        }
+
+        .custom-modal-content {
+            background: #ffffff !important;
+            padding: 30px !important; /* Reduced padding */
+            border-radius: 20px !important;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25) !important;
+            border: 1px solid #cbd5e1 !important;
+            max-height: 90vh; /* Ensure modal content fits screen height */
+            overflow-y: auto; /* Enable scrolling for modal content */
+            position: relative; /* For absolute positioning of close button */
+        }
+
+
+        .modal-header {
+            border-bottom: 1px solid #f1f5f9 !important;
+            padding: 20px 30px !important;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative; /* Ensure it's relative for the close button positioning */
+        }
+        .modal-title {
+            color: #1e293b !important;
+            font-size: 1.6rem !important;
+            font-weight: 700 !important;
+            margin: 0 !important; /* Remove default margin */
+        }
+        .modal-body {
+            padding: 30px !important;
+        }
+        .modal-footer {
+            border-top: 1px solid #f1f5f9 !important;
+            padding: 20px 30px !important;
+        }
+        .form-control, .input-group-text, .form-select {
+            border-radius: 8px !important;
+            border: 1px solid #cbd5e1 !important;
+            padding: 10px 15px !important;
+            font-size: 0.95rem !important;
+        }
+        .form-label {
+            font-weight: 600 !important;
+            color: #334155 !important;
+            margin-bottom: 8px !important;
+        }
+        .btn-success {
+            background-color: #28a745 !important;
+            border-color: #28a745 !important;
+            border-radius: 8px !important;
+            padding: 10px 20px !important;
+            font-weight: 600 !important;
+            transition: background-color 0.2s, transform 0.1s !important;
+        }
+        .btn-success:hover {
+            background-color: #218838 !important;
+            border-color: #218838 !important;
+            transform: translateY(-1px);
+        }
+        .btn-primary {
+            background-color: #007bff !important;
+            border-color: #007bff !important;
+            border-radius: 8px !important;
+            padding: 10px 20px !important;
+            font-weight: 600 !important;
+            transition: background-color 0.2s, transform 0.1s !important;
+        }
+        .btn-primary:hover {
+            background-color: #0069d9 !important;
+            border-color: #0062cc !important;
+            transform: translateY(-1px);
+        }
+        .btn-secondary {
+            background-color: #6c757d !important;
+            border-color: #6c757d !important;
+            border-radius: 8px !important;
+            padding: 10px 20px !important;
+            font-weight: 600 !important;
+            transition: background-color 0.2s, transform 0.1s !important;
+        }
+        .btn-secondary:hover {
+            background-color: #5a6268 !important;
+            border-color: #545b62 !important;
+            transform: translateY(-1px);
+        }
+        .btn-danger {
+            background-color: #dc3545 !important;
+            border-color: #dc3545 !important;
+            border-radius: 8px !important;
+            padding: 10px 20px !important;
+            font-weight: 600 !important;
+            transition: background-color 0.2s, transform 0.1s !important;
+        }
+        .btn-danger:hover {
+            background-color: #c82333 !important;
+            border-color: #bd2130 !important;
+            transform: translateY(-1px);
+        }
+        .btn-link {
+            color: #007bff !important;
+            text-decoration: none !important;
+        }
+        .btn-link:hover {
+            color: #0056b3 !important;
+            text-decoration: underline !important;
+        }
+        .table-striped > tbody > tr:nth-of-type(odd) {
+            background-color: #ffffff;
+        }
+        .table-striped > tbody > tr:nth-of-type(even) {
+            background-color: #eff2f7;
+        }
+        .table-hover tbody tr:hover {
+            background-color: #e2e8f0 !important;
+        }
+        .form-check-input:checked {
+            background-color: #007bff !important;
+            border-color: #007bff !important;
+        }
+        .form-check-input:focus {
+            box-shadow: 0 0 0 0.25rem rgba(0, 123, 255, 0.25) !important;
+        }
+
+        `}
+      </style>
+
       {/* Top Navigation Bar */}
       <header style={{
         background: '#0a193c',
@@ -977,10 +1221,10 @@ const [activationIndex, setActivationIndex] = useState(null);
           width: '100%', // Take full width of header
           paddingBottom: '5px', // Small space between this row and the next
         }}>
-           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
             <span style={{ fontSize: '18px', fontWeight: 'bold', lineHeight: '1.2' }}>TECHXPLORERS</span>
-            <span style={{ fontSize: '10px', opacity: 0.8, marginTop: '0px', paddingLeft:'42px' }}>Exploring The Future</span>
-				  
+            <span style={{ fontSize: '10px', opacity: 0.8, marginTop: '0px', paddingLeft: '42px' }}>Exploring The Future</span>
+
           </div>
         </div>
 
@@ -1006,18 +1250,16 @@ const [activationIndex, setActivationIndex] = useState(null);
             <FaBars />
           </button>
 
-        
+
           {/* Search Bar (Centered) */}
           <div style={{
             flexGrow: 1, // Allows this div to take up available space
             display: 'flex',
             justifyContent: 'center', // Centers the search bar within this div
             margin: '0 15px', // Horizontal margin to give space
-								 
-								
-						
-							  
-							
+
+
+
           }}>
             <div style={{
               display: 'flex',
@@ -1069,15 +1311,15 @@ const [activationIndex, setActivationIndex] = useState(null);
         display: 'grid',
         gridTemplateColumns:
           windowWidth < 640 ? '1fr' : // Single column on small screens
-          windowWidth < 1024 ? 'repeat(2, 1fr)' : // Two columns on medium screens
-          'repeat(4, 1fr)', // Four columns on large screens
+            windowWidth < 1024 ? 'repeat(2, 1fr)' : // Two columns on medium screens
+              'repeat(4, 1fr)', // Four columns on large screens
         gridTemplateRows: 'auto auto 1fr',
         gap: windowWidth < 640 ? '15px' : '25px', // Smaller gap on small screens
         maxWidth: windowWidth < 1024 ? '95%' : '1300px', // Max width adapts
         margin: '25px auto',
       }}>
 
-     
+
         {/* Clients Card */}
         <div
           onMouseEnter={() => setHoveredCardId('clients')}
@@ -1085,12 +1327,11 @@ const [activationIndex, setActivationIndex] = useState(null);
           onClick={() => handleClientCardClick('clients')}
           style={{
             ...cardStyle,
-            ...(hoveredCardId === 'clients' ? cardHoverStyle : {}),
-            // Entrance Animation
             opacity: contentLoaded ? 1 : 0,
             transform: contentLoaded ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.9)',
-            transitionDelay: contentLoaded ? '0s' : '0s', // No delay on exit, delay on entry
+            transitionDelay: contentLoaded ? '0s' : '0s',
           }}
+          className={hoveredCardId === 'clients' ? 'card-hover' : ''}
         >
           <h3 style={cardTitleStyle}>Clients</h3>
           <FaUsers style={cardIconStyle} />
@@ -1103,12 +1344,11 @@ const [activationIndex, setActivationIndex] = useState(null);
           onClick={() => handleManagersCardClick('manager')}
           style={{
             ...cardStyle,
-            ...(hoveredCardId === 'manager' ? cardHoverStyle : {}),
-            // Entrance Animation
             opacity: contentLoaded ? 1 : 0,
             transform: contentLoaded ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.9)',
             transitionDelay: contentLoaded ? '0.05s' : '0s',
           }}
+          className={hoveredCardId === 'manager' ? 'card-hover' : ''}
         >
           <h3 style={cardTitleStyle}>Manager</h3>
           <FaUserTie style={cardIconStyle} />
@@ -1121,12 +1361,11 @@ const [activationIndex, setActivationIndex] = useState(null);
           onClick={() => handleTeamLeadsCardClick('teamleads')}
           style={{
             ...cardStyle,
-            ...(hoveredCardId === 'teamleads' ? cardHoverStyle : {}),
-            // Entrance Animation
             opacity: contentLoaded ? 1 : 0,
             transform: contentLoaded ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.9)',
             transitionDelay: contentLoaded ? '0.1s' : '0s',
           }}
+          className={hoveredCardId === 'teamleads' ? 'card-hover' : ''}
         >
           <h3 style={cardTitleStyle}>Team Leads</h3>
           <FaUserCog style={cardIconStyle} />
@@ -1139,12 +1378,11 @@ const [activationIndex, setActivationIndex] = useState(null);
           onClick={() => handleEmployeesCardClick('employees')}
           style={{
             ...cardStyle,
-            ...(hoveredCardId === 'employee' ? cardHoverStyle : {}),
-            // Entrance Animation
             opacity: contentLoaded ? 1 : 0,
             transform: contentLoaded ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.9)',
             transitionDelay: contentLoaded ? '0.15s' : '0s',
           }}
+          className={hoveredCardId === 'employees' ? 'card-hover' : ''} // Corrected: was 'employee'
         >
           <h3 style={cardTitleStyle}>Employee</h3>
           <FaUserFriends style={cardIconStyle} />
@@ -1157,11 +1395,6 @@ const [activationIndex, setActivationIndex] = useState(null);
           opacity: contentLoaded ? 1 : 0,
           transform: contentLoaded ? 'translateX(0)' : 'translateX(-50px)',
           transitionDelay: contentLoaded ? '0.2s' : '0s',
-						  
-								  
-							   
-								   
-							 
         }}>
           <h3 style={{ marginBottom: '20px', color: '#333' }}>CHART</h3>
           <div style={{ width: '100%', maxWidth: windowWidth < 640 ? '250px' : '500px', height: '350px' }}>
@@ -1176,10 +1409,6 @@ const [activationIndex, setActivationIndex] = useState(null);
           opacity: contentLoaded ? 1 : 0,
           transform: contentLoaded ? 'translateX(0)' : 'translateX(50px)',
           transitionDelay: contentLoaded ? '0.25s' : '0s',
-						  
-								  
-								   
-							 
         }}>
           <h3 style={{ marginBottom: '15px', color: '#333' }}>About</h3>
           <p style={{ lineHeight: '1.6', color: '#555', marginBottom: '15px', fontSize: '1.0em' }}>
@@ -1193,27 +1422,6 @@ const [activationIndex, setActivationIndex] = useState(null);
             Varius Ac Nulla, Ac.
           </p>
         </div>
-      </div>
-
-      {/* Logout Button (bottom, centered) */}
-      <div style={{ textAlign: 'center', padding: '20px 0 40px 0' }}>
-        <button
-          onClick={handleLogout}
-          style={{
-            background: '#dc3545',
-            color: 'white',
-            border: 'none',
-            padding: '12px 25px',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: '1.1em',
-            fontWeight: 'bold',
-            boxShadow: '0 4px 10px rgba(220, 53, 69, 0.3)',
-            transition: 'background-color 0.3s ease'
-          }}
-        >
-          Log Out
-        </button>
       </div>
 
       {/* Overlay for when menu is open */}
@@ -1248,12 +1456,11 @@ const [activationIndex, setActivationIndex] = useState(null);
         gap: '15px'
       }}>
         <h4 style={{ color: '#333' }}>Menu Options</h4>
-       {/* Dashboard link (without dropdown logic) */}
+        {/* Dashboard link (without dropdown logic) */}
         <a
           href="/admindashboard"
           style={menuLinkBaseStyle}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f0f0f0'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          className="button-hover-effect"
         >
           Dashboard
         </a>
@@ -1261,11 +1468,10 @@ const [activationIndex, setActivationIndex] = useState(null);
         <a
           href="/reports"
           style={menuLinkBaseStyle}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f0f0f0'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          className="button-hover-effect"
         >Reports</a>
 
-      <div style={{ marginTop: 'auto' }}>
+        <div style={{ marginTop: 'auto' }}>
           <button
             onClick={() => {
               localStorage.removeItem('isLoggedIn');
@@ -1288,16 +1494,11 @@ const [activationIndex, setActivationIndex] = useState(null);
               alignItems: 'center',
               justifyContent: 'center',
               transition: 'background-color 0.2s',
-              // Corrected pseudo-class syntax for inline styles
-              ...(true && {
-                ':hover': {
-                  backgroundColor: '#fee2e2'
-                }
-              })
             }}
+            className="button-hover-effect"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginRight: '8px' }}>
-              <path d="M6 14H3.33333C2.97971 14 2.64057 13.8595 2.39052 13.6095C2.14048 13.3594 2 13.0203 2 12.6667V3.33333C2 2.97971 2.14048 2.64057 2.39052 2.39052C2.64057 2.14048 2.97971 2 3.33333 2H6M10.6667 11.3333L14 8M14 8L10.6667 4.66667M14 8H6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M6 14H3.33333C2.97971 14 2.64057 13.8595 2.39052 13.6095C2.14048 13.3594 2 13.0203 2 12.6667V3.33333C2 2.97971 2.14048 2.64057 2.39052 2.39052C2.64057 2.14048 2.97971 2 3.33333 2H6M10.6667 11.3333L14 8M14 8L10.6667 4.66667M14 8H6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             Log Out
           </button>
@@ -1305,137 +1506,202 @@ const [activationIndex, setActivationIndex] = useState(null);
       </div>
 
       {/* Client Details Modal */}
-      {showClientDetailsModal && (
-        <div style={modalOverlayStyle}>
+      <Modal
+        show={showClientDetailsModal}
+        onHide={toggleClientDetailsModal}
+        centered
+        size="xl"
+        dialogClassName="custom-modal-dialog"
+        contentClassName="custom-modal-content" // Apply custom content style
+      >
+        <Modal.Header>
+          <Modal.Title>Client Details</Modal.Title>
+          <button
+            onClick={toggleClientDetailsModal}
+            style={modalCloseButtonStyle}
+            className="button-hover-effect"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M13 1L1 13M1 1L13 13" stroke="#64748B" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </button>
+        </Modal.Header>
+        <Modal.Body>
+          {/* Custom Styled Radio Buttons for Client Filter (single line) */}
           <div style={{
-            ...modalContentStyle,
-            width: windowWidth < 768 ? '95%' : '1400px', // Wider on large, fills small
-            maxWidth: '1400px', // Ensure it doesn't exceed this
-            transform: contentLoaded ? 'scale(1)' : 'scale(0.95)', // Apply entrance animation to modal
-            opacity: contentLoaded ? 1 : 0, // Apply entrance animation to modal
-            transition: 'transform 0.5s ease-out, opacity 0.5s ease-out', // Ensure transition is here
+            position: 'relative',
+            display: 'flex',
+            borderRadius: '0.5rem',
+            backgroundColor: '#EEE', // Overall background for the radio group container
+            boxSizing: 'border-box',
+            boxShadow: '0 0 0px 1px rgba(0, 0, 0, 0.06)',
+            padding: '0.25rem',
+            width: '100%',
+            maxWidth: '900px',
+            fontSize: '14px',
+            margin: '0 auto 20px auto',
+            overflowX: 'auto',
+            whiteSpace: 'nowrap',
+            flexWrap: 'wrap',
+            justifyContent: 'center',
           }}>
-            <button
-              onClick={toggleClientDetailsModal}
-              style={modalCloseButtonStyle}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e2e8f0'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
-              onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.9)'}
-              onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-            >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M13 1L1 13M1 1L13 13" stroke="#64748B" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-            </button>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '25px',
-              paddingRight: '60px' // Padding to prevent content from overlapping the close button
-            }}>
-              <h3 style={{
-                margin: 0,
-                color: '#1e293b',
-                fontSize: '1.6rem',
-                fontWeight: '700'
-              }}>
-                Client Details
-              </h3>
-            </div>
-
-            {/* Custom Styled Radio Buttons for Client Filter (single line) */}
-            <div style={{
-              position: 'relative',
-              display: 'flex',
-              borderRadius: '0.5rem',
-              backgroundColor: '#EEE', // Overall background for the radio group container
-              boxSizing: 'border-box',
-              boxShadow: '0 0 0px 1px rgba(0, 0, 0, 0.06)',
-              padding: '0.25rem',
-              width: '100%',
-              maxWidth: '900px',
-              fontSize: '14px',
-              margin: '0 auto 20px auto',
-              overflowX: 'auto',
-              whiteSpace: 'nowrap',
-              flexWrap: 'wrap',
-              justifyContent: 'center',
-            }}>
-              {[
-                // Counts are dynamically calculated from the 'clients' state based on displayStatuses
-                { label: 'Registered Clients', value: 'registered', count: clients.filter(c => c.displayStatuses.includes('registered')).length, activeBg: '#E6F0FF', activeColor: '#3A60EE', badgeBg: '#3A60EE' },
-                { label: 'Unassigned Clients', value: 'unassigned', count: clients.filter(c => c.displayStatuses.includes('unassigned')).length, activeBg: '#E6E6E6', activeColor: '#334155', badgeBg: '#9AA0A6' },
-                { label: 'Active Clients', value: 'active', count: clients.filter(c => c.displayStatuses.includes('active')).length, activeBg: '#D9F5E6', activeColor: '#28A745', badgeBg: '#28A745' },
-                { label: 'Rejected Clients', value: 'rejected', count: clients.filter(c => c.displayStatuses.includes('rejected')).length, activeBg: '#FFEDEE', activeColor: '#DC3545', badgeBg: '#DC3545' },
-                { label: 'Restore Clients', value: 'restored', count: clients.filter(c => c.displayStatuses.includes('restored')).length, activeBg: '#F0E6FF', activeColor: '#6A40EE', badgeBg: '#6A40EE' },
-              ].map((option) => (
-                <label
-                  key={option.value}
-                  style={{
-                    flexShrink: 0,
-                    flexGrow: 1,
-                    textAlign: 'center',
-                    display: 'flex',
-                    cursor: 'pointer',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: '0.5rem',
-                    border: 'none',
-                    padding: '.5rem 10px',
-                    transition: 'all .15s ease-in-out',
-                    // Dynamic background and text color based on active state
-                    backgroundColor: clientFilter === option.value ? option.activeBg : 'transparent',
-                    color: clientFilter === option.value ? option.activeColor : 'rgba(51, 65, 85, 1)',
-                    fontWeight: clientFilter === option.value ? '600' : 'normal',
-                    margin: '0 2px 5px 2px',
+            {[
+              // Counts are dynamically calculated from the 'clients' state based on displayStatuses
+              { label: 'Registered Clients', value: 'registered', count: clients.filter(c => c.displayStatuses.includes('registered')).length, activeBg: '#E6F0FF', activeColor: '#3A60EE', badgeBg: '#3A60EE' },
+              { label: 'Unassigned Clients', value: 'unassigned', count: clients.filter(c => c.displayStatuses.includes('unassigned')).length, activeBg: '#E6E6E6', activeColor: '#334155', badgeBg: '#9AA0A6' },
+              { label: 'Active Clients', value: 'active', count: clients.filter(c => c.displayStatuses.includes('active')).length, activeBg: '#D9F5E6', activeColor: '#28A745', badgeBg: '#28A745' },
+              { label: 'Rejected Clients', value: 'rejected', count: clients.filter(c => c.displayStatuses.includes('rejected')).length, activeBg: '#FFEDEE', activeColor: '#DC3545', badgeBg: '#DC3545' },
+              { label: 'Restore Clients', value: 'restored', count: clients.filter(c => c.displayStatuses.includes('restored')).length, activeBg: '#F0E6FF', activeColor: '#6A40EE', badgeBg: '#6A40EE' },
+            ].map((option) => (
+              <label
+                key={option.value}
+                style={{
+                  flexShrink: 0,
+                  flexGrow: 1,
+                  textAlign: 'center',
+                  display: 'flex',
+                  cursor: 'pointer',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '0.5rem',
+                  border: 'none',
+                  padding: '.5rem 10px',
+                  transition: 'all .15s ease-in-out',
+                  // Dynamic background and text color based on active state
+                  backgroundColor: clientFilter === option.value ? option.activeBg : 'transparent',
+                  color: clientFilter === option.value ? option.activeColor : 'rgba(51, 65, 85, 1)',
+                  fontWeight: clientFilter === option.value ? '600' : 'normal',
+                  margin: '0 2px 5px 2px',
+                }}
+              >
+                <input
+                  type="radio"
+                  name="client-filter"
+                  value={option.value}
+                  checked={clientFilter === option.value}
+                  onChange={(e) => {
+                    setClientFilter(e.target.value);
                   }}
-                >
-                  <input
-                    type="radio"
-                    name="client-filter"
-                    value={option.value}
-                    checked={clientFilter === option.value}
-                      onChange={(e) => {
-                      setClientFilter(e.target.value);
-                    }}
-                    style={{ display: 'none' }}
-                  />
-                  <span style={{ whiteSpace: 'nowrap', marginRight: '8px' }}>{option.label}</span>
-                  <span style={{
-                    ...badgeStyle,
-                    backgroundColor: clientFilter === option.value ? option.badgeBg : '#9AA0A6', // Default grey for inactive badges
-                  }}>
-                    {option.count}
-                  </span>
-                </label>
-              ))}
+                  style={{ display: 'none' }}
+                />
+                <span style={{ whiteSpace: 'nowrap', marginRight: '8px' }}>{option.label}</span>
+                <span style={{
+                  ...badgeStyle,
+                  backgroundColor: clientFilter === option.value ? option.badgeBg : '#9AA0A6', // Default grey for inactive badges
+                }}>
+                  {option.count}
+                </span>
+              </label>
+            ))}
+          </div>
+
+          {/* Client Table - Dynamically Filtered */}
+          <h4 style={{
+            marginBottom: '15px',
+            marginTop: '0px',
+            color: '#333',
+            fontSize: '1.2rem',
+            fontWeight: '600',
+            textAlign: 'center'
+          }}>
+            {clientFilter === 'registered' && `Registered Clients`}
+            {clientFilter === 'unassigned' && `Unassigned Clients`}
+            {clientFilter === 'active' && `Active Clients`}
+            {clientFilter === 'rejected' && `Rejected Clients`}
+            {clientFilter === 'restored' && `Restored Clients`} ({filteredClients.length})
+          </h4>
+          <div style={{ overflowX: 'auto', borderRadius: '8px' }}>
+            <table style={modalTableStyle}>
+              <thead>
+                <tr>
+                  {tableConfig[clientFilter].headers.map((header, index) => (
+                    <th key={header} style={{
+                      ...modalTableHeaderStyle,
+                      width: tableConfig[clientFilter].widths[index], // Apply fixed width from config
+                      textAlign: header === 'Actions' ? 'right' : 'left', // Align Actions header to right
+                    }}>
+                      {header}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredClients.length > 0 ? (
+                  filteredClients.map((client, index) => (
+                    <tr key={client.id} style={{
+                      backgroundColor: index % 2 === 0 ? '#ffffff' : '#eff2f7',
+                    }}>
+                      {tableConfig[clientFilter].headers.map((header, colIndex) => (
+                        <td
+                          key={`${client.id}-${header}`} // Unique key for cells
+                          style={{
+                            ...modalTableCellStyle,
+                            textAlign: header === 'Actions' ? 'right' : 'left', // Align Actions cells to right
+                          }}
+                        >
+                          {/* Render actions if header is 'Actions', otherwise get value from client data */}
+                          {header === 'Actions' ? tableConfig[clientFilter].renderActions(client) : getValue(client, header)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={tableConfig[clientFilter].headers.length} style={{ ...modalTableCellStyle, textAlign: 'center', color: '#666' }}>
+                      No {clientFilter} clients found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Modal.Body>
+      </Modal>
+
+
+      {/* Manager Details Modal */}
+      <Modal
+        show={showManagersDetailsModal}
+        onHide={toggleManagersDetailsModal}
+        centered
+        size="xl"
+        dialogClassName="custom-modal-dialog"
+        contentClassName="custom-modal-content" // Apply custom content style
+      >
+        <Modal.Header>
+          <Modal.Title>Manager Details</Modal.Title>
+          <button
+            onClick={toggleManagersDetailsModal}
+            style={modalCloseButtonStyle}
+            className="button-hover-effect"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M13 1L1 13M1 1L13 13" stroke="#64748B" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </button>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="container mt-4">
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <InputGroup className="w-50">
+                <Form.Control
+                  placeholder="Search"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </InputGroup>
+              <Button variant="success" onClick={handleManagerShowModal}>+ Add Manager</Button>
             </div>
 
-            {/* Client Table - Dynamically Filtered */}
-            <h4 style={{
-              marginBottom: '15px',
-              marginTop: '0px',
-              color: '#333',
-              fontSize: '1.2rem',
-              fontWeight: '600',
-              textAlign: 'center'
-            }}>
-              {clientFilter === 'registered' && `Registered Clients`}
-              {clientFilter === 'unassigned' && `Unassigned Clients`}
-              {clientFilter === 'active' && `Active Clients`}
-              {clientFilter === 'rejected' && `Rejected Clients`}
-              {clientFilter === 'restored' && `Restored Clients`} ({filteredClients.length})
-            </h4>
-            <div style={{ overflowX: 'auto', borderRadius: '8px' }}>
+            <div style={{ overflowX: 'auto', borderRadius: '8px', marginBottom: '30px' }}> {/* Added margin-bottom here */}
               <table style={modalTableStyle}>
                 <thead>
                   <tr>
-                    {tableConfig[clientFilter].headers.map((header, index) => (
+                    {tableConfig.manager.headers.map((header, index) => (
                       <th key={header} style={{
                         ...modalTableHeaderStyle,
-                        width: tableConfig[clientFilter].widths[index], // Apply fixed width from config
-                        textAlign: header === 'Actions' ? 'right' : 'left', // Align Actions header to right
+                        width: tableConfig.manager.widths[index],
+                        textAlign: (header === 'PEOPLE' || header === 'EDIT' || header === 'STATUS') ? 'center' : 'left',
                       }}>
                         {header}
                       </th>
@@ -1443,251 +1709,87 @@ const [activationIndex, setActivationIndex] = useState(null);
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredClients.length > 0 ? (
-                    filteredClients.map((client, index) => (
-                      <tr key={client.id} style={{
-                        backgroundColor: index % 2 === 0 ? '#ffffff' : '#eff2f7',
-                      }}>
-                        {tableConfig[clientFilter].headers.map((header, colIndex) => (
-                          <td
-                            key={`${client.id}-${header}`} // Unique key for cells
-                            style={{
-                              ...modalTableCellStyle,
-                              textAlign: header === 'Actions' ? 'right' : 'left', // Align Actions cells to right
-                            }}
-                          >
-                            {/* Render actions if header is 'Actions', otherwise get value from client data */}
-                            {header === 'Actions' ? tableConfig[clientFilter].renderActions(client) : getClientValue(client, header)}
-                          </td>
-                        ))}
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={tableConfig[clientFilter].headers.length} style={{ ...modalTableCellStyle, textAlign: 'center', color: '#666' }}>
-                        No {clientFilter} clients found.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-
-      {/* Manager Details Modal */}
-      {showManagersDetailsModal && (
-        <div style={modalOverlayStyle}>
-          <div style={modalContentStyle}>
-            <button onClick={toggleManagersDetailsModal} style={modalCloseButtonStyle}>
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M13 1L1 13M1 1L13 13" stroke="#64748B" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-            </button>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '25px',
-              paddingRight: '60px' // Padding to prevent content from overlapping the close button
-            }}>
-              <h3 style={{
-                margin: 0,
-                color: '#1e293b',
-                fontSize: '1.6rem',
-                fontWeight: '700'
-              }}>
-                Manager Details
-              </h3>
-            </div>
-
-            <div className="container mt-4">
-              <div className="d-flex justify-content-between align-items-center mb-3">
-                <InputGroup className="w-50">
-                  <Form.Control
-                    placeholder="Search"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </InputGroup>
-                <Button variant="success" onClick={handleManagerShowModal}>+ Add Manager</Button>
-              </div>
-
-              <Table striped hover responsive className="text-center align-middle">
-                <thead className="table-secondary">
-                  <tr className='py-5'>
-                    <th>FIRST NAME</th>
-                    <th>LAST NAME</th>
-                    <th>MOBILE</th>
-                    <th>EMAIL</th>
-                    <th>PASSWORD</th>
-                    <th>ROLE</th>
-                    <th>PEOPLE</th>
-                    <th>EDIT</th>
-                    <th>STATUS</th>
-                  </tr>
-                </thead>
-                <tbody>
                   {managers
                     .filter((manager) =>
-                      [manager.firstname, manager.lastname, manager.email, manager.mobile].some((field) =>
+                      [manager.firstName, manager.lastName, manager.email, manager.mobile].some((field) =>
                         field.toLowerCase().includes(searchTerm.toLowerCase())
                       )
                     ).map((manager, index) => (
-                      <React.Fragment key={index}>
-                        <tr key={index}>
-                          <td>
-                            <div className="d-flex justify-content-between align-items-center">
-                              {manager.firstname}
-                              <Button
-                                variant="link"
-                                onClick={() => toggleManagerExpand(index)}
-                                className="p-0"
-                              >
-                                {expandedManager === index ? <FaChevronUp /> : <FaChevronDown />}
-                              </Button>
-                            </div>
-                          </td>
-                          <td>{manager.lastname}</td>
-                          <td>{manager.mobile}</td>
-                          <td>{manager.email}</td>
-                          <td>{manager.password}</td>
-                          <td>{manager.role}</td>
-                          <td>
-                            <Button size="sm" variant="success" onClick={() => openAssignModal(index)}>
-                              Add Employees ({manager.assignedPeople?.length || 0})
-                            </Button>
-                          </td>
-                          <td>
-                            <Button
-                              variant="link"
-                              className="text-decoration-none"
-                              onClick={() => {
-                                setIsManagerEditing(true);
-                                setCurrentManagerIndex(index);
-                                setNewManager(manager);
-                                setShowManagerModal(true);
-                              }}
-                            >
-                              ✏️
-                            </Button>
-                          </td>
-                          <td>
-                            <div className="d-flex align-items-center justify-content-center">
-                              <span className="me-2">{manager.active ? 'Active' : 'Inactive'}</span>
-                              <Form.Check
-                                type="switch"
-                                id={`active-switch-${index}`}
-                                checked={manager.active}
-                                onChange={() => toggleManagerActivation(index)}
-                              />
-                            </div>
-                          </td>
-                        </tr>
-                        {expandedManager === index && (
-                          <tr>
-                            <td colSpan="8">
-                              <div className="p-3">
-                                <h5>Assigned Team Leads & Employees</h5>
-                                <Table  striped   size="lg">
-                                  <thead>
-                                    <tr>
-                                      <th>S.No</th>
-                                      <th>FirstName</th>
-                                      <th>LastName</th>
-                                      <th>Mobile</th>
-                                      <th>Email</th>
-                                      <th>Role</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {manager.assignedPeople?.length > 0 ? (
-                                      manager.assignedPeople.map((person, idx) => (
-                                        <tr key={`assigned-${idx}`}>
-                                          <td>{idx + 1}</td>
-                                          <td>{person.firstname}</td>
-                                          <td>{person.lastname}</td>
-                                          <td>{person.mobile}</td>
-                                          <td>{person.email}</td>
-                                          <td>{person.role}</td>
-                                        </tr>
-                                      ))
-                                    ) : (
-                                      <tr>
-                                        <td colSpan="5" className="text-muted">No people assigned yet</td>
-                                      </tr>
-                                    )}
-                                  </tbody>
-                                </Table>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
+                      <tr key={index} style={{ backgroundColor: index % 2 === 0 ? '#ffffff' : '#eff2f7' }}>
+                        <td style={modalTableCellStyle}>{getValue({ ...manager, index: index }, 'FIRST NAME')}</td>
+                        <td style={modalTableCellStyle}>{getValue({ ...manager, index: index }, 'LAST NAME')}</td>
+                        <td style={modalTableCellStyle}>{getValue({ ...manager, index: index }, 'MOBILE')}</td>
+                        <td style={modalTableCellStyle}>{getValue({ ...manager, index: index }, 'EMAIL')}</td>
+                        <td style={modalTableCellStyle}>{getValue({ ...manager, index: index }, 'PASSWORD')}</td>
+                        <td style={modalTableCellStyle}>{getValue({ ...manager, index: index }, 'ROLE')}</td>
+                        <td style={{ ...modalTableCellStyle, textAlign: 'center' }}>{getValue({ ...manager, index: index }, 'PEOPLE')}</td>
+                        <td style={{ ...modalTableCellStyle, textAlign: 'center' }}>{getValue({ ...manager, index: index }, 'EDIT')}</td>
+                        <td style={{ ...modalTableCellStyle, textAlign: 'center' }}>{getValue({ ...manager, index: index }, 'STATUS')}</td>
+                      </tr>
                     ))}
                 </tbody>
-              </Table>
+              </table>
             </div>
 
+          </div>
+        </Modal.Body>
+      </Modal>
 
 
+      {/* Modal for Add/Edit Manager */}
+      <Modal show={showManagerModal} onHide={handleManagerCloseModal} centered backdrop="static" keyboard={false}>
+        <Modal.Header closeButton>
+          <Modal.Title>{isManagerEditing ? 'Edit Manager' : 'Add Manager'}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form>
+            <Form.Group className="mb-3">
+              <Form.Label>First Name</Form.Label>
+              <Form.Control type="text" name="firstName" value={newManager.firstName} onChange={handleManagerInputChange} />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Last Name</Form.Label>
+              <Form.Control type="text" name="lastName" value={newManager.lastName} onChange={handleManagerInputChange} />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Mobile</Form.Label>
+              <Form.Control type="text" name="mobile" value={newManager.mobile} onChange={handleManagerInputChange} />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Email</Form.Label>
+              <Form.Control type="email" name="email" value={newManager.email} onChange={handleManagerInputChange} />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Password</Form.Label>
+              <Form.Control type="password" name="password" value={newManager.password} onChange={handleManagerInputChange} />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Role</Form.Label>
+              <Form.Control
+                type="text"
+                name="role"
+                value={newManager.role}
+                readOnly
+              />
+            </Form.Group>
+          </Form>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleManagerCloseModal}>Cancel</Button>
+          <Button variant="primary" onClick={handleAddManager}>
+            {isManagerEditing ? 'Update Manager' : 'Add Manager'}
+          </Button>
+        </Modal.Footer>
+      </Modal>
 
-            {/* Modal for Add/Edit Manager */}
-            <Modal show={showManagerModal} onHide={handleManagerCloseModal} centered backdrop="static" keyboard={false}>
-              <Modal.Header closeButton>
-                <Modal.Title>{isManagerEditing ? 'Edit Manager' : 'Add Manager'}</Modal.Title>
-              </Modal.Header>
-              <Modal.Body>
-                <Form>
-                  <Form.Group className="mb-3">
-                    <Form.Label>First Name</Form.Label>
-                    <Form.Control type="text" name="firstname" value={newManager.firstname} onChange={handleManagerInputChange} />
-                  </Form.Group>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Last Name</Form.Label>
-                    <Form.Control type="text" name="lastname" value={newManager.lastname} onChange={handleManagerInputChange} />
-                  </Form.Group>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Mobile</Form.Label>
-                    <Form.Control type="text" name="mobile" value={newManager.mobile} onChange={handleManagerInputChange} />
-                  </Form.Group>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Email</Form.Label>
-                    <Form.Control type="email" name="email" value={newManager.email} onChange={handleManagerInputChange} />
-                  </Form.Group>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Password</Form.Label>
-                    <Form.Control type="password" name="password" value={newManager.password} onChange={handleManagerInputChange} />
-                  </Form.Group>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Role</Form.Label>
-                    <Form.Control
-                      type="text"
-                      name="role"
-                      value={newManager.role}
-                      readOnly
-                    />
-                  </Form.Group>
-                </Form>
-              </Modal.Body>
-              <Modal.Footer>
-                <Button variant="secondary" onClick={handleManagerCloseModal}>Cancel</Button>
-                <Button variant="primary" onClick={handleAddManager}>
-                  {isManagerEditing ? 'Update Manager' : 'Add Manager'}
-                </Button>
-              </Modal.Footer>
-            </Modal>
-
-            {/* Update the Confirmation Modal */}
-       <Modal show={confirmationOpen} onHide={() => setConfirmationOpen(false)} centered backdrop="static" keyboard={false}>
+      {/* Confirmation Modal for Manager Activation/Deactivation */}
+      <Modal show={confirmationOpen && managerToDeactivate !== null} onHide={() => setConfirmationOpen(false)} centered backdrop="static" keyboard={false}>
         <Modal.Header closeButton>
           <Modal.Title>
             {isActivating ? 'Confirm Activation' : 'Confirm Deactivation'} Manager
           </Modal.Title>
         </Modal.Header>
-       <Modal.Body>
+        <Modal.Body>
           Are you sure you want to {isActivating ? 'activate' : 'deactivate'} this Manager?
         </Modal.Body>
         <Modal.Footer>
@@ -1698,320 +1800,297 @@ const [activationIndex, setActivationIndex] = useState(null);
             Yes, {isActivating ? 'Activate' : 'Deactivate'}
           </Button>
         </Modal.Footer>
-       </Modal>
+      </Modal>
 
-            {/* Modal: Assign People */}
-            <Modal show={assignModalOpen} onHide={() => setAssignModalOpen(false)} centered backdrop="static" keyboard={false} size="lg">
-              <Modal.Header closeButton>
-                <Modal.Title>Assign People</Modal.Title>
-              </Modal.Header>
-              <Modal.Body>
-                <h5>Team Leads</h5>
-                <InputGroup className="mb-3">
-                  <InputGroup.Text><FaSearch /></InputGroup.Text>
-                  <Form.Control
-                    placeholder="Search Team Leads by name or email"
-                    value={teamLeadSearch}
-                    onChange={(e) => setTeamLeadSearch(e.target.value)}
-                  />
-                </InputGroup>
-                <Table  striped size="sm">
-                  <thead>
-                    <tr>
-                      <th>Select</th>
-                      <th>FirstName</th>
-                      <th>LastName</th>
-                      <th>Mobile</th>
-                      <th>Email</th>
-                      <th>Role</th>
+      {/* Modal: Assign People (to a manager) */}
+      <Modal show={assignModalOpen} onHide={() => setAssignModalOpen(false)} centered backdrop="static" keyboard={false} size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title>Assign People</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <h5>Team Leads</h5>
+          <InputGroup className="mb-3">
+            <InputGroup.Text><FaSearch /></InputGroup.Text>
+            <Form.Control
+              placeholder="Search Team Leads by name or email"
+              value={teamLeadSearch}
+              onChange={(e) => setTeamLeadSearch(e.target.value)}
+            />
+          </InputGroup>
+          <div style={{ overflowX: 'auto', borderRadius: '8px', marginBottom: '30px' }}> {/* Added margin-bottom here */}
+            <Table striped size="sm" style={modalTableStyle}>
+              <thead>
+                <tr>
+                  <th style={modalTableHeaderStyle}>Select</th>
+                  <th style={modalTableHeaderStyle}>First Name</th>
+                  <th style={modalTableHeaderStyle}>Last Name</th>
+                  <th style={modalTableHeaderStyle}>Mobile</th>
+                  <th style={modalTableHeaderStyle}>Email</th>
+                  <th style={modalTableHeaderStyle}>Role</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredTeamLeads
+                  .filter(p =>
+                    p.firstName.toLowerCase().includes(teamLeadSearch.toLowerCase()) ||
+                    p.email.toLowerCase().includes(teamLeadSearch.toLowerCase())
+                  )
+                  .map((person, idx) => (
+                    <tr key={`tl-${idx}`}>
+                      <td style={modalTableCellStyle}>
+                        <Form.Check
+                          type="checkbox"
+                          checked={selectedPeople.some(p => p.email === person.email)}
+                          onChange={() => togglePersonSelection(person)}
+                        />
+                      </td>
+                      <td style={modalTableCellStyle}>{person.firstName}</td>
+                      <td style={modalTableCellStyle}>{person.lastName}</td>
+                      <td style={modalTableCellStyle}>{person.mobile}</td>
+                      <td style={modalTableCellStyle}>{person.email}</td>
+                      <td style={modalTableCellStyle}>{person.role}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {filteredTeamLeads
-                      .filter(p =>
-                        p.firstname.toLowerCase().includes(teamLeadSearch.toLowerCase()) ||
-                        p.email.toLowerCase().includes(teamLeadSearch.toLowerCase())
-                      )
-                      .map((person, idx) => (
-                        <tr key={`tl-${idx}`}>
-                          <td>
-                            <Form.Check
-                              type="checkbox"
-                              checked={selectedPeople.some(p => p.email === person.email)}
-                              onChange={() => togglePersonSelection(person)}
-                            />
-                          </td>
-                          <td>{person.firstname}</td>
-                          <td>{person.lastname}</td>
-                          <td>{person.mobile}</td>
-                          <td>{person.email}</td>
-                          <td>{person.role}</td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </Table>
-
-                <h5 className="mt-4">Employees</h5>
-                <InputGroup className="mb-3">
-                  <InputGroup.Text><FaSearch /></InputGroup.Text>
-                  <Form.Control
-                    placeholder="Search Employees by name or email"
-                    value={employeeSearch}
-                    onChange={(e) => setEmployeeSearch(e.target.value)}
-                  />
-                </InputGroup>
-                <Table  striped size="sm">
-                  <thead>
-                    <tr>
-                      <th>Select</th>
-                      <th>FirstName</th>
-                      <th>LastName</th>
-                      <th>Mobile</th>
-                      <th>Email</th>
-                      <th>Role</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredEmployees
-                      .filter(p =>
-                        p.firstname.toLowerCase().includes(employeeSearch.toLowerCase()) ||
-                        p.email.toLowerCase().includes(employeeSearch.toLowerCase())
-                      )
-                      .map((person, index) => (
-                        <tr key={`emp-${index}`}>
-                          <td>
-                            <Form.Check
-                              type="checkbox"
-                              checked={selectedPeople.some(p => p.email === person.email)}
-                              onChange={() => togglePersonSelection(person)}
-                            />
-                          </td>
-                          <td>{person.firstname}</td>
-                          <td>{person.lastname}</td>
-                          <td>{person.mobile}</td>
-                          <td>{person.email}</td>
-                          <td>{person.role}</td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </Table>
-
-                <h5 className="mt-4">Interns</h5>
-                <InputGroup className="mb-3">
-                  <InputGroup.Text><FaSearch /></InputGroup.Text>
-                  <Form.Control
-                    placeholder="Search Interns by name or email"
-                    value={internSearch}
-                    onChange={(e) => setInternSearch(e.target.value)}
-                  />
-                </InputGroup>
-                <Table  striped  size="sm">
-                  <thead>
-                    <tr>
-                      <th>Select</th>
-                      <th>FirstName</th>
-                      <th>LastName</th>
-                      <th>Mobile</th>
-                      <th>Email</th>
-                      <th>Role</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredInterns
-                      .filter(p =>
-                        p.firstname.toLowerCase().includes(internSearch.toLowerCase()) ||
-                        p.email.toLowerCase().includes(internSearch.toLowerCase())
-                      )
-                      .map((person, index) => (
-                        <tr key={`int-${index}`}>
-                          <td>
-                            <Form.Check
-                              type="checkbox"
-                              checked={selectedPeople.some(p => p.email === person.email)}
-                              onChange={() => togglePersonSelection(person)}
-                            />
-                          </td>
-                          <td>{person.firstname}</td>
-                          <td>{person.lastname}</td>
-                          <td>{person.mobile}</td>
-                          <td>{person.email}</td>
-                          <td>{person.role}</td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </Table>
-              </Modal.Body>
-              <Modal.Footer>
-                <Button variant="primary" onClick={handleManagerAssignDone}>Done</Button>
-              </Modal.Footer>
-            </Modal>
-
-{/* Manager Details Modal */}
-{selectedManagerData && (
-  <Modal show={showAssignModal} onHide={() => setShowAssignModal(false)} centered size="lg">
-    <Modal.Header closeButton>
-      <Modal.Title>Assigned Team Leads & Employees</Modal.Title>
-    </Modal.Header>
-    <Modal.Body>
-      <h5 className="mb-3">Manager: {selectedManagerData.firstname} {selectedManagerData.lastname}</h5>
-      
-      {/* Assigned People Table */}
-      {selectedManagerData.assignedPeople?.length > 0 ? (
-        <Table striped hover responsive>
-          <thead>
-            <tr>
-              <th>S.No</th>
-              <th>First Name</th>
-              <th>Last Name</th>
-              <th>Mobile</th>
-              <th>Email</th>
-              <th>Role</th>
-            </tr>
-          </thead>
-          <tbody>
-            {selectedManagerData.assignedPeople.map((person, idx) => (
-              <tr key={`assigned-${idx}`}>
-                <td>{idx + 1}</td>
-                <td>{person.firstname}</td>
-                <td>{person.lastname}</td>
-                <td>{person.mobile}</td>
-                <td>{person.email}</td>
-                <td>{person.role}</td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-      ) : (
-        <p className="text-muted">No people assigned yet.</p>
-      )}
-    </Modal.Body>
-    <Modal.Footer>
-      <Button variant="secondary" onClick={() => setShowAssignModal(false)}>
-        Close
-      </Button>
-    </Modal.Footer>
-  </Modal>
-)}
-
-
-
+                  ))}
+              </tbody>
+            </Table>
           </div>
-        </div>
+
+          <h5 className="mt-4">Employees</h5>
+          <InputGroup className="mb-3">
+            <InputGroup.Text><FaSearch /></InputGroup.Text>
+            <Form.Control
+              placeholder="Search Employees by name or email"
+              value={employeeSearch}
+              onChange={(e) => setEmployeeSearch(e.target.value)}
+            />
+          </InputGroup>
+          <div style={{ overflowX: 'auto', borderRadius: '8px', marginBottom: '30px' }}> {/* Added margin-bottom here */}
+            <Table striped size="sm" style={modalTableStyle}>
+              <thead>
+                <tr>
+                  <th style={modalTableHeaderStyle}>Select</th>
+                  <th style={modalTableHeaderStyle}>First Name</th>
+                  <th style={modalTableHeaderStyle}>Last Name</th>
+                  <th style={modalTableHeaderStyle}>Mobile</th>
+                  <th style={modalTableHeaderStyle}>Email</th>
+                  <th style={modalTableHeaderStyle}>Role</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredEmployees
+                  .filter(p =>
+                    p.firstName.toLowerCase().includes(employeeSearch.toLowerCase()) ||
+                    p.email.toLowerCase().includes(employeeSearch.toLowerCase())
+                  )
+                  .map((person, index) => (
+                    <tr key={`emp-${index}`}>
+                      <td style={modalTableCellStyle}>
+                        <Form.Check
+                          type="checkbox"
+                          checked={selectedPeople.some(p => p.email === person.email)}
+                          onChange={() => togglePersonSelection(person)}
+                        />
+                      </td>
+                      <td style={modalTableCellStyle}>{person.firstName}</td>
+                      <td style={modalTableCellStyle}>{person.lastName}</td>
+                      <td style={modalTableCellStyle}>{person.mobile}</td>
+                      <td style={modalTableCellStyle}>{person.email}</td>
+                      <td style={modalTableCellStyle}>{person.role}</td>
+                    </tr>
+                  ))}
+              </tbody>
+            </Table>
+          </div>
+
+          <h5 className="mt-4">Interns</h5>
+          <InputGroup className="mb-3">
+            <InputGroup.Text><FaSearch /></InputGroup.Text>
+            <Form.Control
+              placeholder="Search Interns by name or email"
+              value={internSearch}
+              onChange={(e) => setInternSearch(e.target.value)}
+            />
+          </InputGroup>
+          <div style={{ overflowX: 'auto', borderRadius: '8px', marginBottom: '30px' }}> {/* Added margin-bottom here */}
+            <Table striped size="sm" style={modalTableStyle}>
+              <thead>
+                <tr>
+                  <th style={modalTableHeaderStyle}>Select</th>
+                  <th style={modalTableHeaderStyle}>First Name</th>
+                  <th style={modalTableHeaderStyle}>Last Name</th>
+                  <th style={modalTableHeaderStyle}>Mobile</th>
+                  <th style={modalTableHeaderStyle}>Email</th>
+                  <th style={modalTableHeaderStyle}>Role</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredInterns
+                  .filter(p =>
+                    p.firstName.toLowerCase().includes(internSearch.toLowerCase()) ||
+                    p.email.toLowerCase().includes(internSearch.toLowerCase())
+                  )
+                  .map((person, index) => (
+                    <tr key={`int-${index}`}>
+                      <td style={modalTableCellStyle}>
+                        <Form.Check
+                          type="checkbox"
+                          checked={selectedPeople.some(p => p.email === person.email)}
+                          onChange={() => togglePersonSelection(person)}
+                        />
+                      </td>
+                      <td style={modalTableCellStyle}>{person.firstName}</td>
+                      <td style={modalTableCellStyle}>{person.lastName}</td>
+                      <td style={modalTableCellStyle}>{person.mobile}</td>
+                      <td style={modalTableCellStyle}>{person.email}</td>
+                      <td style={modalTableCellStyle}>{person.role}</td>
+                    </tr>
+                  ))}
+              </tbody>
+            </Table>
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="primary" onClick={handleManagerAssignDone}>Done</Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Manager Details Modal (to view assigned people) */}
+      {selectedManagerData && (
+        <Modal show={showManagerAssignedPeopleModal} onHide={() => setShowManagerAssignedPeopleModal(false)} centered size="lg" contentClassName="custom-modal-content">
+          <Modal.Header>
+            <Modal.Title>Assigned Team Leads & Employees</Modal.Title>
+            <button
+              onClick={() => setShowManagerAssignedPeopleModal(false)}
+              style={modalCloseButtonStyle}
+              className="button-hover-effect"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M13 1L1 13M1 1L13 13" stroke="#64748B" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </button>
+          </Modal.Header>
+          <Modal.Body>
+            <h5 className="mb-3">Manager: {selectedManagerData.firstName} {selectedManagerData.lastName}</h5>
+
+            {/* Assigned People Table */}
+            {selectedManagerData.assignedPeople?.length > 0 ? (
+              <div style={{ overflowX: 'auto', borderRadius: '8px' }}>
+                <table style={modalTableStyle}>
+                  <thead>
+                    <tr>
+                      <th style={modalTableHeaderStyle}>S.No</th>
+                      <th style={modalTableHeaderStyle}>First Name</th>
+                      <th style={modalTableHeaderStyle}>Last Name</th>
+                      <th style={modalTableHeaderStyle}>Mobile</th>
+                      <th style={modalTableHeaderStyle}>Email</th>
+                      <th style={modalTableHeaderStyle}>Role</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedManagerData.assignedPeople.map((person, idx) => (
+                      <tr key={`assigned-${idx}`} style={{ backgroundColor: idx % 2 === 0 ? '#ffffff' : '#eff2f7' }}>
+                        <td style={modalTableCellStyle}>{idx + 1}</td>
+                        <td style={modalTableCellStyle}>{person.firstName}</td>
+                        <td style={modalTableCellStyle}>{person.lastName}</td>
+                        <td style={modalTableCellStyle}>{person.mobile}</td>
+                        <td style={modalTableCellStyle}>{person.email}</td>
+                        <td style={modalTableCellStyle}>{person.role}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-muted" style={{ ...modalTableCellStyle, textAlign: 'center' }}>No people assigned yet.</p>
+            )}
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowManagerAssignedPeopleModal(false)}>
+              Close
+            </Button>
+          </Modal.Footer>
+        </Modal>
       )}
 
 
 
       {/* TeamLead Details Modal */}
-      {showTeamLeadsDetailsModal && (
-        <div style={modalOverlayStyle}>
-          <div style={modalContentStyle}>
-            <button onClick={toggleTeamLeadsDetailsModal} style={modalCloseButtonStyle}>
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M13 1L1 13M1 1L13 13" stroke="#64748B" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-            </button>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '25px',
-              paddingRight: '60px' // Padding to prevent content from overlapping the close button
-            }}>
-              <h3 style={{
-                margin: 0,
-                color: '#1e293b',
-                fontSize: '1.6rem',
-                fontWeight: '700'
-              }}>
-                Team Leads Details
-              </h3>
+      <Modal
+        show={showTeamLeadsDetailsModal}
+        onHide={toggleTeamLeadsDetailsModal}
+        centered
+        size="xl"
+        dialogClassName="custom-modal-dialog"
+        contentClassName="custom-modal-content" // Apply custom content style
+      >
+        <Modal.Header>
+          <Modal.Title>Team Leads Details</Modal.Title>
+          <button
+            onClick={toggleTeamLeadsDetailsModal}
+            style={modalCloseButtonStyle}
+            className="button-hover-effect"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M13 1L1 13M1 1L13 13" stroke="#64748B" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </button>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="container mt-4">
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <InputGroup className="w-50">
+                <Form.Control
+                  placeholder="Search"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </InputGroup>
+              <Button variant="success" onClick={handleTeamLeadShowModal}>+ Add TeamLead</Button>
             </div>
 
-           <div className="container mt-4">
-        <div className="d-flex justify-content-between align-items-center mb-3">
-          <InputGroup className="w-50">
-            <Form.Control
-              placeholder="Search"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </InputGroup>
-          <Button variant="success" onClick={handleTeamLeadShowModal}>+ Add TeamLead</Button>
-        </div>
+            <div style={{ overflowX: 'auto', borderRadius: '8px', marginBottom: '30px' }}> {/* Added margin-bottom here */}
+              <table style={modalTableStyle}>
+                <thead>
+                  <tr>
+                    {tableConfig.teamlead.headers.map((header, index) => (
+                      <th key={header} style={{
+                        ...modalTableHeaderStyle,
+                        width: tableConfig.teamlead.widths[index],
+                        textAlign: (header === 'EDIT' || header === 'STATUS') ? 'center' : 'left',
+                      }}>
+                        {header}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {teamLeads
+                    .filter((teamlead) =>
+                      [teamlead.firstName, teamlead.lastName, teamlead.email, teamlead.mobile].some((field) =>
+                        field.toLowerCase().includes(searchTerm.toLowerCase())
+                      )
+                    )
+                    .map((teamlead, index) => (
+                      <tr key={index} style={{ backgroundColor: index % 2 === 0 ? '#ffffff' : '#eff2f7' }}>
+                        <td style={modalTableCellStyle}>{getValue({ ...teamlead, index: index }, 'FIRST NAME')}</td>
+                        <td style={modalTableCellStyle}>{getValue({ ...teamlead, index: index }, 'LAST NAME')}</td>
+                        <td style={modalTableCellStyle}>{getValue({ ...teamlead, index: index }, 'MOBILE')}</td>
+                        <td style={modalTableCellStyle}>{getValue({ ...teamlead, index: index }, 'EMAIL')}</td>
+                        <td style={modalTableCellStyle}>{getValue({ ...teamlead, index: index }, 'PASSWORD')}</td>
+                        <td style={modalTableCellStyle}>{getValue({ ...teamlead, index: index }, 'ROLE')}</td>
+                        <td style={{ ...modalTableCellStyle, textAlign: 'center' }}>{getValue({ ...teamlead, index: index }, 'EDIT')}</td>
+                        <td style={{ ...modalTableCellStyle, textAlign: 'center' }}>{getValue({ ...teamlead, index: index }, 'STATUS')}</td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </Modal.Body>
+      </Modal>
 
-        <Table striped hover responsive className="text-center align-middle">
-          <thead className="table-secondary">
-            <tr>
-              <th>FIRST NAME</th>
-              <th>LAST NAME</th>
-              <th>MOBILE</th>
-              <th>EMAIL</th>
-              <th>PASSWORD</th>
-              <th>ROLE</th>
-              <th>EDIT</th>
-              <th>STATUS</th>
-              {/* <th>PROMOTE</th> */}
-            </tr>
-          </thead>
-          <tbody>
-            {teamLeads
-              .filter((teamlead) =>
-                [teamlead.firstname, teamlead.lastname, teamlead.email, teamlead.mobile].some((field) =>
-                  field.toLowerCase().includes(searchTerm.toLowerCase())
-                )
-              )
-              .map((teamlead, index) => (
-                <tr key={index}>
-                  <td>{teamlead.firstname}</td>
-                  <td>{teamlead.lastname}</td>
-                  <td>{teamlead.mobile}</td>
-                  <td>{teamlead.email}</td>
-                  <td>{teamlead.password}</td>
-                  <td>{teamlead.role}</td>
-                  <td>
-                    <Button
-                      variant="link"
-                      className="text-decoration-none"
-                      onClick={() => {
-                        setIsTeamLeadEditing(true);
-                        setCurrentTeamLeadIndex(index);
-                        setNewTeamLead(teamlead);
-                        setShowTeamLeadModal(true);
-                      }}
-                    >
-                      ✏️
-                    </Button>
-                  </td>
-                  <td>
-                    <div className="d-flex align-items-center justify-content-center">
-                      <span className="me-2">{teamlead.active ? 'Active' : 'Inactive'}</span>
-                      <Form.Check
-                        type="switch"
-                        id={`active-switch-${index}`}
-                        checked={teamlead.active}
-                        onChange={() => toggleTeamLeadActivation(index)}
-                      />
-                    </div>
-                  </td>
-                  {/* <td>
-                    <Button
-                      variant="success"
-                      size="sm"
-                      onClick={() => handlePromoteTeamLead(index)}
-                      disabled={!teamlead.active}
-                      title="Promote to Manager"
-                    >
-                      <FaArrowUp /> Promote
-                    </Button>
-                  </td> */}
-                </tr>
-              ))}
-          </tbody>
-        </Table>
-      </div>
-
-      {/* Add/Edit Modal */}
-      <Modal show={showTeamLeadModal} onHide={handleTeamLeadCloseModal} centered>
+      {/* Add/Edit TeamLead Modal */}
+      <Modal show={showTeamLeadModal} onHide={handleTeamLeadCloseModal} centered backdrop="static" keyboard={false}>
         <Modal.Header closeButton>
           <Modal.Title>{isTeamLeadEditing ? 'Edit TeamLead' : 'Add TeamLead'}</Modal.Title>
         </Modal.Header>
@@ -2019,11 +2098,11 @@ const [activationIndex, setActivationIndex] = useState(null);
           <Form>
             <Form.Group className="mb-3">
               <Form.Label>First Name</Form.Label>
-              <Form.Control type="text" name="firstname" value={newTeamLead.firstname} onChange={handleTeamLeadInputChange} />
+              <Form.Control type="text" name="firstName" value={newTeamLead.firstName} onChange={handleTeamLeadInputChange} />
             </Form.Group>
             <Form.Group className="mb-3">
               <Form.Label>Last Name</Form.Label>
-              <Form.Control type="text" name="lastname" value={newTeamLead.lastname} onChange={handleTeamLeadInputChange} />
+              <Form.Control type="text" name="lastName" value={newTeamLead.lastName} onChange={handleTeamLeadInputChange} />
             </Form.Group>
             <Form.Group className="mb-3">
               <Form.Label>Mobile</Form.Label>
@@ -2041,17 +2120,18 @@ const [activationIndex, setActivationIndex] = useState(null);
               <Form.Label>Role</Form.Label>
               <Form.Control type="text" name="role" value={newTeamLead.role} readOnly />
             </Form.Group>
-
-                <Button variant="secondary" onClick={handleTeamLeadCloseModal}>Cancel</Button>
-            <Button variant="primary" onClick={handleAddTeamLead}>
-              {isTeamLeadEditing ? 'Update TeamLead' : 'Add TeamLead'}
-            </Button>
           </Form>
         </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleTeamLeadCloseModal}>Cancel</Button>
+          <Button variant="primary" onClick={handleAddTeamLead}>
+            {isTeamLeadEditing ? 'Update TeamLead' : 'Add TeamLead'}
+          </Button>
+        </Modal.Footer>
       </Modal>
 
-      {/* Confirmation Modals */}
-      <Modal show={confirmationOpen} onHide={() => setConfirmationOpen(false)} centered backdrop="static" keyboard={false}>
+      {/* Confirmation Modals for TeamLead Activation/Deactivation */}
+      <Modal show={confirmationOpen && teamLeadToDeactivate !== null} onHide={() => setConfirmationOpen(false)} centered backdrop="static" keyboard={false}>
         <Modal.Header closeButton>
           <Modal.Title>{isActivating ? 'Confirm Activation' : 'Confirm Deactivation'} Team Lead</Modal.Title>
         </Modal.Header>
@@ -2068,114 +2148,83 @@ const [activationIndex, setActivationIndex] = useState(null);
         </Modal.Footer>
       </Modal>
 
-     
 
+      {/* Employee Details Modal */}
+      <Modal
+        show={showEmployeesDetailsModal}
+        onHide={toggleEmployeesDetailsModal}
+        centered
+        size="xl"
+        dialogClassName="custom-modal-dialog"
+        contentClassName="custom-modal-content" // Apply custom content style
+      >
+        <Modal.Header>
+          <Modal.Title>Employee Details</Modal.Title>
+          <button
+            onClick={toggleEmployeesDetailsModal}
+            style={modalCloseButtonStyle}
+            className="button-hover-effect"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M13 1L1 13M1 1L13 13" stroke="#64748B" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </button>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="container mt-4">
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <InputGroup className="w-50">
+                <Form.Control
+                  placeholder="Search"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </InputGroup>
 
-
-          </div>
-        </div>
-      )}
-
-
-
-{/* Employee Details Modal */}
-      {showEmployeesDetailsModal && (
-        <div style={modalOverlayStyle}>
-          <div style={modalContentStyle}>
-            <button onClick={toggleEmployeesDetailsModal} style={modalCloseButtonStyle}>
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M13 1L1 13M1 1L13 13" stroke="#64748B" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-            </button>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '25px',
-              paddingRight: '60px' // Padding to prevent content from overlapping the close button
-            }}>
-              <h3 style={{
-                margin: 0,
-                color: '#1e293b',
-                fontSize: '1.6rem',
-                fontWeight: '700'
-              }}>
-                Employee Details
-              </h3>
+              <Button variant="success" onClick={handleEmployeeShowModal}>+ Add Employee</Button>
             </div>
 
-              <div className="container mt-4">
-        <div className="d-flex justify-content-between align-items-center mb-3">
-          <InputGroup className="w-50">
-            <Form.Control
-              placeholder="Search"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </InputGroup>
-
-          <Button variant="success" onClick={handleEmployeeShowModal}>+ Add Employee</Button>
-        </div>
-
-        <Table striped hover responsive className="text-center align-middle">
-          <thead className="table-secondary">
-            <tr>
-              <th>FIRST NAME</th>
-              <th>LAST NAME</th>
-              <th>MOBILE</th>
-              <th>EMAIL</th>
-              <th>PASSWORD</th>
-              <th>ROLE</th>
-              <th>EDIT</th>
-              <th>STATUS</th>
-            </tr>
-          </thead>
-          <tbody>
-            {employees
-              .filter((employee) =>
-                [employee.firstName, employee.lastName, employee.email, employee.mobile]
-                  .some((field) => field.toLowerCase().includes(searchTerm.toLowerCase()))
-              ).map((employee, index) => (
-                <tr key={index} >
-                  <td>{employee.firstName}</td>
-                  <td>{employee.lastName}</td>
-                  <td>{employee.mobile}</td>
-                  <td>{employee.email}</td>
-                  <td>{employee.password}</td>
-                  <td>{employee.role}</td>
-                  <td>
-                    <Button
-                      variant="link"
-                      className="text-decoration-none"
-                      onClick={() => {
-                        setIsEmployeeEditing(true);
-                        setCurrentEmployeeIndex(index);
-                        setNewEmployee(employee);
-                        setShowEmployeeModal(true);
-                      }}
-                    >
-                      ✏️
-                    </Button>
-                  </td>
-                  <td>
-                    <div className="d-flex align-items-center justify-content-center">
-                      <span className="me-2">{employee.active ? 'Active' : 'Inactive'}</span>
-                      <Form.Check
-                        type="switch"
-                        id={`active-switch-${index}`}
-                        checked={employee.active}
-                        onChange={() => toggleEmployeeActivation(index)}
-                      />
-                    </div>
-                  </td>
-                </tr>
-              ))}
-          </tbody>
-        </Table>
-      </div>
+            <div style={{ overflowX: 'auto', borderRadius: '8px', marginBottom: '30px' }}> {/* Added margin-bottom here */}
+              <table style={modalTableStyle}>
+                <thead>
+                  <tr>
+                    {tableConfig.employee.headers.map((header, index) => (
+                      <th key={header} style={{
+                        ...modalTableHeaderStyle,
+                        width: tableConfig.employee.widths[index],
+                        textAlign: (header === 'EDIT' || header === 'STATUS') ? 'center' : 'left',
+                      }}>
+                        {header}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {employees
+                    .filter((employee) =>
+                      [employee.firstName, employee.lastName, employee.email, employee.mobile]
+                        .some((field) => field.toLowerCase().includes(searchTerm.toLowerCase()))
+                    ).map((employee, index) => (
+                      <tr key={index} style={{ backgroundColor: index % 2 === 0 ? '#ffffff' : '#eff2f7' }}>
+                        <td style={modalTableCellStyle}>{getValue({ ...employee, index: index }, 'FIRST NAME')}</td>
+                        <td style={modalTableCellStyle}>{getValue({ ...employee, index: index }, 'LAST NAME')}</td>
+                        <td style={modalTableCellStyle}>{getValue({ ...employee, index: index }, 'MOBILE')}</td>
+                        <td style={modalTableCellStyle}>{getValue({ ...employee, index: index }, 'EMAIL')}</td>
+                        <td style={modalTableCellStyle}>{getValue({ ...employee, index: index }, 'PASSWORD')}</td>
+                        <td style={modalTableCellStyle}>{getValue({ ...employee, index: index }, 'ROLE')}</td>
+                        <td style={{ ...modalTableCellStyle, textAlign: 'center' }}>{getValue({ ...employee, index: index }, 'EDIT')}</td>
+                        <td style={{ ...modalTableCellStyle, textAlign: 'center' }}>{getValue({ ...employee, index: index }, 'STATUS')}</td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </Modal.Body>
+      </Modal>
 
       {/* Modal for Add/Edit Employee */}
-      <Modal show={showEmployeeModal} onHide={handleEmployeeCloseModal} centered>
+      <Modal show={showEmployeeModal} onHide={handleEmployeeCloseModal} centered backdrop="static" keyboard={false}>
         <Modal.Header closeButton>
           <Modal.Title>{isEmployeeEditing ? 'Edit Employee' : 'Add Employee'}</Modal.Title>
         </Modal.Header>
@@ -2218,15 +2267,9 @@ const [activationIndex, setActivationIndex] = useState(null);
         </Modal.Footer>
       </Modal>
 
-           
-          </div>
-        </div>
-      )}
 
-
-
-   {/* Confirmation Modals */}
-      <Modal show={confirmationOpen} onHide={() => setConfirmationOpen(false)} centered backdrop="static" keyboard={false}>
+      {/* Confirmation Modal for Employee Activation/Deactivation (moved here for correct state checks) */}
+      <Modal show={confirmationOpen && employeeToDeactivate !== null} onHide={() => setConfirmationOpen(false)} centered backdrop="static" keyboard={false}>
         <Modal.Header closeButton>
           <Modal.Title>{isActivating ? 'Confirm Activation' : 'Confirm Deactivation'} Employee</Modal.Title>
         </Modal.Header>
@@ -2242,20 +2285,6 @@ const [activationIndex, setActivationIndex] = useState(null);
           </Button>
         </Modal.Footer>
       </Modal>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
     </div>
@@ -2275,12 +2304,7 @@ const cardStyle = {
   minHeight: '180px',
   position: 'relative',
   cursor: 'pointer',
-transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out, opacity 0.4s ease-out', // Smoother transition  paddingBottom: '15px',
-};
-
-const cardHoverStyle = { // New style for hover effect
-  transform: 'translateY(-8px) scale(1.02)', // More pronounced lift and slight scale
-  boxShadow: '0 12px 25px rgba(0,0,0,0.2)', // More pronounced shadow
+  transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out, opacity 0.4s ease-out', // Smoother transition
 };
 
 const cardTitleStyle = {
@@ -2306,50 +2330,6 @@ const menuLinkBaseStyle = { // Base style for menu links
   display: 'block', // Make it a block element to take full width
 };
 
-const logoutButtonInSidebarStyle = {
-  background: 'transparent', // No background by default
-  color: '#dc3545', // Red text color
-  border: 'none',
-  padding: '10px 15px',
-  borderRadius: '5px',
-  cursor: 'pointer',
-  fontSize: '1em',
-  fontWeight: 'bold',
-  textAlign: 'left',
-  width: '100%', // Take full width of sidebar
-  transition: 'background-color 0.2s ease, transform 0.2s ease',
-  marginTop: 'auto', // Push it to the bottom of the sidebar
-};
-
-
-const modalOverlayStyle = {
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  width: '100vw',
-  height: '100vh',
-  background: 'rgba(0, 0, 0, 0.6)',
-  backdropFilter: 'blur(6px)',
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  zIndex: 1000,
-    transition: 'opacity 0.3s ease', // Transition for fade in/out
-
-};
-
-const modalContentStyle = {
-  background: '#ffffff',
-  padding: '30px', // Reduced padding
-  borderRadius: '20px',
-  boxShadow: '0 25px 50px rgba(0, 0, 0, 0.25)',
-  maxWidth: '95%',
-  width: '1400px', // Adjusted for wider table content
-  maxHeight: '90vh',
-  overflowY: 'auto',
-  position: 'relative',
-  border: '1px solid #cbd5e1'
-};
 
 const modalCloseButtonStyle = {
   position: 'absolute',
@@ -2363,7 +2343,7 @@ const modalCloseButtonStyle = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
- transition: 'background-color 0.2s, transform 0.1s', // Added transform transition
+  transition: 'background-color 0.2s, transform 0.1s', // Added transform transition
   color: '#64748b',
   boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
 };
@@ -2379,7 +2359,7 @@ const modalTableStyle = {
 };
 
 const modalTableHeaderStyle = {
-  padding: '14px 10px',
+  padding: '10px 10px', // Reduced vertical padding
   textAlign: 'left', // Default for most headers
   backgroundColor: '#e2e8f0',
   color: '#334155',
@@ -2393,16 +2373,12 @@ const modalTableHeaderStyle = {
 };
 
 const modalTableCellStyle = {
-  padding: '18px 10px',
+  padding: '14px 10px', // Reduced vertical padding
   textAlign: 'left', // Default for most cells
   fontSize: '0.9rem',
   color: '#334155',
   wordBreak: 'break-word', // Added for long content in cells
   verticalAlign: 'middle', // Added for vertical alignment
-};
-
-const modalTableRowStyle = {
-  transition: 'transform 0.2s, box-shadow 0.2s',
 };
 
 const actionButtonStyle = {
@@ -2469,4 +2445,3 @@ const badgeStyle = {
 
 
 export default AdminDashboard;
-
