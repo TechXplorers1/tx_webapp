@@ -43,6 +43,62 @@ const AdminDashboard = () => {
   const [clientFilter, setClientFilter] = useState('registered'); // Initial state: 'registered'
   
 
+  // New states for editing manager in Active Clients
+  const [editingClientId, setEditingClientId] = useState(null);
+  const [tempSelectedManager, setTempSelectedManager] = useState('');
+
+  // State to track window width for responsive design
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+
+  // --- Effect to trigger entrance animations after component mounts ---
+  useEffect(() => {
+    setContentLoaded(true);
+  }, []);
+
+  // --- Effect to save and restore scroll position on refresh ---
+  useEffect(() => {
+    // Function to save scroll position
+    const saveScrollPosition = () => {
+      sessionStorage.setItem('scrollPosition', window.scrollY);
+    };
+
+    // Restore scroll position on component mount
+    const restoreScrollPosition = () => {
+      const savedScrollY = sessionStorage.getItem('scrollPosition');
+      if (savedScrollY) {
+        window.scrollTo(0, parseInt(savedScrollY, 10));
+        sessionStorage.removeItem('scrollPosition'); // Clean up after restoring
+      }
+    };
+
+    // Attach event listener for beforeunload to save scroll position
+    window.addEventListener('beforeunload', saveScrollPosition);
+
+    // Restore scroll position when component mounts (after initial render)
+    restoreScrollPosition();
+														   
+
+    // Clean up event listener when component unmounts
+    return () => {
+      window.removeEventListener('beforeunload', saveScrollPosition);
+    };
+  }, []); // Empty dependency array ensures this runs only once on mount and cleanup on unmount
+
+  // --- Effect to update windowWidth on resize ---
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // --- Debugging useEffect for menuOpen state changes ---
+  useEffect(() => {
+    console.log("Menu state changed to:", menuOpen);
+  }, [menuOpen]);
+
+  const [contentLoaded, setContentLoaded] = useState(false); // State to trigger entrance animations
   const [isManagerEditing, setIsManagerEditing] = useState(false);
   const [isTeamLeadEditing, setIsTeamLeadEditing] = useState(false);
   const [isEmployeeEditing, setIsEmployeeEditing] = useState(false);
@@ -204,6 +260,10 @@ const [activationIndex, setActivationIndex] = useState(null);
   ]);
 
 
+   const toggleMenu = () => {
+    console.log("Toggle menu clicked. Before update, menuOpen was:", menuOpen);
+    setMenuOpen(prevMenuOpen => !prevMenuOpen)};
+
     const [managers, setManagers] = useState([
     {
       firstname: "Sreenivasulu",
@@ -349,7 +409,6 @@ const [activationIndex, setActivationIndex] = useState(null);
 
 
 
-  const toggleMenu = () => setMenuOpen(!menuOpen);
   const toggleClientDetailsModal = () => setShowClientDetailsModal(!showClientDetailsModal);
   const toggleManagersDetailsModal = () => setShowManagersDetailsModal(!showManagersDetailsModal);
     const toggleTeamLeadsDetailsModal = () => setShowTeamLeadsDetailsModal(!showTeamLeadsDetailsModal);
@@ -523,6 +582,40 @@ const [activationIndex, setActivationIndex] = useState(null);
   };
 
 
+    // Handler for dropdown change (for editing active client manager)
+  const handleTempManagerSelectChange = (managerName) => {
+    setTempSelectedManager(managerName);
+	
+  };
+
+
+    const handleEditManager = (client) => {
+    setEditingClientId(client.id);
+    setTempSelectedManager(client.manager || ''); // Initialize with current manager
+
+  };
+
+   const handleSaveManagerChange = (clientId) => {
+    if (!tempSelectedManager) {
+      console.warn("Please select a manager to save.");
+	  
+      return;
+    }
+    console.log(`Saving manager change for client ${clientId} to ${tempSelectedManager}`);
+    updateClientData(clientId, { assignedTo: tempSelectedManager, manager: tempSelectedManager });
+    setEditingClientId(null); // Exit edit mode
+    setTempSelectedManager(''); // Clear temp state
+					  
+  };
+
+  const handleCancelEdit = () => {
+    console.log("Cancelling edit.");
+    setEditingClientId(null); // Exit edit mode
+    setTempSelectedManager(''); // Clear temp state
+			 
+				   
+  };
+
 
   const handleTeamLeadShowModal = () => setShowTeamLeadModal(true);
   const handleTeamLeadCloseModal = () => {
@@ -666,13 +759,65 @@ const [activationIndex, setActivationIndex] = useState(null);
       case 'Registered Date': value = client.registeredDate; break;
       case 'Country': value = client.country; break;
       case 'Visa Status': value = client.visaStatus; break;
-      case 'Assign To': value = client.assignedTo; break;
-      case 'Manager': value = client.manager; break;
+    case 'Assign To':
+        // If it's an unassigned or restored client, always show the select box
+        if (client.displayStatuses.includes('unassigned') || client.displayStatuses.includes('restored')) {
+          return (
+            <select
+              style={{
+                padding: '6px 8px',
+                borderRadius: '5px',
+                border: '1px solid #ccc',
+                backgroundColor: '#fff',
+                fontSize: '0.85em',
+                width: '100%', // Make it take full width of cell
+              }}
+              value={selectedManagerPerClient[client.id] || ''} // Use selected or empty string
+              onChange={(e) => handleManagerSelectChange(client.id, e.target.value)}
+            >
+              <option value="">Select Manager</option>
+              <option value="Manager A">Manager A</option>
+              <option value="Manager B">Manager B</option>
+              <option value="Manager C">Manager C</option>
+            </select>
+          );
+        } else {
+          // For other client types, just display the assigned manager or '-'
+          value = client.assignedTo;
+        }
+        break;
+      case 'Manager':
+        // If this is an active client and we are in edit mode for this client
+        if (client.status === 'active' && editingClientId === client.id) {
+          return (
+            <select
+              style={{
+                padding: '6px 8px',
+                borderRadius: '5px',
+                border: '1px solid #ccc',
+                backgroundColor: '#fff',
+                fontSize: '0.85em',
+                width: '100%',
+              }}
+              value={tempSelectedManager}
+              onChange={(e) => handleTempManagerSelectChange(e.target.value)}
+            >
+              <option value="">Select Manager</option>
+              <option value="Manager A">Manager A</option>
+              <option value="Manager B">Manager B</option>
+              <option value="Manager C">Manager C</option>
+              <option value="Sarah Connor">Sarah Connor</option> {/* Include existing managers from data */}
+            </select>
+          );
+        } else {
+          value = client.manager;
+        }
+        break;
       case 'Actions': return null; // Actions are rendered by renderActions, not directly from data
       default: value = null; // Fallback for unknown headers
     }
-    // Return '-' for undefined, null, or empty string values
-    return value !== undefined && value !== null && value !== '' ? value : '-';
+    // Return '-' for undefined, null, or empty string values, unless it's a JSX element
+    return React.isValidElement(value) ? value : (value !== undefined && value !== null && value !== '' ? value : '-');
   };
 
   // --- Table Configuration based on Client Filter ---
@@ -681,9 +826,23 @@ const [activationIndex, setActivationIndex] = useState(null);
       headers: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Actions'],
       widths: ['12%', '10%', '16%', '16%', '12%', '9%', '12%', '13%'], // Sums to 100%
       renderActions: (client) => (
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap' }}>
-          <button onClick={() => handleAcceptClient(client.id)} style={{ ...actionButtonStyle, background: '#28a745' }}>Accept</button>
-          <button onClick={() => handleDeclineClient(client.id)} style={{ ...actionButtonStyle, background: '#dc3545' }}>Decline</button>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'flex-end' }}>
+          <button
+            onClick={() => handleAcceptClient(client.id)}
+            style={{ ...actionButtonStyle, background: '#28a745' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#218838'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#28a745'}
+            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          >Accept</button>
+          <button
+            onClick={() => handleDeclineClient(client.id)}
+            style={{ ...actionButtonStyle, background: '#dc3545' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#c82333'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#dc3545'}
+            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          >Decline</button>
         </div>
       )
     },
@@ -691,24 +850,15 @@ const [activationIndex, setActivationIndex] = useState(null);
       headers: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Assign To', 'Actions'],
       widths: ['12%', '10%', '15%', '14%', '12%', '7%', '8%', '12%', '10%'], // Sums to 100%
       renderActions: (client) => (
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap', alignItems: 'center' }}>
-          <select
-            style={{
-              padding: '6px 8px',
-              borderRadius: '5px',
-              border: '1px solid #ccc',
-              backgroundColor: '#fff',
-              fontSize: '0.85em',
-            }}
-            value={selectedManagerPerClient[client.id] || ''} // Use value prop for controlled component
-            onChange={(e) => handleManagerSelectChange(client.id, e.target.value)}
-          >
-            <option value="">Select Manager</option>
-            <option value="Manager A">Manager A</option>
-            <option value="Manager B">Manager B</option>
-            <option value="Manager C">Manager C</option>
-          </select>
-          <button onClick={() => handleAssignClient(client.id)} style={{ ...actionButtonStyle, background: '#007bff' }}>Assign</button>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'flex-end' }}>
+          <button
+            onClick={() => handleAssignClient(client.id)}
+            style={{ ...actionButtonStyle, background: '#007bff' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0069d9'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#007bff'}
+            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          >Assign</button>
         </div>
       )
     },
@@ -757,8 +907,15 @@ const [activationIndex, setActivationIndex] = useState(null);
       headers: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Actions'],
       widths: ['12%', '10%', '16%', '16%', '14%', '10%', '10%', '12%'], // Sums to 100%
       renderActions: (client) => (
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap' }}>
-          <button onClick={() => handleRestoreClient(client.id)} style={{ ...actionButtonStyle, background: '#28a745' }}>Restore</button>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'flex-end' }}>
+          <button
+            onClick={() => handleRestoreClient(client.id)}
+            style={{ ...actionButtonStyle, background: '#28a745' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#218838'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#28a745'}
+            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          >Restore</button>
         </div>
       )
     },
@@ -766,28 +923,20 @@ const [activationIndex, setActivationIndex] = useState(null);
       headers: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Assign To', 'Actions'],
       widths: ['11%', '9%', '13%', '13%', '12%', '8%', '11%', '11%', '12%'], // Sums to 100%
       renderActions: (client) => (
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap', alignItems: 'center' }}>
-          <select
-            style={{
-              padding: '6px 8px',
-              borderRadius: '5px',
-              border: '1px solid #ccc',
-              backgroundColor: '#fff',
-              fontSize: '0.85em',
-            }}
-            value={selectedManagerPerClient[client.id] || ''} // Use value prop for controlled component
-            onChange={(e) => handleManagerSelectChange(client.id, e.target.value)}
-          >
-            <option value="">Select Manager</option>
-            <option value="Manager A">Manager A</option>
-            <option value="Manager B">Manager B</option>
-            <option value="Manager C">Manager C</option>
-          </select>
-          <button onClick={() => handleAssignClient(client.id)} style={{ ...actionButtonStyle, background: '#007bff' }}>Assign</button>
+         <div style={{ display: 'flex', gap: '10px', flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'flex-end' }}>
+          <button
+            onClick={() => handleAssignClient(client.id)}
+            style={{ ...actionButtonStyle, background: '#007bff' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0069d9'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#007bff'}
+            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          >Assign</button>
         </div>
       )
     },
   };
+
 
   // Filter clients based on the clientFilter state - now checks displayStatuses
   const getFilteredClients = () => {
@@ -804,10 +953,11 @@ const [activationIndex, setActivationIndex] = useState(null);
       minHeight: '100vh',
       display: 'flex',
       flexDirection: 'column',
+       overflowX: 'hidden', // Ensure no horizontal scrollbar due to initial off-screen elements
     }}>
       {/* Top Navigation Bar */}
       <header style={{
-        background: '#1B3370',
+        background: '#0a193c',
         color: 'white',
         padding: '10px 25px',
         display: 'flex',
@@ -816,7 +966,6 @@ const [activationIndex, setActivationIndex] = useState(null);
         height: 'auto',
         position: 'sticky',
         top: 0,
-        zIndex: 1000,
         zIndex: 1000,
         width: '100%'
       }}>
@@ -828,11 +977,10 @@ const [activationIndex, setActivationIndex] = useState(null);
           width: '100%', // Take full width of header
           paddingBottom: '5px', // Small space between this row and the next
         }}>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-              <span style={{ fontSize: '18px', fontWeight: 'bold', lineHeight: '1.2' }}>TECHXPLORERS</span>
-              <span style={{ fontSize: '10px', opacity: 0.8, marginTop: '0px', paddingLeft: '42px' }}>Exploring The Future</span>
-            </div>
+           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+            <span style={{ fontSize: '18px', fontWeight: 'bold', lineHeight: '1.2' }}>TECHXPLORERS</span>
+            <span style={{ fontSize: '10px', opacity: 0.8, marginTop: '0px', paddingLeft:'42px' }}>Exploring The Future</span>
+				  
           </div>
         </div>
 
@@ -858,35 +1006,56 @@ const [activationIndex, setActivationIndex] = useState(null);
             <FaBars />
           </button>
 
-          {/* Search Bar */}
+        
+          {/* Search Bar (Centered) */}
+          <div style={{
+            flexGrow: 1, // Allows this div to take up available space
+            display: 'flex',
+            justifyContent: 'center', // Centers the search bar within this div
+            margin: '0 15px', // Horizontal margin to give space
+								 
+								
+						
+							  
+							
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              background: '#ffffff',
+              cursor: 'pointer',
+              borderRadius: '25px',
+              padding: '8px 18px',
+              maxWidth: windowWidth < 640 ? '200px' : '400px', // Responsive max-width
+              width: '100%',
+            }}>
+              <input
+                type="text"
+                placeholder="Search"
+                value={""}
+                readOnly
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'black',
+                  outline: 'none',
+                  width: '100%',
+                  fontSize: '15px',
+                  paddingLeft: '5px',
+                  cursor: 'default'
+                }}
+              />
+              <FaSearch style={{ color: '#ccc', marginLeft: '10px', fontSize: '16px' }} />
+            </div>
+          </div>
+
+          {/* Notification and Profile Icons (Right) */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            background: '#ffffff',
-            borderRadius: '25px',
-            padding: '8px 18px',
-            flexGrow: 1,
-            maxWidth: '400px',
-            margin: '0 20px'
+            gap: '25px', // Space between icons
+            flexShrink: 0, // Prevent shrinking
           }}>
-            <input
-              type="text"
-              placeholder="Search"
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'white',
-                outline: 'none',
-                width: '100%',
-                fontSize: '15px',
-                paddingLeft: '5px'
-              }}
-            />
-            <FaSearch style={{ color: '#ccc', marginLeft: '10px', fontSize: '16px' }} />
-          </div>
-
-          {/* Right side icons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '25px' }}>
             <FaBell style={{ fontSize: '20px', cursor: 'pointer' }} />
             <CgProfile style={{ fontSize: '30px', color: '#fff', cursor: 'pointer' }} />
           </div>
@@ -908,12 +1077,20 @@ const [activationIndex, setActivationIndex] = useState(null);
         margin: '25px auto',
       }}>
 
+     
         {/* Clients Card */}
         <div
           onMouseEnter={() => setHoveredCardId('clients')}
           onMouseLeave={() => setHoveredCardId(null)}
           onClick={() => handleClientCardClick('clients')}
-          style={{ ...cardStyle, ...(hoveredCardId === 'clients' ? cardHoverStyle : {}) }}
+          style={{
+            ...cardStyle,
+            ...(hoveredCardId === 'clients' ? cardHoverStyle : {}),
+            // Entrance Animation
+            opacity: contentLoaded ? 1 : 0,
+            transform: contentLoaded ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.9)',
+            transitionDelay: contentLoaded ? '0s' : '0s', // No delay on exit, delay on entry
+          }}
         >
           <h3 style={cardTitleStyle}>Clients</h3>
           <FaUsers style={cardIconStyle} />
@@ -924,7 +1101,14 @@ const [activationIndex, setActivationIndex] = useState(null);
           onMouseEnter={() => setHoveredCardId('manager')}
           onMouseLeave={() => setHoveredCardId(null)}
           onClick={() => handleManagersCardClick('manager')}
-          style={{ ...cardStyle, ...(hoveredCardId === 'manager' ? cardHoverStyle : {}) }}
+          style={{
+            ...cardStyle,
+            ...(hoveredCardId === 'manager' ? cardHoverStyle : {}),
+            // Entrance Animation
+            opacity: contentLoaded ? 1 : 0,
+            transform: contentLoaded ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.9)',
+            transitionDelay: contentLoaded ? '0.05s' : '0s',
+          }}
         >
           <h3 style={cardTitleStyle}>Manager</h3>
           <FaUserTie style={cardIconStyle} />
@@ -935,7 +1119,14 @@ const [activationIndex, setActivationIndex] = useState(null);
           onMouseEnter={() => setHoveredCardId('teamleads')}
           onMouseLeave={() => setHoveredCardId(null)}
           onClick={() => handleTeamLeadsCardClick('teamleads')}
-          style={{ ...cardStyle, ...(hoveredCardId === 'teamleads' ? cardHoverStyle : {}) }}
+          style={{
+            ...cardStyle,
+            ...(hoveredCardId === 'teamleads' ? cardHoverStyle : {}),
+            // Entrance Animation
+            opacity: contentLoaded ? 1 : 0,
+            transform: contentLoaded ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.9)',
+            transitionDelay: contentLoaded ? '0.1s' : '0s',
+          }}
         >
           <h3 style={cardTitleStyle}>Team Leads</h3>
           <FaUserCog style={cardIconStyle} />
@@ -946,7 +1137,14 @@ const [activationIndex, setActivationIndex] = useState(null);
           onMouseEnter={() => setHoveredCardId('employees')}
           onMouseLeave={() => setHoveredCardId(null)}
           onClick={() => handleEmployeesCardClick('employees')}
-          style={{ ...cardStyle, ...(hoveredCardId === 'employees' ? cardHoverStyle : {}) }}
+          style={{
+            ...cardStyle,
+            ...(hoveredCardId === 'employee' ? cardHoverStyle : {}),
+            // Entrance Animation
+            opacity: contentLoaded ? 1 : 0,
+            transform: contentLoaded ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.9)',
+            transitionDelay: contentLoaded ? '0.15s' : '0s',
+          }}
         >
           <h3 style={cardTitleStyle}>Employee</h3>
           <FaUserFriends style={cardIconStyle} />
@@ -954,16 +1152,16 @@ const [activationIndex, setActivationIndex] = useState(null);
 
         {/* Chart Section */}
         <div style={{
-          gridColumn: 'span 2',
-          background: 'white',
-          borderRadius: '10px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-          padding: '25px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '400px',
+          ...chartSectionStyle,
+          gridColumn: windowWidth < 1024 ? 'span 1' : 'span 2', // Full width or 2 columns
+          opacity: contentLoaded ? 1 : 0,
+          transform: contentLoaded ? 'translateX(0)' : 'translateX(-50px)',
+          transitionDelay: contentLoaded ? '0.2s' : '0s',
+						  
+								  
+							   
+								   
+							 
         }}>
           <h3 style={{ marginBottom: '20px', color: '#333' }}>CHART</h3>
           <div style={{ width: '100%', maxWidth: windowWidth < 640 ? '250px' : '500px', height: '350px' }}>
@@ -973,15 +1171,15 @@ const [activationIndex, setActivationIndex] = useState(null);
 
         {/* About Section */}
         <div style={{
-          gridColumn: 'span 2',
-          background: 'white',
-          borderRadius: '10px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-          padding: '25px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          minHeight: '400px',
+          ...aboutSectionStyle,
+          gridColumn: windowWidth < 1024 ? 'span 1' : 'span 2', // Full width or 2 columns
+          opacity: contentLoaded ? 1 : 0,
+          transform: contentLoaded ? 'translateX(0)' : 'translateX(50px)',
+          transitionDelay: contentLoaded ? '0.25s' : '0s',
+						  
+								  
+								   
+							 
         }}>
           <h3 style={{ marginBottom: '15px', color: '#333' }}>About</h3>
           <p style={{ lineHeight: '1.6', color: '#555', marginBottom: '15px', fontSize: '1.0em' }}>
@@ -1042,7 +1240,7 @@ const [activationIndex, setActivationIndex] = useState(null);
         width: '250px',
         background: '#fff',
         boxShadow: '2px 0 10px rgba(0,0,0,0.3)',
-        zIndex: 1001,
+        zIndex: 1003,
         transition: 'left 0.3s ease',
         padding: '20px',
         display: 'flex',
@@ -1050,16 +1248,81 @@ const [activationIndex, setActivationIndex] = useState(null);
         gap: '15px'
       }}>
         <h4 style={{ color: '#333' }}>Menu Options</h4>
-        <a href="#" style={menuLinkStyle}>Dashboard</a>
-        <a href="#" style={menuLinkStyle}>Reports</a>
-        <a href="#" style={menuLinkStyle}>Settings</a>
+       {/* Dashboard link (without dropdown logic) */}
+        <a
+          href="/admindashboard"
+          style={menuLinkBaseStyle}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f0f0f0'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+        >
+          Dashboard
+        </a>
+
+        <a
+          href="/reports"
+          style={menuLinkBaseStyle}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f0f0f0'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+        >Reports</a>
+
+      <div style={{ marginTop: 'auto' }}>
+          <button
+            onClick={() => {
+              localStorage.removeItem('isLoggedIn');
+              localStorage.removeItem('userRole');
+              navigate('/login');
+              toggleMenu();
+            }}
+            style={{
+              background: '#f1f5f9',
+              color: '#ef4444',
+              border: 'none',
+              padding: '12px 24px',
+              borderRadius: '8px',
+              fontSize: '0.9375rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              width: '100%',
+              margin: '16px 0 24px 0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'background-color 0.2s',
+              // Corrected pseudo-class syntax for inline styles
+              ...(true && {
+                ':hover': {
+                  backgroundColor: '#fee2e2'
+                }
+              })
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginRight: '8px' }}>
+              <path d="M6 14H3.33333C2.97971 14 2.64057 13.8595 2.39052 13.6095C2.14048 13.3594 2 13.0203 2 12.6667V3.33333C2 2.97971 2.14048 2.64057 2.39052 2.39052C2.64057 2.14048 2.97971 2 3.33333 2H6M10.6667 11.3333L14 8M14 8L10.6667 4.66667M14 8H6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            Log Out
+          </button>
+        </div>
       </div>
 
       {/* Client Details Modal */}
       {showClientDetailsModal && (
         <div style={modalOverlayStyle}>
-          <div style={modalContentStyle}>
-            <button onClick={toggleClientDetailsModal} style={modalCloseButtonStyle}>
+          <div style={{
+            ...modalContentStyle,
+            width: windowWidth < 768 ? '95%' : '1400px', // Wider on large, fills small
+            maxWidth: '1400px', // Ensure it doesn't exceed this
+            transform: contentLoaded ? 'scale(1)' : 'scale(0.95)', // Apply entrance animation to modal
+            opacity: contentLoaded ? 1 : 0, // Apply entrance animation to modal
+            transition: 'transform 0.5s ease-out, opacity 0.5s ease-out', // Ensure transition is here
+          }}>
+            <button
+              onClick={toggleClientDetailsModal}
+              style={modalCloseButtonStyle}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e2e8f0'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+              onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.9)'}
+              onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M13 1L1 13M1 1L13 13" stroke="#64748B" strokeWidth="2" strokeLinecap="round" />
               </svg>
@@ -1096,6 +1359,7 @@ const [activationIndex, setActivationIndex] = useState(null);
               margin: '0 auto 20px auto',
               overflowX: 'auto',
               whiteSpace: 'nowrap',
+              flexWrap: 'wrap',
               justifyContent: 'center',
             }}>
               {[
@@ -1124,7 +1388,7 @@ const [activationIndex, setActivationIndex] = useState(null);
                     backgroundColor: clientFilter === option.value ? option.activeBg : 'transparent',
                     color: clientFilter === option.value ? option.activeColor : 'rgba(51, 65, 85, 1)',
                     fontWeight: clientFilter === option.value ? '600' : 'normal',
-                    margin: '0 2px',
+                    margin: '0 2px 5px 2px',
                   }}
                 >
                   <input
@@ -1132,10 +1396,18 @@ const [activationIndex, setActivationIndex] = useState(null);
                     name="client-filter"
                     value={option.value}
                     checked={clientFilter === option.value}
-                    onChange={(e) => setClientFilter(e.target.value)} // Set filter ONLY on explicit radio button click
+                      onChange={(e) => {
+                      setClientFilter(e.target.value);
+                    }}
                     style={{ display: 'none' }}
                   />
-                  <span style={{ whiteSpace: 'nowrap' }}>{option.label} ({option.count})</span>
+                  <span style={{ whiteSpace: 'nowrap', marginRight: '8px' }}>{option.label}</span>
+                  <span style={{
+                    ...badgeStyle,
+                    backgroundColor: clientFilter === option.value ? option.badgeBg : '#9AA0A6', // Default grey for inactive badges
+                  }}>
+                    {option.count}
+                  </span>
                 </label>
               ))}
             </div>
@@ -2003,13 +2275,12 @@ const cardStyle = {
   minHeight: '180px',
   position: 'relative',
   cursor: 'pointer',
-  transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
-  paddingBottom: '15px',
+transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out, opacity 0.4s ease-out', // Smoother transition  paddingBottom: '15px',
 };
 
-const cardHoverStyle = {
-  transform: 'translateY(-5px)',
-  boxShadow: '0 8px 20px rgba(0,0,0,0.15)',
+const cardHoverStyle = { // New style for hover effect
+  transform: 'translateY(-8px) scale(1.02)', // More pronounced lift and slight scale
+  boxShadow: '0 12px 25px rgba(0,0,0,0.2)', // More pronounced shadow
 };
 
 const cardTitleStyle = {
@@ -2026,16 +2297,30 @@ const cardIconStyle = {
   marginTop: '15px',
 };
 
-const menuLinkStyle = {
+const menuLinkBaseStyle = { // Base style for menu links
   color: '#333',
   textDecoration: 'none',
   padding: '10px 15px',
   borderRadius: '5px',
   transition: 'background-color 0.2s',
-  '&:hover': {
-    backgroundColor: '#f0f0f0'
-  }
+  display: 'block', // Make it a block element to take full width
 };
+
+const logoutButtonInSidebarStyle = {
+  background: 'transparent', // No background by default
+  color: '#dc3545', // Red text color
+  border: 'none',
+  padding: '10px 15px',
+  borderRadius: '5px',
+  cursor: 'pointer',
+  fontSize: '1em',
+  fontWeight: 'bold',
+  textAlign: 'left',
+  width: '100%', // Take full width of sidebar
+  transition: 'background-color 0.2s ease, transform 0.2s ease',
+  marginTop: 'auto', // Push it to the bottom of the sidebar
+};
+
 
 const modalOverlayStyle = {
   position: 'fixed',
@@ -2048,7 +2333,9 @@ const modalOverlayStyle = {
   display: 'flex',
   justifyContent: 'center',
   alignItems: 'center',
-  zIndex: 1000
+  zIndex: 1000,
+    transition: 'opacity 0.3s ease', // Transition for fade in/out
+
 };
 
 const modalContentStyle = {
@@ -2076,9 +2363,9 @@ const modalCloseButtonStyle = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  transition: 'background-color 0.2s',
+ transition: 'background-color 0.2s, transform 0.1s', // Added transform transition
   color: '#64748b',
-  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
 };
 
 const modalTableStyle = {
@@ -2129,8 +2416,57 @@ const actionButtonStyle = {
   whiteSpace: 'nowrap',
   flexShrink: 0,
   boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-  transition: 'background-color 0.2s'
+  transition: 'background-color 0.2s ease, transform 0.1s ease',
 };
+
+const chartSectionStyle = {
+  gridColumn: 'span 2',
+  background: 'white',
+  borderRadius: '10px',
+  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+  padding: '25px',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minHeight: '400px',
+  transition: 'opacity 0.5s ease-out, transform 0.5s ease-out',
+  transform: 'translateX(-50px)', // Start off-left for animation
+  opacity: 0,
+};
+
+const aboutSectionStyle = {
+  gridColumn: 'span 2',
+  background: 'white',
+  borderRadius: '10px',
+  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+  padding: '25px',
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent: 'center',
+  minHeight: '400px',
+  transition: 'opacity 0.5s ease-out, transform 0.5s ease-out',
+  transform: 'translateX(50px)', // Start off-right for animation
+  opacity: 0,
+};
+
+// --- Style for the count badges ---
+const badgeStyle = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minWidth: '20px', // Ensure it's wide enough for single digits
+  height: '20px',
+  borderRadius: '50%',
+  color: 'white', // Text color for the badge
+  fontSize: '0.75em',
+  fontWeight: 'bold',
+  padding: '0 6px',
+  marginLeft: '5px',
+  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+  transition: 'background-color 0.15s ease',
+};
+
 
 export default AdminDashboard;
 
