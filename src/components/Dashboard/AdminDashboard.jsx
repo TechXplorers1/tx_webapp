@@ -342,7 +342,7 @@ const AdminDashboard = () => {
     mobile: '',
     email: '',
     password: '',
-    role: '',
+    role: 'Employee',
     active: true,
   });
 
