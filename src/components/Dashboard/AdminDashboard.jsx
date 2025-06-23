@@ -30,6 +30,28 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 // Register Chart.js elements
 ChartJS.register(ArcElement, Tooltip, Legend);
 
+// Dimming Overlay Component
+// This component now takes a generic 'isVisible' prop to control its display
+const DimmingOverlay = ({ isVisible, onClick }) => {
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        zIndex: isVisible ? 1001 : -1, // Below sidebar (1003) but above main content
+        opacity: isVisible ? 1 : 0,
+        visibility: isVisible ? 'visible' : 'hidden',
+        transition: 'opacity 0.3s ease, visibility 0.3s ease',
+      }}
+    />
+  );
+};
+
 
 // Define the AdminDashboard component
 const AdminDashboard = () => {
@@ -47,6 +69,9 @@ const AdminDashboard = () => {
   const [showEmployeesDetailsModal, setShowEmployeesDetailsModal] = useState(false);
   const [showProfileDetailsModal, setShowProfileDetailsModal] = useState(false);
   const [showNotificationDetailsModal, setShowNotificationDetailsModal] = useState(false);
+
+  // State to hold the current live date and time for the profile modal
+  const [currentDateTime, setCurrentDateTime] = useState('');
 
   const [clientFilter, setClientFilter] = useState('registered');
 
@@ -67,6 +92,35 @@ const AdminDashboard = () => {
   useEffect(() => {
     setContentLoaded(true);
   }, []);
+
+  useEffect(() => {
+    // Function to update current date and time
+    const updateCurrentDateTime = () => {
+      const now = new Date();
+      const options = {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+        // Optional: specify time zone if needed, e.g., timeZone: 'Asia/Kolkata'
+      };
+      // Format date as YYYY-MM-DD and time as HH:MM AM/PM
+      const formattedDate = now.toLocaleDateString('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/-/g, '-');
+      const formattedTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+      setCurrentDateTime(`${formattedDate} ${formattedTime}`);
+    };
+
+    // Initial call
+    updateCurrentDateTime();
+
+    // Update every second
+    const intervalId = setInterval(updateCurrentDateTime, 1000);
+
+    // Cleanup interval on component unmount
+    return () => clearInterval(intervalId);
+  }, []); // Empty dependency array means this runs once on mount
 
   useEffect(() => {
     const saveScrollPosition = () => {
@@ -881,6 +935,13 @@ const AdminDashboard = () => {
 
   const filteredClients = getFilteredClients();
 
+  // Determine if the overlay should be visible
+  const isOverlayVisible = menuOpen || showClientDetailsModal || showManagersDetailsModal ||
+    showTeamLeadsDetailsModal || showEmployeesDetailsModal || showProfileDetailsModal ||
+    showNotificationDetailsModal || confirmationOpen || showManagerModal ||
+    showTeamLeadModal || showEmployeeModal || assignModalOpen || showManagerAssignedPeopleModal;
+
+
   return (
     // The main container for the dashboard
     <div style={{
@@ -892,7 +953,26 @@ const AdminDashboard = () => {
       overflowX: 'hidden',
       // Removed previous opacity/transform to avoid conflicts
     }}>
-      {/* Removed DimmingOverlay component */}
+      {/* Dimming Overlay component, conditionally rendered */}
+      <DimmingOverlay
+        isVisible={isOverlayVisible}
+        onClick={() => {
+          // Close sidebar and all modals if overlay is clicked
+          if (menuOpen) setMenuOpen(false);
+          if (showClientDetailsModal) setShowClientDetailsModal(false);
+          if (showManagersDetailsModal) setShowManagersDetailsModal(false);
+          if (showTeamLeadsDetailsModal) setShowTeamLeadsDetailsModal(false);
+          if (showEmployeesDetailsModal) setShowEmployeesDetailsModal(false);
+          if (showProfileDetailsModal) setShowProfileDetailsModal(false);
+          if (showNotificationDetailsModal) setShowNotificationDetailsModal(false);
+          if (confirmationOpen) setConfirmationOpen(false);
+          if (showManagerModal) handleManagerCloseModal();
+          if (showTeamLeadModal) handleTeamLeadCloseModal();
+          if (showEmployeeModal) handleEmployeeCloseModal();
+          if (assignModalOpen) setAssignModalOpen(false);
+          if (showManagerAssignedPeopleModal) setShowManagerAssignedPeopleModal(false);
+        }}
+      />
 
       {/* Styles for various elements (unchanged) */}
       <style>
@@ -1297,21 +1377,6 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Overlay for when menu is open */}
-      {menuOpen && (
-        <div
-          onClick={toggleMenu}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100vw',
-            height: '100vh',
-            background: 'rgba(0, 0, 0, 0.4)',
-            zIndex: 1002,
-          }}
-        />
-      )}
       {/* Sidebar - This slides in from the left */}
       <div style={{
         position: 'fixed',
@@ -2184,7 +2249,8 @@ const AdminDashboard = () => {
           <div style={{ borderTop: '1px solid #eee', paddingTop: '20px' }}>
             <p style={{ color: '#444', marginBottom: '10px' }}><strong>Role:</strong> Administrator</p>
             <p style={{ color: '#444', marginBottom: '10px' }}><strong>Status:</strong> Active</p>
-            <p style={{ color: '#444', marginBottom: '10px' }}><strong>Last Login:</strong> 2025-06-23 07:09 PM</p>
+            {/* Displaying live date and time for Last Login */}
+            <p style={{ color: '#444', marginBottom: '10px' }}><strong>Last Login:</strong> {currentDateTime}</p>
             <p style={{ color: '#444', marginBottom: '10px' }}><strong>Contact:</strong> +91 98765 43210</p>
           </div>
         </Modal.Body>
