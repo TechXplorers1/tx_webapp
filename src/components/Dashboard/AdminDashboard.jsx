@@ -1,5 +1,10 @@
+// App.jsx (This file contains the main application structure)
+
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+// Import BrowserRouter, Routes, and Route for routing
+import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+
+// Import Chart.js components and register them for use
 import {
   Chart as ChartJS,
   ArcElement, // Required for Donut/Pie charts
@@ -7,82 +12,83 @@ import {
   Legend
 } from 'chart.js';
 import { Doughnut } from 'react-chartjs-2';
-import { FaUsers, FaUserTie, FaUserCog, FaUserFriends, FaBell, FaSearch, FaBars } from 'react-icons/fa'; // Icons from react-icons
-import {
-  FaUserCircle,
-  FaArrowLeft,
-  FaChevronDown,
-  FaChevronUp,
-  FaArrowUp
-} from 'react-icons/fa';
+
+// Import icons from react-icons. Added FaEdit for the edit icon.
+import { FaUsers, FaUserTie, FaUserCog, FaUserFriends, FaBell, FaSearch, FaBars, FaEdit } from 'react-icons/fa';
 import { CgProfile } from 'react-icons/cg'; // For the profile icon (more generic)
-import { Table, Button, Form, InputGroup, Dropdown, Modal } from 'react-bootstrap';
+
+// Import Bootstrap components
+import { Table, Button, Form, InputGroup, Modal } from 'react-bootstrap';
+
+// IMPORTANT: Import Bootstrap CSS. This line is crucial for styling React-Bootstrap components.
+// If you are using a bundler (like Webpack with Create React App or Vite), this is the correct way.
+import 'bootstrap/dist/css/bootstrap.min.css';
+// If you are not using a bundler (e.g., a simple HTML file), you would need to add this to your public/index.html:
+// <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" xintegrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6h+ALEwIH" crossorigin="anonymous">
 
 
+// Register Chart.js elements
 ChartJS.register(ArcElement, Tooltip, Legend);
 
+
+// Define the AdminDashboard component
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [hoveredCardId, setHoveredCardId] = useState(null); // State for tracking hovered card
+  const [hoveredCardId, setHoveredCardId] = useState(null);
   const [confirmationOpen, setConfirmationOpen] = useState(false);
   const [managerToDeactivate, setManagerToDeactivate] = useState(null);
   const [teamLeadToDeactivate, setTeamLeadToDeactivate] = useState(null);
   const [employeeToDeactivate, setEmployeeToDeactivate] = useState(null);
 
+  const [showClientDetailsModal, setShowClientDetailsModal] = useState(false);
+  const [showManagersDetailsModal, setShowManagersDetailsModal] = useState(false);
+  const [showTeamLeadsDetailsModal, setShowTeamLeadsDetailsModal] = useState(false);
+  const [showEmployeesDetailsModal, setShowEmployeesDetailsModal] = useState(false);
+  const [showProfileDetailsModal, setShowProfileDetailsModal] = useState(false);
+  const [showNotificationDetailsModal, setShowNotificationDetailsModal] = useState(false);
 
-  const [showClientDetailsModal, setShowClientDetailsModal] = useState(false); // State for Client Details modal
-  const [showManagersDetailsModal, setShowManagersDetailsModal] = useState(false); // State for Manager Details modal
-  const [showTeamLeadsDetailsModal, setShowTeamLeadsDetailsModal] = useState(false); // State for Team Lead Details modal
-  const [showEmployeesDetailsModal, setShowEmployeesDetailsModal] = useState(false); // State for Employee Details modal
+  const [clientFilter, setClientFilter] = useState('registered');
 
-
-  const [clientFilter, setClientFilter] = useState('registered'); // Initial state: 'registered'
-
-
-  // New states for editing manager in Active Clients
   const [editingClientId, setEditingClientId] = useState(null);
   const [tempSelectedManager, setTempSelectedManager] = useState('');
 
-  // State to track window width for responsive design
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
-  // --- Effect to trigger entrance animations after component mounts ---
   const [contentLoaded, setContentLoaded] = useState(false);
+
+  // State for notifications
+  const [notifications, setNotifications] = useState([
+    { id: 1, message: 'New Client Registered: John Doe', timestamp: '2025-06-23 07:09 PM' },
+    { id: 2, message: 'Manager Update: Sreenivasulu S. details were updated by Admin.', timestamp: '2025-06-23 06:00 PM' },
+    { id: 3, message: 'New Employee Added: Prakash Kumar (Employee)', timestamp: '2025-06-23 05:00 PM' },
+  ]);
+
   useEffect(() => {
     setContentLoaded(true);
   }, []);
 
-  // --- Effect to save and restore scroll position on refresh ---
   useEffect(() => {
-    // Function to save scroll position
     const saveScrollPosition = () => {
       sessionStorage.setItem('scrollPosition', window.scrollY);
     };
 
-    // Restore scroll position on component mount
     const restoreScrollPosition = () => {
       const savedScrollY = sessionStorage.getItem('scrollPosition');
       if (savedScrollY) {
         window.scrollTo(0, parseInt(savedScrollY, 10));
-        sessionStorage.removeItem('scrollPosition'); // Clean up after restoring
+        sessionStorage.removeItem('scrollPosition');
       }
     };
 
-    // Attach event listener for beforeunload to save scroll position
     window.addEventListener('beforeunload', saveScrollPosition);
-
-    // Restore scroll position when component mounts (after initial render)
     restoreScrollPosition();
 
-
-    // Clean up event listener when component unmounts
     return () => {
       window.removeEventListener('beforeunload', saveScrollPosition);
     };
-  }, []); // Empty dependency array ensures this runs only once on mount and cleanup on unmount
+  }, []);
 
-  // --- Effect to update windowWidth on resize ---
   useEffect(() => {
     const handleResize = () => {
       setWindowWidth(window.innerWidth);
@@ -91,29 +97,24 @@ const AdminDashboard = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // --- Debugging useEffect for menuOpen state changes ---
   useEffect(() => {
     console.log("Menu state changed to:", menuOpen);
   }, [menuOpen]);
-
 
   const [isManagerEditing, setIsManagerEditing] = useState(false);
   const [isTeamLeadEditing, setIsTeamLeadEditing] = useState(false);
   const [isEmployeeEditing, setIsEmployeeEditing] = useState(false);
 
-
   const [showManagerModal, setShowManagerModal] = useState(false);
   const [showTeamLeadModal, setShowTeamLeadModal] = useState(false);
   const [showEmployeeModal, setShowEmployeeModal] = useState(false);
 
-
-  const [assignModalOpen, setAssignModalOpen] = useState(false); // For the modal to assign people to a manager
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [selectedManagerIndex, setSelectedManagerIndex] = useState(null);
   const [selectedPeople, setSelectedPeople] = useState([]);
 
-  const [showManagerAssignedPeopleModal, setShowManagerAssignedPeopleModal] = useState(false); // For the modal to view assigned people
+  const [showManagerAssignedPeopleModal, setShowManagerAssignedPeopleModal] = useState(false);
   const [selectedManagerData, setSelectedManagerData] = useState(null);
-
 
   const [originalTeamLeads, setOriginalTeamLeads] = useState([]);
   const [originalEmployees, setOriginalEmployees] = useState([]);
@@ -127,64 +128,35 @@ const AdminDashboard = () => {
   const [employeeSearch, setEmployeeSearch] = useState('');
   const [internSearch, setInternSearch] = useState('');
 
-  const [searchTerm, setSearchTerm] = useState(''); // Used for searching in modals
+  const [searchTerm, setSearchTerm] = useState('');
   const [expandedManager, setExpandedManager] = useState(null);
-
 
   const [currentManagerIndex, setCurrentManagerIndex] = useState(null);
   const [currentTeamLeadIndex, setCurrentTeamLeadIndex] = useState(null);
   const [currentEmployeeIndex, setCurrentEmployeeIndex] = useState(null);
 
-
   const [isActivating, setIsActivating] = useState(false);
-
 
   const toggleManagerActivation = (index) => {
     const manager = managers[index];
     setManagerToDeactivate(index);
-
-    if (manager.active) {
-      // Show deactivation confirmation
-      setIsActivating(false);
-      setConfirmationOpen(true);
-    } else {
-      // Show activation confirmation
-      setIsActivating(true);
-      setConfirmationOpen(true);
-    }
+    setIsActivating(!manager.active); // Determine if activating or deactivating
+    setConfirmationOpen(true);
   };
 
   const toggleTeamLeadActivation = (index) => {
     const teamLead = teamLeads[index];
     setTeamLeadToDeactivate(index);
-
-    if (teamLead.active) {
-      // Show deactivation confirmation
-      setIsActivating(false);
-      setConfirmationOpen(true);
-    } else {
-      // Show activation confirmation
-      setIsActivating(true);
-      setConfirmationOpen(true);
-    }
+    setIsActivating(!teamLead.active);
+    setConfirmationOpen(true);
   };
-
 
   const toggleEmployeeActivation = (index) => {
     const employee = employees[index];
     setEmployeeToDeactivate(index);
-
-    if (employee.active) {
-      // Show deactivation confirmation
-      setIsActivating(false);
-      setConfirmationOpen(true);
-    } else {
-      // Show activation confirmation
-      setIsActivating(true);
-      setConfirmationOpen(true);
-    }
+    setIsActivating(!employee.active);
+    setConfirmationOpen(true);
   };
-
 
   const confirmManagerToggle = () => {
     if (managerToDeactivate !== null) {
@@ -195,7 +167,6 @@ const AdminDashboard = () => {
       setManagerToDeactivate(null);
     }
   };
-
 
   const confirmTeamLeadToggle = () => {
     if (teamLeadToDeactivate !== null) {
@@ -210,50 +181,35 @@ const AdminDashboard = () => {
   const confirmEmployeeToggle = () => {
     if (employeeToDeactivate !== null) {
       const updatedEmployees = [...employees];
-      updatedEmployees[employeeToDeactivate].active = !updatedEmployees[employeeToDeactivate].active; // Corrected: Use updatedEmployees
-      setEmployees(updatedEmployees); // Corrected: Set employees state
+      updatedEmployees[employeeToDeactivate].active = !updatedEmployees[employeeToDeactivate].active;
+      setEmployees(updatedEmployees);
       setConfirmationOpen(false);
       setEmployeeToDeactivate(null);
     }
   };
 
-
-  // State to hold the selected manager for each client in the modal's dropdowns
   const [selectedManagerPerClient, setSelectedManagerPerClient] = useState({});
 
-  // --- Client Data as State (Ensured consistent lowercase status values) ---
   const [clients, setClients] = useState([
-    // Each client now has a 'status' (primary) and 'displayStatuses' array
-    // Registered Clients (4 entries)
     { id: 1, name: 'John Doe', mobile: '9876543210', email: 'john@example.com', jobsApplyFor: 'Data Science', registeredDate: '2025-05-01', country: 'USA', visaStatus: 'Citizen (U.S.)', status: 'registered', displayStatuses: ['registered'], assignedTo: null, manager: null },
     { id: 7, name: 'Michael White', mobile: '2233445566', email: 'michael@example.com', jobsApplyFor: 'UX Designer', registeredDate: '2025-05-12', country: 'USA', visaStatus: 'Green Card', status: 'registered', displayStatuses: ['registered'], assignedTo: null, manager: null },
     { id: 13, name: 'Mia Davis', mobile: '5551112222', email: 'mia.d@example.com', jobsApplyFor: 'InnovateX Lead', registeredDate: '2025-05-19', country: 'Germany', visaStatus: 'Work Permit', status: 'registered', displayStatuses: ['registered'], assignedTo: null, manager: null },
     { id: 15, name: 'Ethan Hunt', mobile: '9988776655', email: 'ethan.h@example.com', jobsApplyFor: 'Security Analyst', registeredDate: '2025-05-22', country: 'Canada', visaStatus: 'Citizen', status: 'registered', displayStatuses: ['registered'], assignedTo: null, manager: null },
-
-    // Unassigned Clients (3 entries)
     { id: 3, name: 'Mcgregor', mobile: '7776543210', email: 'mcg@example.com', jobsApplyFor: 'Scrum Master', registeredDate: '2025-05-01', country: 'Australia', visaStatus: 'H-1B Visa', status: 'unassigned', displayStatuses: ['unassigned'], assignedTo: null, manager: null },
     { id: 8, name: 'Sarah Wilson', mobile: '3344556677', email: 'sarah@example.com', jobsApplyFor: 'DevOps Engineer', registeredDate: '2025-05-15', country: 'France', visaStatus: 'Work Permit', status: 'unassigned', displayStatuses: ['unassigned'], assignedTo: null, manager: null },
     { id: 10, name: 'Jack Taylor', mobile: '4445556666', email: 'jack.t@example.com', jobsApplyFor: 'Financial Analyst', registeredDate: '2025-05-25', country: 'UK', visaStatus: 'EU Citizen', status: 'unassigned', displayStatuses: ['unassigned'], assignedTo: null, manager: null },
-
-    // Active Clients (4 entries)
     { id: 2, name: 'Alice Brown', mobile: '7896543210', email: 'alice@example.com', jobsApplyFor: 'Cyber Security', registeredDate: '2025-05-03', country: 'UK', visaStatus: 'Green Card', status: 'active', displayStatuses: ['active'], assignedTo: 'Manager B', manager: 'Manager B' },
     { id: 4, name: 'Jane Smith', mobile: '1234567890', email: 'jane@example.com', jobsApplyFor: 'Software Engineer', registeredDate: '2025-05-05', country: 'Canada', visaStatus: 'Work Permit', status: 'active', displayStatuses: ['active'], assignedTo: 'Manager A', manager: 'Manager A' },
     { id: 9, name: 'David Lee', mobile: '4455667788', email: 'david@example.com', jobsApplyFor: 'AI/ML Engineer', registeredDate: '2025-05-18', country: 'Japan', visaStatus: 'Permanent Resident', status: 'active', displayStatuses: ['active'], assignedTo: 'Manager C', manager: 'Manager C' },
     { id: 12, name: 'Mike Green', mobile: '8876543210', email: 'mike@example.com', jobsApplyFor: 'Cyber Security', registeredDate: '2025-04-28', country: 'USA', visaStatus: 'L-1 Visa', status: 'active', displayStatuses: ['active'], assignedTo: 'Sarah Connor', manager: 'Sarah Connor' },
-
-    // Rejected Clients (3 entries)
     { id: 5, name: 'Robert Johnson', mobile: '0987654321', email: 'robert@example.com', jobsApplyFor: 'Product Manager', registeredDate: '2025-04-20', country: 'Germany', visaStatus: 'Schengen Visa', status: 'rejected', displayStatuses: ['rejected'], assignedTo: null, manager: null },
     { id: 11, name: 'Karen Hall', mobile: '6667778888', email: 'karen.h@example.com', jobsApplyFor: 'Graphic Designer', registeredDate: '2025-05-17', country: 'Australia', visaStatus: 'Working Holiday', status: 'rejected', displayStatuses: ['rejected'], assignedTo: null, manager: null },
     { id: 14, name: 'Laura Martinez', mobile: '5566778899', email: 'laura@example.com', jobsApplyFor: 'Cloud Architect', registeredDate: '2025-05-20', country: 'Spain', visaStatus: 'Student Visa', status: 'rejected', displayStatuses: ['rejected'], assignedTo: null, manager: null },
-
-    // Restored Clients (2 entries) - Note: Their status *is* 'restored', but they also display in 'registered'
-    { id: 6, name: 'Emily Davis', mobile: '1122334455', email: 'emily@example.com', jobsApplyFor: 'Data Analyst', registeredDate: '2025-05-10', country: 'India', visaStatus: 'Citizen', status: 'restored', displayStatuses: ['restored'], assignedTo: 'Manager A', manager: null }, // Removed 'registered' from initial restored client displayStatuses to accurately test restore flow
-    { id: 16, name: 'Chris Evans', mobile: '1122334455', email: 'chris.e@example.com', jobsApplyFor: 'Marketing Specialist', registeredDate: '2025-05-14', country: 'Brazil', visaStatus: 'Tourist Visa', status: 'restored', displayStatuses: ['restored'], assignedTo: 'Manager B', manager: null }, // Removed 'registered' from initial restored client displayStatuses
+    { id: 6, name: 'Emily Davis', mobile: '1122334455', email: 'emily@example.com', jobsApplyFor: 'Data Analyst', registeredDate: '2025-05-10', country: 'India', visaStatus: 'Citizen', status: 'restored', displayStatuses: ['restored'], assignedTo: 'Manager A', manager: null },
+    { id: 16, name: 'Chris Evans', mobile: '1122334455', email: 'chris.e@example.com', jobsApplyFor: 'Marketing Specialist', registeredDate: '2025-05-14', country: 'Brazil', visaStatus: 'Tourist Visa', status: 'restored', displayStatuses: ['restored'], assignedTo: 'Manager B', manager: null },
   ]);
 
-
   const toggleMenu = () => {
-    console.log("Toggle menu clicked. Before update, menuOpen was:", menuOpen);
     setMenuOpen(prevMenuOpen => !prevMenuOpen);
   };
 
@@ -309,7 +265,6 @@ const AdminDashboard = () => {
     active: true
   });
 
-
   const [teamLeads, setTeamLeads] = useState([
     { firstName: 'Vaishnavi', lastName: 'V', mobile: '+91 9874561230', email: 'vaishnavi@gmail.com', password: '07072023@TxRm', role: 'Team Lead', active: true },
     { firstName: 'Murali', lastName: 'reddy', mobile: '+91 9874561230', email: 'murali@gmail.com', password: '07072023@TxRm', role: 'Team Lead', active: true },
@@ -326,14 +281,13 @@ const AdminDashboard = () => {
     active: true,
   });
 
-
   const [employees, setEmployees] = useState([
     { firstName: 'Humer', lastName: 'R', mobile: '+91 9874561230', email: 'humermployee@gmail.com', password: '07072023@TxRm', role: 'Employee', active: true },
     { firstName: 'Chaveen', lastName: 'Reddy', mobile: '+91 9874561230', email: 'chaveenemployee@gmail.com', password: '07072023@TxRm', role: 'Employee', active: true },
     { firstName: 'Bharath', lastName: 'Surya', mobile: '+91 9874561230', email: 'bharathemployee@gmail.com', password: '07072023@TxRm', role: 'Employee', active: true },
     { firstName: 'Sandeep', lastName: 'Kumar', mobile: '+91 9874561230', email: 'sandeepemployee@gmail.com', password: '07072023@TxRm', role: 'Employee', active: true },
-    { firstName: 'Neelam', lastName: 'Sai Krishna', mobile: '+91 9874561230', email: 'saiemployee@gmail.com', password: '07072023@TxRm', role: 'Intern', active: true },
-    { firstName: 'Prakash', lastName: 'Kumar', mobile: '+91 9874561230', email: 'prakashployee@gmail.com', password: '07072023@TxRm', role: 'Employee', active: true },
+    { firstName: 'Neelam', lastName: 'Sai Krishna', mobile: '+91 9874561230', email: 'saiemployee@gmail.com', role: 'Intern', active: true },
+    { firstName: 'Prakash', lastName: 'Kumar', mobile: '+91 9874561230', email: 'prakashployee@gmail.com', role: 'Employee', active: true },
   ]);
 
   const [newEmployee, setNewEmployee] = useState({
@@ -346,6 +300,13 @@ const AdminDashboard = () => {
     active: true,
   });
 
+  // Function to add a new notification
+  const addNotification = (message) => {
+    setNotifications(prevNotifications => [
+      { id: Date.now(), message, timestamp: new Date().toLocaleString() },
+      ...prevNotifications, // Newest notification at the top
+    ]);
+  };
 
   useEffect(() => {
     const initialTeamLeads = [
@@ -375,7 +336,6 @@ const AdminDashboard = () => {
       { firstName: 'Chaveen', lastName: 'C', mobile: '+91 9874561230', email: 'chaveenemployee@gmail.com', role: 'Intern' }
     ];
 
-
     setOriginalTeamLeads(initialTeamLeads);
     setOriginalEmployees(initialEmployees);
     setOriginalInterns(initialInterns);
@@ -385,7 +345,6 @@ const AdminDashboard = () => {
     return managers.flatMap(manager => manager.assignedPeople || []);
   };
 
-
   const togglePersonSelection = (person) => {
     setSelectedPeople((prev) =>
       prev.some(p => p.email === person.email)
@@ -394,31 +353,27 @@ const AdminDashboard = () => {
     );
   };
 
-
   const toggleClientDetailsModal = () => setShowClientDetailsModal(!showClientDetailsModal);
   const toggleManagersDetailsModal = () => setShowManagersDetailsModal(!showManagersDetailsModal);
   const toggleTeamLeadsDetailsModal = () => setShowTeamLeadsDetailsModal(!showTeamLeadsDetailsModal);
   const toggleEmployeesDetailsModal = () => setShowEmployeesDetailsModal(!showEmployeesDetailsModal);
+  const toggleProfileDetailsModal = () => setShowProfileDetailsModal(!showProfileDetailsModal);
+  const toggleNotificationDetailsModal = () => setShowNotificationDetailsModal(!showNotificationDetailsModal);
 
 
   const toggleManagerExpand = (index) => {
     const manager = managers[index];
     setSelectedManagerData(manager);
-    setShowManagerAssignedPeopleModal(true); // Open the modal to view assigned people
+    setShowManagerAssignedPeopleModal(true);
   };
 
   const handleManagerAssignDone = () => {
     const updatedManagers = [...managers];
     updatedManagers[selectedManagerIndex].assignedPeople = selectedPeople;
     setManagers(updatedManagers);
-    setAssignModalOpen(false); // Close the assignment modal
+    setAssignModalOpen(false);
   };
 
-  // Placeholders (consider replacing with actual assets if available)
-  const logoPlaceholder = "https://placehold.co/40x40/0a193c/ffffff?text=TX";
-  const profilePlaceholder = "https://placehold.co/40x40/E0E0E0/808080?text=👤";
-
-  // Mock data for the Donut Chart, matching image values and colors
   const donutChartData = {
     labels: ['Team Leads', 'Employee', 'Clients', 'Manager'],
     datasets: [{
@@ -435,7 +390,6 @@ const AdminDashboard = () => {
     }]
   };
 
-  // Options for the Donut Chart
   const donutChartOptions = {
     responsive: true,
     maintainAspectRatio: false,
@@ -446,7 +400,7 @@ const AdminDashboard = () => {
           usePointStyle: true,
           font: {
             size: 14,
-            family: 'Segoe UI, sans-serif'
+            family: 'Inter, sans-serif'
           }
         }
       }
@@ -460,34 +414,29 @@ const AdminDashboard = () => {
   };
 
   const handleClientCardClick = (cardType) => {
-    console.log(`${cardType} card clicked!`);
     if (cardType === 'clients') {
       setShowClientDetailsModal(true);
-      setClientFilter('registered'); // Default to 'registered' when modal opens
+      setClientFilter('registered');
     }
   };
   const handleManagersCardClick = (cardType) => {
-    console.log(`${cardType} card clicked!`);
     if (cardType === 'manager') {
       setShowManagersDetailsModal(true);
     }
   };
   const handleTeamLeadsCardClick = (cardType) => {
-    console.log(`${cardType} card clicked!`);
     if (cardType === 'teamleads') {
       setShowTeamLeadsDetailsModal(true);
     }
   };
 
   const handleEmployeesCardClick = (cardType) => {
-    console.log(`${cardType} card clicked!`);
     if (cardType === 'employees') {
       setShowEmployeesDetailsModal(true);
     }
   };
 
-  // --- Action Handlers that update state WITHOUT changing filter automatically ---
-  const updateClientData = (clientId, updates) => { // Removed newFilterStatus param
+  const updateClientData = (clientId, updates) => {
     setClients(prevClients =>
       prevClients.map(client =>
         client.id === clientId
@@ -495,33 +444,23 @@ const AdminDashboard = () => {
           : client
       )
     );
-    // clientFilter is NOT updated here, so the tab stays the same
   };
 
   const handleAcceptClient = (clientId) => {
-    console.log(`Client ${clientId} Accepted! Moving to Unassigned.`);
-    // Registered client accepted -> status becomes 'unassigned', displayStatuses updated
     updateClientData(clientId, { status: 'unassigned', displayStatuses: ['unassigned'], assignedTo: null, manager: null });
   };
 
   const handleDeclineClient = (clientId) => {
-    console.log(`Client ${clientId} Declined! Staying on current table.`);
-    // Declined client -> status becomes 'rejected', displayStatuses updated
-    // The key change here: NO newFilterStatus is passed, so the filter doesn't change.
     updateClientData(clientId, { status: 'rejected', displayStatuses: ['rejected'] });
   };
 
-  // Modified handleAssignClient to use selectedManagerPerClient
   const handleAssignClient = (clientId) => {
     const managerToAssign = selectedManagerPerClient[clientId];
     if (!managerToAssign) {
-      alert("Please select a manager before assigning."); // Using alert for now, consider a custom modal
+      alert("Please select a manager before assigning.");
       return;
     }
-    console.log(`Client ${clientId} assigned to ${managerToAssign}! Moving to Active.`);
-    // Unassigned/Restored client assigned -> status becomes 'active'
     updateClientData(clientId, { status: 'active', displayStatuses: ['active'], assignedTo: managerToAssign, manager: managerToAssign });
-    // Clear the selected manager for this client after assignment
     setSelectedManagerPerClient(prev => {
       const newState = { ...prev };
       delete newState[clientId];
@@ -530,12 +469,9 @@ const AdminDashboard = () => {
   };
 
   const handleRestoreClient = (clientId) => {
-    console.log(`Client ${clientId} Restored! Showing in Restored Clients and Registered Clients.`);
-    // Rejected client restored -> status becomes 'restored', and also added to 'registered' display list
     updateClientData(clientId, { status: 'restored', displayStatuses: ['restored', 'registered'], assignedTo: null, manager: null });
   };
 
-  // Handler for dropdown change (for initial assignment)
   const handleManagerSelectChange = (clientId, managerName) => {
     setSelectedManagerPerClient(prev => ({
       ...prev,
@@ -543,47 +479,36 @@ const AdminDashboard = () => {
     }));
   };
 
-
   const handleManagerShowModal = () => setShowManagerModal(true);
   const handleManagerCloseModal = () => {
     setShowManagerModal(false);
     setIsManagerEditing(false);
     setCurrentManagerIndex(null);
-
     setNewManager({ firstName: '', lastName: '', mobile: '', email: '', password: '', role: 'Manager', active: true });
   };
 
-
-  // Handler for dropdown change (for editing active client manager)
   const handleTempManagerSelectChange = (managerName) => {
     setTempSelectedManager(managerName);
-
   };
-
 
   const handleEditManager = (client) => {
     setEditingClientId(client.id);
-    setTempSelectedManager(client.manager || ''); // Initialize with current manager
-
+    setTempSelectedManager(client.manager || '');
   };
 
   const handleSaveManagerChange = (clientId) => {
     if (!tempSelectedManager) {
       console.warn("Please select a manager to save.");
-
       return;
     }
-    console.log(`Saving manager change for client ${clientId} to ${tempSelectedManager}`);
     updateClientData(clientId, { assignedTo: tempSelectedManager, manager: tempSelectedManager });
-    setEditingClientId(null); // Exit edit mode
-    setTempSelectedManager(''); // Clear temp state
-
+    setEditingClientId(null);
+    setTempSelectedManager('');
   };
 
   const handleCancelEdit = () => {
-    console.log("Cancelling edit.");
-    setEditingClientId(null); // Exit edit mode
-    setTempSelectedManager(''); // Clear temp state
+    setEditingClientId(null);
+    setTempSelectedManager('');
   };
 
   const handleTeamLeadShowModal = () => setShowTeamLeadModal(true);
@@ -591,23 +516,16 @@ const AdminDashboard = () => {
     setShowTeamLeadModal(false);
     setIsTeamLeadEditing(false);
     setCurrentTeamLeadIndex(null);
-
     setNewTeamLead({ firstName: '', lastName: '', mobile: '', email: '', password: '', role: 'Team Lead', active: true });
-
   };
-
 
   const handleEmployeeShowModal = () => setShowEmployeeModal(true);
   const handleEmployeeCloseModal = () => {
     setShowEmployeeModal(false);
     setIsEmployeeEditing(false);
-
     setCurrentEmployeeIndex(null);
-
     setNewEmployee({ firstName: '', lastName: '', mobile: '', email: '', password: '', role: '', active: true });
-
   };
-
 
   const handleManagerInputChange = (e) => {
     const { name, value } = e.target;
@@ -623,43 +541,40 @@ const AdminDashboard = () => {
   };
 
   const handleAddManager = () => {
-    const { firstName, lastName, mobile, email, password } = newManager; // Use firstName, lastName
+    const { firstName, lastName, mobile, email, password } = newManager;
     if (!firstName || !lastName || !mobile || !email || !password) {
       alert('Please fill all fields');
       return;
     }
-
     if (isManagerEditing) {
       const updatedManagers = [...managers];
       updatedManagers[currentManagerIndex] = newManager;
       setManagers(updatedManagers);
+      addNotification(`Manager Updated: ${newManager.firstName} ${newManager.lastName}`);
     } else {
       setManagers([...managers, { ...newManager, assignedPeople: [] }]);
+      addNotification(`New Manager Added: ${newManager.firstName} ${newManager.lastName}`);
     }
-
     handleManagerCloseModal();
   };
 
   const handleAddTeamLead = () => {
-    const { firstName, lastName, mobile, email, password } = newTeamLead; // Use firstName, lastName
+    const { firstName, lastName, mobile, email, password } = newTeamLead;
     if (!firstName || !lastName || !mobile || !email || !password) {
       alert('Please fill all fields');
       return;
     }
-
-
     if (isTeamLeadEditing) {
       const updatedTeamLeads = [...teamLeads];
       updatedTeamLeads[currentTeamLeadIndex] = newTeamLead;
       setTeamLeads(updatedTeamLeads);
+      addNotification(`Team Lead Updated: ${newTeamLead.firstName} ${newTeamLead.lastName}`);
     } else {
       setTeamLeads([...teamLeads, { ...newTeamLead }]);
+      addNotification(`New Team Lead Added: ${newTeamLead.firstName} ${newTeamLead.lastName}`);
     }
-
-
     handleTeamLeadCloseModal();
   };
-
 
   const handleAddEmployee = () => {
     const { firstName, lastName, mobile, email, password } = newEmployee;
@@ -667,18 +582,17 @@ const AdminDashboard = () => {
       alert('Please fill all fields');
       return;
     }
-
     if (isEmployeeEditing) {
       const updatedEmployees = [...employees];
       updatedEmployees[currentEmployeeIndex] = newEmployee;
       setEmployees(updatedEmployees);
+      addNotification(`Employee Updated: ${newEmployee.firstName} ${newEmployee.lastName} (${newEmployee.role})`);
     } else {
       setEmployees([...employees, { ...newEmployee }]);
+      addNotification(`New Employee Added: ${newEmployee.firstName} ${newEmployee.lastName} (${newEmployee.role})`);
     }
-
     handleEmployeeCloseModal();
   };
-
 
   const openAssignModal = (index) => {
     setSelectedManagerIndex(index);
@@ -687,7 +601,6 @@ const AdminDashboard = () => {
 
     const allAssigned = getAllAssignedPeople();
 
-    // Filter people - show only unassigned or those already assigned to this manager
     setFilteredTeamLeads(originalTeamLeads.filter(tl =>
       !allAssigned.some(a => a.email === tl.email) ||
       previouslyAssigned.some(pa => pa.email === tl.email)
@@ -697,7 +610,6 @@ const AdminDashboard = () => {
       !allAssigned.some(a => a.email === emp.email) ||
       previouslyAssigned.some(pa => pa.email === emp.email))
     );
-
     setFilteredInterns(originalInterns.filter(int =>
       !allAssigned.some(a => a.email === int.email) ||
       previouslyAssigned.some(pa => pa.email === int.email)
@@ -706,10 +618,8 @@ const AdminDashboard = () => {
     setAssignModalOpen(true);
   };
 
-  // --- Helper to get data value by header name (refined for robustness) ---
   const getValue = (item, header) => {
-    // Client-specific properties
-    if (item.hasOwnProperty('name')) { // Check if it's a client object
+    if (item.hasOwnProperty('name')) {
       switch (header) {
         case 'Name': return item.name;
         case 'Mobile': return item.mobile;
@@ -768,10 +678,10 @@ const AdminDashboard = () => {
             );
           }
           return item.manager || '-';
-        case 'Actions': return null; // Actions are handled by renderActions directly
-        default: return item[header.toLowerCase().replace(/\s/g, '')] || '-'; // Fallback
+        case 'Actions': return null;
+        default: return item[header.toLowerCase().replace(/\s/g, '')] || '-';
       }
-    } else { // For Manager, Team Lead, Employee data
+    } else {
       switch (header) {
         case 'FIRST NAME': return item.firstName;
         case 'LAST NAME': return item.lastName;
@@ -801,7 +711,7 @@ const AdminDashboard = () => {
               setNewTeamLead(teamLeads[item.index]);
               setShowTeamLeadModal(true);
             };
-          } else { // Employee or Intern
+          } else {
             handleEdit = () => {
               setIsEmployeeEditing(true);
               setCurrentEmployeeIndex(item.index);
@@ -815,7 +725,8 @@ const AdminDashboard = () => {
               className="text-decoration-none"
               onClick={handleEdit}
             >
-              ✏️
+              {/* Replaced pencil emoji with FaEdit icon */}
+              <FaEdit style={{ fontSize: '1.2em', color: '#007bff' }} />
             </Button>
           );
         case 'STATUS':
@@ -824,7 +735,7 @@ const AdminDashboard = () => {
             toggleActivation = () => toggleManagerActivation(item.index);
           } else if (item.role === 'Team Lead') {
             toggleActivation = () => toggleTeamLeadActivation(item.index);
-          } else { // Employee or Intern
+          } else {
             toggleActivation = () => toggleEmployeeActivation(item.index);
           }
           return (
@@ -843,8 +754,6 @@ const AdminDashboard = () => {
     }
   };
 
-
-  // --- Table Configurations for ALL modals, including Clients ---
   const tableConfig = {
     registered: {
       headers: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Actions'],
@@ -876,7 +785,7 @@ const AdminDashboard = () => {
           <button
             onClick={() => handleAssignClient(client.id)}
             style={{ ...actionButtonStyle, background: '#007bff', ':hover': { backgroundColor: '#0056b3' } }}
-            disabled={!selectedManagerPerClient[client.id]} // Disable if no manager selected
+            disabled={!selectedManagerPerClient[client.id]}
             className="button-hover-effect"
           >
             Assign
@@ -952,10 +861,9 @@ const AdminDashboard = () => {
         </div>
       )
     },
-    // Manager, Team Lead, Employee table configurations are kept separate
     manager: {
       headers: ['FIRST NAME', 'LAST NAME', 'MOBILE', 'EMAIL', 'PASSWORD', 'ROLE', 'PEOPLE', 'EDIT', 'STATUS'],
-      widths: ['10%', '10%', '12%', '15%', '12%', '8%', '18%', '6%', '10%'], // Adjusted widths
+      widths: ['10%', '10%', '12%', '15%', '12%', '8%', '18%', '6%', '10%'],
     },
     teamlead: {
       headers: ['FIRST NAME', 'LAST NAME', 'MOBILE', 'EMAIL', 'PASSWORD', 'ROLE', 'EDIT', 'STATUS'],
@@ -967,34 +875,32 @@ const AdminDashboard = () => {
     }
   };
 
-
-  // Filter clients based on the clientFilter state - now checks displayStatuses
   const getFilteredClients = () => {
     return clients.filter(client => client.displayStatuses.includes(clientFilter));
   };
 
   const filteredClients = getFilteredClients();
 
-
   return (
+    // The main container for the dashboard
     <div style={{
-      fontFamily: 'Segoe UI, sans-serif',
+      fontFamily: 'Inter, sans-serif',
       background: '#f0f2f5',
       minHeight: '100vh',
       display: 'flex',
       flexDirection: 'column',
-      overflowX: 'hidden', // Ensure no horizontal scrollbar due to initial off-screen elements
+      overflowX: 'hidden',
+      // Removed previous opacity/transform to avoid conflicts
     }}>
-      {/* Centralized CSS styles for hover effects and animations */}
+      {/* Removed DimmingOverlay component */}
+
+      {/* Styles for various elements (unchanged) */}
       <style>
         {`
-        /* General hover effect for buttons */
         .button-hover-effect:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 12px rgba(0,0,0,0.15);
         }
-
-        /* Tab button specific active and hover styles */
         .tab-button.active {
             border-bottom: 2px solid #3b82f6;
             color: #3b82f6;
@@ -1002,29 +908,23 @@ const AdminDashboard = () => {
         .tab-button:hover {
             color: #3b82f6;
         }
-
-        /* Card hover effect */
         .card-hover:hover {
             transform: translateY(-8px) scale(1.02);
             box-shadow: 0 12px 25px rgba(0,0,0,0.2);
         }
-
-        /* Action button specific styles and animation */
         .action-button:hover {
-            background-color: #218838 !important; /* Specific hover colors from inline styles */
+            background-color: #218838 !important;
         }
         .action-button:active {
             transform: scale(0.95);
         }
-
-        /* Download button specific styles and animation */
         .download-button {
           background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
           color: white;
           border: none;
-          padding: 8px 16px; /* Slightly smaller padding for card button */
+          padding: 8px 16px;
           border-radius: 8px;
-          font-size: 0.875rem; /* Smaller font size for card button */
+          font-size: 0.875rem;
           font-weight: 600;
           cursor: pointer;
           box-shadow: 0 4px 6px rgba(0,0,0,0.1);
@@ -1032,74 +932,62 @@ const AdminDashboard = () => {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          gap: 6px; /* Smaller gap */
-          width: 100%; /* Make button fill its container in the card */
+          gap: 6px;
+          width: 100%;
           text-align: center;
         }
-
         .download-button:hover {
-          transform: translateY(-2px); /* Slightly less movement */
-          box-shadow: 0 6px 12px rgba(0,0,0,0.15); /* Slightly less intense shadow */
+          transform: translateY(-2px);
+          box-shadow: 0 6px 12px rgba(0,0,0,0.15);
           background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
         }
         .download-button:disabled {
-          background: #cbd5e1; /* Greyed out background */
+          background: #cbd5e1;
           cursor: not-allowed;
           box-shadow: none;
         }
         .download-button:disabled:hover {
-          transform: none; /* No movement on hover when disabled */
+          transform: none;
           box-shadow: none;
-          background: #cbd5e1; /* Stays greyed out on hover */
+          background: #cbd5e1;
         }
-
-        /* View button specific hover */
         .view-button:hover {
           background-color: #c4e0ff !important;
         }
-
-        /* Activity button specific hover */
         .activity-button:hover {
           background-color: #e2e8f0 !important;
         }
-
-        /* Bootstrap Modal Overrides */
         .modal.show .modal-dialog {
-          transform: none !important; /* Override Bootstrap's default transform for centering */
+          transform: none !important; /* Ensure modals don't jump around in iframes */
         }
-
-        /* Custom dialog class for consistent size and positioning */
         .custom-modal-dialog {
             max-width: 95% !important;
             width: 1400px !important;
-            margin: 1.75rem auto; /* Center it with default Bootstrap margin */
+            margin: 1.75rem auto;
         }
-
         .custom-modal-content {
             background: #ffffff !important;
-            padding: 30px !important; /* Reduced padding */
+            padding: 30px !important;
             border-radius: 20px !important;
             box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25) !important;
             border: 1px solid #cbd5e1 !important;
-            max-height: 90vh; /* Ensure modal content fits screen height */
-            overflow-y: auto; /* Enable scrolling for modal content */
-            position: relative; /* For absolute positioning of close button */
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
         }
-
-
         .modal-header {
             border-bottom: 1px solid #f1f5f9 !important;
             padding: 20px 30px !important;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            position: relative; /* Ensure it's relative for the close button positioning */
+            position: relative;
         }
         .modal-title {
             color: #1e293b !important;
             font-size: 1.6rem !important;
             font-weight: 700 !important;
-            margin: 0 !important; /* Remove default margin */
+            margin: 0 !important;
         }
         .modal-body {
             padding: 30px !important;
@@ -1195,7 +1083,28 @@ const AdminDashboard = () => {
         .form-check-input:focus {
             box-shadow: 0 0 0 0.25rem rgba(0, 123, 255, 0.25) !important;
         }
-
+        /* New style for the smaller profile icon and hover effect */
+        .profile-icon {
+            font-size: 1.8em; /* Adjusted from 30px to 1.8em for relative sizing */
+            color: #fff;
+            cursor: pointer;
+            transition: transform 0.2s ease-in-out, color 0.2s ease-in-out;
+        }
+        .profile-icon:hover {
+            transform: scale(1.1); /* Slightly enlarge on hover */
+            color: #e0e7ff; /* Lighter color on hover */
+        }
+        /* New style for notification icon and hover effect */
+        .notification-icon {
+            font-size: 1.8em; /* Adjusted for consistency with profile icon */
+            color: #fff;
+            cursor: pointer;
+            transition: transform 0.2s ease-in-out, color 0.2s ease-in-out;
+        }
+        .notification-icon:hover {
+            transform: scale(1.1);
+            color: #e0e7ff;
+        }
         `}
       </style>
 
@@ -1224,15 +1133,14 @@ const AdminDashboard = () => {
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
             <span style={{ fontSize: '18px', fontWeight: 'bold', lineHeight: '1.2' }}>TECHXPLORERS</span>
             <span style={{ fontSize: '10px', opacity: 0.8, marginTop: '0px', paddingLeft: '42px' }}>Exploring The Future</span>
-
           </div>
         </div>
 
-        {/* Bottom Row: Hamburger Menu, Search Bar, Notification, Profile */}
+        {/* Bottom Row: Hamburger Menu, Notification, Profile (Search Bar Removed) */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
+          justifyContent: 'space-between', // Adjust to space-between
           width: '100%'
         }}>
           {/* Hamburger Menu */}
@@ -1250,56 +1158,23 @@ const AdminDashboard = () => {
             <FaBars />
           </button>
 
-
-          {/* Search Bar (Centered) */}
-          <div style={{
-            flexGrow: 1, // Allows this div to take up available space
-            display: 'flex',
-            justifyContent: 'center', // Centers the search bar within this div
-            margin: '0 15px', // Horizontal margin to give space
-
-
-
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              background: '#ffffff',
-              cursor: 'pointer',
-              borderRadius: '25px',
-              padding: '8px 18px',
-              maxWidth: windowWidth < 640 ? '200px' : '400px', // Responsive max-width
-              width: '100%',
-            }}>
-              <input
-                type="text"
-                placeholder="Search"
-                value={""}
-                readOnly
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'black',
-                  outline: 'none',
-                  width: '100%',
-                  fontSize: '15px',
-                  paddingLeft: '5px',
-                  cursor: 'default'
-                }}
-              />
-              <FaSearch style={{ color: '#ccc', marginLeft: '10px', fontSize: '16px' }} />
-            </div>
-          </div>
+          {/* This is where the search bar used to be. It has been removed. */}
 
           {/* Notification and Profile Icons (Right) */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '25px', // Space between icons
-            flexShrink: 0, // Prevent shrinking
+            gap: '25px',
+            flexShrink: 0,
           }}>
-            <FaBell style={{ fontSize: '20px', cursor: 'pointer' }} />
-            <CgProfile style={{ fontSize: '30px', color: '#fff', cursor: 'pointer' }} />
+            <FaBell
+              className="notification-icon" // Apply the new class for styling
+              onClick={toggleNotificationDetailsModal} // Added onClick handler
+            />
+            <CgProfile
+              className="profile-icon" // Apply the new class for styling
+              onClick={toggleProfileDetailsModal}
+            />
           </div>
         </div>
       </header>
@@ -1307,19 +1182,17 @@ const AdminDashboard = () => {
       {/* Main Content Area - Using CSS Grid */}
       <div style={{
         flexGrow: 1,
-        padding: windowWidth < 640 ? '15px' : '25px', // Smaller padding on small screens
+        padding: windowWidth < 640 ? '15px' : '25px',
         display: 'grid',
         gridTemplateColumns:
-          windowWidth < 640 ? '1fr' : // Single column on small screens
-            windowWidth < 1024 ? 'repeat(2, 1fr)' : // Two columns on medium screens
-              'repeat(4, 1fr)', // Four columns on large screens
+          windowWidth < 640 ? '1fr' :
+            windowWidth < 1024 ? 'repeat(2, 1fr)' :
+              'repeat(4, 1fr)',
         gridTemplateRows: 'auto auto 1fr',
-        gap: windowWidth < 640 ? '15px' : '25px', // Smaller gap on small screens
-        maxWidth: windowWidth < 1024 ? '95%' : '1300px', // Max width adapts
+        gap: windowWidth < 640 ? '15px' : '25px',
+        maxWidth: windowWidth < 1024 ? '95%' : '1300px',
         margin: '25px auto',
       }}>
-
-
         {/* Clients Card */}
         <div
           onMouseEnter={() => setHoveredCardId('clients')}
@@ -1382,7 +1255,7 @@ const AdminDashboard = () => {
             transform: contentLoaded ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.9)',
             transitionDelay: contentLoaded ? '0.15s' : '0s',
           }}
-          className={hoveredCardId === 'employees' ? 'card-hover' : ''} // Corrected: was 'employee'
+          className={hoveredCardId === 'employees' ? 'card-hover' : ''}
         >
           <h3 style={cardTitleStyle}>Employee</h3>
           <FaUserFriends style={cardIconStyle} />
@@ -1391,7 +1264,7 @@ const AdminDashboard = () => {
         {/* Chart Section */}
         <div style={{
           ...chartSectionStyle,
-          gridColumn: windowWidth < 1024 ? 'span 1' : 'span 2', // Full width or 2 columns
+          gridColumn: windowWidth < 1024 ? 'span 1' : 'span 2',
           opacity: contentLoaded ? 1 : 0,
           transform: contentLoaded ? 'translateX(0)' : 'translateX(-50px)',
           transitionDelay: contentLoaded ? '0.2s' : '0s',
@@ -1405,7 +1278,7 @@ const AdminDashboard = () => {
         {/* About Section */}
         <div style={{
           ...aboutSectionStyle,
-          gridColumn: windowWidth < 1024 ? 'span 1' : 'span 2', // Full width or 2 columns
+          gridColumn: windowWidth < 1024 ? 'span 1' : 'span 2',
           opacity: contentLoaded ? 1 : 0,
           transform: contentLoaded ? 'translateX(0)' : 'translateX(50px)',
           transitionDelay: contentLoaded ? '0.25s' : '0s',
@@ -1456,7 +1329,6 @@ const AdminDashboard = () => {
         gap: '15px'
       }}>
         <h4 style={{ color: '#333' }}>Menu Options</h4>
-        {/* Dashboard link (without dropdown logic) */}
         <a
           href="/admindashboard"
           style={menuLinkBaseStyle}
@@ -1512,7 +1384,8 @@ const AdminDashboard = () => {
         centered
         size="xl"
         dialogClassName="custom-modal-dialog"
-        contentClassName="custom-modal-content" // Apply custom content style
+        contentClassName="custom-modal-content"
+        backdrop="static" // Ensures a static backdrop is used
       >
         <Modal.Header>
           <Modal.Title>Client Details</Modal.Title>
@@ -1527,12 +1400,11 @@ const AdminDashboard = () => {
           </button>
         </Modal.Header>
         <Modal.Body>
-          {/* Custom Styled Radio Buttons for Client Filter (single line) */}
           <div style={{
             position: 'relative',
             display: 'flex',
             borderRadius: '0.5rem',
-            backgroundColor: '#EEE', // Overall background for the radio group container
+            backgroundColor: '#EEE',
             boxSizing: 'border-box',
             boxShadow: '0 0 0px 1px rgba(0, 0, 0, 0.06)',
             padding: '0.25rem',
@@ -1546,7 +1418,6 @@ const AdminDashboard = () => {
             justifyContent: 'center',
           }}>
             {[
-              // Counts are dynamically calculated from the 'clients' state based on displayStatuses
               { label: 'Registered Clients', value: 'registered', count: clients.filter(c => c.displayStatuses.includes('registered')).length, activeBg: '#E6F0FF', activeColor: '#3A60EE', badgeBg: '#3A60EE' },
               { label: 'Unassigned Clients', value: 'unassigned', count: clients.filter(c => c.displayStatuses.includes('unassigned')).length, activeBg: '#E6E6E6', activeColor: '#334155', badgeBg: '#9AA0A6' },
               { label: 'Active Clients', value: 'active', count: clients.filter(c => c.displayStatuses.includes('active')).length, activeBg: '#D9F5E6', activeColor: '#28A745', badgeBg: '#28A745' },
@@ -1567,7 +1438,6 @@ const AdminDashboard = () => {
                   border: 'none',
                   padding: '.5rem 10px',
                   transition: 'all .15s ease-in-out',
-                  // Dynamic background and text color based on active state
                   backgroundColor: clientFilter === option.value ? option.activeBg : 'transparent',
                   color: clientFilter === option.value ? option.activeColor : 'rgba(51, 65, 85, 1)',
                   fontWeight: clientFilter === option.value ? '600' : 'normal',
@@ -1587,7 +1457,7 @@ const AdminDashboard = () => {
                 <span style={{ whiteSpace: 'nowrap', marginRight: '8px' }}>{option.label}</span>
                 <span style={{
                   ...badgeStyle,
-                  backgroundColor: clientFilter === option.value ? option.badgeBg : '#9AA0A6', // Default grey for inactive badges
+                  backgroundColor: clientFilter === option.value ? option.badgeBg : '#9AA0A6',
                 }}>
                   {option.count}
                 </span>
@@ -1595,7 +1465,6 @@ const AdminDashboard = () => {
             ))}
           </div>
 
-          {/* Client Table - Dynamically Filtered */}
           <h4 style={{
             marginBottom: '15px',
             marginTop: '0px',
@@ -1617,8 +1486,8 @@ const AdminDashboard = () => {
                   {tableConfig[clientFilter].headers.map((header, index) => (
                     <th key={header} style={{
                       ...modalTableHeaderStyle,
-                      width: tableConfig[clientFilter].widths[index], // Apply fixed width from config
-                      textAlign: header === 'Actions' ? 'right' : 'left', // Align Actions header to right
+                      width: tableConfig[clientFilter].widths[index],
+                      textAlign: header === 'Actions' ? 'right' : 'left',
                     }}>
                       {header}
                     </th>
@@ -1633,13 +1502,12 @@ const AdminDashboard = () => {
                     }}>
                       {tableConfig[clientFilter].headers.map((header, colIndex) => (
                         <td
-                          key={`${client.id}-${header}`} // Unique key for cells
+                          key={`${client.id}-${header}`}
                           style={{
                             ...modalTableCellStyle,
-                            textAlign: header === 'Actions' ? 'right' : 'left', // Align Actions cells to right
+                            textAlign: header === 'Actions' ? 'right' : 'left',
                           }}
                         >
-                          {/* Render actions if header is 'Actions', otherwise get value from client data */}
                           {header === 'Actions' ? tableConfig[clientFilter].renderActions(client) : getValue(client, header)}
                         </td>
                       ))}
@@ -1658,7 +1526,6 @@ const AdminDashboard = () => {
         </Modal.Body>
       </Modal>
 
-
       {/* Manager Details Modal */}
       <Modal
         show={showManagersDetailsModal}
@@ -1666,7 +1533,8 @@ const AdminDashboard = () => {
         centered
         size="xl"
         dialogClassName="custom-modal-dialog"
-        contentClassName="custom-modal-content" // Apply custom content style
+        contentClassName="custom-modal-content"
+        backdrop="static" // Ensures a static backdrop is used
       >
         <Modal.Header>
           <Modal.Title>Manager Details</Modal.Title>
@@ -1683,7 +1551,8 @@ const AdminDashboard = () => {
         <Modal.Body>
           <div className="container mt-4">
             <div className="d-flex justify-content-between align-items-center mb-3">
-              <InputGroup className="w-50">
+              {/* Reduced search bar width to w-25 */}
+              <InputGroup className="w-25">
                 <Form.Control
                   placeholder="Search"
                   value={searchTerm}
@@ -1693,7 +1562,7 @@ const AdminDashboard = () => {
               <Button variant="success" onClick={handleManagerShowModal}>+ Add Manager</Button>
             </div>
 
-            <div style={{ overflowX: 'auto', borderRadius: '8px', marginBottom: '30px' }}> {/* Added margin-bottom here */}
+            <div style={{ overflowX: 'auto', borderRadius: '8px', marginBottom: '30px' }}>
               <table style={modalTableStyle}>
                 <thead>
                   <tr>
@@ -1730,11 +1599,9 @@ const AdminDashboard = () => {
                 </tbody>
               </table>
             </div>
-
           </div>
         </Modal.Body>
       </Modal>
-
 
       {/* Modal for Add/Edit Manager */}
       <Modal show={showManagerModal} onHide={handleManagerCloseModal} centered backdrop="static" keyboard={false}>
@@ -1817,7 +1684,7 @@ const AdminDashboard = () => {
               onChange={(e) => setTeamLeadSearch(e.target.value)}
             />
           </InputGroup>
-          <div style={{ overflowX: 'auto', borderRadius: '8px', marginBottom: '30px' }}> {/* Added margin-bottom here */}
+          <div style={{ overflowX: 'auto', borderRadius: '8px', marginBottom: '30px' }}>
             <Table striped size="sm" style={modalTableStyle}>
               <thead>
                 <tr>
@@ -1864,7 +1731,7 @@ const AdminDashboard = () => {
               onChange={(e) => setEmployeeSearch(e.target.value)}
             />
           </InputGroup>
-          <div style={{ overflowX: 'auto', borderRadius: '8px', marginBottom: '30px' }}> {/* Added margin-bottom here */}
+          <div style={{ overflowX: 'auto', borderRadius: '8px', marginBottom: '30px' }}>
             <Table striped size="sm" style={modalTableStyle}>
               <thead>
                 <tr>
@@ -1911,7 +1778,7 @@ const AdminDashboard = () => {
               onChange={(e) => setInternSearch(e.target.value)}
             />
           </InputGroup>
-          <div style={{ overflowX: 'auto', borderRadius: '8px', marginBottom: '30px' }}> {/* Added margin-bottom here */}
+          <div style={{ overflowX: 'auto', borderRadius: '8px', marginBottom: '30px' }}>
             <Table striped size="sm" style={modalTableStyle}>
               <thead>
                 <tr>
@@ -1956,7 +1823,7 @@ const AdminDashboard = () => {
 
       {/* Manager Details Modal (to view assigned people) */}
       {selectedManagerData && (
-        <Modal show={showManagerAssignedPeopleModal} onHide={() => setShowManagerAssignedPeopleModal(false)} centered size="lg" contentClassName="custom-modal-content">
+        <Modal show={showManagerAssignedPeopleModal} onHide={() => setShowManagerAssignedPeopleModal(false)} centered size="lg" contentClassName="custom-modal-content" backdrop="static">
           <Modal.Header>
             <Modal.Title>Assigned Team Leads & Employees</Modal.Title>
             <button
@@ -2012,8 +1879,6 @@ const AdminDashboard = () => {
         </Modal>
       )}
 
-
-
       {/* TeamLead Details Modal */}
       <Modal
         show={showTeamLeadsDetailsModal}
@@ -2021,7 +1886,8 @@ const AdminDashboard = () => {
         centered
         size="xl"
         dialogClassName="custom-modal-dialog"
-        contentClassName="custom-modal-content" // Apply custom content style
+        contentClassName="custom-modal-content"
+        backdrop="static" // Ensures a static backdrop is used
       >
         <Modal.Header>
           <Modal.Title>Team Leads Details</Modal.Title>
@@ -2038,7 +1904,8 @@ const AdminDashboard = () => {
         <Modal.Body>
           <div className="container mt-4">
             <div className="d-flex justify-content-between align-items-center mb-3">
-              <InputGroup className="w-50">
+              {/* Reduced search bar width to w-25 */}
+              <InputGroup className="w-25">
                 <Form.Control
                   placeholder="Search"
                   value={searchTerm}
@@ -2048,7 +1915,7 @@ const AdminDashboard = () => {
               <Button variant="success" onClick={handleTeamLeadShowModal}>+ Add TeamLead</Button>
             </div>
 
-            <div style={{ overflowX: 'auto', borderRadius: '8px', marginBottom: '30px' }}> {/* Added margin-bottom here */}
+            <div style={{ overflowX: 'auto', borderRadius: '8px', marginBottom: '30px' }}>
               <table style={modalTableStyle}>
                 <thead>
                   <tr>
@@ -2148,7 +2015,6 @@ const AdminDashboard = () => {
         </Modal.Footer>
       </Modal>
 
-
       {/* Employee Details Modal */}
       <Modal
         show={showEmployeesDetailsModal}
@@ -2156,7 +2022,8 @@ const AdminDashboard = () => {
         centered
         size="xl"
         dialogClassName="custom-modal-dialog"
-        contentClassName="custom-modal-content" // Apply custom content style
+        contentClassName="custom-modal-content"
+        backdrop="static" // Ensures a static backdrop is used
       >
         <Modal.Header>
           <Modal.Title>Employee Details</Modal.Title>
@@ -2173,7 +2040,8 @@ const AdminDashboard = () => {
         <Modal.Body>
           <div className="container mt-4">
             <div className="d-flex justify-content-between align-items-center mb-3">
-              <InputGroup className="w-50">
+              {/* Reduced search bar width to w-25 */}
+              <InputGroup className="w-25">
                 <Form.Control
                   placeholder="Search"
                   value={searchTerm}
@@ -2184,7 +2052,7 @@ const AdminDashboard = () => {
               <Button variant="success" onClick={handleEmployeeShowModal}>+ Add Employee</Button>
             </div>
 
-            <div style={{ overflowX: 'auto', borderRadius: '8px', marginBottom: '30px' }}> {/* Added margin-bottom here */}
+            <div style={{ overflowX: 'auto', borderRadius: '8px', marginBottom: '30px' }}>
               <table style={modalTableStyle}>
                 <thead>
                   <tr>
@@ -2267,8 +2135,7 @@ const AdminDashboard = () => {
         </Modal.Footer>
       </Modal>
 
-
-      {/* Confirmation Modal for Employee Activation/Deactivation (moved here for correct state checks) */}
+      {/* Confirmation Modal for Employee Activation/Deactivation */}
       <Modal show={confirmationOpen && employeeToDeactivate !== null} onHide={() => setConfirmationOpen(false)} centered backdrop="static" keyboard={false}>
         <Modal.Header closeButton>
           <Modal.Title>{isActivating ? 'Confirm Activation' : 'Confirm Deactivation'} Employee</Modal.Title>
@@ -2286,12 +2153,89 @@ const AdminDashboard = () => {
         </Modal.Footer>
       </Modal>
 
+      {/* Profile Details Modal */}
+      <Modal
+        show={showProfileDetailsModal}
+        onHide={toggleProfileDetailsModal}
+        centered
+        size="md" // Smaller size for profile details
+        dialogClassName="custom-modal-dialog"
+        contentClassName="custom-modal-content"
+        backdrop="static"
+      >
+        <Modal.Header>
+          <Modal.Title>Profile Details</Modal.Title>
+          <button
+            onClick={toggleProfileDetailsModal}
+            style={modalCloseButtonStyle}
+            className="button-hover-effect"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M13 1L1 13M1 1L13 13" stroke="#64748B" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </button>
+        </Modal.Header>
+        <Modal.Body>
+          <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+            <CgProfile style={{ fontSize: '6em', color: '#0a193c', marginBottom: '15px' }} />
+            <h4 style={{ color: '#333', marginBottom: '5px' }}>Admin User</h4>
+            <p style={{ color: '#666', fontSize: '0.95em' }}>admin@techxplorers.com</p>
+          </div>
+          <div style={{ borderTop: '1px solid #eee', paddingTop: '20px' }}>
+            <p style={{ color: '#444', marginBottom: '10px' }}><strong>Role:</strong> Administrator</p>
+            <p style={{ color: '#444', marginBottom: '10px' }}><strong>Status:</strong> Active</p>
+            <p style={{ color: '#444', marginBottom: '10px' }}><strong>Last Login:</strong> 2025-06-23 07:09 PM</p>
+            <p style={{ color: '#444', marginBottom: '10px' }}><strong>Contact:</strong> +91 98765 43210</p>
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={toggleProfileDetailsModal}>Close</Button>
+        </Modal.Footer>
+      </Modal>
 
+      {/* Notification Details Modal */}
+      <Modal
+        show={showNotificationDetailsModal}
+        onHide={toggleNotificationDetailsModal}
+        centered
+        size="md" // Smaller size for notification details
+        dialogClassName="custom-modal-dialog"
+        contentClassName="custom-modal-content"
+        backdrop="static"
+      >
+        <Modal.Header>
+          <Modal.Title>Notifications</Modal.Title>
+          <button
+            onClick={toggleNotificationDetailsModal}
+            style={modalCloseButtonStyle}
+            className="button-hover-effect"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M13 1L1 13M1 1L13 13" stroke="#64748B" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </button>
+        </Modal.Header>
+        <Modal.Body>
+          {notifications.length > 0 ? (
+            notifications.map((notification) => (
+              <div key={notification.id} style={{ marginBottom: '15px', borderBottom: '1px solid #eee', paddingBottom: '15px' }}>
+                <p style={{ fontWeight: '600', color: '#333', marginBottom: '5px' }}>{notification.message}</p>
+                <p style={{ fontSize: '0.8em', color: '#999' }}>{notification.timestamp}</p>
+              </div>
+            ))
+          ) : (
+            <p style={{ textAlign: 'center', color: '#666' }}>No new notifications.</p>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={toggleNotificationDetailsModal}>Close</Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 };
 
-// --- Inline Styles ---
+// --- Inline Styles (moved outside the AdminDashboard component) ---
 const cardStyle = {
   background: 'white',
   borderRadius: '10px',
@@ -2304,7 +2248,7 @@ const cardStyle = {
   minHeight: '180px',
   position: 'relative',
   cursor: 'pointer',
-  transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out, opacity 0.4s ease-out', // Smoother transition
+  transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out, opacity 0.4s ease-out',
 };
 
 const cardTitleStyle = {
@@ -2321,15 +2265,14 @@ const cardIconStyle = {
   marginTop: '15px',
 };
 
-const menuLinkBaseStyle = { // Base style for menu links
+const menuLinkBaseStyle = {
   color: '#333',
   textDecoration: 'none',
   padding: '10px 15px',
   borderRadius: '5px',
   transition: 'background-color 0.2s',
-  display: 'block', // Make it a block element to take full width
+  display: 'block',
 };
-
 
 const modalCloseButtonStyle = {
   position: 'absolute',
@@ -2343,7 +2286,7 @@ const modalCloseButtonStyle = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  transition: 'background-color 0.2s, transform 0.1s', // Added transform transition
+  transition: 'background-color 0.2s, transform 0.1s',
   color: '#64748b',
   boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
 };
@@ -2355,12 +2298,12 @@ const modalTableStyle = {
   marginTop: '20px',
   borderRadius: '8px',
   overflow: 'hidden',
-  tableLayout: 'fixed', // Key change for fixed column widths
+  tableLayout: 'fixed',
 };
 
 const modalTableHeaderStyle = {
-  padding: '10px 10px', // Reduced vertical padding
-  textAlign: 'left', // Default for most headers
+  padding: '10px 10px',
+  textAlign: 'left',
   backgroundColor: '#e2e8f0',
   color: '#334155',
   fontSize: '0.875rem',
@@ -2373,12 +2316,12 @@ const modalTableHeaderStyle = {
 };
 
 const modalTableCellStyle = {
-  padding: '14px 10px', // Reduced vertical padding
-  textAlign: 'left', // Default for most cells
+  padding: '14px 10px',
+  textAlign: 'left',
   fontSize: '0.9rem',
   color: '#334155',
-  wordBreak: 'break-word', // Added for long content in cells
-  verticalAlign: 'middle', // Added for vertical alignment
+  wordBreak: 'break-word',
+  verticalAlign: 'middle',
 };
 
 const actionButtonStyle = {
@@ -2407,7 +2350,7 @@ const chartSectionStyle = {
   justifyContent: 'center',
   minHeight: '400px',
   transition: 'opacity 0.5s ease-out, transform 0.5s ease-out',
-  transform: 'translateX(-50px)', // Start off-left for animation
+  transform: 'translateX(-50px)',
   opacity: 0,
 };
 
@@ -2422,19 +2365,18 @@ const aboutSectionStyle = {
   justifyContent: 'center',
   minHeight: '400px',
   transition: 'opacity 0.5s ease-out, transform 0.5s ease-out',
-  transform: 'translateX(50px)', // Start off-right for animation
+  transform: 'translateX(50px)',
   opacity: 0,
 };
 
-// --- Style for the count badges ---
 const badgeStyle = {
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
-  minWidth: '20px', // Ensure it's wide enough for single digits
+  minWidth: '20px',
   height: '20px',
   borderRadius: '50%',
-  color: 'white', // Text color for the badge
+  color: 'white',
   fontSize: '0.75em',
   fontWeight: 'bold',
   padding: '0 6px',
@@ -2443,5 +2385,22 @@ const badgeStyle = {
   transition: 'background-color 0.15s ease',
 };
 
+// This is the main App component that will be rendered in your index.js/main.jsx
+const App = () => {
+  return (
+    <Router>
+      <Routes>
+        {/* Render AdminDashboard component for the root path and /admindashboard */}
+        <Route path="/" element={<AdminDashboard />} />
+        <Route path="/admindashboard" element={<AdminDashboard />} />
+        {/* You can add other routes here as needed, e.g., for /reports */}
+        <Route path="/reports" element={<div>Reports Page - Content to be added</div>} />
+        <Route path="/login" element={<div>Login Page - Content to be added</div>} />
+        {/* Fallback route for unmatched paths */}
+        <Route path="*" element={<div>404 - Page Not Found</div>} />
+      </Routes>
+    </Router>
+  );
+};
 
-export default AdminDashboard;
+export default AdminDashboard; // Export App as the default component
