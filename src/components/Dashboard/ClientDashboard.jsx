@@ -276,17 +276,19 @@ const ClientDashboard = () => {
 
 
   return (
-    <div style={{
-      fontFamily: "'Segoe UI', 'Helvetica Neue', sans-serif",
-      background: '#f8fafc',
-      color: '#1e293b',
-      minHeight: '100vh',
-      display: 'flex',
-      overflowX: 'hidden' // Prevent horizontal scroll due to fixed sidebar
-    }}>
+    <div className="client-dashboard-container">
       {/* Dynamic Styles injected here */}
       <style>
         {`
+        .client-dashboard-container {
+          font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+          background: #f8fafc;
+          color: #1e293b;
+          min-height: 100vh;
+          display: flex;
+          overflow-x: hidden; /* Prevent horizontal scroll due to fixed sidebar */
+        }
+
         .download-button {
           background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
           color: white;
@@ -429,9 +431,9 @@ const ClientDashboard = () => {
             text-align: center;
             box-shadow: 0 10px 15px rgba(99, 102, 241, 0.3);
             cursor: pointer;
-            flex: 1 1 300px;
-            max-width: 100%;
-            min-width: 300px;
+            flex: 1 1 300px; /* Flex-basis for cards, will wrap */
+            max-width: 100%; /* Ensure it doesn't overflow on small screens */
+            min-width: 280px; /* Minimum width for the card to be readable */
             transition: transform 0.3s, box-shadow 0.3s;
             position: relative; /* For inner absolute elements */
             overflow: hidden; /* To contain background elements */
@@ -444,15 +446,16 @@ const ClientDashboard = () => {
         .resume-card {
             padding: 40px 24px;
             border-radius: 16px;
-            background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+            background: linear-gradient(135deg, #10b981 0%, #34d399 100%)
+            ;
             color: white;
             font-weight: 700;
             text-align: center;
             box-shadow: 0 10px 15px rgba(16, 185, 129, 0.3);
             cursor: pointer;
-            flex: 1 1 300px;
-            max-width: 100%;
-            min-width: 300px;
+            flex: 1 1 300px; /* Flex-basis for cards, will wrap */
+            max-width: 100%; /* Ensure it doesn't overflow on small screens */
+            min-width: 280px; /* Minimum width for the card to be readable */
             transition: transform 0.3s, box-shadow 0.3s;
             position: relative; /* For inner absolute elements */
             overflow: hidden; /* To contain background elements */
@@ -461,6 +464,42 @@ const ClientDashboard = () => {
             transform: translateY(-5px);
             box-shadow: 0 15px 25px rgba(16, 185, 129, 0.4);
         }
+
+        /* Modal Specific Styles */
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100vw;
+          height: 100vh;
+          background: rgba(0, 0, 0, 0.5);
+          backdrop-filter: blur(4px);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          z-index: 100;
+        }
+
+        .modal-content-style {
+          background: #ffffff;
+          padding: 32px;
+          border-radius: 16px;
+          box-shadow: 0 20px 25px rgba(0, 0, 0, 0.1);
+          width: 90%; /* Responsive width */
+          max-width: 900px; /* Max width for larger screens */
+          max-height: 80vh;
+          overflow-y: auto;
+          position: relative;
+          border: 1px solid #e2e8f0;
+        }
+        @media (max-width: 768px) {
+            .modal-content-style {
+                padding: 20px;
+                width: 95%; /* Wider on small screens */
+                margin: 10px; /* Some margin from edges */
+            }
+        }
+
 
         .modal-close-button {
             position: absolute;
@@ -480,22 +519,97 @@ const ClientDashboard = () => {
             background-color: #f1f5f9;
         }
 
-        /* Styles for the chart and advertisement container */
+        .modal-table-container {
+            overflow-x: auto; /* Enable horizontal scrolling for tables */
+            border-radius: 8px;
+        }
+
+        .modal-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 8px;
+            /* Remove min-width to allow fluid shrinking */
+            table-layout: auto; /* Allow column widths to adjust */
+        }
+
+        .modal-table-header {
+            padding: 12px 16px;
+            text-align: left;
+            background-color: #f8fafc;
+            color: #475569;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border: none;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        @media (max-width: 768px) {
+            .modal-table-header {
+                font-size: 0.7rem; /* Smaller font on mobile */
+                padding: 8px 10px;
+            }
+        }
+
+        .modal-table-cell {
+            padding: 16px;
+            text-align: left;
+            background-color: #ffffff;
+            border: none;
+            font-size: 0.875rem;
+            color: #334155;
+            border-bottom: 1px solid #f1f5f9;
+            white-space: nowrap; /* Prevent text wrapping in cells on smaller screens */
+        }
+        @media (max-width: 768px) {
+            .modal-table-cell {
+                font-size: 0.8rem; /* Smaller font on mobile */
+                padding: 10px;
+            }
+        }
+
+        .modal-table-row {
+            transition: background-color 0.2s;
+        }
+        .modal-table-row:hover {
+            background-color: #f8fafc;
+        }
+        .modal-table-row td:first-child {
+            border-top-left-radius: 8px;
+            border-bottom-left-radius: 8px;
+        }
+        .modal-table-row td:last-child {
+            border-top-right-radius: 8px;
+            border-bottom-right-radius: 8px;
+        }
+
+        /* Chart and Advertisement Specific Styles */
         .chart-and-ads-container {
           display: grid;
-          grid-template-columns: minmax(0, 150px) 1fr minmax(0, 150px); /* Fixed width for ads, flexible for chart */
+          grid-template-columns: minmax(100px, 150px) 1fr minmax(100px, 150px); /* Min width of 100px for ads */
           gap: 24px;
           margin-bottom: 32px;
           align-items: center; /* Vertically align items in the grid */
+          justify-content: center; /* Center content horizontally */
+          width: 100%; /* Use full width available */
         }
 
-        @media (max-width: 1024px) { /* Responsive adjustments for smaller screens */
+        @media (max-width: 1024px) { /* Medium screens */
           .chart-and-ads-container {
             grid-template-columns: 1fr; /* Stack columns on smaller screens */
             grid-template-areas: "ad-left" "chart" "ad-right"; /* Define grid areas for stacking */
+            gap: 20px;
           }
           .ad-column:first-child { grid-area: ad-left; } /* Left ad comes first */
           .ad-column:last-child { grid-area: ad-right; }  /* Right ad comes last */
+        }
+
+        @media (max-width: 768px) { /* Small screens (mobile) */
+          .chart-and-ads-container {
+            gap: 15px;
+          }
         }
 
         .ad-column {
@@ -503,7 +617,8 @@ const ClientDashboard = () => {
           justify-content: center;
           align-items: center;
           height: 100%; /* Ensure ads take full height of the grid row */
-          min-height: 350px; /* Ensure a minimum height for visibility */
+          min-height: 250px; /* Reduced min-height for smaller screens */
+          max-width: 100%; /* Ensure it doesn't overflow */
         }
 
         .ad-placeholder {
@@ -511,7 +626,7 @@ const ClientDashboard = () => {
           border-radius: 12px;
           box-shadow: 0 4px 6px rgba(0,0,0,0.05);
           border: 1px solid #e2e8f0;
-          padding: 20px;
+          padding: 15px; /* Reduced padding */
           text-align: center;
           display: flex;
           flex-direction: column;
@@ -520,8 +635,16 @@ const ClientDashboard = () => {
           width: 100%;
           max-width: 150px; /* Max width for ad content */
         }
+        .ad-placeholder p {
+            font-size: 0.75rem; /* Smaller font for ad text */
+        }
+        .ad-placeholder img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+        }
 
-        /* Styles for payment radio buttons and glider */
+        /* Payment Radio Buttons Specific Styles */
         .radio-group {
           display: flex;
           position: relative;
@@ -532,6 +655,17 @@ const ClientDashboard = () => {
           overflow: hidden;
           width: fit-content;
           margin: 20px auto 30px auto;
+        }
+        @media (max-width: 480px) {
+            .radio-group {
+                flex-direction: column; /* Stack radio buttons on very small screens */
+                width: 80%; /* Wider to accommodate stacked labels */
+                border-radius: 1rem;
+                padding: 10px 0; /* Add vertical padding */
+            }
+            .radio-glider {
+                display: none; /* Hide glider when stacked */
+            }
         }
 
         .hidden-radio-input {
@@ -553,70 +687,67 @@ const ClientDashboard = () => {
           z-index: 2;
           transition: color 0.3s ease-in-out;
         }
-        /* Specific color for selected radio label */
         input[type="radio"]:checked + .radio-label-base {
           color: #fff;
         }
-        /* Hover effect for radio labels */
         .radio-label-base:hover {
-          color: white; /* Always white on hover for dark background */
+          color: white;
+        }
+        @media (max-width: 480px) {
+            .radio-label-base {
+                padding: 10px 15px; /* Adjust padding for stacked */
+                justify-content: flex-start; /* Align text to left when stacked */
+            }
         }
 
         .radio-glider {
           position: absolute;
           top: 0;
           bottom: 0;
-          width: calc(100% / 3); /* 3 options */
+          width: calc(100% / 3);
           border-radius: 1rem;
           z-index: 1;
           transition: transform 0.5s cubic-bezier(0.37, 1.95, 0.66, 0.56), background 0.4s ease-in-out, box-shadow 0.4s ease-in-out;
         }
 
-        .modal-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0 8px;
-            min-width: 700px; /* Adjusted table width */
+        /* General element responsiveness */
+        .main-content-area {
+            flex-grow: 1;
+            padding: 24px;
+            max-width: 100%;
+        }
+        @media (max-width: 768px) {
+            .main-content-area {
+                padding: 15px; /* Smaller padding on mobile */
+            }
+            .dashboard-title {
+                font-size: 1.5rem; /* Smaller title on mobile */
+            }
+        }
+        @media (max-width: 480px) {
+            .dashboard-title {
+                font-size: 1.2rem;
+            }
         }
 
-        .modal-table-header {
-            padding: 12px 16px;
-            text-align: left;
-            background-color: #f8fafc;
-            color: #475569;
-            font-size: 0.8125rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            border: none;
-            position: sticky;
-            top: 0;
-            z-index: 10;
+        .cards-section {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            margin: 40px 0;
+            flex-wrap: wrap; /* Allow cards to wrap */
         }
-
-        .modal-table-cell {
-            padding: 16px;
-            text-align: left;
-            background-color: #ffffff;
-            border: none;
-            font-size: 0.875rem;
-            color: #334155;
-            border-bottom: 1px solid #f1f5f9;
+        @media (max-width: 768px) {
+            .cards-section {
+                gap: 20px; /* Smaller gap on tablets */
+                margin: 30px 0;
+            }
         }
-
-        .modal-table-row {
-            transition: background-color 0.2s;
-        }
-        .modal-table-row:hover {
-            background-color: #f8fafc;
-        }
-        .modal-table-row td:first-child {
-            border-top-left-radius: 8px;
-            border-bottom-left-radius: 8px;
-        }
-        .modal-table-row td:last-child {
-            border-top-right-radius: 8px;
-            border-bottom-right-radius: 8px;
+        @media (max-width: 480px) {
+            .cards-section {
+                gap: 15px; /* Even smaller gap on mobile */
+                margin: 20px 0;
+            }
         }
         `}
       </style>
@@ -634,8 +765,8 @@ const ClientDashboard = () => {
 
       {/* Interviews Modal */}
       {showInterviewsModal && (
-        <div style={modalOverlayStyle}>
-          <div style={modalContentStyle}>
+        <div className="modal-overlay">
+          <div className="modal-content-style">
             <button onClick={toggleInterviewsModal} className="modal-close-button">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M13 1L1 13M1 1L13 13" stroke="#64748B" strokeWidth="2" strokeLinecap="round"/>
@@ -650,7 +781,7 @@ const ClientDashboard = () => {
             }}>
               Scheduled Interviews
             </h3>
-            <div style={{ overflowX: 'auto' }}>
+            <div className="modal-table-container">
               <table className="modal-table">
                 <thead>
                   <tr>
@@ -704,8 +835,8 @@ const ClientDashboard = () => {
 
       {/* Resume Modal */}
       {showResumeModal && (
-        <div style={modalOverlayStyle}>
-          <div style={modalContentStyle}>
+        <div className="modal-overlay">
+          <div className="modal-content-style">
             <button onClick={toggleResumeModal} className="modal-close-button">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M13 1L1 13M1 1L13 13" stroke="#64748B" strokeWidth="2" strokeLinecap="round"/>
@@ -720,7 +851,7 @@ const ClientDashboard = () => {
             }}>
               Resume Updates
             </h3>
-            <div style={{ overflowX: 'auto' }}>
+            <div className="modal-table-container">
               <table className="modal-table">
                 <thead>
                   <tr>
@@ -803,7 +934,7 @@ const ClientDashboard = () => {
 
       {/* Payment Plan Modal */}
       {showPaymentModal && (
-        <div style={modalOverlayStyle}>
+        <div className="modal-overlay">
           <div style={{ ...modalContentStyle, maxWidth: '600px', padding: '40px', background: '#334155' }}> {/* Dark background for glass effect */}
             <button onClick={togglePaymentModal} className="modal-close-button">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1000,11 +1131,7 @@ const ClientDashboard = () => {
       </div>
 
       {/* Main Content Area */}
-      <div style={{
-        flexGrow: 1,
-        padding: '24px',
-        maxWidth: '100%'
-      }}>
+      <div className="main-content-area">
         {/* Header */}
         <header style={{
           display: 'flex',
@@ -1032,13 +1159,7 @@ const ClientDashboard = () => {
           </button>
         </header>
 
-        <h2 style={{
-          marginBottom: '24px',
-          textAlign: 'center',
-          color: '#1e293b',
-          fontSize: '1.75rem',
-          fontWeight: '700'
-        }}>
+        <h2 className="dashboard-title">
           User Dashboard
         </h2>
 
@@ -1047,9 +1168,9 @@ const ClientDashboard = () => {
           {/* Left Advertisement */}
           <div className="ad-column">
             <div className="ad-placeholder">
-              <p style={{ color: '#475569', fontSize: '0.9rem', marginBottom: '10px' }}>Sponsored</p>
-              <img src="https://placehold.co/120x300/e0f2f7/475569?text=Your+Ad" alt="Advertisement 1" style={{ maxWidth: '100%', height: 'auto', borderRadius: '8px' }} onError={(e)=>{e.target.onerror = null; e.target.src='https://placehold.co/120x300/e0f2f7/475569?text=Ad+Load+Error'}}/>
-              <p style={{ marginTop: '10px', fontSize: '0.8rem', color: '#64748b' }}>Discover new opportunities!</p>
+              <p style={{ color: '#475569', marginBottom: '10px' }}>Sponsored</p>
+              <img src="https://placehold.co/120x300/e0f2f7/475569?text=Your+Ad" alt="Advertisement 1" onError={(e)=>{e.target.onerror = null; e.target.src='https://placehold.co/120x300/e0f2f7/475569?text=Ad+Load+Error'}}/>
+              <p style={{ marginTop: '10px', color: '#64748b' }}>Discover new opportunities!</p>
             </div>
           </div>
 
@@ -1070,9 +1191,9 @@ const ClientDashboard = () => {
           {/* Right Advertisement */}
           <div className="ad-column">
             <div className="ad-placeholder">
-              <p style={{ color: '#475569', fontSize: '0.9rem', marginBottom: '10px' }}>Promoted</p>
-              <img src="https://placehold.co/120x300/f0f9ff/475569?text=Another+Ad" alt="Advertisement 2" style={{ maxWidth: '100%', height: 'auto', borderRadius: '8px' }} onError={(e)=>{e.target.onerror = null; e.target.src='https://placehold.co/120x300/f0f9ff/475569?text=Ad+Load+Error'}}/>
-              <p style={{ marginTop: '10px', fontSize: '0.8rem', color: '#64748b' }}>Boost your career today!</p>
+              <p style={{ color: '#475569', marginBottom: '10px' }}>Promoted</p>
+              <img src="https://placehold.co/120x300/f0f9ff/475569?text=Another+Ad" alt="Advertisement 2" onError={(e)=>{e.target.onerror = null; e.target.src='https://placehold.co/120x300/f0f9ff/475569?text=Ad+Load+Error'}}/>
+              <p style={{ marginTop: '10px', color: '#64748b' }}>Boost your career today!</p>
             </div>
           </div>
         </div>
@@ -1087,19 +1208,13 @@ const ClientDashboard = () => {
         </div>
 
         {/* Cards Section */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          gap: '32px',
-          margin: '40px 0',
-          flexWrap: 'wrap'
-        }}>
+        <div className="cards-section">
           {/* Interviews Card */}
           <div
             onClick={toggleInterviewsModal}
             className="interviews-card"
           >
-            {/* Background elements, keep inline for now as they don't have pseudo-classes */}
+            {/* Background elements */}
             <div style={{
               position: 'absolute',
               bottom: '-20px',
@@ -1141,7 +1256,7 @@ const ClientDashboard = () => {
             onClick={toggleResumeModal}
             className="resume-card"
           >
-            {/* Background elements, keep inline for now as they don't have pseudo-classes */}
+            {/* Background elements */}
             <div style={{
               position: 'absolute',
               bottom: '-20px',
@@ -1184,33 +1299,6 @@ const ClientDashboard = () => {
 };
 
 // --- STYLES (kept as constants for clarity, but they are NOT inline styles with pseudo-classes) ---
-const modalOverlayStyle = {
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  width: '100vw',
-  height: '100vh',
-  background: 'rgba(0, 0, 0, 0.5)',
-  backdropFilter: 'blur(4px)',
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  zIndex: 100
-};
-
-const modalContentStyle = {
-  background: '#ffffff',
-  padding: '32px',
-  borderRadius: '16px',
-  boxShadow: '0 20px 25px rgba(0, 0, 0, 0.1)',
-  maxWidth: '90%',
-  width: '900px',
-  maxHeight: '80vh',
-  overflowY: 'auto',
-  position: 'relative',
-  border: '1px solid #e2e8f0'
-};
-
 const chartSectionStyle = {
   width: '100%',
   maxWidth: '1000px',
