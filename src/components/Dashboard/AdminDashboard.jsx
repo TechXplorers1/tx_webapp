@@ -1,5 +1,3 @@
-// App.jsx (This file contains the main application structure)
-
 import React, { useState, useEffect } from 'react';
 // Import BrowserRouter, Routes, and Route for routing
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';

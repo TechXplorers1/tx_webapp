@@ -20,6 +20,28 @@ ChartJS.register(
   Tooltip
 );
 
+// Dimming Overlay Component
+const DimmingOverlay = ({ isVisible, onClick }) => {
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        zIndex: isVisible ? 99 : -1, // Z-index needs to be below modals (100) but above content
+        opacity: isVisible ? 1 : 0,
+        visibility: isVisible ? 'visible' : 'hidden',
+        transition: 'opacity 0.3s ease, visibility 0.3s ease',
+      }}
+    />
+  );
+};
+
+
 const ClientDashboard = () => {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -235,7 +257,6 @@ const ClientDashboard = () => {
     }
 
     return {
-      ...radioGliderStyle,
       transform: transformValue,
       background: backgroundValue,
       boxShadow: boxShadowValue,
@@ -250,6 +271,9 @@ const ClientDashboard = () => {
     alert('Downloading the latest resume... (This is a placeholder action)');
   };
 
+  // Determine if the overlay should be visible
+  const isOverlayVisible = menuOpen || showInterviewsModal || showResumeModal || showPaymentModal;
+
 
   return (
     <div style={{
@@ -257,9 +281,10 @@ const ClientDashboard = () => {
       background: '#f8fafc',
       color: '#1e293b',
       minHeight: '100vh',
-      display: 'flex'
+      display: 'flex',
+      overflowX: 'hidden' // Prevent horizontal scroll due to fixed sidebar
     }}>
-      {/* Styles for the download button animation */}
+      {/* Dynamic Styles injected here */}
       <style>
         {`
         .download-button {
@@ -284,30 +309,334 @@ const ClientDashboard = () => {
           box-shadow: 0 8px 15px rgba(0,0,0,0.2);
           background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
         }
+
+        .renew-plan-button {
+          background: linear-gradient(135deg, #4ade80 0%, #3b82f6 100%);
+          color: white;
+          border: none;
+          padding: 12px 24px;
+          border-radius: 8px;
+          font-size: 1rem;
+          font-weight: 600;
+          cursor: pointer;
+          margin-bottom: 32px;
+          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+          width: 100%;
+          transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .renew-plan-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+
+        .help-support-button {
+            background: none;
+            border: none;
+            color: #64748b;
+            font-size: 0.9375rem;
+            font-weight: 500;
+            text-align: center;
+            padding: 12px 0;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s;
+        }
+        .help-support-button:hover {
+            color: #3b82f6;
+        }
+
+        .logout-button {
+            background: #f1f5f9;
+            color: #ef4444;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 0.9375rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin: 16px 0 24px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+        .logout-button:hover {
+            background-color: #fee2e2;
+        }
+
+        .back-button {
+            background: #ffffff;
+            color: #3b82f6;
+            border: 1px solid #e2e8f0;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            transition: background-color 0.2s;
+        }
+        .back-button:hover {
+            background-color: #f8fafc;
+        }
+
+        .menu-toggle-button {
+            font-size: 24px;
+            cursor: pointer;
+            color: #64748b;
+            padding: 8px;
+            border-radius: 6px;
+            transition: background-color 0.2s;
+            background: none; /* Ensure no default button background */
+            border: none; /* Ensure no default button border */
+        }
+        .menu-toggle-button:hover {
+            background-color: #f1f5f9;
+        }
+
+        .worksheet-button {
+            margin: 0 auto;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .worksheet-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+            background: #2563eb;
+        }
+
+        .interviews-card {
+            padding: 40px 24px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            font-weight: 700;
+            text-align: center;
+            box-shadow: 0 10px 15px rgba(99, 102, 241, 0.3);
+            cursor: pointer;
+            flex: 1 1 300px;
+            max-width: 100%;
+            min-width: 300px;
+            transition: transform 0.3s, box-shadow 0.3s;
+            position: relative; /* For inner absolute elements */
+            overflow: hidden; /* To contain background elements */
+        }
+        .interviews-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 25px rgba(99, 102, 241, 0.4);
+        }
+
+        .resume-card {
+            padding: 40px 24px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+            color: white;
+            font-weight: 700;
+            text-align: center;
+            box-shadow: 0 10px 15px rgba(16, 185, 129, 0.3);
+            cursor: pointer;
+            flex: 1 1 300px;
+            max-width: 100%;
+            min-width: 300px;
+            transition: transform 0.3s, box-shadow 0.3s;
+            position: relative; /* For inner absolute elements */
+            overflow: hidden; /* To contain background elements */
+        }
+        .resume-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 25px rgba(16, 185, 129, 0.4);
+        }
+
+        .modal-close-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+        .modal-close-button:hover {
+            background-color: #f1f5f9;
+        }
+
+        /* Styles for the chart and advertisement container */
+        .chart-and-ads-container {
+          display: grid;
+          grid-template-columns: minmax(0, 150px) 1fr minmax(0, 150px); /* Fixed width for ads, flexible for chart */
+          gap: 24px;
+          margin-bottom: 32px;
+          align-items: center; /* Vertically align items in the grid */
+        }
+
+        @media (max-width: 1024px) { /* Responsive adjustments for smaller screens */
+          .chart-and-ads-container {
+            grid-template-columns: 1fr; /* Stack columns on smaller screens */
+            grid-template-areas: "ad-left" "chart" "ad-right"; /* Define grid areas for stacking */
+          }
+          .ad-column:first-child { grid-area: ad-left; } /* Left ad comes first */
+          .ad-column:last-child { grid-area: ad-right; }  /* Right ad comes last */
+        }
+
+        .ad-column {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          height: 100%; /* Ensure ads take full height of the grid row */
+          min-height: 350px; /* Ensure a minimum height for visibility */
+        }
+
+        .ad-placeholder {
+          background: #ffffff;
+          border-radius: 12px;
+          box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+          border: 1px solid #e2e8f0;
+          padding: 20px;
+          text-align: center;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          width: 100%;
+          max-width: 150px; /* Max width for ad content */
+        }
+
+        /* Styles for payment radio buttons and glider */
+        .radio-group {
+          display: flex;
+          position: relative;
+          background: rgba(255, 255, 255, 0.06);
+          border-radius: 1rem;
+          backdrop-filter: blur(12px);
+          box-shadow: inset 1px 1px 4px rgba(255, 255, 255, 0.2), inset -1px -1px 6px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.15);
+          overflow: hidden;
+          width: fit-content;
+          margin: 20px auto 30px auto;
+        }
+
+        .hidden-radio-input {
+          display: none;
+        }
+
+        .radio-label-base {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 80px;
+          font-size: 14px;
+          padding: 0.8rem 1.6rem;
+          cursor: pointer;
+          font-weight: 600;
+          letter-spacing: 0.3px;
+          position: relative;
+          z-index: 2;
+          transition: color 0.3s ease-in-out;
+        }
+        /* Specific color for selected radio label */
+        input[type="radio"]:checked + .radio-label-base {
+          color: #fff;
+        }
+        /* Hover effect for radio labels */
+        .radio-label-base:hover {
+          color: white; /* Always white on hover for dark background */
+        }
+
+        .radio-glider {
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          width: calc(100% / 3); /* 3 options */
+          border-radius: 1rem;
+          z-index: 1;
+          transition: transform 0.5s cubic-bezier(0.37, 1.95, 0.66, 0.56), background 0.4s ease-in-out, box-shadow 0.4s ease-in-out;
+        }
+
+        .modal-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 8px;
+            min-width: 700px; /* Adjusted table width */
+        }
+
+        .modal-table-header {
+            padding: 12px 16px;
+            text-align: left;
+            background-color: #f8fafc;
+            color: #475569;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border: none;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .modal-table-cell {
+            padding: 16px;
+            text-align: left;
+            background-color: #ffffff;
+            border: none;
+            font-size: 0.875rem;
+            color: #334155;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .modal-table-row {
+            transition: background-color 0.2s;
+        }
+        .modal-table-row:hover {
+            background-color: #f8fafc;
+        }
+        .modal-table-row td:first-child {
+            border-top-left-radius: 8px;
+            border-bottom-left-radius: 8px;
+        }
+        .modal-table-row td:last-child {
+            border-top-right-radius: 8px;
+            border-bottom-right-radius: 8px;
+        }
         `}
       </style>
 
-      {/* Sidebar Overlay */}
-      {menuOpen && (
-        <div
-          onClick={toggleMenu}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100vw',
-            height: '100vh',
-            background: 'rgba(0, 0, 0, 0.4)',
-            zIndex: 9
-          }}
-        />
-      )}
+      {/* Dimming Overlay */}
+      <DimmingOverlay
+        isVisible={isOverlayVisible}
+        onClick={() => {
+          if (menuOpen) setMenuOpen(false);
+          if (showInterviewsModal) setShowInterviewsModal(false);
+          if (showResumeModal) setShowResumeModal(false);
+          if (showPaymentModal) setShowPaymentModal(false);
+        }}
+      />
 
       {/* Interviews Modal */}
       {showInterviewsModal && (
         <div style={modalOverlayStyle}>
           <div style={modalContentStyle}>
-            <button onClick={toggleInterviewsModal} style={modalCloseButtonStyle}>
+            <button onClick={toggleInterviewsModal} className="modal-close-button">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M13 1L1 13M1 1L13 13" stroke="#64748B" strokeWidth="2" strokeLinecap="round"/>
               </svg>
@@ -322,28 +651,28 @@ const ClientDashboard = () => {
               Scheduled Interviews
             </h3>
             <div style={{ overflowX: 'auto' }}>
-              <table style={modalTableStyle}>
+              <table className="modal-table">
                 <thead>
                   <tr>
-                    <th style={modalTableHeaderStyle}>Date</th>
-                    <th style={modalTableHeaderStyle}>Time</th>
-                    <th style={modalTableHeaderStyle}>Company</th>
-                    <th style={modalTableHeaderStyle}>Role</th>
-                    <th style={modalTableHeaderStyle}>Recruiter Mail ID</th>
-                    <th style={modalTableHeaderStyle}>Round</th>
+                    <th className="modal-table-header">Date</th>
+                    <th className="modal-table-header">Time</th>
+                    <th className="modal-table-header">Company</th>
+                    <th className="modal-table-header">Role</th>
+                    <th className="modal-table-header">Recruiter Mail ID</th>
+                    <th className="modal-table-header">Round</th>
                   </tr>
                 </thead>
                 <tbody>
                   {scheduledInterviews.map((interview) => (
-                    <tr key={interview.id} style={modalTableRowStyle}>
-                      <td style={modalTableCellStyle}>
+                    <tr key={interview.id} className="modal-table-row">
+                      <td className="modal-table-cell">
                         <div style={{ fontWeight: '500' }}>{interview.date}</div>
                       </td>
-                      <td style={modalTableCellStyle}>{interview.time}</td>
-                      <td style={{...modalTableCellStyle, fontWeight: '600'}}>{interview.company}</td>
-                      <td style={modalTableCellStyle}>{interview.role}</td>
-                      <td style={modalTableCellStyle}>{interview.recruiterMailId}</td>
-                      <td style={modalTableCellStyle}>
+                      <td className="modal-table-cell">{interview.time}</td>
+                      <td style={{fontWeight: '600'}} className="modal-table-cell">{interview.company}</td>
+                      <td className="modal-table-cell">{interview.role}</td>
+                      <td className="modal-table-cell">{interview.recruiterMailId}</td>
+                      <td className="modal-table-cell">
                         <div style={{
                           display: 'inline-flex',
                           alignItems: 'center',
@@ -377,7 +706,7 @@ const ClientDashboard = () => {
       {showResumeModal && (
         <div style={modalOverlayStyle}>
           <div style={modalContentStyle}>
-            <button onClick={toggleResumeModal} style={modalCloseButtonStyle}>
+            <button onClick={toggleResumeModal} className="modal-close-button">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M13 1L1 13M1 1L13 13" stroke="#64748B" strokeWidth="2" strokeLinecap="round"/>
               </svg>
@@ -392,23 +721,23 @@ const ClientDashboard = () => {
               Resume Updates
             </h3>
             <div style={{ overflowX: 'auto' }}>
-              <table style={modalTableStyle}>
+              <table className="modal-table">
                 <thead>
                   <tr>
-                    <th style={modalTableHeaderStyle}>Date</th>
-                    <th style={modalTableHeaderStyle}>Update Type</th>
-                    <th style={modalTableHeaderStyle}>Status</th>
-                    <th style={modalTableHeaderStyle}>Details</th>
+                    <th className="modal-table-header">Date</th>
+                    <th className="modal-table-header">Update Type</th>
+                    <th className="modal-table-header">Status</th>
+                    <th className="modal-table-header">Details</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredResumeUpdates.map((update) => (
-                    <tr key={update.id} style={modalTableRowStyle}>
-                      <td style={modalTableCellStyle}>
+                    <tr key={update.id} className="modal-table-row">
+                      <td className="modal-table-cell">
                         <div style={{ fontWeight: '500' }}>{update.date}</div>
                       </td>
-                      <td style={{...modalTableCellStyle, fontWeight: '600'}}>{update.type}</td>
-                      <td style={modalTableCellStyle}>
+                      <td style={{fontWeight: '600'}} className="modal-table-cell">{update.type}</td>
+                      <td className="modal-table-cell">
                         <div style={{
                           display: 'inline-flex',
                           alignItems: 'center',
@@ -443,7 +772,7 @@ const ClientDashboard = () => {
                           {update.status}
                         </div>
                       </td>
-                      <td style={modalTableCellStyle}>{update.details}</td>
+                      <td className="modal-table-cell">{update.details}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -476,7 +805,7 @@ const ClientDashboard = () => {
       {showPaymentModal && (
         <div style={modalOverlayStyle}>
           <div style={{ ...modalContentStyle, maxWidth: '600px', padding: '40px', background: '#334155' }}> {/* Dark background for glass effect */}
-            <button onClick={togglePaymentModal} style={modalCloseButtonStyle}>
+            <button onClick={togglePaymentModal} className="modal-close-button">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M13 1L1 13M1 1L13 13" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round"/> {/* Lighter color for contrast */}
               </svg>
@@ -492,20 +821,16 @@ const ClientDashboard = () => {
             </h3>
 
             {/* Glass Radio Group */}
-            <div style={radioGroupStyle}>
+            <div className="radio-group">
               <input
                 type="radio"
                 name="plan"
                 id="glass-silver"
                 checked={selectedRadioPlan === 'glass-silver'}
                 onChange={() => handleRadioPlanChange('glass-silver')}
-                style={hiddenRadioInputStyle} // Apply hidden style
+                className="hidden-radio-input"
               />
-              <label htmlFor="glass-silver" style={{
-                ...radioLabelBaseStyle,
-                color: selectedRadioPlan === 'glass-silver' ? '#fff' : '#e5e5e5',
-                ...(true && { ':hover': { color: 'white' } })
-              }}>
+              <label htmlFor="glass-silver" className="radio-label-base">
                 Silver
               </label>
 
@@ -515,13 +840,9 @@ const ClientDashboard = () => {
                 id="glass-gold"
                 checked={selectedRadioPlan === 'glass-gold'}
                 onChange={() => handleRadioPlanChange('glass-gold')}
-                style={hiddenRadioInputStyle}
+                className="hidden-radio-input"
               />
-              <label htmlFor="glass-gold" style={{
-                ...radioLabelBaseStyle,
-                color: selectedRadioPlan === 'glass-gold' ? '#fff' : '#e5e5e5',
-                ...(true && { ':hover': { color: 'white' } })
-              }}>
+              <label htmlFor="glass-gold" className="radio-label-base">
                 Gold
               </label>
 
@@ -531,16 +852,12 @@ const ClientDashboard = () => {
                 id="glass-platinum"
                 checked={selectedRadioPlan === 'glass-platinum'}
                 onChange={() => handleRadioPlanChange('glass-platinum')}
-                style={hiddenRadioInputStyle}
+                className="hidden-radio-input"
               />
-              <label htmlFor="glass-platinum" style={{
-                ...radioLabelBaseStyle,
-                color: selectedRadioPlan === 'glass-platinum' ? '#fff' : '#e5e5e5',
-                ...(true && { ':hover': { color: 'white' } })
-              }}>
+              <label htmlFor="glass-platinum" className="radio-label-base">
                 Platinum
               </label>
-              <div style={getGliderDynamicStyle()} />
+              <div className="radio-glider" style={getGliderDynamicStyle()} />
             </div>
 
             {/* Display details of the currently selected plan */}
@@ -584,7 +901,7 @@ const ClientDashboard = () => {
         color: '#1e293b',
         padding: '24px',
         boxShadow: '4px 0 20px rgba(0,0,0,0.08)',
-        zIndex: 10,
+        zIndex: 100, // Higher z-index for sidebar
         transition: 'right 0.3s ease-out',
         display: 'flex',
         flexDirection: 'column',
@@ -646,27 +963,7 @@ const ClientDashboard = () => {
         {/* Renewal Button */}
         <button
           onClick={togglePaymentModal} // Calls the new toggle function
-          style={{
-            background: 'linear-gradient(135deg, #4ade80 0%, #3b82f6 100%)',
-            color: 'white',
-            border: 'none',
-            padding: '12px 24px',
-            borderRadius: '8px',
-            fontSize: '1rem',
-            fontWeight: '600',
-            cursor: 'pointer',
-            marginBottom: '32px',
-            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-            width: '100%',
-            transition: 'transform 0.2s, box-shadow 0.2s',
-            // Corrected pseudo-class syntax for inline styles
-            ...(true && { // Using a true condition to always apply for now, could be dynamic
-              ':hover': {
-                transform: 'translateY(-2px)',
-                boxShadow: '0 6px 12px rgba(0,0,0,0.15)'
-              }
-            })
-          }}
+          className="renew-plan-button"
         >
           Renew Plan
         </button>
@@ -677,28 +974,7 @@ const ClientDashboard = () => {
         {/* Bottom Links */}
         <button
           onClick={() => navigate('/contactus')}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: '#64748b',
-            fontSize: '0.9375rem',
-            fontWeight: '500',
-            textAlign: 'center',
-            padding: '12px 0',
-            cursor: 'pointer',
-            width: '100%',
-            marginTop: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'color 0.2s',
-            // Corrected pseudo-class syntax for inline styles
-            ...(true && {
-              ':hover': {
-                color: '#3b82f6'
-              }
-            })
-          }}
+          className="help-support-button"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginRight: '8px' }}>
             <path d="M8 14C11.3137 14 14 11.3137 14 8C14 4.68629 11.3137 2 8 2C4.68629 2 2 4.68629 2 8C2 11.3137 4.68629 14 8 14Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -714,28 +990,7 @@ const ClientDashboard = () => {
             navigate('/');
             toggleMenu();
           }}
-          style={{
-            background: '#f1f5f9',
-            color: '#ef4444',
-            border: 'none',
-            padding: '12px 24px',
-            borderRadius: '8px',
-            fontSize: '0.9375rem',
-            fontWeight: '600',
-            cursor: 'pointer',
-            width: '100%',
-            margin: '16px 0 24px 0',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'background-color 0.2s',
-            // Corrected pseudo-class syntax for inline styles
-            ...(true && {
-              ':hover': {
-                backgroundColor: '#fee2e2'
-              }
-            })
-          }}
+          className="logout-button"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginRight: '8px' }}>
             <path d="M6 14H3.33333C2.97971 14 2.64057 13.8595 2.39052 13.6095C2.14048 13.3594 2 13.0203 2 12.6667V3.33333C2 2.97971 2.14048 2.64057 2.39052 2.39052C2.64057 2.14048 2.97971 2 3.33333 2H6M10.6667 11.3333L14 8M14 8L10.6667 4.66667M14 8H6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -761,26 +1016,7 @@ const ClientDashboard = () => {
         }}>
           <button
             onClick={() => navigate('/')}
-            style={{
-              background: '#ffffff',
-              color: '#3b82f6',
-              border: '1px solid #e2e8f0',
-              padding: '8px 16px',
-              borderRadius: '6px',
-              fontSize: '0.875rem',
-              fontWeight: '500',
-              cursor: 'pointer',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-              display: 'flex',
-              alignItems: 'center',
-              transition: 'background-color 0.2s',
-              // Corrected pseudo-class syntax for inline styles
-              ...(true && {
-                ':hover': {
-                  backgroundColor: '#f8fafc'
-                }
-              })
-            }}
+            className="back-button"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginRight: '6px' }}>
               <path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -788,25 +1024,12 @@ const ClientDashboard = () => {
             Back
           </button>
 
-          <div
+          <button
             onClick={toggleMenu}
-            style={{
-              fontSize: '24px',
-              cursor: 'pointer',
-              color: '#64748b',
-              padding: '8px',
-              borderRadius: '6px',
-              transition: 'background-color 0.2s',
-              // Corrected pseudo-class syntax for inline styles
-              ...(true && {
-                ':hover': {
-                  backgroundColor: '#f1f5f9'
-                }
-              })
-            }}
+            className="menu-toggle-button"
           >
             &#9776;
-          </div>
+          </button>
         </header>
 
         <h2 style={{
@@ -819,53 +1042,45 @@ const ClientDashboard = () => {
           User Dashboard
         </h2>
 
-        {/* Chart Section */}
-        <div style={{
-          width: '100%',
-          maxWidth: '1000px',
-          margin: '0 auto 32px auto',
-          background: '#ffffff',
-          borderRadius: '12px',
-          padding: '24px',
-          boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
-          border: '1px solid #e2e8f0'
-        }}>
-          <h4 style={{
-            marginBottom: '20px',
-            textAlign: 'center',
-            color: '#475569',
-            fontSize: '1.125rem',
-            fontWeight: '600'
-          }}>
-            Job Source Performance
-          </h4>
-          <Line data={data} options={options} />
+        {/* New container for Chart and Advertisements */}
+        <div className="chart-and-ads-container">
+          {/* Left Advertisement */}
+          <div className="ad-column">
+            <div className="ad-placeholder">
+              <p style={{ color: '#475569', fontSize: '0.9rem', marginBottom: '10px' }}>Sponsored</p>
+              <img src="https://placehold.co/120x300/e0f2f7/475569?text=Your+Ad" alt="Advertisement 1" style={{ maxWidth: '100%', height: 'auto', borderRadius: '8px' }} onError={(e)=>{e.target.onerror = null; e.target.src='https://placehold.co/120x300/e0f2f7/475569?text=Ad+Load+Error'}}/>
+              <p style={{ marginTop: '10px', fontSize: '0.8rem', color: '#64748b' }}>Discover new opportunities!</p>
+            </div>
+          </div>
+
+          {/* Chart Section */}
+          <div style={chartSectionStyle}> {/* Keep chartSectionStyle inline for transitions */}
+            <h4 style={{
+              marginBottom: '20px',
+              textAlign: 'center',
+              color: '#475569',
+              fontSize: '1.125rem',
+              fontWeight: '600'
+            }}>
+              Job Source Performance
+            </h4>
+            <Line data={data} options={options} />
+          </div>
+
+          {/* Right Advertisement */}
+          <div className="ad-column">
+            <div className="ad-placeholder">
+              <p style={{ color: '#475569', fontSize: '0.9rem', marginBottom: '10px' }}>Promoted</p>
+              <img src="https://placehold.co/120x300/f0f9ff/475569?text=Another+Ad" alt="Advertisement 2" style={{ maxWidth: '100%', height: 'auto', borderRadius: '8px' }} onError={(e)=>{e.target.onerror = null; e.target.src='https://placehold.co/120x300/f0f9ff/475569?text=Ad+Load+Error'}}/>
+              <p style={{ marginTop: '10px', fontSize: '0.8rem', color: '#64748b' }}>Boost your career today!</p>
+            </div>
+          </div>
         </div>
 
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <button
             onClick={() => navigate('/clientworksheet')}
-            style={{
-              margin: '0 auto',
-              background: '#3b82f6',
-              color: 'white',
-              border: 'none',
-              padding: '12px 24px',
-              borderRadius: '8px',
-              fontSize: '1rem',
-              fontWeight: '600',
-              cursor: 'pointer',
-              boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-              transition: 'transform 0.2s, box-shadow 0.2s',
-              // Corrected pseudo-class syntax for inline styles
-              ...(true && {
-                ':hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 6px 12px rgba(0,0,0,0.15)',
-                  background: '#2563eb'
-                }
-              })
-            }}
+            className="worksheet-button"
           >
             Go to Work Sheet
           </button>
@@ -882,28 +1097,9 @@ const ClientDashboard = () => {
           {/* Interviews Card */}
           <div
             onClick={toggleInterviewsModal}
-            style={{
-              padding: '40px 24px',
-              borderRadius: '16px',
-              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-              color: 'white',
-              fontWeight: '700',
-              textAlign: 'center',
-              boxShadow: '0 10px 15px rgba(99, 102, 241, 0.3)',
-              cursor: 'pointer',
-              flex: '1 1 300px',
-              maxWidth: '100%',
-              minWidth: '300px',
-              transition: 'transform 0.3s, box-shadow 0.3s',
-              // Corrected pseudo-class syntax for inline styles
-              ...(true && {
-                ':hover': {
-                  transform: 'translateY(-5px)',
-                  boxShadow: '0 15px 25px rgba(99, 102, 241, 0.4)'
-                }
-              })
-            }}
+            className="interviews-card"
           >
+            {/* Background elements, keep inline for now as they don't have pseudo-classes */}
             <div style={{
               position: 'absolute',
               bottom: '-20px',
@@ -943,28 +1139,9 @@ const ClientDashboard = () => {
           {/* Resume Card */}
           <div
             onClick={toggleResumeModal}
-            style={{
-              padding: '40px 24px',
-              borderRadius: '16px',
-              background: 'linear-gradient(135deg, #10b981 0%, #34d399 100%)',
-              color: 'white',
-              fontWeight: '700',
-              textAlign: 'center',
-              boxShadow: '0 10px 15px rgba(16, 185, 129, 0.3)',
-              cursor: 'pointer',
-              flex: '1 1 300px',
-              maxWidth: '100%',
-              minWidth: '300px',
-              transition: 'transform 0.3s, box-shadow 0.3s',
-              // Corrected pseudo-class syntax for inline styles
-              ...(true && {
-                ':hover': {
-                  transform: 'translateY(-5px)',
-                  boxShadow: '0 15px 25px rgba(16, 185, 129, 0.4)'
-                }
-              })
-            }}
+            className="resume-card"
           >
+            {/* Background elements, keep inline for now as they don't have pseudo-classes */}
             <div style={{
               position: 'absolute',
               bottom: '-20px',
@@ -1006,7 +1183,7 @@ const ClientDashboard = () => {
   );
 };
 
-// --- STYLES ---
+// --- STYLES (kept as constants for clarity, but they are NOT inline styles with pseudo-classes) ---
 const modalOverlayStyle = {
   position: 'fixed',
   top: 0,
@@ -1034,118 +1211,14 @@ const modalContentStyle = {
   border: '1px solid #e2e8f0'
 };
 
-const modalCloseButtonStyle = {
-  position: 'absolute',
-  top: '20px',
-  right: '20px',
-  background: 'none',
-  border: 'none',
-  cursor: 'pointer',
-  padding: '8px',
-  borderRadius: '50%',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  transition: 'background-color 0.2s',
-  // Corrected pseudo-class syntax for inline styles
-  ...(true && {
-    ':hover': {
-      backgroundColor: '#f1f5f9'
-    }
-  })
-};
-
-const modalTableStyle = {
+const chartSectionStyle = {
   width: '100%',
-  borderCollapse: 'separate',
-  borderSpacing: '0 8px',
-  minWidth: '700px', // Adjusted table width
-};
-
-const modalTableHeaderStyle = {
-  padding: '12px 16px',
-  textAlign: 'left',
-  backgroundColor: '#f8fafc',
-  color: '#475569',
-  fontSize: '0.8125rem',
-  fontWeight: '600',
-  textTransform: 'uppercase',
-  letterSpacing: '0.5px',
-  border: 'none',
-  position: 'sticky',
-  top: '0',
-  zIndex: '10',
-};
-
-const modalTableCellStyle = {
-  padding: '16px',
-  textAlign: 'left',
-  backgroundColor: '#ffffff',
-  border: 'none',
-  fontSize: '0.875rem',
-  color: '#334155',
-  borderBottom: '1px solid #f1f5f9',
-};
-
-const modalTableRowStyle = {
-  transition: 'background-color 0.2s',
-  // Corrected pseudo-class syntax for inline styles
-  ...(true && {
-    ':hover': {
-      backgroundColor: '#f8fafc'
-    },
-    'td:first-child': {
-      borderTopLeftRadius: '8px',
-      borderBottomLeftRadius: '8px'
-    },
-    'td:last-child': {
-      borderTopRightRadius: '8px',
-      borderBottomRightRadius: '8px'
-    }
-  })
-};
-
-// --- New Styles for Payment Radio Buttons ---
-const radioGroupStyle = {
-  display: 'flex',
-  position: 'relative',
-  background: 'rgba(255, 255, 255, 0.06)',
-  borderRadius: '1rem',
-  backdropFilter: 'blur(12px)',
-  boxShadow: 'inset 1px 1px 4px rgba(255, 255, 255, 0.2), inset -1px -1px 6px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.15)',
-  overflow: 'hidden',
-  width: 'fit-content',
-  margin: '20px auto 30px auto', // Centered with margin
-};
-
-const hiddenRadioInputStyle = {
-  display: 'none',
-};
-
-const radioLabelBaseStyle = {
-  flex: 1,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  minWidth: '80px',
-  fontSize: '14px',
-  padding: '0.8rem 1.6rem',
-  cursor: 'pointer',
-  fontWeight: '600',
-  letterSpacing: '0.3px',
-  position: 'relative',
-  zIndex: 2,
-  transition: 'color 0.3s ease-in-out',
-};
-
-const radioGliderStyle = {
-  position: 'absolute',
-  top: 0,
-  bottom: 0,
-  width: `calc(100% / 3)`,
-  borderRadius: '1rem',
-  zIndex: 1,
-  transition: 'transform 0.5s cubic-bezier(0.37, 1.95, 0.66, 0.56), background 0.4s ease-in-out, box-shadow 0.4s ease-in-out',
+  maxWidth: '1000px',
+  background: '#ffffff',
+  borderRadius: '12px',
+  padding: '24px',
+  boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
+  border: '1px solid #e2e8f0'
 };
 
 const selectedPlanDetailsStyle = {
@@ -1203,13 +1276,6 @@ const paymentPlanSelectButtonStyle = {
   width: '100%',
   boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
   transition: 'background-color 0.2s, transform 0.2s',
-  ...(true && {
-    ':hover': {
-      background: '#2563eb',
-      transform: 'translateY(-2px)',
-      boxShadow: '0 6px 12px rgba(0,0,0,0.15)',
-    }
-  })
 };
 
 export default ClientDashboard;
