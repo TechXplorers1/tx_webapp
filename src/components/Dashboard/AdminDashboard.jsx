@@ -2469,4 +2469,4 @@ const App = () => {
   );
 };
 
-export default AdminDashboard; // Export App as the default component
+export default AdminDashboard;
