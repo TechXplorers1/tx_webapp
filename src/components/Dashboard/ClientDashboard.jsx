@@ -280,6 +280,7 @@ const ClientDashboard = () => {
       {/* Dynamic Styles injected here */}
       <style>
         {`
+        /* Base styles for the dashboard container */
         .client-dashboard-container {
           font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
           background: #f8fafc;
@@ -289,6 +290,7 @@ const ClientDashboard = () => {
           overflow-x: hidden; /* Prevent horizontal scroll due to fixed sidebar */
         }
 
+        /* Styles for various buttons and cards */
         .download-button {
           background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
           color: white;
@@ -305,7 +307,6 @@ const ClientDashboard = () => {
           justify-content: center;
           gap: 8px;
         }
-
         .download-button:hover {
           transform: translateY(-3px);
           box-shadow: 0 8px 15px rgba(0,0,0,0.2);
@@ -446,8 +447,7 @@ const ClientDashboard = () => {
         .resume-card {
             padding: 40px 24px;
             border-radius: 16px;
-            background: linear-gradient(135deg, #10b981 0%, #34d399 100%)
-            ;
+            background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
             color: white;
             font-weight: 700;
             text-align: center;
@@ -588,7 +588,12 @@ const ClientDashboard = () => {
         /* Chart and Advertisement Specific Styles */
         .chart-and-ads-container {
           display: grid;
-          grid-template-columns: minmax(100px, 150px) 1fr minmax(100px, 150px); /* Min width of 100px for ads */
+          /* Adjusted grid columns for better responsiveness:
+             - ads on sides get min-width 120px and grow up to 180px,
+             - chart takes remaining space.
+             This provides more room for ads while still being flexible.
+          */
+          grid-template-columns: minmax(120px, 180px) 1fr minmax(120px, 180px);
           gap: 24px;
           margin-bottom: 32px;
           align-items: center; /* Vertically align items in the grid */
@@ -633,15 +638,18 @@ const ClientDashboard = () => {
           justify-content: center;
           align-items: center;
           width: 100%;
-          max-width: 150px; /* Max width for ad content */
+          /* Remove max-width here, let grid handle the sizing */
         }
         .ad-placeholder p {
             font-size: 0.75rem; /* Smaller font for ad text */
+            line-height: 1.3; /* Improve readability */
         }
         .ad-placeholder img {
             max-width: 100%;
-            height: auto;
+            height: auto; /* Maintain aspect ratio */
             border-radius: 8px;
+            display: block; /* Remove extra space below image */
+            margin: 0 auto 10px auto; /* Center image and add some margin */
         }
 
         /* Payment Radio Buttons Specific Styles */
@@ -1169,6 +1177,7 @@ const ClientDashboard = () => {
           <div className="ad-column">
             <div className="ad-placeholder">
               <p style={{ color: '#475569', marginBottom: '10px' }}>Sponsored</p>
+              {/* Added onError for image fallback */}
               <img src="https://placehold.co/120x300/e0f2f7/475569?text=Your+Ad" alt="Advertisement 1" onError={(e)=>{e.target.onerror = null; e.target.src='https://placehold.co/120x300/e0f2f7/475569?text=Ad+Load+Error'}}/>
               <p style={{ marginTop: '10px', color: '#64748b' }}>Discover new opportunities!</p>
             </div>
@@ -1192,6 +1201,7 @@ const ClientDashboard = () => {
           <div className="ad-column">
             <div className="ad-placeholder">
               <p style={{ color: '#475569', marginBottom: '10px' }}>Promoted</p>
+              {/* Added onError for image fallback */}
               <img src="https://placehold.co/120x300/f0f9ff/475569?text=Another+Ad" alt="Advertisement 2" onError={(e)=>{e.target.onerror = null; e.target.src='https://placehold.co/120x300/f0f9ff/475569?text=Ad+Load+Error'}}/>
               <p style={{ marginTop: '10px', color: '#64748b' }}>Boost your career today!</p>
             </div>
@@ -1214,7 +1224,7 @@ const ClientDashboard = () => {
             onClick={toggleInterviewsModal}
             className="interviews-card"
           >
-            {/* Background elements */}
+            {/* Background elements, keep inline for now as they don't have pseudo-classes */}
             <div style={{
               position: 'absolute',
               bottom: '-20px',
