@@ -447,7 +447,8 @@ const ClientDashboard = () => {
         .resume-card {
             padding: 40px 24px;
             border-radius: 16px;
-            background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+            background: linear-gradient(135deg, #10b981 0%, #34d399 100%)
+            ;
             color: white;
             font-weight: 700;
             text-align: center;
@@ -528,7 +529,6 @@ const ClientDashboard = () => {
             width: 100%;
             border-collapse: separate;
             border-spacing: 0 8px;
-            /* Remove min-width to allow fluid shrinking */
             table-layout: auto; /* Allow column widths to adjust */
         }
 
@@ -588,22 +588,18 @@ const ClientDashboard = () => {
         /* Chart and Advertisement Specific Styles */
         .chart-and-ads-container {
           display: grid;
-          /* Adjusted grid columns for better responsiveness:
-             - ads on sides get min-width 120px and grow up to 180px,
-             - chart takes remaining space.
-             This provides more room for ads while still being flexible.
-          */
-          grid-template-columns: minmax(120px, 180px) 1fr minmax(120px, 180px);
+          /* Explicitly setting fixed width for ads, 1fr for chart on large screens */
+          grid-template-columns: 200px 1fr 200px;
           gap: 24px;
-          margin-bottom: 32px;
-          align-items: center; /* Vertically align items in the grid */
-          justify-content: center; /* Center content horizontally */
-          width: 100%; /* Use full width available */
+          margin: 0 auto 32px auto; /* Center the container */
+          max-width: 1400px; /* Optional: Max width for the entire grid container */
+          align-items: start; /* Align items to the start of the grid cell vertically */
+          width: 100%; /* Ensure it takes full available width within its parent */
         }
 
-        @media (max-width: 1024px) { /* Medium screens */
+        @media (max-width: 1024px) { /* Medium screens - stack ads above/below chart */
           .chart-and-ads-container {
-            grid-template-columns: 1fr; /* Stack columns on smaller screens */
+            grid-template-columns: 1fr; /* Stack into a single column */
             grid-template-areas: "ad-left" "chart" "ad-right"; /* Define grid areas for stacking */
             gap: 20px;
           }
@@ -614,16 +610,17 @@ const ClientDashboard = () => {
         @media (max-width: 768px) { /* Small screens (mobile) */
           .chart-and-ads-container {
             gap: 15px;
+            padding: 0 10px; /* Add some horizontal padding */
           }
         }
 
         .ad-column {
           display: flex;
           justify-content: center;
-          align-items: center;
-          height: 100%; /* Ensure ads take full height of the grid row */
-          min-height: 250px; /* Reduced min-height for smaller screens */
-          max-width: 100%; /* Ensure it doesn't overflow */
+          align-items: center; /* Center content vertically within the column */
+          min-height: 250px; /* Ensure ads have a decent minimum height */
+          height: auto; /* Allow height to adjust based on content */
+          padding: 10px 0; /* Add some vertical padding within the column */
         }
 
         .ad-placeholder {
@@ -631,18 +628,20 @@ const ClientDashboard = () => {
           border-radius: 12px;
           box-shadow: 0 4px 6px rgba(0,0,0,0.05);
           border: 1px solid #e2e8f0;
-          padding: 15px; /* Reduced padding */
+          padding: 15px;
           text-align: center;
           display: flex;
           flex-direction: column;
           justify-content: center;
           align-items: center;
-          width: 100%;
-          /* Remove max-width here, let grid handle the sizing */
+          width: 100%; /* Ensure it fills its parent ad-column */
+          height: 100%; /* Ensure it fills its parent ad-column */
+          box-sizing: border-box; /* Include padding/border in element's total width and height */
         }
         .ad-placeholder p {
-            font-size: 0.75rem; /* Smaller font for ad text */
-            line-height: 1.3; /* Improve readability */
+            font-size: 0.8rem; /* Slightly larger font for ad text */
+            line-height: 1.4; /* Improve readability */
+            margin-bottom: 5px;
         }
         .ad-placeholder img {
             max-width: 100%;
@@ -650,7 +649,13 @@ const ClientDashboard = () => {
             border-radius: 8px;
             display: block; /* Remove extra space below image */
             margin: 0 auto 10px auto; /* Center image and add some margin */
+            object-fit: contain; /* Ensure the image fits within its bounds without cropping */
+            flex-grow: 1; /* Allow image to take available space */
         }
+        .ad-placeholder p:last-of-type {
+            margin-top: auto; /* Push the last paragraph to the bottom if space allows */
+        }
+
 
         /* Payment Radio Buttons Specific Styles */
         .radio-group {
