@@ -26,7 +26,7 @@ import WorkGroups from './components/workgroups';
 // import ClientWorkSheet from './components/ClientWorksheet';
 
 import IntegratedEmployeeForm from './employeeRegistrationForm';
-import EmployeeOnboardingWorksheet from './employeeOnboardingWorkSheet';
+// import EmployeeOnboardingWorksheet from './employeeOnboardingWorkSheet';
 
 
 
@@ -74,7 +74,7 @@ const App = () => {
     </ThemeProvider>
     <Routes>
        <Route path="/employee-registration-form" element={<IntegratedEmployeeForm />} />
-      <Route path="/employee-onboarding-worksheet" element={<EmployeeOnboardingWorksheet />} />
+      {/* <Route path="/employee-onboarding-worksheet" element={<EmployeeOnboardingWorksheet />} /> */}
 
     </Routes>
     </div>
