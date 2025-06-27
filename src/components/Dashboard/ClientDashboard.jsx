@@ -20,6 +20,28 @@ ChartJS.register(
   Tooltip
 );
 
+// Dimming Overlay Component
+const DimmingOverlay = ({ isVisible, onClick }) => {
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        zIndex: isVisible ? 99 : -1, // Z-index needs to be below modals (100) but above content
+        opacity: isVisible ? 1 : 0,
+        visibility: isVisible ? 'visible' : 'hidden',
+        transition: 'opacity 0.3s ease, visibility 0.3s ease',
+      }}
+    />
+  );
+};
+
+
 const ClientDashboard = () => {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -235,7 +257,6 @@ const ClientDashboard = () => {
     }
 
     return {
-      ...radioGliderStyle,
       transform: transformValue,
       background: backgroundValue,
       boxShadow: boxShadowValue,
@@ -250,18 +271,26 @@ const ClientDashboard = () => {
     alert('Downloading the latest resume... (This is a placeholder action)');
   };
 
+  // Determine if the overlay should be visible
+  const isOverlayVisible = menuOpen || showInterviewsModal || showResumeModal || showPaymentModal;
+
 
   return (
-    <div style={{
-      fontFamily: "'Segoe UI', 'Helvetica Neue', sans-serif",
-      background: '#f8fafc',
-      color: '#1e293b',
-      minHeight: '100vh',
-      display: 'flex'
-    }}>
-      {/* Styles for the download button animation */}
+    <div className="client-dashboard-container">
+      {/* Dynamic Styles injected here */}
       <style>
         {`
+        /* Base styles for the dashboard container */
+        .client-dashboard-container {
+          font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+          background: #f8fafc;
+          color: #1e293b;
+          min-height: 100vh;
+          display: flex;
+          overflow-x: hidden; /* Prevent horizontal scroll due to fixed sidebar */
+        }
+
+        /* Styles for various buttons and cards */
         .download-button {
           background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
           color: white;
@@ -278,36 +307,480 @@ const ClientDashboard = () => {
           justify-content: center;
           gap: 8px;
         }
-
         .download-button:hover {
           transform: translateY(-3px);
           box-shadow: 0 8px 15px rgba(0,0,0,0.2);
           background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
         }
+
+        .renew-plan-button {
+          background: linear-gradient(135deg, #4ade80 0%, #3b82f6 100%);
+          color: white;
+          border: none;
+          padding: 12px 24px;
+          border-radius: 8px;
+          font-size: 1rem;
+          font-weight: 600;
+          cursor: pointer;
+          margin-bottom: 32px;
+          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+          width: 100%;
+          transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .renew-plan-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+
+        .help-support-button {
+            background: none;
+            border: none;
+            color: #64748b;
+            font-size: 0.9375rem;
+            font-weight: 500;
+            text-align: center;
+            padding: 12px 0;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s;
+        }
+        .help-support-button:hover {
+            color: #3b82f6;
+        }
+
+        .logout-button {
+            background: #f1f5f9;
+            color: #ef4444;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 0.9375rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin: 16px 0 24px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+        .logout-button:hover {
+            background-color: #fee2e2;
+        }
+
+        .back-button {
+            background: #ffffff;
+            color: #3b82f6;
+            border: 1px solid #e2e8f0;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            transition: background-color 0.2s;
+        }
+        .back-button:hover {
+            background-color: #f8fafc;
+        }
+
+        .menu-toggle-button {
+            font-size: 24px;
+            cursor: pointer;
+            color: #64748b;
+            padding: 8px;
+            border-radius: 6px;
+            transition: background-color 0.2s;
+            background: none; /* Ensure no default button background */
+            border: none; /* Ensure no default button border */
+        }
+        .menu-toggle-button:hover {
+            background-color: #f1f5f9;
+        }
+
+        .worksheet-button {
+            margin: 0 auto;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .worksheet-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+            background: #2563eb;
+        }
+
+        .interviews-card {
+            padding: 40px 24px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            font-weight: 700;
+            text-align: center;
+            box-shadow: 0 10px 15px rgba(99, 102, 241, 0.3);
+            cursor: pointer;
+            flex: 1 1 300px; /* Flex-basis for cards, will wrap */
+            max-width: 100%; /* Ensure it doesn't overflow on small screens */
+            min-width: 280px; /* Minimum width for the card to be readable */
+            transition: transform 0.3s, box-shadow 0.3s;
+            position: relative; /* For inner absolute elements */
+            overflow: hidden; /* To contain background elements */
+        }
+        .interviews-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 25px rgba(99, 102, 241, 0.4);
+        }
+
+        .resume-card {
+            padding: 40px 24px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #10b981 0%, #34d399 100%)
+            ;
+            color: white;
+            font-weight: 700;
+            text-align: center;
+            box-shadow: 0 10px 15px rgba(16, 185, 129, 0.3);
+            cursor: pointer;
+            flex: 1 1 300px; /* Flex-basis for cards, will wrap */
+            max-width: 100%; /* Ensure it doesn't overflow on small screens */
+            min-width: 280px; /* Minimum width for the card to be readable */
+            transition: transform 0.3s, box-shadow 0.3s;
+            position: relative; /* For inner absolute elements */
+            overflow: hidden; /* To contain background elements */
+        }
+        .resume-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 25px rgba(16, 185, 129, 0.4);
+        }
+
+        /* Modal Specific Styles */
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100vw;
+          height: 100vh;
+          background: rgba(0, 0, 0, 0.5);
+          backdrop-filter: blur(4px);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          z-index: 100;
+        }
+
+        .modal-content-style {
+          background: #ffffff;
+          padding: 32px;
+          border-radius: 16px;
+          box-shadow: 0 20px 25px rgba(0, 0, 0, 0.1);
+          width: 90%; /* Responsive width */
+          max-width: 900px; /* Max width for larger screens */
+          max-height: 80vh;
+          overflow-y: auto;
+          position: relative;
+          border: 1px solid #e2e8f0;
+        }
+        @media (max-width: 768px) {
+            .modal-content-style {
+                padding: 20px;
+                width: 95%; /* Wider on small screens */
+                margin: 10px; /* Some margin from edges */
+            }
+        }
+
+
+        .modal-close-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+        .modal-close-button:hover {
+            background-color: #f1f5f9;
+        }
+
+        .modal-table-container {
+            overflow-x: auto; /* Enable horizontal scrolling for tables */
+            border-radius: 8px;
+        }
+
+        .modal-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 8px;
+            table-layout: auto; /* Allow column widths to adjust */
+        }
+
+        .modal-table-header {
+            padding: 12px 16px;
+            text-align: left;
+            background-color: #f8fafc;
+            color: #475569;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border: none;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        @media (max-width: 768px) {
+            .modal-table-header {
+                font-size: 0.7rem; /* Smaller font on mobile */
+                padding: 8px 10px;
+            }
+        }
+
+        .modal-table-cell {
+            padding: 16px;
+            text-align: left;
+            background-color: #ffffff;
+            border: none;
+            font-size: 0.875rem;
+            color: #334155;
+            border-bottom: 1px solid #f1f5f9;
+            white-space: nowrap; /* Prevent text wrapping in cells on smaller screens */
+        }
+        @media (max-width: 768px) {
+            .modal-table-cell {
+                font-size: 0.8rem; /* Smaller font on mobile */
+                padding: 10px;
+            }
+        }
+
+        .modal-table-row {
+            transition: background-color 0.2s;
+        }
+        .modal-table-row:hover {
+            background-color: #f8fafc;
+        }
+        .modal-table-row td:first-child {
+            border-top-left-radius: 8px;
+            border-bottom-left-radius: 8px;
+        }
+        .modal-table-row td:last-child {
+            border-top-right-radius: 8px;
+            border-bottom-right-radius: 8px;
+        }
+
+        /* Chart and Advertisement Specific Styles */
+        .chart-and-ads-container {
+          display: grid;
+          /* Explicitly setting fixed width for ads, 1fr for chart on large screens */
+          grid-template-columns: 200px 1fr 200px;
+          gap: 24px;
+          margin: 0 auto 32px auto; /* Center the container */
+          max-width: 1400px; /* Optional: Max width for the entire grid container */
+          align-items: start; /* Align items to the start of the grid cell vertically */
+          width: 100%; /* Ensure it takes full available width within its parent */
+        }
+
+        @media (max-width: 1024px) { /* Medium screens - stack ads above/below chart */
+          .chart-and-ads-container {
+            grid-template-columns: 1fr; /* Stack into a single column */
+            grid-template-areas: "ad-left" "chart" "ad-right"; /* Define grid areas for stacking */
+            gap: 20px;
+          }
+          .ad-column:first-child { grid-area: ad-left; } /* Left ad comes first */
+          .ad-column:last-child { grid-area: ad-right; }  /* Right ad comes last */
+        }
+
+        @media (max-width: 768px) { /* Small screens (mobile) */
+          .chart-and-ads-container {
+            gap: 15px;
+            padding: 0 10px; /* Add some horizontal padding */
+          }
+        }
+
+        .ad-column {
+          display: flex;
+          justify-content: center;
+          align-items: center; /* Center content vertically within the column */
+          min-height: 250px; /* Ensure ads have a decent minimum height */
+          height: auto; /* Allow height to adjust based on content */
+          padding: 10px 0; /* Add some vertical padding within the column */
+        }
+
+        .ad-placeholder {
+          background: #ffffff;
+          border-radius: 12px;
+          box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+          border: 1px solid #e2e8f0;
+          padding: 15px;
+          text-align: center;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          width: 100%; /* Ensure it fills its parent ad-column */
+          height: 100%; /* Ensure it fills its parent ad-column */
+          box-sizing: border-box; /* Include padding/border in element's total width and height */
+        }
+        .ad-placeholder p {
+            font-size: 0.8rem; /* Slightly larger font for ad text */
+            line-height: 1.4; /* Improve readability */
+            margin-bottom: 5px;
+        }
+        .ad-placeholder img {
+            max-width: 100%;
+            height: auto; /* Maintain aspect ratio */
+            border-radius: 8px;
+            display: block; /* Remove extra space below image */
+            margin: 0 auto 10px auto; /* Center image and add some margin */
+            object-fit: contain; /* Ensure the image fits within its bounds without cropping */
+            flex-grow: 1; /* Allow image to take available space */
+        }
+        .ad-placeholder p:last-of-type {
+            margin-top: auto; /* Push the last paragraph to the bottom if space allows */
+        }
+
+
+        /* Payment Radio Buttons Specific Styles */
+        .radio-group {
+          display: flex;
+          position: relative;
+          background: rgba(255, 255, 255, 0.06);
+          border-radius: 1rem;
+          backdrop-filter: blur(12px);
+          box-shadow: inset 1px 1px 4px rgba(255, 255, 255, 0.2), inset -1px -1px 6px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.15);
+          overflow: hidden;
+          width: fit-content;
+          margin: 20px auto 30px auto;
+        }
+        @media (max-width: 480px) {
+            .radio-group {
+                flex-direction: column; /* Stack radio buttons on very small screens */
+                width: 80%; /* Wider to accommodate stacked labels */
+                border-radius: 1rem;
+                padding: 10px 0; /* Add vertical padding */
+            }
+            .radio-glider {
+                display: none; /* Hide glider when stacked */
+            }
+        }
+
+        .hidden-radio-input {
+          display: none;
+        }
+
+        .radio-label-base {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 80px;
+          font-size: 14px;
+          padding: 0.8rem 1.6rem;
+          cursor: pointer;
+          font-weight: 600;
+          letter-spacing: 0.3px;
+          position: relative;
+          z-index: 2;
+          transition: color 0.3s ease-in-out;
+        }
+        input[type="radio"]:checked + .radio-label-base {
+          color: #fff;
+        }
+        .radio-label-base:hover {
+          color: white;
+        }
+        @media (max-width: 480px) {
+            .radio-label-base {
+                padding: 10px 15px; /* Adjust padding for stacked */
+                justify-content: flex-start; /* Align text to left when stacked */
+            }
+        }
+
+        .radio-glider {
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          width: calc(100% / 3);
+          border-radius: 1rem;
+          z-index: 1;
+          transition: transform 0.5s cubic-bezier(0.37, 1.95, 0.66, 0.56), background 0.4s ease-in-out, box-shadow 0.4s ease-in-out;
+        }
+
+        /* General element responsiveness */
+        .main-content-area {
+            flex-grow: 1;
+            padding: 24px;
+            max-width: 100%;
+        }
+        @media (max-width: 768px) {
+            .main-content-area {
+                padding: 15px; /* Smaller padding on mobile */
+            }
+            .dashboard-title {
+                font-size: 1.5rem; /* Smaller title on mobile */
+            }
+        }
+        @media (max-width: 480px) {
+            .dashboard-title {
+                font-size: 1.2rem;
+            }
+        }
+
+        .cards-section {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            margin: 40px 0;
+            flex-wrap: wrap; /* Allow cards to wrap */
+        }
+        @media (max-width: 768px) {
+            .cards-section {
+                gap: 20px; /* Smaller gap on tablets */
+                margin: 30px 0;
+            }
+        }
+        @media (max-width: 480px) {
+            .cards-section {
+                gap: 15px; /* Even smaller gap on mobile */
+                margin: 20px 0;
+            }
+        }
         `}
       </style>
 
-      {/* Sidebar Overlay */}
-      {menuOpen && (
-        <div
-          onClick={toggleMenu}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100vw',
-            height: '100vh',
-            background: 'rgba(0, 0, 0, 0.4)',
-            zIndex: 9
-          }}
-        />
-      )}
+      {/* Dimming Overlay */}
+      <DimmingOverlay
+        isVisible={isOverlayVisible}
+        onClick={() => {
+          if (menuOpen) setMenuOpen(false);
+          if (showInterviewsModal) setShowInterviewsModal(false);
+          if (showResumeModal) setShowResumeModal(false);
+          if (showPaymentModal) setShowPaymentModal(false);
+        }}
+      />
 
       {/* Interviews Modal */}
       {showInterviewsModal && (
-        <div style={modalOverlayStyle}>
-          <div style={modalContentStyle}>
-            <button onClick={toggleInterviewsModal} style={modalCloseButtonStyle}>
+        <div className="modal-overlay">
+          <div className="modal-content-style">
+            <button onClick={toggleInterviewsModal} className="modal-close-button">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M13 1L1 13M1 1L13 13" stroke="#64748B" strokeWidth="2" strokeLinecap="round"/>
               </svg>
@@ -321,29 +794,29 @@ const ClientDashboard = () => {
             }}>
               Scheduled Interviews
             </h3>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={modalTableStyle}>
+            <div className="modal-table-container">
+              <table className="modal-table">
                 <thead>
                   <tr>
-                    <th style={modalTableHeaderStyle}>Date</th>
-                    <th style={modalTableHeaderStyle}>Time</th>
-                    <th style={modalTableHeaderStyle}>Company</th>
-                    <th style={modalTableHeaderStyle}>Role</th>
-                    <th style={modalTableHeaderStyle}>Recruiter Mail ID</th>
-                    <th style={modalTableHeaderStyle}>Round</th>
+                    <th className="modal-table-header">Date</th>
+                    <th className="modal-table-header">Time</th>
+                    <th className="modal-table-header">Company</th>
+                    <th className="modal-table-header">Role</th>
+                    <th className="modal-table-header">Recruiter Mail ID</th>
+                    <th className="modal-table-header">Round</th>
                   </tr>
                 </thead>
                 <tbody>
                   {scheduledInterviews.map((interview) => (
-                    <tr key={interview.id} style={modalTableRowStyle}>
-                      <td style={modalTableCellStyle}>
+                    <tr key={interview.id} className="modal-table-row">
+                      <td className="modal-table-cell">
                         <div style={{ fontWeight: '500' }}>{interview.date}</div>
                       </td>
-                      <td style={modalTableCellStyle}>{interview.time}</td>
-                      <td style={{...modalTableCellStyle, fontWeight: '600'}}>{interview.company}</td>
-                      <td style={modalTableCellStyle}>{interview.role}</td>
-                      <td style={modalTableCellStyle}>{interview.recruiterMailId}</td>
-                      <td style={modalTableCellStyle}>
+                      <td className="modal-table-cell">{interview.time}</td>
+                      <td style={{fontWeight: '600'}} className="modal-table-cell">{interview.company}</td>
+                      <td className="modal-table-cell">{interview.role}</td>
+                      <td className="modal-table-cell">{interview.recruiterMailId}</td>
+                      <td className="modal-table-cell">
                         <div style={{
                           display: 'inline-flex',
                           alignItems: 'center',
@@ -375,9 +848,9 @@ const ClientDashboard = () => {
 
       {/* Resume Modal */}
       {showResumeModal && (
-        <div style={modalOverlayStyle}>
-          <div style={modalContentStyle}>
-            <button onClick={toggleResumeModal} style={modalCloseButtonStyle}>
+        <div className="modal-overlay">
+          <div className="modal-content-style">
+            <button onClick={toggleResumeModal} className="modal-close-button">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M13 1L1 13M1 1L13 13" stroke="#64748B" strokeWidth="2" strokeLinecap="round"/>
               </svg>
@@ -391,24 +864,24 @@ const ClientDashboard = () => {
             }}>
               Resume Updates
             </h3>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={modalTableStyle}>
+            <div className="modal-table-container">
+              <table className="modal-table">
                 <thead>
                   <tr>
-                    <th style={modalTableHeaderStyle}>Date</th>
-                    <th style={modalTableHeaderStyle}>Update Type</th>
-                    <th style={modalTableHeaderStyle}>Status</th>
-                    <th style={modalTableHeaderStyle}>Details</th>
+                    <th className="modal-table-header">Date</th>
+                    <th className="modal-table-header">Update Type</th>
+                    <th className="modal-table-header">Status</th>
+                    <th className="modal-table-header">Details</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredResumeUpdates.map((update) => (
-                    <tr key={update.id} style={modalTableRowStyle}>
-                      <td style={modalTableCellStyle}>
+                    <tr key={update.id} className="modal-table-row">
+                      <td className="modal-table-cell">
                         <div style={{ fontWeight: '500' }}>{update.date}</div>
                       </td>
-                      <td style={{...modalTableCellStyle, fontWeight: '600'}}>{update.type}</td>
-                      <td style={modalTableCellStyle}>
+                      <td style={{fontWeight: '600'}} className="modal-table-cell">{update.type}</td>
+                      <td className="modal-table-cell">
                         <div style={{
                           display: 'inline-flex',
                           alignItems: 'center',
@@ -443,7 +916,7 @@ const ClientDashboard = () => {
                           {update.status}
                         </div>
                       </td>
-                      <td style={modalTableCellStyle}>{update.details}</td>
+                      <td className="modal-table-cell">{update.details}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -474,9 +947,9 @@ const ClientDashboard = () => {
 
       {/* Payment Plan Modal */}
       {showPaymentModal && (
-        <div style={modalOverlayStyle}>
+        <div className="modal-overlay">
           <div style={{ ...modalContentStyle, maxWidth: '600px', padding: '40px', background: '#334155' }}> {/* Dark background for glass effect */}
-            <button onClick={togglePaymentModal} style={modalCloseButtonStyle}>
+            <button onClick={togglePaymentModal} className="modal-close-button">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M13 1L1 13M1 1L13 13" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round"/> {/* Lighter color for contrast */}
               </svg>
@@ -492,20 +965,16 @@ const ClientDashboard = () => {
             </h3>
 
             {/* Glass Radio Group */}
-            <div style={radioGroupStyle}>
+            <div className="radio-group">
               <input
                 type="radio"
                 name="plan"
                 id="glass-silver"
                 checked={selectedRadioPlan === 'glass-silver'}
                 onChange={() => handleRadioPlanChange('glass-silver')}
-                style={hiddenRadioInputStyle} // Apply hidden style
+                className="hidden-radio-input"
               />
-              <label htmlFor="glass-silver" style={{
-                ...radioLabelBaseStyle,
-                color: selectedRadioPlan === 'glass-silver' ? '#fff' : '#e5e5e5',
-                ...(true && { ':hover': { color: 'white' } })
-              }}>
+              <label htmlFor="glass-silver" className="radio-label-base">
                 Silver
               </label>
 
@@ -515,13 +984,9 @@ const ClientDashboard = () => {
                 id="glass-gold"
                 checked={selectedRadioPlan === 'glass-gold'}
                 onChange={() => handleRadioPlanChange('glass-gold')}
-                style={hiddenRadioInputStyle}
+                className="hidden-radio-input"
               />
-              <label htmlFor="glass-gold" style={{
-                ...radioLabelBaseStyle,
-                color: selectedRadioPlan === 'glass-gold' ? '#fff' : '#e5e5e5',
-                ...(true && { ':hover': { color: 'white' } })
-              }}>
+              <label htmlFor="glass-gold" className="radio-label-base">
                 Gold
               </label>
 
@@ -531,16 +996,12 @@ const ClientDashboard = () => {
                 id="glass-platinum"
                 checked={selectedRadioPlan === 'glass-platinum'}
                 onChange={() => handleRadioPlanChange('glass-platinum')}
-                style={hiddenRadioInputStyle}
+                className="hidden-radio-input"
               />
-              <label htmlFor="glass-platinum" style={{
-                ...radioLabelBaseStyle,
-                color: selectedRadioPlan === 'glass-platinum' ? '#fff' : '#e5e5e5',
-                ...(true && { ':hover': { color: 'white' } })
-              }}>
+              <label htmlFor="glass-platinum" className="radio-label-base">
                 Platinum
               </label>
-              <div style={getGliderDynamicStyle()} />
+              <div className="radio-glider" style={getGliderDynamicStyle()} />
             </div>
 
             {/* Display details of the currently selected plan */}
@@ -584,7 +1045,7 @@ const ClientDashboard = () => {
         color: '#1e293b',
         padding: '24px',
         boxShadow: '4px 0 20px rgba(0,0,0,0.08)',
-        zIndex: 10,
+        zIndex: 100, // Higher z-index for sidebar
         transition: 'right 0.3s ease-out',
         display: 'flex',
         flexDirection: 'column',
@@ -646,27 +1107,7 @@ const ClientDashboard = () => {
         {/* Renewal Button */}
         <button
           onClick={togglePaymentModal} // Calls the new toggle function
-          style={{
-            background: 'linear-gradient(135deg, #4ade80 0%, #3b82f6 100%)',
-            color: 'white',
-            border: 'none',
-            padding: '12px 24px',
-            borderRadius: '8px',
-            fontSize: '1rem',
-            fontWeight: '600',
-            cursor: 'pointer',
-            marginBottom: '32px',
-            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-            width: '100%',
-            transition: 'transform 0.2s, box-shadow 0.2s',
-            // Corrected pseudo-class syntax for inline styles
-            ...(true && { // Using a true condition to always apply for now, could be dynamic
-              ':hover': {
-                transform: 'translateY(-2px)',
-                boxShadow: '0 6px 12px rgba(0,0,0,0.15)'
-              }
-            })
-          }}
+          className="renew-plan-button"
         >
           Renew Plan
         </button>
@@ -677,28 +1118,7 @@ const ClientDashboard = () => {
         {/* Bottom Links */}
         <button
           onClick={() => navigate('/contactus')}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: '#64748b',
-            fontSize: '0.9375rem',
-            fontWeight: '500',
-            textAlign: 'center',
-            padding: '12px 0',
-            cursor: 'pointer',
-            width: '100%',
-            marginTop: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'color 0.2s',
-            // Corrected pseudo-class syntax for inline styles
-            ...(true && {
-              ':hover': {
-                color: '#3b82f6'
-              }
-            })
-          }}
+          className="help-support-button"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginRight: '8px' }}>
             <path d="M8 14C11.3137 14 14 11.3137 14 8C14 4.68629 11.3137 2 8 2C4.68629 2 2 4.68629 2 8C2 11.3137 4.68629 14 8 14Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -714,28 +1134,7 @@ const ClientDashboard = () => {
             navigate('/');
             toggleMenu();
           }}
-          style={{
-            background: '#f1f5f9',
-            color: '#ef4444',
-            border: 'none',
-            padding: '12px 24px',
-            borderRadius: '8px',
-            fontSize: '0.9375rem',
-            fontWeight: '600',
-            cursor: 'pointer',
-            width: '100%',
-            margin: '16px 0 24px 0',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'background-color 0.2s',
-            // Corrected pseudo-class syntax for inline styles
-            ...(true && {
-              ':hover': {
-                backgroundColor: '#fee2e2'
-              }
-            })
-          }}
+          className="logout-button"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginRight: '8px' }}>
             <path d="M6 14H3.33333C2.97971 14 2.64057 13.8595 2.39052 13.6095C2.14048 13.3594 2 13.0203 2 12.6667V3.33333C2 2.97971 2.14048 2.64057 2.39052 2.39052C2.64057 2.14048 2.97971 2 3.33333 2H6M10.6667 11.3333L14 8M14 8L10.6667 4.66667M14 8H6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -745,11 +1144,7 @@ const ClientDashboard = () => {
       </div>
 
       {/* Main Content Area */}
-      <div style={{
-        flexGrow: 1,
-        padding: '24px',
-        maxWidth: '100%'
-      }}>
+      <div className="main-content-area">
         {/* Header */}
         <header style={{
           display: 'flex',
@@ -761,26 +1156,7 @@ const ClientDashboard = () => {
         }}>
           <button
             onClick={() => navigate('/')}
-            style={{
-              background: '#ffffff',
-              color: '#3b82f6',
-              border: '1px solid #e2e8f0',
-              padding: '8px 16px',
-              borderRadius: '6px',
-              fontSize: '0.875rem',
-              fontWeight: '500',
-              cursor: 'pointer',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-              display: 'flex',
-              alignItems: 'center',
-              transition: 'background-color 0.2s',
-              // Corrected pseudo-class syntax for inline styles
-              ...(true && {
-                ':hover': {
-                  backgroundColor: '#f8fafc'
-                }
-              })
-            }}
+            className="back-button"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginRight: '6px' }}>
               <path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -788,122 +1164,72 @@ const ClientDashboard = () => {
             Back
           </button>
 
-          <div
+          <button
             onClick={toggleMenu}
-            style={{
-              fontSize: '24px',
-              cursor: 'pointer',
-              color: '#64748b',
-              padding: '8px',
-              borderRadius: '6px',
-              transition: 'background-color 0.2s',
-              // Corrected pseudo-class syntax for inline styles
-              ...(true && {
-                ':hover': {
-                  backgroundColor: '#f1f5f9'
-                }
-              })
-            }}
+            className="menu-toggle-button"
           >
             &#9776;
-          </div>
+          </button>
         </header>
 
-        <h2 style={{
-          marginBottom: '24px',
-          textAlign: 'center',
-          color: '#1e293b',
-          fontSize: '1.75rem',
-          fontWeight: '700'
-        }}>
+        <h2 className="dashboard-title">
           User Dashboard
         </h2>
 
-        {/* Chart Section */}
-        <div style={{
-          width: '100%',
-          maxWidth: '1000px',
-          margin: '0 auto 32px auto',
-          background: '#ffffff',
-          borderRadius: '12px',
-          padding: '24px',
-          boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
-          border: '1px solid #e2e8f0'
-        }}>
-          <h4 style={{
-            marginBottom: '20px',
-            textAlign: 'center',
-            color: '#475569',
-            fontSize: '1.125rem',
-            fontWeight: '600'
-          }}>
-            Job Source Performance
-          </h4>
-          <Line data={data} options={options} />
+        {/* New container for Chart and Advertisements */}
+        <div className="chart-and-ads-container">
+          {/* Left Advertisement */}
+          <div className="ad-column">
+            <div className="ad-placeholder">
+              <p style={{ color: '#475569', marginBottom: '10px' }}>Sponsored</p>
+              {/* Added onError for image fallback */}
+              <img src="data:image/png;base64,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" alt="Advertisement 1" onError={(e)=>{e.target.onerror = null; e.target.src='https://placehold.co/120x300/e0f2f7/475569?text=Ad+Load+Error'}}/>
+              <p style={{ marginTop: '10px', color: '#64748b' }}>Discover new opportunities!</p>
+            </div>
+          </div>
+
+          {/* Chart Section */}
+          <div style={chartSectionStyle}> {/* Keep chartSectionStyle inline for transitions */}
+            <h4 style={{
+              marginBottom: '20px',
+              textAlign: 'center',
+              color: '#475569',
+              fontSize: '1.125rem',
+              fontWeight: '600'
+            }}>
+              Job Source Performance
+            </h4>
+            <Line data={data} options={options} />
+          </div>
+
+          {/* Right Advertisement */}
+          <div className="ad-column">
+            <div className="ad-placeholder">
+              <p style={{ color: '#475569', marginBottom: '10px' }}>Promoted</p>
+              {/* Added onError for image fallback */}
+              <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAMAAAAOusbgAAAAV1BMVEX///9mZmZjY2NdXV1gYGBZWVn8/Pzy8vKgoKBWVlZxcXHj4+OJiYmvr6+rq6v29vZsbGzs7OyRkZG1tbV5eXnNzc3c3NzExMS9vb3W1taBgYGZmZlPT0/9pgcuAAADvUlEQVRoge2b23KjMAyGsWRjDgYczpC8/3Mu0LQNlCRWUL2zO/kvelPG39iSJdlWguCtf1FF2mRl7x2b5qNAVJFnbFsighBC+gXrs5JiEWY+ua1AcRVWHrlVDJ9coTp/3OhrupPi9u9wxSX0xc1WXKh9cbsV159vneIVV6jUDzesYcWF0Q83yHEz4cYPN91wvblWKddgHPxwU7XmyrMf7iZ0TAut/XB1snZp6StaDmsLo7faYx0sMffFDcztSvsseW6jVuyx8Ci+fUuCp4i1BktZnjxyr2BANJ7i1aeWzGRN5ikR3kinaap/tdKZjiZ9X/VN+pCSNlVUGmPKqGo4bN7mNSqFk6a/ptpf2LQvYfq3hFkSFYromOF1ZmN5s10BY/tjyDZPYlyH7cnVY5u/nDN0jnI7oJgmNLG/Fj3Nk52PPj6U2Wse0Fi5N+Cyc23U6CA8dSPsU6/fJS8seBj9WL7VmJiUxj78ZJ41vdzVIz4ecw6Uz74Qc/KgLfcpubfMVNHI2+LiGNmdG9Zc813I7imzfGpfktA1aVa8XIgdq6KWz76zsHasPsORFYyRa+TsWRfavfjUlnPChGI745wwodgOObmydOayWhhqQrSsGS0sCUnxdGHkUo7LnEELKIUvY/CgeFagGS3snBpmtfHzAR0FCaXIZNxMQLqJOfMVALSbCcNn45ji0yFnqUUxccFo4qSggNXzEV3BlDgdnP4H8PiesSewsBSv5gTT9jEjmPTkxhhAaC9QnCETDAXMenqhXHYxpkVaXswZwaQQ0jG6Nano2r4kHRIleBWMXJqVOU8wAqx7+RNxXvcI6f6q2zHf9zjfcWnGQ9ss5Rw4GYPmotiVzBlCFrneKA68Rp6Exi1oc8948m3bu0QSzjxxFchxeI4e+METWj2/d+IsBr7l0qex7e1gUexg5fQX1trtAmjb3cEgdCo5+d0LEhfuj86h45KOiZk5Rbkf0gveO3pCy2THd901y7ofo1itTOkRHRirTdo1jOHbUrQWUc3m2NLQnlPZ3kTcgtaNmPyL3vSUsnAhobcJsLwSvNQDzJClXmvzLg7XIoQjzErtwSkDIVaudeycDvB62+Kh+kse6Wo/0C1wsNXa3CWDRMT7XkDohbhD3hsbUNoxqqqstGK/x4jh9xLnbVUA6jJWX01lesjry7bnBy4cv1po4Hu5QcZgum2CLToj1Q0bE55GPh2B+mhNQ3se9vem7kqBSwubVOLFPq69YfuyTuqybx+NWLR9ZIw597zdzmFBqWDeeiv4A4ezNLG3VJ07AAAAAElFTkSuQmCC" alt="Advertisement 2" onError={(e)=>{e.target.onerror = null; e.target.src='https://placehold.co/120x300/f0f9ff/475569?text=Ad+Load+Error'}}/>
+              <p style={{ marginTop: '10px', color: '#64748b' }}>Boost your career today!</p>
+            </div>
+          </div>
         </div>
 
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <button
             onClick={() => navigate('/clientworksheet')}
-            style={{
-              margin: '0 auto',
-              background: '#3b82f6',
-              color: 'white',
-              border: 'none',
-              padding: '12px 24px',
-              borderRadius: '8px',
-              fontSize: '1rem',
-              fontWeight: '600',
-              cursor: 'pointer',
-              boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-              transition: 'transform 0.2s, box-shadow 0.2s',
-              // Corrected pseudo-class syntax for inline styles
-              ...(true && {
-                ':hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 6px 12px rgba(0,0,0,0.15)',
-                  background: '#2563eb'
-                }
-              })
-            }}
+            className="worksheet-button"
           >
             Go to Work Sheet
           </button>
         </div>
 
         {/* Cards Section */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          gap: '32px',
-          margin: '40px 0',
-          flexWrap: 'wrap'
-        }}>
+        <div className="cards-section">
           {/* Interviews Card */}
           <div
             onClick={toggleInterviewsModal}
-            style={{
-              padding: '40px 24px',
-              borderRadius: '16px',
-              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-              color: 'white',
-              fontWeight: '700',
-              textAlign: 'center',
-              boxShadow: '0 10px 15px rgba(99, 102, 241, 0.3)',
-              cursor: 'pointer',
-              flex: '1 1 300px',
-              maxWidth: '100%',
-              minWidth: '300px',
-              transition: 'transform 0.3s, box-shadow 0.3s',
-              // Corrected pseudo-class syntax for inline styles
-              ...(true && {
-                ':hover': {
-                  transform: 'translateY(-5px)',
-                  boxShadow: '0 15px 25px rgba(99, 102, 241, 0.4)'
-                }
-              })
-            }}
+            className="interviews-card"
           >
+            {/* Background elements, keep inline for now as they don't have pseudo-classes */}
             <div style={{
               position: 'absolute',
               bottom: '-20px',
@@ -943,28 +1269,9 @@ const ClientDashboard = () => {
           {/* Resume Card */}
           <div
             onClick={toggleResumeModal}
-            style={{
-              padding: '40px 24px',
-              borderRadius: '16px',
-              background: 'linear-gradient(135deg, #10b981 0%, #34d399 100%)',
-              color: 'white',
-              fontWeight: '700',
-              textAlign: 'center',
-              boxShadow: '0 10px 15px rgba(16, 185, 129, 0.3)',
-              cursor: 'pointer',
-              flex: '1 1 300px',
-              maxWidth: '100%',
-              minWidth: '300px',
-              transition: 'transform 0.3s, box-shadow 0.3s',
-              // Corrected pseudo-class syntax for inline styles
-              ...(true && {
-                ':hover': {
-                  transform: 'translateY(-5px)',
-                  boxShadow: '0 15px 25px rgba(16, 185, 129, 0.4)'
-                }
-              })
-            }}
+            className="resume-card"
           >
+            {/* Background elements */}
             <div style={{
               position: 'absolute',
               bottom: '-20px',
@@ -1006,146 +1313,15 @@ const ClientDashboard = () => {
   );
 };
 
-// --- STYLES ---
-const modalOverlayStyle = {
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  width: '100vw',
-  height: '100vh',
-  background: 'rgba(0, 0, 0, 0.5)',
-  backdropFilter: 'blur(4px)',
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  zIndex: 100
-};
-
-const modalContentStyle = {
-  background: '#ffffff',
-  padding: '32px',
-  borderRadius: '16px',
-  boxShadow: '0 20px 25px rgba(0, 0, 0, 0.1)',
-  maxWidth: '90%',
-  width: '900px',
-  maxHeight: '80vh',
-  overflowY: 'auto',
-  position: 'relative',
-  border: '1px solid #e2e8f0'
-};
-
-const modalCloseButtonStyle = {
-  position: 'absolute',
-  top: '20px',
-  right: '20px',
-  background: 'none',
-  border: 'none',
-  cursor: 'pointer',
-  padding: '8px',
-  borderRadius: '50%',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  transition: 'background-color 0.2s',
-  // Corrected pseudo-class syntax for inline styles
-  ...(true && {
-    ':hover': {
-      backgroundColor: '#f1f5f9'
-    }
-  })
-};
-
-const modalTableStyle = {
+// --- STYLES (kept as constants for clarity, but they are NOT inline styles with pseudo-classes) ---
+const chartSectionStyle = {
   width: '100%',
-  borderCollapse: 'separate',
-  borderSpacing: '0 8px',
-  minWidth: '700px', // Adjusted table width
-};
-
-const modalTableHeaderStyle = {
-  padding: '12px 16px',
-  textAlign: 'left',
-  backgroundColor: '#f8fafc',
-  color: '#475569',
-  fontSize: '0.8125rem',
-  fontWeight: '600',
-  textTransform: 'uppercase',
-  letterSpacing: '0.5px',
-  border: 'none',
-  position: 'sticky',
-  top: '0',
-  zIndex: '10',
-};
-
-const modalTableCellStyle = {
-  padding: '16px',
-  textAlign: 'left',
-  backgroundColor: '#ffffff',
-  border: 'none',
-  fontSize: '0.875rem',
-  color: '#334155',
-  borderBottom: '1px solid #f1f5f9',
-};
-
-const modalTableRowStyle = {
-  transition: 'background-color 0.2s',
-  // Corrected pseudo-class syntax for inline styles
-  ...(true && {
-    ':hover': {
-      backgroundColor: '#f8fafc'
-    },
-    'td:first-child': {
-      borderTopLeftRadius: '8px',
-      borderBottomLeftRadius: '8px'
-    },
-    'td:last-child': {
-      borderTopRightRadius: '8px',
-      borderBottomRightRadius: '8px'
-    }
-  })
-};
-
-// --- New Styles for Payment Radio Buttons ---
-const radioGroupStyle = {
-  display: 'flex',
-  position: 'relative',
-  background: 'rgba(255, 255, 255, 0.06)',
-  borderRadius: '1rem',
-  backdropFilter: 'blur(12px)',
-  boxShadow: 'inset 1px 1px 4px rgba(255, 255, 255, 0.2), inset -1px -1px 6px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.15)',
-  overflow: 'hidden',
-  width: 'fit-content',
-  margin: '20px auto 30px auto', // Centered with margin
-};
-
-const hiddenRadioInputStyle = {
-  display: 'none',
-};
-
-const radioLabelBaseStyle = {
-  flex: 1,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  minWidth: '80px',
-  fontSize: '14px',
-  padding: '0.8rem 1.6rem',
-  cursor: 'pointer',
-  fontWeight: '600',
-  letterSpacing: '0.3px',
-  position: 'relative',
-  zIndex: 2,
-  transition: 'color 0.3s ease-in-out',
-};
-
-const radioGliderStyle = {
-  position: 'absolute',
-  top: 0,
-  bottom: 0,
-  width: `calc(100% / 3)`,
-  borderRadius: '1rem',
-  zIndex: 1,
-  transition: 'transform 0.5s cubic-bezier(0.37, 1.95, 0.66, 0.56), background 0.4s ease-in-out, box-shadow 0.4s ease-in-out',
+  maxWidth: '1000px',
+  background: '#ffffff',
+  borderRadius: '12px',
+  padding: '24px',
+  boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
+  border: '1px solid #e2e8f0'
 };
 
 const selectedPlanDetailsStyle = {
@@ -1203,13 +1379,6 @@ const paymentPlanSelectButtonStyle = {
   width: '100%',
   boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
   transition: 'background-color 0.2s, transform 0.2s',
-  ...(true && {
-    ':hover': {
-      background: '#2563eb',
-      transform: 'translateY(-2px)',
-      boxShadow: '0 6px 12px rgba(0,0,0,0.15)',
-    }
-  })
 };
 
 export default ClientDashboard;
