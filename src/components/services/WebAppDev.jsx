@@ -73,6 +73,10 @@ const WebAppDev = () => {
     }
   ];
 
+  const handleApplyNow = () => {
+    navigate('/services/servicesForm', { state: { service: 'Web Application Development' } });
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
@@ -141,7 +145,7 @@ const WebAppDev = () => {
             Contact Us
           </button>
           &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;------or------ &nbsp; &nbsp; &nbsp;
-          <button onClick={() => setShowModal(true)} className="contact-button btn-lg btn-primary mb-5">
+          <button onClick={handleApplyNow} className="contact-button btn-lg btn-primary mb-5">
             Apply Now
           </button>
         </div>

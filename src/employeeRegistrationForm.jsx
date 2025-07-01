@@ -1248,9 +1248,11 @@ const textareaStyle = {
 
   // Function to handle designation assignment
 const handleAssignDesignations = () => {
-  setSelectedDesignations(
-    selectedEmployee?.designations?.split(", ") || []
-  ); // Pre-select existing designations
+  if (!selectedEmployee) {
+    console.error("No employee selected");
+    return;
+  }
+  setSelectedDesignations(selectedEmployee?.designations?.split(", ") || []);
   setShowDesignationModal(true);
 };
 
@@ -1269,19 +1271,18 @@ const handleAssignDesignations = () => {
   };
 
    const handleCloseDesignationModal = () => {
+    setSelectedDesignations([]);
     setShowDesignationModal(false);
   };
 
 
-    const handleDesignationChange = (designation) => {
-    if (selectedDesignations.includes(designation)) {
-      setSelectedDesignations(
-        selectedDesignations.filter((d) => d !== designation)
-      );
-    } else {
-      setSelectedDesignations([...selectedDesignations, designation]);
-    }
-  };
+  const handleDesignationChange = (designation) => {
+  setSelectedDesignations((prev) =>
+    prev.includes(designation)
+      ? prev.filter((d) => d !== designation)
+      : [...prev, designation]
+  );
+};
 
 const handleSaveDesignations = () => {
   // Update the selected employee's designations
@@ -1290,12 +1291,19 @@ const handleSaveDesignations = () => {
     designations: selectedDesignations.join(", "), // Convert array to comma-separated string
   };
 
-  // Update the employees state (or awaitingEmployees/reviewEmployees)
-  setEmployees((prevEmployees) =>
-    prevEmployees.map((emp) => (emp.id === updatedEmployee.id ? updatedEmployee : emp))
-  );
+  // Update the correct state based on the active tab
+  if (activeTab === "Awaiting") {
+    setAwaitingEmployees((prev) =>
+      prev.map((emp) => (emp.id === updatedEmployee.id ? updatedEmployee : emp))
+    );
+  } else if (activeTab === "Review") {
+    setReviewEmployees((prev) =>
+      prev.map((emp) => (emp.id === updatedEmployee.id ? updatedEmployee : emp))
+    );
+  }
 
   // Close the modal
+  setSelectedDesignations([]);
   setShowDesignationModal(false);
 
   // Optionally, show a success message
@@ -1433,6 +1441,7 @@ const handleEditDetails = () => {
   };
 
 
+
   const handleApprove = (employeeId) => {
   // Find the employee to approve
   const employeeToApprove = awaitingEmployees.find(
@@ -1547,8 +1556,10 @@ const handleEditDetails = () => {
               </span>
             </td>
             <td style={tableDataCellStyle}>
-              {employee.designations || "No designations assigned"}
-            </td>
+  {typeof employee.designations === "string" && employee.designations.trim()
+    ? employee.designations
+    : "No designations assigned"}
+</td>
             <td style={tableDataCellStyle}>
               {/* View Details Button */}
               <span
@@ -1761,13 +1772,13 @@ const handleEditDetails = () => {
             <div style={detailsSectionStyle}>
               <h6 style={detailsSectionTitleStyle}>Assigned Designations</h6>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={detailValueStyle}>{selectedEmployee.designations || 'No designations assigned'}</div>
+                <div style={detailValueStyle}>{selectedEmployee.designations ||'No designations assigned'}</div>
                 <button
                   style={assignDesignationsButtonStyle}
                   onMouseEnter={(e) => Object.assign(e.target.style, assignDesignationsButtonStyle, assignDesignationsButtonHoverStyle)}
                   onMouseLeave={(e) => Object.assign(e.target.style, assignDesignationsButtonStyle)}
                    onClick={() => {
-    setSelectedDesignations(selectedEmployee.designations || []);
+    setSelectedDesignations(selectedEmployee?.designations?.split(", ") || []);
     setShowDesignationModal(true);
   }}
                 >
@@ -2104,20 +2115,12 @@ const handleEditDetails = () => {
     <div>
       {availableDesignations.map((designation) => (
         <div key={designation} style={{ marginBottom: '8px' }}>
-          <input
+           <input
             type="checkbox"
             id={designation}
             value={designation}
             checked={selectedDesignations.includes(designation)}
-            onChange={(e) => {
-              if (e.target.checked) {
-                setSelectedDesignations([...selectedDesignations, designation]);
-              } else {
-                setSelectedDesignations(
-                  selectedDesignations.filter((d) => d !== designation)
-                );
-              }
-            }}
+            onChange={(e) => handleDesignationChange(designation)}
           />
           <label htmlFor={designation} style={{ marginLeft: '8px' }}>
             {designation}
@@ -2137,7 +2140,7 @@ const handleEditDetails = () => {
         cursor: 'pointer',
         marginRight: '10px',
       }}
-      onClick={() => setShowDesignationModal(false)}
+      onClick={handleCloseDesignationModal}
     >
       Cancel
     </button>

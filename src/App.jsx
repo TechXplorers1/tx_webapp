@@ -27,6 +27,9 @@ import WorkGroups from './components/workgroups';
 
 import IntegratedEmployeeForm from './employeeRegistrationForm';
 // import EmployeeOnboardingWorksheet from './employeeOnboardingWorkSheet';
+import ServiceFormComponent from './components/services/ServicesForm';
+
+
 
 
 
@@ -58,6 +61,7 @@ const App = () => {
         <Route path="/services/it-talent-supply" element={<ITTalentSupply />} />
         <Route path="/services/job-support" element={<JobSupport />} />
         <Route path="/services/job-contact-form" element={<JobSupportForm />} />
+        <Route path="/services/servicesForm" element={<ServiceFormComponent />} />
            {/* DashBoards */}
         <Route path="/admindashboard" element={<AdminDashboard />} />
         <Route path="/reports" element={<Reports />} />
@@ -75,7 +79,7 @@ const App = () => {
     <Routes>
        <Route path="/employee-registration-form" element={<IntegratedEmployeeForm />} />
       {/* <Route path="/employee-onboarding-worksheet" element={<EmployeeOnboardingWorksheet />} /> */}
-
+       
     </Routes>
     </div>
   );
