@@ -25,8 +25,8 @@ import Reports from './components/Reports';
 import WorkGroups from './components/workgroups';
 // import ClientWorkSheet from './components/ClientWorksheet';
 
-import IntegratedEmployeeForm from './employeeRegistrationForm';
-import EmployeeOnboardingWorksheet from './employeeOnboardingWorkSheet';
+import IntegratedEmployeeForm from './components/employeeRegistrationForm';
+import AdminWorksheet from './components/AdminWorksheet';
 
 
 
@@ -65,6 +65,7 @@ const App = () => {
         <Route path="/teamleads" element={<TeamLeadData />} />
         <Route path="/employees" element={<EmployeeData />} />
         <Route path="/workgroups" element={<WorkGroups />} />
+        <Route path="/adminworksheet" element={<AdminWorksheet/>} />
         {/* <Route path="/clientworksheet" element={<ClientWorkSheet/>} /> */}
 
 
@@ -74,7 +75,6 @@ const App = () => {
     </ThemeProvider>
     <Routes>
        <Route path="/employee-registration-form" element={<IntegratedEmployeeForm />} />
-      <Route path="/employee-onboarding-worksheet" element={<EmployeeOnboardingWorksheet />} />
 
     </Routes>
     </div>
