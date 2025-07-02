@@ -1,16 +1,19 @@
-import React, { useState, useEffect } from 'react'; // Removed useRef as it's no longer needed
+import React, { useState, useEffect, useRef } from 'react'; // Import useRef
 
 const AdminWorksheet = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [currentView, setCurrentView] = useState('userManagement'); // Default view to User Management
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false); // New state for profile dropdown
+  const profileDropdownRef = useRef(null); // Ref for the profile dropdown area
+
   const [users, setUsers] = useState([
     { id: 1, name: 'Admin User', email: 'admin@techxplorers.in', roles: ['admin', 'active', 'Management'] },
     { id: 2, name: 'Sarah Wilson', email: 'manager@techxplorers.in', roles: ['manager', 'active', 'Management'] },
     { id: 3, name: 'Michael Johnson', email: 'teamlead@techxplorers.in', roles: ['team lead', 'active', 'Tech Placement'] },
     { id: 4, name: 'Asset Manager', email: 'assets@techxplorers.in', roles: ['asset manager', 'active', 'Operations'] },
     { id: 5, name: 'John Employee', email: 'employee@techxplorers.in', roles: ['employee', 'active', 'Development'] },
-    { id: 6, name: 'John Client', email: 'client@example.com', roles: ['client', 'active', 'External'] },
+    { id: 6, name: 'John Client', email: 'client', roles: ['client', 'active', 'External'] }, // Changed role to 'client' for consistency
     { id: 7, name: 'Regular User', email: 'user@techxplorers.in', roles: ['user', 'active', 'Development'] },
   ]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -54,8 +57,35 @@ const AdminWorksheet = () => {
   const [currentDepartmentToEdit, setCurrentDepartmentToEdit] = useState(null);
   const [isDeleteDepartmentConfirmModalOpen, setIsDeleteDepartmentConfirmModalOpen] = useState(false);
   const [departmentToDeleteId, setDepartmentToDeleteId] = useState(null);
+  const [isCreateDepartmentModalOpen, setIsCreateDepartmentModalOpen] = useState(false); // New state for create department modal
+  const [newDepartment, setNewDepartment] = useState({ // State for new department form
+    name: '',
+    description: '',
+    head: 'Not assigned',
+    status: 'active',
+  });
 
-  // Removed isProfileDropdownOpen state
+  // Client Management States (for the inline display)
+  const [clientFilter, setClientFilter] = useState('registered'); // Default filter for client management
+  const [selectedManagerPerClient, setSelectedManagerPerClient] = useState({});
+  const [editingClientId, setEditingClientId] = useState(null);
+  const [tempSelectedManager, setTempSelectedManager] = useState('');
+  const [clientSearchTerm, setClientSearchTerm] = useState(''); // Search term for clients
+
+  const [clients, setClients] = useState([
+    { id: 1, name: 'John Doe', mobile: '123-456-7890', email: 'john.doe@example.com', jobsApplyFor: 'Software Engineer', registeredDate: '2023-01-15', country: 'USA', visaStatus: 'H1B', paymentStatus: 'Pending', displayStatuses: ['registered'] },
+    { id: 2, name: 'Jane Smith', mobile: '098-765-4321', email: 'jane.smith@example.com', jobsApplyFor: 'Data Analyst', registeredDate: '2023-02-20', country: 'Canada', visaStatus: 'PR', paymentStatus: 'Paid', displayStatuses: ['unassigned'] },
+    { id: 3, name: 'Alice Johnson', mobile: '111-222-3333', email: 'alice.j@example.com', jobsApplyFor: 'UX Designer', registeredDate: '2023-03-01', country: 'UK', visaStatus: 'Tier 2', manager: 'Sarah Wilson', paymentStatus: 'N/A', displayStatuses: ['active'] },
+    { id: 4, name: 'Bob Williams', mobile: '444-555-6666', email: 'bob.w@example.com', jobsApplyFor: 'Project Manager', registeredDate: '2023-04-10', country: 'Australia', visaStatus: 'Working Holiday', paymentStatus: 'Pending', displayStatuses: ['rejected'] },
+    { id: 5, name: 'Charlie Brown', mobile: '777-888-9999', email: 'charlie.b@example.com', jobsApplyFor: 'DevOps Engineer', registeredDate: '2023-05-05', country: 'Germany', visaStatus: 'Blue Card', manager: 'Michael Johnson', paymentStatus: 'Paid', displayStatuses: ['active'] },
+    { id: 6, name: 'Diana Prince', mobile: '123-123-1234', email: 'diana.p@example.com', jobsApplyFor: 'Product Manager', registeredDate: '2023-06-01', country: 'USA', visaStatus: 'Green Card', paymentStatus: 'N/A', displayStatuses: ['restored'] },
+  ]);
+
+  const managers = [
+    { id: 1, firstName: 'Sarah', lastName: 'Wilson' },
+    { id: 2, firstName: 'Michael', lastName: 'Johnson' },
+    { id: 3, firstName: 'Emily', lastName: 'Davis' },
+  ];
 
 
   const adminUserName = "Admin User";
@@ -81,9 +111,18 @@ const AdminWorksheet = () => {
     }
   }, []);
 
+  // State for Payment Management Modal
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [selectedClientForPayment, setSelectedClientForPayment] = useState(null);
+  const [paymentDetails, setPaymentDetails] = useState({
+    amount: '',
+    description: '',
+    transactionDate: '',
+  });
+
   // Effect to manage body scroll when any modal is open
   useEffect(() => {
-    if (isAddUserModalOpen || isEditUserModalOpen || isDeleteConfirmModalOpen || isEditDepartmentModalOpen || isDeleteDepartmentConfirmModalOpen) {
+    if (isAddUserModalOpen || isEditUserModalOpen || isDeleteConfirmModalOpen || isEditDepartmentModalOpen || isDeleteDepartmentConfirmModalOpen || isCreateDepartmentModalOpen || isPaymentModalOpen) {
       document.body.classList.add('no-scroll');
     } else {
       document.body.classList.remove('no-scroll');
@@ -92,7 +131,22 @@ const AdminWorksheet = () => {
     return () => {
       document.body.classList.remove('no-scroll');
     };
-  }, [isAddUserModalOpen, isEditUserModalOpen, isDeleteConfirmModalOpen, isEditDepartmentModalOpen, isDeleteDepartmentConfirmModalOpen]);
+  }, [isAddUserModalOpen, isEditUserModalOpen, isDeleteConfirmModalOpen, isEditDepartmentModalOpen, isDeleteDepartmentConfirmModalOpen, isCreateDepartmentModalOpen, isPaymentModalOpen]);
+
+  // Effect to close profile dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
+        setIsProfileDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
 
   useEffect(() => {
     if (isDarkMode) {
@@ -101,9 +155,6 @@ const AdminWorksheet = () => {
       document.documentElement.classList.remove('dark-mode');
     }
   }, [isDarkMode]);
-
-  // Removed useEffect for click outside dropdown
-
 
   const toggleTheme = () => {
     setIsDarkMode(prevMode => {
@@ -329,12 +380,128 @@ const AdminWorksheet = () => {
     handleCancelDepartmentDelete();
   };
 
+  // Create Department Modal Handlers
+  const handleCreateDepartmentClick = () => {
+    setIsCreateDepartmentModalOpen(true);
+  };
+
+  const handleCloseCreateDepartmentModal = () => {
+    setIsCreateDepartmentModalOpen(false);
+    setNewDepartment({
+      name: '',
+      description: '',
+      head: 'Not assigned',
+      status: 'active',
+    });
+  };
+
+  const handleNewDepartmentChange = (e) => {
+    const { name, value } = e.target;
+    setNewDepartment(prevDept => ({
+      ...prevDept,
+      [name]: value
+    }));
+  };
+
+  const handleSaveNewDepartment = (e) => {
+    e.preventDefault();
+    const newDeptId = departments.length > 0 ? Math.max(...departments.map(d => d.id)) + 1 : 1;
+    const currentDate = new Date();
+    const formattedDate = `${currentDate.getDate()}/${currentDate.getMonth() + 1}/${currentDate.getFullYear()}`;
+
+    setDepartments(prevDepartments => [
+      ...prevDepartments,
+      {
+        id: newDeptId,
+        name: newDepartment.name,
+        description: newDepartment.description,
+        head: newDepartment.head,
+        employees: 0, // New departments start with 0 employees
+        status: newDepartment.status,
+        createdDate: formattedDate,
+      }
+    ]);
+    handleCloseCreateDepartmentModal();
+  };
+
+
+  // Client Management Handlers (for the inline display)
+  const handleAcceptClient = (clientId) => {
+    console.log(`Accept client with ID: ${clientId}`);
+    setClients(prevClients => prevClients.map(client =>
+      client.id === clientId ? { ...client, displayStatuses: ['unassigned'], manager: null } : client
+    ));
+  };
+
+  const handleDeclineClient = (clientId) => {
+    console.log(`Decline client with ID: ${clientId}`);
+    setClients(prevClients => prevClients.map(client =>
+      client.id === clientId ? { ...client, displayStatuses: ['rejected'] } : client
+    ));
+  };
+
+  const handleAssignClient = (clientId) => {
+    const managerName = selectedManagerPerClient[clientId];
+    if (managerName) {
+      console.log(`Assign client ${clientId} to manager ${managerName}`);
+      setClients(prevClients => prevClients.map(client =>
+        client.id === clientId ? { ...client, displayStatuses: ['active'], manager: managerName } : client
+      ));
+      setSelectedManagerPerClient(prev => {
+        const newSelection = { ...prev };
+        delete newSelection[clientId];
+        return newSelection;
+      });
+    }
+  };
+
+  const handleRestoreClient = (clientId) => {
+    console.log(`Restore client with ID: ${clientId}`);
+    setClients(prevClients => prevClients.map(client =>
+      client.id === clientId ? { ...client, displayStatuses: ['restored', 'registered'], manager: null } : client
+    ));
+  };
+
+  const handleEditManager = (client) => {
+    setEditingClientId(client.id);
+    setTempSelectedManager(client.manager || '');
+  };
+
+  const handleSaveManagerChange = (clientId) => {
+    console.log(`Save manager change for client ${clientId} to ${tempSelectedManager}`);
+    setClients(prevClients => prevClients.map(client =>
+      client.id === clientId ? { ...client, manager: tempSelectedManager } : client
+    ));
+    setEditingClientId(null);
+    setTempSelectedManager('');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingClientId(null);
+    setTempSelectedManager('');
+  };
+
+  const handleClientSearchChange = (event) => {
+    setClientSearchTerm(event.target.value);
+  };
+
+  const getFilteredClients = () => {
+    return clients
+      .filter(client => client.displayStatuses.includes(clientFilter))
+      .filter(client =>
+        [client.name, client.email, client.mobile, client.jobsApplyFor, client.country] // Removed paymentStatus from search fields
+          .some(field => field && field.toLowerCase().includes(clientSearchTerm.toLowerCase()))
+      );
+  };
+
+  const filteredClients = getFilteredClients();
+
 
   // Define options for the radio button navigation
   const adminViewOptions = [
     { value: 'userManagement', label: 'User Management' },
     { value: 'departments', label: 'Departments' },
-    { value: 'clientManagement', label: 'Client Management' },
+    { value: 'clientManagement', label: 'Client Management' }, // Keep the tab
   ];
 
   // Data for dropdowns
@@ -376,6 +543,48 @@ const AdminWorksheet = () => {
   const accountStatusOptions = ['Active', 'Inactive', 'Pending'];
   const departmentStatusOptions = ['active', 'inactive', 'pending']; // For department table filter and edit
 
+  // Payment Modal Handlers
+  const handleOpenPaymentModal = (client) => {
+    setSelectedClientForPayment(client);
+    setPaymentDetails({
+      amount: '',
+      description: '',
+      transactionDate: new Date().toISOString().slice(0, 10), // Default to current date
+    });
+    setIsPaymentModalOpen(true);
+  };
+
+  const handleClosePaymentModal = () => {
+    setIsPaymentModalOpen(false);
+    setSelectedClientForPayment(null);
+    setPaymentDetails({
+      amount: '',
+      description: '',
+      transactionDate: '',
+    });
+  };
+
+  const handlePaymentDetailsChange = (e) => {
+    const { name, value } = e.target;
+    setPaymentDetails(prevDetails => ({
+      ...prevDetails,
+      [name]: value,
+    }));
+  };
+
+  const handleGeneratePaymentLink = () => {
+    console.log('Generating payment link with details:', paymentDetails, ' for client:', selectedClientForPayment);
+    // In a real application, you would integrate with a payment gateway here.
+    // For now, we'll just close the modal.
+    handleClosePaymentModal();
+  };
+
+  const handlePayNow = () => {
+    console.log('Processing immediate payment with details:', paymentDetails, ' for client:', selectedClientForPayment);
+    // In a real application, you would integrate with a payment gateway here for immediate payment.
+    // For now, we'll just close the modal.
+    handleClosePaymentModal();
+  };
 
   // Helper to get role/status tag background color
   const getRoleTagBg = (role) => {
@@ -390,7 +599,6 @@ const AdminWorksheet = () => {
       case 'user': return '#FBE9E7'; // Light Orange-Red
       case 'active': return '#E8F5E9'; // Light Green
       case 'inactive': return '#FFEBEE'; // Light Red
-      case 'pending': return '#FFFDE7'; // Light Yellow
       case 'management': return '#E3F2FD'; // Light Blue
       case 'tech placement': return '#FCE4EC'; // Light Pink
       case 'operations': return '#F5F5DC'; // Beige
@@ -401,8 +609,17 @@ const AdminWorksheet = () => {
       case 'finance': return '#FFCDD2'; // Light Red
       case 'support': return '#C8E6C9'; // Darker Light Green
       case 'quality assurance': return '#BBDEFB'; // Light Blue
-      case 'hr': return '#F0F4C3'; // Light Khaki
+      case 'hr': '#F0F4C3'; // Light Khaki
       case 'external': return '#F9FBE7'; // Light Yellow-Green
+      // Client Status Tags (for modal, keeping them here as they might be used elsewhere too)
+      case 'registered': return '#DBEAFE'; // Light Blue
+      case 'unassigned': return '#FEF3C7'; // Light Yellow
+      case 'rejected': return '#FEE2E2'; // Light Red
+      case 'restored': return '#EDE9FE'; // Light Purple
+      // Payment Status Tags
+      case 'paid': return '#D9F5E6'; // Light Green
+      case 'pending': return '#FFFDE7'; // Light Yellow
+      case 'n/a': return '#E5E7EB'; // Light Grey
       default: return 'var(--border-color)';
     }
   };
@@ -420,7 +637,6 @@ const AdminWorksheet = () => {
       case 'user': return '#FF5722'; // Deep Orange
       case 'active': return '#4CAF50'; // Green
       case 'inactive': return '#F44336'; // Red
-      case 'pending': return '#FFD700'; // Gold
       case 'management': return '#2196F3'; // Blue
       case 'tech placement': return '#E91E63'; // Pink
       case 'operations': return '#795548'; // Brown
@@ -431,8 +647,17 @@ const AdminWorksheet = () => {
       case 'finance': return '#E53935'; // Red
       case 'support': return '#388E3C'; // Dark Green
       case 'quality assurance': return '#1976D2'; // Dark Blue
-      case 'hr': return '#F0F4C3'; // Light Khaki
+      case 'hr': return '#AFB42B'; // Lime
       case 'external': return '#AFB42B'; // Lime
+      // Client Status Tags (for modal)
+      case 'registered': return '#1D4ED8'; // Darker Blue
+      case 'unassigned': return '#B45309'; // Darker Yellow
+      case 'rejected': return '#B91C1C'; // Darker Red
+      case 'restored': return '#6D28D9'; // Darker Purple
+      // Payment Status Tags
+      case 'paid': return '#28A745'; // Green
+      case 'pending': return '#B45309'; // Darker Yellow
+      case 'n/a': return '#6B7280'; // Grey
       default: return 'var(--text-secondary)';
     }
   };
@@ -716,6 +941,69 @@ const AdminWorksheet = () => {
           --dept-active-tag-text: #ffffff;
         }
 
+        /* Profile Dropdown Styles */
+        .profile-dropdown-container {
+          position: relative;
+          cursor: pointer;
+          z-index: 60; /* Higher than header for dropdown to appear on top */
+        }
+
+        .profile-dropdown-menu {
+          position: absolute;
+          top: calc(100% + 0.5rem); /* Position below the avatar */
+          right: 0;
+          background-color: var(--bg-card);
+          border-radius: 0.5rem;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+          border: 1px solid var(--border-color);
+          min-width: 12rem;
+          padding: 0.5rem 0;
+          list-style: none;
+          margin: 0;
+          opacity: 0;
+          visibility: hidden;
+          transform: translateY(-10px);
+          transition: opacity 0.2s ease-out, transform 0.2s ease-out, visibility 0.2s ease-out;
+        }
+
+        .profile-dropdown-menu.open {
+          opacity: 1;
+          visibility: visible;
+          transform: translateY(0);
+        }
+
+        .profile-dropdown-item {
+          padding: 0.75rem 1rem;
+          color: var(--text-primary);
+          font-size: 0.9rem;
+          font-weight: 500;
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          transition: background-color 0.15s ease;
+        }
+
+        .profile-dropdown-item:hover {
+          background-color: var(--bg-nav-link-hover);
+        }
+
+        .profile-dropdown-item.header {
+          font-weight: 600;
+          color: var(--text-secondary);
+          font-size: 0.8rem;
+          padding: 0.5rem 1rem;
+          border-bottom: 1px solid var(--border-color);
+          margin-bottom: 0.5rem;
+        }
+
+        .profile-dropdown-item.logout {
+          color: #ef4444; /* Red for logout */
+        }
+
+        .profile-dropdown-item.logout:hover {
+          background-color: #fee2e2; /* Light red background on hover */
+        }
+
         /* Global no-scroll class */
         .no-scroll {
           overflow: hidden;
@@ -765,7 +1053,6 @@ const AdminWorksheet = () => {
           display: flex;
           align-items: center;
           gap: 1rem;
-          /* Removed position: relative; as dropdown is gone */
         }
 
         .ad-icon-btn {
@@ -807,7 +1094,6 @@ const AdminWorksheet = () => {
           display: flex;
           align-items: center;
           gap: 0.5rem;
-          /* Removed cursor: pointer; as it's no longer clickable for dropdown */
         }
 
         .ad-user-info-text {
@@ -1236,7 +1522,7 @@ const AdminWorksheet = () => {
             border-color: var(--delete-btn-hover-bg);
         }
 
-        /* Modal Styles */
+        /* Modal Styles (kept for other modals) */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -1630,7 +1916,8 @@ const AdminWorksheet = () => {
         .department-table th, .department-table td {
             padding: 1rem;
             text-align: left;
-            white-space: nowrap; /* Prevent text wrapping in table cells */
+            white-space: nowrap;
+            border-bottom: 1px solid var(--border-color);
         }
 
         .department-table thead {
@@ -1644,10 +1931,6 @@ const AdminWorksheet = () => {
             border-bottom: 1px solid var(--dept-table-row-border);
         }
 
-        .department-table tbody tr {
-            border-bottom: 1px solid var(--dept-table-row-border);
-        }
-
         .department-table tbody tr:last-child {
             border-bottom: none; /* No border for the last row */
         }
@@ -1658,7 +1941,7 @@ const AdminWorksheet = () => {
 
         .department-table td {
             font-size: 0.9rem;
-            color: var(--dept-table-text-primary);
+            color: var(--text-primary);
         }
 
         .department-table td.description {
@@ -1718,40 +2001,370 @@ const AdminWorksheet = () => {
             border-color: var(--delete-btn-hover-bg);
         }
 
-        @media (max-width: 767px) {
-            .user-management-header, .department-header {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            .user-search-add {
-                width: 100%;
-                max-width: none;
-                flex-direction: column;
-                align-items: stretch;
-            }
-            .add-user-btn, .create-department-btn {
-                width: 100%;
-                justify-content: center;
-            }
-            .user-card {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            .user-card-left {
-                width: 100%;
-            }
-            .user-actions {
-                width: 100%;
-                justify-content: flex-end; /* Align buttons to the right on small screens */
-                margin-top: 1rem; /* Space between info and actions */
-            }
-            .department-search-filter {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            .department-search-input, .department-status-select {
-                width: 100%;
-            }
+        /* Client Management Inline Styles */
+        .client-management-container {
+            padding: 0 1.5rem 1.5rem;
+        }
+
+        .client-management-box {
+            background-color: var(--bg-card);
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px var(--shadow-color-1), 0 2px 4px -1px var(--shadow-color-3);
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .client-management-header-section {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+        }
+
+        .client-management-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .client-filter-tabs {
+          position: relative;
+          display: flex;
+          border-radius: 0.5rem;
+          background-color: #EEE; /* Light grey background for the tabs container */
+          box-sizing: border-box;
+          box-shadow: 0 0 0px 1px rgba(0, 0, 0, 0.06);
+          padding: 0.25rem;
+          width: 100%;
+          font-size: 14px;
+          margin: 0 auto 20px auto;
+          overflow-x: auto;
+          white-space: nowrap;
+          flex-wrap: wrap;
+          justify-content: center;
+        }
+
+        .client-filter-tab-item {
+          flex-shrink: 0;
+          flex-grow: 1;
+          text-align: center;
+          display: flex;
+          cursor: pointer;
+          align-items: center;
+          justify-content: center;
+          border-radius: 0.5rem;
+          border: none;
+          padding: .5rem 10px;
+          transition: all .15s ease-in-out;
+          color: rgba(51, 65, 85, 1);
+          font-weight: normal;
+          margin: 0 2px 5px 2px;
+        }
+
+        .client-filter-tab-item input[type="radio"] {
+          display: none;
+        }
+
+        .client-filter-tab-item input[type="radio"]:checked + .client-filter-tab-label {
+          font-weight: 600;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+
+        .client-filter-tab-item .badge {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          color: white;
+          font-size: 0.75em;
+          font-weight: bold;
+          padding: 0 6px;
+          margin-left: 5px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          transition: background-color 0.15s ease;
+        }
+
+        /* Specific colors for client filter tabs */
+        .client-filter-tab-item.registered input[type="radio"]:checked + .client-filter-tab-label { background-color: #E6F0FF; color: #3A60EE; }
+        .client-filter-tab-item.registered .badge { background-color: #3A60EE; }
+
+        .client-filter-tab-item.unassigned input[type="radio"]:checked + .client-filter-tab-label { background-color: #FEF3C7; color: #B45309; }
+        .client-filter-tab-item.unassigned .badge { background-color: #B45309; }
+
+        .client-filter-tab-item.active input[type="radio"]:checked + .client-filter-tab-label { background-color: #D9F5E6; color: #28A745; }
+        .client-filter-tab-item.active .badge { background-color: #28A745; }
+
+        .client-filter-tab-item.rejected input[type="radio"]:checked + .client-filter-tab-label { background-color: #FFEDEE; color: #DC3545; }
+        .client-filter-tab-item.rejected .badge { background-color: #DC3545; }
+
+        .client-filter-tab-item.restored input[type="radio"]:checked + .client-filter-tab-label { background-color: #F0E6FF; color: #6A40EE; }
+        .client-filter-tab-item.restored .badge { background-color: #6A40EE; }
+
+
+        .client-search-input-group {
+          display: flex;
+          align-items: center;
+          border: 1px solid var(--border-color);
+          border-radius: 0.5rem;
+          overflow: hidden;
+          margin-bottom: 1.5rem;
+          background-color: var(--bg-card);
+        }
+
+        .client-search-input-group .search-icon-wrapper {
+          padding: 0.75rem 1rem;
+          color: var(--text-secondary);
+          background-color: var(--bg-card);
+          border-right: 1px solid var(--border-color);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .client-search-input-group .client-search-input {
+          flex-grow: 1;
+          padding: 0.75rem 1rem;
+          border: none;
+          outline: none;
+          background-color: var(--bg-card);
+          color: var(--text-primary);
+          font-size: 0.9rem;
+        }
+
+        .client-search-input-group .client-search-input::placeholder {
+          color: var(--text-secondary);
+        }
+
+        .client-search-input-group .client-search-input:focus {
+          border-color: #2563eb;
+          box-shadow: 0 0 0 0.25rem rgba(37, 99, 235, 0.25);
+        }
+
+        .client-table-title {
+          margin-bottom: 1rem;
+          font-size: 1.25rem;
+          font-weight: 600;
+          color: var(--text-primary);
+          text-align: center;
+        }
+
+        .client-table-container {
+          overflow-x: auto;
+          border-radius: 0.75rem;
+          border: 1px solid var(--border-color);
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+
+        .client-table {
+          width: 100%;
+          border-collapse: collapse;
+          background-color: var(--bg-card);
+        }
+
+        .client-table th, .client-table td {
+          padding: 1rem;
+          text-align: left;
+          white-space: nowrap;
+          border-bottom: 1px solid var(--border-color);
+        }
+
+        .client-table thead th {
+          background-color: var(--dept-table-header-bg);
+          color: var(--dept-table-header-text);
+          font-size: 0.875rem;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.7px;
+        }
+
+        .client-table tbody tr:last-child td {
+          border-bottom: none;
+        }
+
+        .client-table tbody tr:nth-child(even) {
+          background-color: var(--bg-body); /* Slightly different background for even rows */
+        }
+
+        .client-table tbody tr:hover {
+          background-color: var(--dept-table-row-hover-bg);
+        }
+
+        .client-table td {
+          font-size: 0.9rem;
+          color: var(--text-primary);
+        }
+
+        .client-table td .action-buttons {
+          display: flex;
+          gap: 0.5rem;
+          justify-content: flex-end;
+          align-items: center;
+        }
+
+        .client-table td .action-button {
+          padding: 0.5rem 1rem;
+          border: none;
+          border-radius: 0.5rem;
+          cursor: pointer;
+          font-size: 0.85em;
+          font-weight: 600;
+          white-space: nowrap;
+          flex-shrink: 0;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          transition: background-color 0.2s ease, transform 0.1s ease;
+        }
+
+        .client-table td .action-button:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        }
+
+        /* Specific client action button colors */
+        .client-table td .action-button.accept { background-color: #28a745; color: white; }
+        .client-table td .action-button.accept:hover { background-color: #218838; }
+        .client-table td .action-button.decline { background-color: #dc3545; color: white; }
+        .client-table td .action-button.decline:hover { background-color: #c82333; }
+        .client-table td .action-button.assign { background-color: #007bff; color: white; }
+        .client-table td .action-button.assign:hover { background-color: #0056b3; }
+        .client-table td .action-button.restore { background-color: #6f42c1; color: white; }
+        .client-table td .action-button.restore:hover { background-color: #563d7c; }
+        .client-table td .action-button.edit-manager { background-color: #007bff; color: white; }
+        .client-table td .action-button.edit-manager:hover { background-color: #0056b3; }
+        .client-table td .action-button.save { background-color: #28a745; color: white; }
+        .client-table td .action-button.save:hover { background-color: #218838; }
+        .client-table td .action-button.cancel { background-color: #6c757d; color: white; }
+        .client-table td .action-button.cancel:hover { background-color: #5a6268; }
+        .client-table td .action-button.send-payment-link {
+          background-color: #28a745; /* Green color for payment link */
+          color: white;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+        .client-table td .action-button.send-payment-link:hover {
+          background-color: #218838;
+        }
+
+
+        .client-table td .manager-select {
+          padding: 6px 8px;
+          border-radius: 5px;
+          border: 1px solid var(--border-color);
+          background-color: var(--bg-card);
+          color: var(--text-primary);
+          font-size: 0.85em;
+          width: 100%;
+          box-sizing: border-box;
+        }
+
+        .client-table td .manager-select:focus {
+          border-color: #2563eb;
+          outline: none;
+        }
+
+        .payment-status-tag {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            white-space: nowrap;
+            display: inline-block; /* Ensure it respects padding and background */
+        }
+
+        /* Payment Management Modal Specific Styles */
+        .payment-modal-content {
+            max-width: 500px; /* Adjust max-width for payment modal */
+            padding: 1.25rem; /* Reduced padding */
+        }
+
+        .payment-modal-client-details {
+            background-color: var(--bg-body);
+            border-radius: 0.5rem;
+            padding: 0.75rem; /* Reduced padding */
+            margin-top: 0.75rem; /* Reduced margin */
+            border: 1px solid var(--border-color);
+        }
+
+        .payment-modal-client-details p {
+            margin: 0.15rem 0; /* Reduced margin */
+            font-size: 0.85rem; /* Slightly smaller font */
+            color: var(--text-primary);
+        }
+
+        .payment-modal-client-details strong {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .payment-modal-options {
+            margin-top: 1rem; /* Reduced margin */
+            padding-top: 0.75rem; /* Reduced padding */
+            border-top: 1px solid var(--border-color);
+        }
+
+        .payment-modal-options h4 {
+            font-size: 0.95rem; /* Slightly smaller font */
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem; /* Reduced margin */
+        }
+
+        .payment-modal-option-item {
+            font-size: 0.8rem; /* Smaller font */
+            color: var(--text-secondary);
+            margin-bottom: 0.3rem; /* Reduced margin */
+        }
+
+        .payment-modal-option-item strong {
+            color: var(--text-primary);
+        }
+
+        .modal-form .form-group {
+            gap: 0.4rem; /* Reduced gap between label and input */
+        }
+
+        .modal-form .form-label {
+            margin-bottom: 0; /* Remove default margin */
+        }
+
+        .modal-footer {
+            margin-top: 1rem; /* Reduced margin */
+            gap: 0.6rem; /* Reduced gap between buttons */
+            /* Added for equal sizing and filling space */
+            display: flex;
+            justify-content: space-between; /* Distribute space between items */
+            flex-wrap: wrap; /* Allow buttons to wrap on smaller screens */
+        }
+
+        .modal-footer button {
+            flex-grow: 1; /* Allow buttons to grow and fill space */
+            flex-basis: auto; /* Allow buttons to shrink as needed */
+            min-width: 120px; /* Ensure a minimum width for buttons */
+            padding: 0.75rem 1rem; /* Consistent padding */
+            font-size: 0.9rem; /* Consistent font size */
+        }
+
+        .pay-now-btn {
+            background-color: #007bff; /* Blue for Pay Now button */
+            color: #ffffff;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex; /* Ensure icon and text are aligned */
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem; /* Space between icon and text */
+        }
+
+        .pay-now-btn:hover {
+            background-color: #0056b3; /* Darker blue on hover */
         }
         `}
       </style>
@@ -1804,25 +2417,50 @@ const AdminWorksheet = () => {
               </svg>
             )}
           </button>
-          <div className="ad-user-info"> {/* Removed onClick handler */}
-            <div className="ad-user-info-text">
-              <p className="ad-user-name">{adminUserName}</p>
-              {/* Added Admin Tag */}
-              <span className="ad-admin-tag">
-                {/* User Icon */}
-                <svg className="ad-icon-btn" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ fontSize: '0.65rem', width: '0.65rem', height: '0.65rem' }}>
-                  <path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"/>
-                </svg>
-                Admin
-              </span>
+          <div className="profile-dropdown-container" ref={profileDropdownRef}> {/* Added ref here */}
+            <div className="ad-user-info" onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}> {/* Toggle dropdown */}
+              <div className="ad-user-info-text">
+                <p className="ad-user-name">{adminUserName}</p>
+                {/* Added Admin Tag */}
+                <span className="ad-admin-tag">
+                  {/* User Icon */}
+                  <svg className="ad-icon-btn" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ fontSize: '0.65rem', width: '0.65rem', height: '0.65rem' }}>
+                    <path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"/>
+                  </svg>
+                  Admin
+                </span>
+              </div>
+              <div className="ad-initials-avatar">
+                <span className="ad-initials-text">{adminInitials}</span>
+              </div>
             </div>
-            <div className="ad-initials-avatar">
-              <span className="ad-initials-text">{adminInitials}</span>
-            </div>
-            {/* Removed dropdown arrow icon */}
+            {isProfileDropdownOpen && (
+              <ul className="profile-dropdown-menu open">
+                <li className="profile-dropdown-item header">My Account</li>
+                <li className="profile-dropdown-item">
+                  {/* User Icon */}
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1rem', height: '1rem' }}>
+                    <path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"/>
+                  </svg>
+                  Profile
+                </li>
+                <li className="profile-dropdown-item">
+                  {/* Settings Icon (Gear icon from screenshot) */}
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1rem', height: '1rem' }}>
+                    <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM13.07 4.11C16.96 4.41 20 7.71 20 12C20 16.3 16.96 19.59 13.07 19.89L13.07 4.11ZM10.93 4.11L10.93 19.89C7.04 19.59 4 16.3 4 12C4 7.71 7.04 4.41 10.93 4.11Z" />
+                  </svg>
+                  Settings
+                </li>
+                <li className="profile-dropdown-item logout" onClick={() => window.location.href = '/'}>
+                  {/* Log Out Icon (Door with arrow from screenshot) */}
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1rem', height: '1rem' }}>
+                    <path d="M10 4H4C3.44772 4 3 4.44772 3 5V19C3 19.5523 3.44772 20 4 20H10C10.5523 20 11 19.5523 11 19V17H13V19C13 20.6569 11.6569 22 10 22H4C2.34315 22 1 20.6569 1 19V5C1 3.34315 2.34315 2 4 2H10C11.6569 2 13 3.34315 13 5V7H11V5C11 4.44772 10.5523 4 10 4ZM19.2929 10.2929L22.2929 13.2929C22.6834 13.6834 22.6834 14.3166 22.2929 14.7071L19.2929 17.7071C18.9024 18.0976 18.2692 18.0976 17.8787 17.7071C17.4882 17.3166 17.4882 16.6834 17.8787 16.2929L19.5858 14.5858H11C10.4477 14.5858 10 14.1381 10 13.5858C10 13.0335 10.4477 12.5858 11 12.5858H19.5858L17.8787 10.8787C17.4882 10.4882 17.4882 9.85497 17.8787 9.46447C18.2692 9.07395 18.9024 9.07395 19.2929 9.46447Z" />
+                  </svg>
+                  Log out
+                </li>
+              </ul>
+            )}
           </div>
-
-          {/* Removed Profile Dropdown Menu JSX block */}
         </div>
 
         <button
@@ -1830,7 +2468,7 @@ const AdminWorksheet = () => {
           onClick={toggleSidebar}
         >
           {/* Hamburger Icon */}
-          <svg className="ad-hamburger-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1.125rem', height: '1.125rem' }}>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1.125rem', height: '1.125rem' }}>
             <path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/>
           </svg>
         </button>
@@ -1918,7 +2556,7 @@ const AdminWorksheet = () => {
                         <div className="user-card-left">
                           <div className="user-avatar">
                             {/* User Icon for Avatar (Font Awesome: fa-user) */}
-                            <svg className="user-avatar-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1.5rem', height: '1.5rem' }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1.5rem', height: '1.5rem' }}>
                               <path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"/>
                             </svg>
                           </div>
@@ -1977,7 +2615,7 @@ const AdminWorksheet = () => {
                     <h2 className="department-title">Department Management</h2>
                     <p className="department-subtitle">Create and manage organizational departments</p>
                   </div>
-                  <button className="create-department-btn">
+                  <button className="create-department-btn" onClick={handleCreateDepartmentClick}>
                     {/* Plus Icon (Font Awesome: fa-plus) */}
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '0.9rem', height: '0.9rem' }}>
                       <path d="M256 80c0-17.7-14.3-32-32-32s-32 14.3-32 32V224H48c-17.7 0-32 14.3-32 32s14.3 32 32 32H192V432c0 17.7 14.3 32 32 32s32-14.3 32-32V288H400c17.7 0 32-14.3 32-32s-14.3-32-32-32H256V80z"/>
@@ -2014,9 +2652,9 @@ const AdminWorksheet = () => {
                   {/* Total Employees Card - ICON CHANGED HERE */}
                   <div className="department-stat-card">
                     <div className="department-stat-card-icon-wrapper employees">
-                      {/* Users Icon (Font Awesome: fa-users) */}
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512" fill="currentColor" style={{ width: '1.25rem', height: '1.25rem' }}>
-                        <path d="M160 64c0-35.3 28.7-64 64-64H576c35.3 0 64 28.7 64 64V352c0 35.3-28.7 64-64 64H224c-35.3 0-64-28.7-64-64V64zm-80 0c-35.3 0-64 28.7-64 64V448c0 35.3 28.7 64 64 64H360.3c-1.2-5.3-1.9-10.8-1.9-16.3V416H224c-70.7 0-128-57.3-128-128V64z"/>
+                      {/* New User Icon (from Screenshot 2025-07-02 at 7.30.49 PM.png) */}
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1.25rem', height: '1.25rem' }}>
+                        <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2ZM12 5C13.6569 5 15 6.34315 15 8C15 9.65685 13.6569 11 12 11C10.3431 11 9 9.65685 9 8C9 6.34315 10.3431 5 12 5ZM12 19.25C9.03261 19.25 6.48033 17.6169 5 15.1672C5.00001 13.197 8.33333 12.1667 12 12.1667C15.6667 12.1667 19 13.197 19 15.1672C17.5197 17.6169 14.9674 19.25 12 19.25Z" />
                       </svg>
                     </div>
                     <div className="department-stat-card-value">{departments.reduce((sum, dept) => sum + dept.employees, 0)}</div>
@@ -2058,9 +2696,9 @@ const AdminWorksheet = () => {
                             <td>{dept.head}</td>
                             <td>
                               <div className="employee-count">
-                                {/* Users Icon (Font Awesome: fa-users) */}
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512" fill="currentColor" style={{ width: '0.8rem', height: '0.8rem' }}>
-                                  <path d="M160 64c0-35.3 28.7-64 64-64H576c35.3 0 64 28.7 64 64V352c0 35.3-28.7 64-64 64H224c-35.3 0-64-28.7-64-64V64zm-80 0c-35.3 0-64 28.7-64 64V448c0 35.3 28.7 64 64 64H360.3c-1.2-5.3-1.9-10.8-1.9-16.3V416H224c-70.7 0-128-57.3-128-128V64z"/>
+                                {/* New User Icon (from Screenshot 2025-07-02 at 7.30.49 PM.png) */}
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '0.8rem', height: '0.8rem' }}>
+                                  <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2ZM12 5C13.6569 5 15 6.34315 15 8C15 9.65685 13.6569 11 12 11C10.3431 11 9 9.65685 9 8C9 6.34315 10.3431 5 12 5ZM12 19.25C9.03261 19.25 6.48033 17.6169 5 15.1672C5.00001 13.197 8.33333 12.1667 12 12.1667C15.6667 12.1667 19 13.197 19 15.1672C17.5197 17.6169 14.9674 19.25 12 19.25Z" />
                                 </svg>
                                 {dept.employees}
                               </div>
@@ -2105,9 +2743,240 @@ const AdminWorksheet = () => {
           )}
 
           {currentView === 'clientManagement' && (
-            <div className="ad-card" style={{padding: '2rem', textAlign: 'center'}}>
-              <h2 className="ad-card-title">Client Management Section</h2>
-              <p className="ad-subtitle">Content for client management will go here.</p>
+            <div className="client-management-container">
+              <div className="client-management-box">
+                <div className="client-management-header-section">
+                  <h2 className="client-management-title">Client Details Management</h2>
+                </div>
+
+                {/* Client Filter Tabs */}
+                <div className="client-filter-tabs">
+                  {[
+                    { label: 'Registered Clients', value: 'registered', count: clients.filter(c => c.displayStatuses.includes('registered')).length, activeBg: '#E6F0FF', activeColor: '#3A60EE', badgeBg: '#3A60EE' },
+                    { label: 'Unassigned Clients', value: 'unassigned', count: clients.filter(c => c.displayStatuses.includes('unassigned')).length, activeBg: '#FEF3C7', activeColor: '#B45309', badgeBg: '#B45309' },
+                    { label: 'Active Clients', value: 'active', count: clients.filter(c => c.displayStatuses.includes('active')).length, activeBg: '#D9F5E6', activeColor: '#28A745', badgeBg: '#28A745' },
+                    { label: 'Rejected Clients', value: 'rejected', count: clients.filter(c => c.displayStatuses.includes('rejected')).length, activeBg: '#FFEDEE', activeColor: '#DC3545', badgeBg: '#DC3545' },
+                    { label: 'Restore Clients', value: 'restored', count: clients.filter(c => c.displayStatuses.includes('restored')).length, activeBg: '#F0E6FF', activeColor: '#6A40EE', badgeBg: '#6A40EE' },
+                  ].map((option) => (
+                    <label
+                      key={option.value}
+                      className={`client-filter-tab-item ${option.value}`}
+                      style={{
+                        backgroundColor: clientFilter === option.value ? option.activeBg : 'transparent',
+                        color: clientFilter === option.value ? option.activeColor : 'rgba(51, 65, 85, 1)',
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="client-filter"
+                        value={option.value}
+                        checked={clientFilter === option.value}
+                        onChange={(e) => {
+                          setClientFilter(e.target.value);
+                          setClientSearchTerm(''); // Clear search when changing filter
+                        }}
+                      />
+                      <span className="client-filter-tab-label">{option.label}</span>
+                      <span className="badge" style={{ backgroundColor: clientFilter === option.value ? option.badgeBg : '#9AA0A6' }}>
+                        {option.count}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+
+                {/* Search Input */}
+                <div className="client-search-input-group">
+                  <span className="search-icon-wrapper">
+                    {/* Search Icon (SVG) */}
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" style={{ width: '1rem', height: '1rem' }}>
+                      <path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.1-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z"/>
+                    </svg>
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Search clients by name, email, mobile, job, or country"
+                    className="client-search-input"
+                    value={clientSearchTerm}
+                    onChange={handleClientSearchChange}
+                  />
+                </div>
+
+                <h4 className="client-table-title">
+                  {clientFilter === 'registered' && `Registered Clients`}
+                  {clientFilter === 'unassigned' && `Unassigned Clients`}
+                  {clientFilter === 'active' && `Active Clients`}
+                  {clientFilter === 'rejected' && `Rejected Clients`}
+                  {clientFilter === 'restored' && `Restored Clients`} ({filteredClients.length})
+                </h4>
+
+                {/* Client Table */}
+                <div className="client-table-container">
+                  <table className="client-table">
+                    <thead>
+                      <tr>
+                        {/* Headers based on current filter */}
+                        {(() => {
+                          const headers = {
+                            registered: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Actions'],
+                            unassigned: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Assign To', 'Actions'],
+                            active: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Manager', 'Actions'],
+                            rejected: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Actions'],
+                            restored: ['Name', 'Mobile', 'Email', 'Jobs Apply For', 'Registered Date', 'Country', 'Visa Status', 'Assign To', 'Actions'],
+                          };
+                          return headers[clientFilter].map((header) => (
+                            <th key={header} style={{ textAlign: header === 'Actions' ? 'center' : 'left' }}> {/* Centered Actions column title */}
+                              {header}
+                            </th>
+                          ));
+                        })()}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredClients.length > 0 ? (
+                        filteredClients.map((client, index) => (
+                          <tr key={client.id}>
+                            <td>{client.name}</td>
+                            <td>{client.mobile}</td>
+                            <td>{client.email}</td>
+                            <td>{client.jobsApplyFor}</td>
+                            <td>{client.registeredDate}</td>
+                            <td>{client.country}</td>
+                            <td>{client.visaStatus}</td>
+                            {(clientFilter === 'unassigned' || clientFilter === 'restored') && (
+                              <td>
+                                <select
+                                  className="manager-select"
+                                  value={selectedManagerPerClient[client.id] || ''}
+                                  onChange={(e) => setSelectedManagerPerClient(prev => ({
+                                    ...prev,
+                                    [client.id]: e.target.value,
+                                  }))}
+                                >
+                                  <option value="">Select Manager</option>
+                                  {managers.map((mgr, idx) => (
+                                    <option key={idx} value={`${mgr.firstName} ${mgr.lastName}`}>
+                                      {mgr.firstName} {mgr.lastName}
+                                    </option>
+                                  ))}
+                                </select>
+                              </td>
+                            )}
+                            {clientFilter === 'active' && (
+                              <td>
+                                {editingClientId === client.id ? (
+                                  <select
+                                    className="manager-select"
+                                    value={tempSelectedManager}
+                                    onChange={(e) => setTempSelectedManager(e.target.value)}
+                                  >
+                                    <option value="">Select Manager</option>
+                                    {managers.map((mgr, idx) => (
+                                      <option key={idx} value={`${mgr.firstName} ${mgr.lastName}`}>
+                                        {mgr.firstName} {mgr.lastName}
+                                      </option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  client.manager || '-'
+                                )}
+                              </td>
+                            )}
+                            <td>
+                              <div className="action-buttons">
+                                {clientFilter === 'registered' && (
+                                  <>
+                                    <button
+                                      onClick={() => handleAcceptClient(client.id)}
+                                      className="action-button accept"
+                                    >
+                                      Accept
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeclineClient(client.id)}
+                                      className="action-button decline"
+                                    >
+                                      Decline
+                                    </button>
+                                  </>
+                                )}
+                                {(clientFilter === 'unassigned' || clientFilter === 'restored') && (
+                                  <button
+                                    onClick={() => handleAssignClient(client.id)}
+                                    className="action-button assign"
+                                    disabled={!selectedManagerPerClient[client.id]}
+                                  >
+                                    Assign
+                                  </button>
+                                )}
+                                {clientFilter === 'active' && (
+                                  editingClientId === client.id ? (
+                                    <>
+                                      <button
+                                        onClick={() => handleSaveManagerChange(client.id)}
+                                        className="action-button save"
+                                        disabled={!tempSelectedManager}
+                                      >
+                                        Save
+                                      </button>
+                                      <button
+                                        onClick={handleCancelEdit}
+                                        className="action-button cancel"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleEditManager(client)}
+                                      className="action-button edit-manager"
+                                    >
+                                      Edit Manager
+                                    </button>
+                                  )
+                                )}
+                                {clientFilter === 'rejected' && (
+                                  <button
+                                    onClick={() => handleRestoreClient(client.id)}
+                                    className="action-button restore"
+                                  >
+                                    Restore
+                                  </button>
+                                )}
+                                {/* Send Payment Link Button */}
+                                <button
+                                  onClick={() => handleOpenPaymentModal(client)}
+                                  className="action-button send-payment-link"
+                                >
+                                  {/* Dollar Sign Icon (Font Awesome: fa-dollar-sign) */}
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style={{ width: '0.8rem', height: '0.8rem' }}>
+                                    <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2ZM17 7H7C6.44772 7 6 7.44772 6 8V16C6 16.5523 6.44772 17 7 17H17C17.5523 17 18 16.5523 18 16V8C18 7.44772 17.5523 7 17 7ZM7 9H17V11H7V9ZM7 13H14V15H7V13Z" />
+                                  </svg>
+                                  Send Payment Link
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={(() => {
+                            const headers = {
+                              registered: 8, // Changed from 9
+                              unassigned: 9, // Changed from 10
+                              active: 9,     // Changed from 10
+                              rejected: 8,   // Changed from 9
+                              restored: 9    // Changed from 10
+                            };
+                            return headers[clientFilter];
+                          })()} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                            No {clientFilter} clients found.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -2219,7 +3088,7 @@ const AdminWorksheet = () => {
                   <button type="button" className="generate-password-btn" onClick={generateTemporaryPassword}>
                     {/* Eye Icon (Font Awesome: fa-eye) */}
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" fill="currentColor" style={{ width: '1rem', height: '1rem' }}>
-                        <path d="M288 80c-65.2 0-118.8 29.6-159.9 67.7C89.3 183.5 64 223.8 64 256c0 32.2 25.3 72.5 64.1 108.3C169.2 402.4 222.8 432 288 432s118.8-29.6 159.9-67.7C486.7 328.5 512 288.2 512 256c0-32.2-25.3-72.5-64.1-108.3C406.8 109.6 353.2 80 288 80zM96 256c0-10.8 2.8-21.6 7.9-31.7c17.5-35.3 47.6-64.7 85.8-84.3c15.2-7.8 31.5-12 48.3-12s33.1 4.2 48.3 12c38.2 19.6 68.3 49 85.8 84.3c5.1 10.1 7.9 20.9 7.9 31.7s-2.8 21.6-7.9 31.7c-17.5 35.3-47.6 64.7-85.8 84.3c-15.2 7.8-31.5 12-48.3 12s-33.1-4.2-48.3-12c-38.2-19.6-68.3-49-85.8-84.3C98.8 277.6 96 266.8 96 256zm192 0a64 64 0 1 0 0-128 64 64 0 1 0 0 128z"/>
+                        <path d="M288 80c-65.2 0-118.8 29.6-159.9 67.7C89.3 183.5 64 223.8 64 256c0 32.2 25.3 72.5 64.1 108.3C169.2 402.4 222.8 432 288 432s118.8-29.6 159.9-67.7C486.7 328.5 512 288.2 512 256c0-32.2-25.3-72.5-64.1-108.3C406.8 109.6 353.2 80 288 80zM96 256c0-10.8 2.8-21.6 7.9-31.7c17.5-35.3 47.6-64.7 85.8-84.3c15.2-7.8 31.5-12 48.3-12s33.1 4.2 48.3 12c38.2 19.6 68.3 49 85.8 84.3c5.1 10.1 7.9 20.9 7.9 31.7s-2.8 21.6-7.9 31.7c-17.5 35.3-47.6 64.7-85.8-84.3c-15.2 7.8-31.5 12-48.3 12s-33.1-4.2-48.3-12c-38.2-19.6-68.3-49-85.8-84.3C98.8 277.6 96 266.8 96 256zm192 0a64 64 0 1 0 0-128 64 64 0 1 0 0 128z"/>
                     </svg>
                     Generate
                   </button>
@@ -2355,6 +3224,84 @@ const AdminWorksheet = () => {
         </div>
       )}
 
+      {/* Create New Department Modal */}
+      {isCreateDepartmentModalOpen && (
+        <div className="modal-overlay open">
+          <div className="modal-content">
+            <div className="modal-header">
+              <div>
+                <h3 className="modal-title">Create New Department</h3>
+                <p className="modal-subtitle">Add a new department to the organization</p>
+              </div>
+              <button className="modal-close-btn" onClick={handleCloseCreateDepartmentModal}>&times;</button>
+            </div>
+            <form className="modal-form" onSubmit={handleSaveNewDepartment}>
+              <div className="form-group modal-form-full-width">
+                <label htmlFor="newDeptName" className="form-label">Department Name *</label>
+                <input
+                  type="text"
+                  id="newDeptName"
+                  name="name"
+                  className="form-input"
+                  placeholder="Enter department name"
+                  value={newDepartment.name}
+                  onChange={handleNewDepartmentChange}
+                  required
+                />
+              </div>
+              <div className="form-group modal-form-full-width">
+                <label htmlFor="newDeptDescription" className="form-label">Description</label>
+                <input
+                  type="text"
+                  id="newDeptDescription"
+                  name="description"
+                  className="form-input"
+                  placeholder="Enter department description"
+                  value={newDepartment.description}
+                  onChange={handleNewDepartmentChange}
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="newDeptHead" className="form-label">Head of Department</label>
+                <select
+                  id="newDeptHead"
+                  name="head"
+                  className="form-select"
+                  value={newDepartment.head}
+                  onChange={handleNewDepartmentChange}
+                >
+                  {headOfDepartmentOptions.map(option => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label htmlFor="newDeptStatus" className="form-label">Status</label>
+                <select
+                  id="newDeptStatus"
+                  name="status"
+                  className="form-select"
+                  value={newDepartment.status}
+                  onChange={handleNewDepartmentChange}
+                >
+                  {departmentStatusOptions.map(option => (
+                    <option key={option} value={option}>
+                      {option.charAt(0).toUpperCase() + option.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="modal-footer modal-form-full-width">
+                <button type="submit" className="create-user-btn">Create Department</button>
+                <button type="button" className="confirm-cancel-btn" onClick={handleCloseCreateDepartmentModal}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Edit Department Modal */}
       {isEditDepartmentModalOpen && currentDepartmentToEdit && (
         <div className="modal-overlay open">
@@ -2475,6 +3422,99 @@ const AdminWorksheet = () => {
         </div>
       )}
 
+      {/* Payment Management Modal */}
+      {isPaymentModalOpen && selectedClientForPayment && (
+        <div className="modal-overlay open">
+          <div className="modal-content payment-modal-content">
+            <div className="modal-header">
+              <div>
+                <h3 className="modal-title">Payment Management</h3>
+                <p className="modal-subtitle">Create payment links or process immediate payments for {selectedClientForPayment.name}</p>
+              </div>
+              <button className="modal-close-btn" onClick={handleClosePaymentModal}>&times;</button>
+            </div>
+            <form className="modal-form" onSubmit={(e) => { e.preventDefault(); handleGeneratePaymentLink(); }}>
+              <div className="form-group modal-form-full-width">
+                <label htmlFor="paymentAmount" className="form-label">Amount *</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ color: 'var(--text-secondary)', fontSize: '1rem', fontWeight: '500' }}>USD</span>
+                  <input
+                    type="number"
+                    id="paymentAmount"
+                    name="amount"
+                    className="form-input"
+                    placeholder="0.00"
+                    value={paymentDetails.amount}
+                    onChange={handlePaymentDetailsChange}
+                    step="0.01"
+                    min="0"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="form-group modal-form-full-width">
+                <label htmlFor="paymentDescription" className="form-label">Description *</label>
+                <input
+                  type="text"
+                  id="paymentDescription"
+                  name="description"
+                  className="form-input"
+                  placeholder="e.g., Service charges, Consultation fee"
+                  value={paymentDetails.description}
+                  onChange={handlePaymentDetailsChange}
+                  required
+                />
+              </div>
+              <div className="form-group modal-form-full-width">
+                <label htmlFor="transactionDate" className="form-label">Transaction Date</label>
+                <input
+                  type="date"
+                  id="transactionDate"
+                  name="transactionDate"
+                  className="form-input"
+                  value={paymentDetails.transactionDate}
+                  readOnly // Made non-editable
+                />
+              </div>
+
+              <div className="payment-modal-client-details modal-form-full-width">
+                <p><strong>Client Details:</strong></p>
+                <p>Name: {selectedClientForPayment.name}</p>
+                <p>Email: {selectedClientForPayment.email}</p>
+                <p>Phone: {selectedClientForPayment.mobile}</p>
+              </div>
+
+              <div className="modal-footer modal-form-full-width">
+                <button type="button" className="confirm-cancel-btn" onClick={handleClosePaymentModal}>Cancel</button>
+                <button type="button" className="pay-now-btn" onClick={handlePayNow}>
+                  {/* Credit Card Icon (from Screenshot 2025-07-02 at 7.33.16 PM.png) */}
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '0.9rem', height: '0.9rem' }}>
+                    <path d="M20 4H4C3.44772 4 3 4.44772 3 5V19C3 19.5523 3.44772 20 4 20H20C20.5523 20 21 19.5523 21 19V5C21 4.44772 20.5523 4 20 4ZM5 7H19V9H5V7ZM5 11H17V13H5V11ZM5 15H13V17H5V15Z" />
+                  </svg>
+                  Pay Now
+                </button>
+                <button type="submit" className="create-user-btn">
+                  {/* Link Icon (from Screenshot 2025-07-02 at 7.33.37 PM.png) */}
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '0.9rem', height: '0.9rem' }}>
+                    <path d="M12 4H10C7.79086 4 6 5.79086 6 8C6 10.2091 7.79086 12 10 12H12V14H10C6.68629 14 4 11.3137 4 8C4 4.68629 6.68629 2 10 2H12V4ZM14 10H12C9.79086 10 8 11.7909 8 14C8 16.2091 9.79086 18 12 18H14V20H12C8.68629 20 6 17.3137 6 14C6 10.6863 8.68629 8 12 8H14V10ZM18 6H16V8H18C21.3137 8 24 10.6863 24 14C24 17.3137 21.3137 20 18 20H16V18H18C20.2091 18 22 16.2091 22 14C22 11.7909 20.2091 10 18 10H16V6Z" />
+                  </svg>
+                  Generate Link
+                </button>
+              </div>
+
+              <div className="payment-modal-options modal-form-full-width">
+                <h4>Payment Options:</h4>
+                <p className="payment-modal-option-item">
+                  • <strong>Pay Now:</strong> Opens secure payment gateway for immediate processing
+                </p>
+                <p className="payment-modal-option-item">
+                  • <strong>Generate Link:</strong> Creates shareable payment link for client use
+                </p>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
