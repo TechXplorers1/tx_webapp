@@ -18,6 +18,12 @@ const DigitalMarketing = () => {
     userType: '',
   });
 
+   const handleApplyNow = () => {
+    navigate('/services/servicesForm', { state: { service: 'Digital Marketing' } });
+  };
+
+
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
@@ -115,7 +121,7 @@ const DigitalMarketing = () => {
             Contact Us
           </button>
           &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;------or------ &nbsp; &nbsp; &nbsp;
-          <button onClick={() => setShowModal(true)} className="btn-lg btn-primary contact-button">
+          <button onClick={handleApplyNow} className="btn-lg btn-primary contact-button">
             Apply Now
           </button>
         </div>

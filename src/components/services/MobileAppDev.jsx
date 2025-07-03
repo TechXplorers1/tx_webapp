@@ -63,6 +63,10 @@ TechXplorers specializes in a wide range of mobile solutions including Bluetooth
     },
   ];
 
+  const handleApplyNow = () => {
+    navigate('/services/servicesForm', { state: { service: 'Mobile App Development' } });
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
@@ -128,7 +132,7 @@ TechXplorers specializes in a wide range of mobile solutions including Bluetooth
           <button onClick={() => navigate('/contactus')} className="contact-button btn-lg btn-primary">
             Contact Us
           </button>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;------or------ &nbsp; &nbsp; &nbsp;
-          <button onClick={() => setShowModal(true)} className="contact-button btn-lg btn-primary mb-5">
+          <button onClick={handleApplyNow} className="contact-button btn-lg btn-primary mb-5">
             Apply Now
           </button>
         </div>

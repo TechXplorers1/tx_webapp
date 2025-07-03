@@ -17,6 +17,10 @@ const ITTalentSupply = () => {
     userType: '',
   });
 
+   const handleApplyNow = () => {
+    navigate('/services/servicesForm', { state: { service: 'IT Talent Supply' } });
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
@@ -130,7 +134,7 @@ const ITTalentSupply = () => {
             Contact Us
           </button>
           &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;------or------ &nbsp; &nbsp; &nbsp;
-          <button onClick={() => setShowModal(true)} className="contact-button btn-lg btn-primary">
+          <button onClick={handleApplyNow} className="contact-button btn-lg btn-primary">
             Apply Now
           </button>
         </div>

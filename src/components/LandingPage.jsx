@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Container, Row, Col, Carousel } from 'react-bootstrap';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom'; // Import useNavigateimport { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import CustomNavbar from './Navbar';
@@ -33,14 +33,23 @@ const LandingPage = () => {
     { name: 'India', position: [28.6139, 77.209] },
   ];
 
+
+    const navigate = useNavigate(); // Hook for navigation
   const [selectedOffice, setSelectedOffice] = useState(null);
 
-  const carouselItems = [
-    { id: 1, image: Image1, alt: "TechXplorers Service 1", text: "Mobile Application Development", path: "/services/mobile-app-development" },
-    { id: 2, image: Image2, alt: "TechXplorers Service 2", text: "Web Application Development", path: "/services/web-app-development" },
-    { id: 3, image: Image3, alt: "TechXplorers Service 3", text: "Digital Marketing", path: "/services/digital-marketing" },
-    { id: 4, image: Image4, alt: "TechXplorers Service 4", text: "Job Support", path: "/services/job-support" },
-    { id: 5, image: Image5, alt: "TechXplorers Service 5", text: "IT Talent Supply", path: "/services/it-talent-supply" }
+ const carouselItems = [
+    { id: 1, image: Image1, alt: "TechXplorers Service 1", text: "Mobile App Development", path: "/services/mobile-app-development", service: "Mobile App Development" },
+    { id: 2, image: Image2, alt: "TechXplorers Service 2", text: "Web Application Development", path: "/services/web-app-development", service: "Web Application Development" },
+    { id: 3, image: Image3, alt: "TechXplorers Service 3", text: "Digital Marketing", path: "/services/digital-marketing", service: "Digital Marketing" },
+{ 
+    id: 4, 
+    image: Image4, 
+    alt: "Job Support Profile", 
+    text: "Job Support", 
+    path: "/services/job-support", 
+    isJobSupport: true // Special flag for Job Support
+  },
+    { id: 5, image: Image5, alt: "TechXplorers Service 5", text: "IT Talent Supply", path: "/services/it-talent-supply", service: "IT Talent Supply" }
   ];
 
   // UseInView with triggerOnce: false for re-animation on re-entry
@@ -62,7 +71,15 @@ const LandingPage = () => {
               <Carousel.Item key={item.id} className="carousel-item-custom position-relative">
                 <div className="carousel-overlay-content position-absolute top-50 start-50 translate-middle text-center text-white">
                   <h3>{item.text}</h3>
-                  <button className="btn btn-primary mt-3">Book a Service</button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                   {item.isJobSupport ? (
+              <button
+                className="btn btn-primary mt-3"
+                onClick={() => window.location.href = "/services/job-contact-form"}
+              >
+                Book a Service
+              </button>
+            ) : (
+                  <button  onClick={() => navigate('/services/servicesForm', { state: { service: item.service } })}  className="btn btn-primary mt-3">Book a Service</button>)}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                   <Link to={item.path} className="btn btn-primary mt-3">Learn More</Link>
                 </div>
                 <img

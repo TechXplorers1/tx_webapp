@@ -25,7 +25,10 @@ import Reports from './components/Reports';
 import WorkGroups from './components/workgroups';
 // import ClientWorkSheet from './components/ClientWorksheet';
 
-import IntegratedEmployeeForm from './components/employeeRegistrationForm';
+import EmployeeRegistrationForm from './components/employeeRegistrationForm';
+import EmployeeOnboardingWorkSheet from './components/employeeOnboardingSheet';
+import ServiceFormComponent from './components/services/ServicesForm';
+
 import AdminWorksheet from './components/AdminWorksheet';
 import ManagerWorksheet from './components/ManagerWorksheet';
 
@@ -59,6 +62,7 @@ const App = () => {
         <Route path="/services/it-talent-supply" element={<ITTalentSupply />} />
         <Route path="/services/job-support" element={<JobSupport />} />
         <Route path="/services/job-contact-form" element={<JobSupportForm />} />
+        <Route path="/services/servicesForm" element={<ServiceFormComponent />} />
            {/* DashBoards */}
         <Route path="/admindashboard" element={<AdminDashboard />} />
         <Route path="/reports" element={<Reports />} />
@@ -69,16 +73,13 @@ const App = () => {
         <Route path="/adminworksheet" element={<AdminWorksheet/>} />
         <Route path="/managerworksheet" element={<ManagerWorksheet/>} />
         {/* <Route path="/clientworksheet" element={<ClientWorkSheet/>} /> */}
-
+        <Route path="/employee-registration-form" element={<EmployeeRegistrationForm />} />
+        <Route path="/employee-onboarding-sheet" element={<EmployeeOnboardingWorkSheet />} />
 
 
 
     </Routes>
     </ThemeProvider>
-    <Routes>
-       <Route path="/employee-registration-form" element={<IntegratedEmployeeForm />} />
-
-    </Routes>
     </div>
   );
 };
