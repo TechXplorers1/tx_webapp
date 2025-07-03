@@ -119,6 +119,7 @@ const AdminWorksheet = () => {
     description: '',
     transactionDate: '',
   });
+  const [generatedPaymentLink, setGeneratedPaymentLink] = useState(''); // New state for the generated link
 
   // Effect to manage body scroll when any modal is open
   useEffect(() => {
@@ -551,6 +552,7 @@ const AdminWorksheet = () => {
       description: '',
       transactionDate: new Date().toISOString().slice(0, 10), // Default to current date
     });
+    setGeneratedPaymentLink(''); // Clear any previous generated link
     setIsPaymentModalOpen(true);
   };
 
@@ -562,6 +564,7 @@ const AdminWorksheet = () => {
       description: '',
       transactionDate: '',
     });
+    setGeneratedPaymentLink(''); // Clear generated link on close
   };
 
   const handlePaymentDetailsChange = (e) => {
@@ -573,10 +576,11 @@ const AdminWorksheet = () => {
   };
 
   const handleGeneratePaymentLink = () => {
+    // In a real application, you would make an API call to generate a unique link.
+    // For this example, we'll create a mock link.
+    const mockLink = `https://31228083-199d-476b-a6cb-d029dbd0ce9-figmaiframepreview.figma.site#/pay/1/INV-14752-12703`;
+    setGeneratedPaymentLink(mockLink);
     console.log('Generating payment link with details:', paymentDetails, ' for client:', selectedClientForPayment);
-    // In a real application, you would integrate with a payment gateway here.
-    // For now, we'll just close the modal.
-    handleClosePaymentModal();
   };
 
   const handlePayNow = () => {
@@ -584,6 +588,35 @@ const AdminWorksheet = () => {
     // In a real application, you would integrate with a payment gateway here for immediate payment.
     // For now, we'll just close the modal.
     handleClosePaymentModal();
+  };
+
+  const handleCopyLink = () => {
+    if (generatedPaymentLink) {
+      document.execCommand('copy'); // Use execCommand for broader iframe compatibility
+      const textArea = document.createElement('textarea');
+      textArea.value = generatedPaymentLink;
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        console.log('Payment link copied using execCommand!');
+      } catch (e) {
+        console.error('Fallback copy failed: ', e);
+      }
+      document.body.removeChild(textArea);
+    }
+  };
+
+  const handleSendEmail = () => {
+    console.log('Sending email with link:', generatedPaymentLink);
+    // In a real app, this would open an email client or trigger an email API.
+  };
+
+  const handlePreviewLink = () => {
+    if (generatedPaymentLink) {
+      window.open(generatedPaymentLink, '_blank');
+    }
   };
 
   // Helper to get role/status tag background color
@@ -2366,6 +2399,93 @@ const AdminWorksheet = () => {
         .pay-now-btn:hover {
             background-color: #0056b3; /* Darker blue on hover */
         }
+
+        /* Generated Link Section */
+        .generated-link-section {
+            margin-top: 1rem; /* Reduced margin-top */
+            padding-top: 0.75rem; /* Reduced padding-top */
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem; /* Reduced gap */
+        }
+
+        .generated-link-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #28a745; /* Green for success */
+            font-weight: 600;
+            font-size: 0.9rem; /* Slightly smaller font */
+        }
+
+        .generated-link-input-group {
+            display: flex;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            overflow: hidden;
+            background-color: var(--modal-input-bg);
+        }
+
+        .generated-link-input {
+            flex-grow: 1;
+            padding: 0.6rem 0.8rem; /* Reduced padding */
+            border: none;
+            outline: none;
+            background-color: transparent;
+            color: var(--modal-input-text);
+            font-size: 0.85rem; /* Slightly smaller font */
+            white-space: nowrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch; /* For smooth scrolling on iOS */
+            max-height: 3.5rem; /* Reduced max-height for scrollability */
+            overflow-y: auto; /* Make it scrollable vertically */
+        }
+
+        .generated-link-actions {
+            display: flex;
+            gap: 0.4rem; /* Reduced gap */
+            padding: 0.4rem; /* Reduced padding */
+            border-left: 1px solid var(--border-color);
+            flex-shrink: 0;
+        }
+
+        .generated-link-action-btn {
+            padding: 0.5rem 0.7rem; /* Reduced padding */
+            border-radius: 0.5rem;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-card);
+            color: var(--text-primary);
+            font-size: 0.75rem; /* Slightly smaller font */
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem; /* Reduced gap */
+            white-space: nowrap;
+        }
+
+        .generated-link-action-btn:hover {
+            background-color: var(--bg-nav-link-hover);
+        }
+
+        .generated-link-close-btn {
+            width: 100%;
+            padding: 0.75rem 1.5rem;
+            background-color: var(--confirm-modal-cancel-btn-bg);
+            color: var(--confirm-modal-cancel-btn-text);
+            border-radius: 0.5rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: 0.75rem; /* Reduced margin-top */
+        }
+
+        .generated-link-close-btn:hover {
+            background-color: var(--confirm-modal-cancel-btn-hover);
+        }
         `}
       </style>
 
@@ -2947,9 +3067,9 @@ const AdminWorksheet = () => {
                                   onClick={() => handleOpenPaymentModal(client)}
                                   className="action-button send-payment-link"
                                 >
-                                  {/* Dollar Sign Icon (Font Awesome: fa-dollar-sign) */}
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style={{ width: '0.8rem', height: '0.8rem' }}>
-                                    <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2ZM17 7H7C6.44772 7 6 7.44772 6 8V16C6 16.5523 6.44772 17 7 17H17C17.5523 17 18 16.5523 18 16V8C18 7.44772 17.5523 7 17 7ZM7 9H17V11H7V9ZM7 13H14V15H7V13Z" />
+                                  {/* Credit Card Icon (from Screenshot 2025-07-02 at 7.33.16 PM.png) */}
+                                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '0.9rem', height: '0.9rem' }}>
+                                    <path d="M20 4H4C3.44772 4 3 4.44772 3 5V19C3 19.5523 3.44772 20 4 20H20C20.5523 20 21 19.5523 21 19V5C21 4.44772 20.5523 4 20 4ZM5 7H19V9H5V7ZM5 11H17V13H5V11ZM5 15H13V17H5V15Z" />
                                   </svg>
                                   Send Payment Link
                                 </button>
@@ -3484,23 +3604,67 @@ const AdminWorksheet = () => {
                 <p>Phone: {selectedClientForPayment.mobile}</p>
               </div>
 
-              <div className="modal-footer modal-form-full-width">
-                <button type="button" className="confirm-cancel-btn" onClick={handleClosePaymentModal}>Cancel</button>
-                <button type="button" className="pay-now-btn" onClick={handlePayNow}>
-                  {/* Credit Card Icon (from Screenshot 2025-07-02 at 7.33.16 PM.png) */}
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '0.9rem', height: '0.9rem' }}>
-                    <path d="M20 4H4C3.44772 4 3 4.44772 3 5V19C3 19.5523 3.44772 20 4 20H20C20.5523 20 21 19.5523 21 19V5C21 4.44772 20.5523 4 20 4ZM5 7H19V9H5V7ZM5 11H17V13H5V11ZM5 15H13V17H5V15Z" />
-                  </svg>
-                  Pay Now
-                </button>
-                <button type="submit" className="create-user-btn">
-                  {/* Link Icon (from Screenshot 2025-07-02 at 7.33.37 PM.png) */}
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '0.9rem', height: '0.9rem' }}>
-                    <path d="M12 4H10C7.79086 4 6 5.79086 6 8C6 10.2091 7.79086 12 10 12H12V14H10C6.68629 14 4 11.3137 4 8C4 4.68629 6.68629 2 10 2H12V4ZM14 10H12C9.79086 10 8 11.7909 8 14C8 16.2091 9.79086 18 12 18H14V20H12C8.68629 20 6 17.3137 6 14C6 10.6863 8.68629 8 12 8H14V10ZM18 6H16V8H18C21.3137 8 24 10.6863 24 14C24 17.3137 21.3137 20 18 20H16V18H18C20.2091 18 22 16.2091 22 14C22 11.7909 20.2091 10 18 10H16V6Z" />
-                  </svg>
-                  Generate Link
-                </button>
-              </div>
+              {generatedPaymentLink ? (
+                <div className="generated-link-section modal-form-full-width">
+                  <div className="generated-link-header">
+                    {/* Checkmark Circle Icon */}
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2ZM16.7071 9.29289C17.0976 8.90237 17.0976 8.26921 16.7071 7.87869C16.3166 7.48816 15.6834 7.48816 15.2929 7.87869L10.5 12.6716L8.70711 10.8787C8.31658 10.4882 7.68342 10.4882 7.29289 10.8787C6.90237 11.2692 6.90237 11.9024 7.29289 12.2929L9.87869 14.8787C10.2692 15.2692 10.9024 15.2692 11.2929 14.8787L16.7071 9.46447V9.29289Z" />
+                    </svg>
+                    Payment Link Generated:
+                  </div>
+                  <div className="generated-link-input-group">
+                    <input
+                      type="text"
+                      className="generated-link-input"
+                      value={generatedPaymentLink}
+                      readOnly
+                    />
+                    <div className="generated-link-actions">
+                      <button type="button" className="generated-link-action-btn" onClick={handleCopyLink}>
+                        {/* Copy Icon */}
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M16 1H4C2.89543 1 2 1.89543 2 3V17H4V3H16V1ZM18 5H8C6.89543 5 6 5.89543 6 7V21C6 22.1046 6.89543 23 8 23H18C19.1046 23 20 22.1046 20 21V7C20 5.89543 19.1046 5 18 5ZM8 7H18V21H8V7Z" />
+                        </svg>
+                        Copy Link
+                      </button>
+                      <button type="button" className="generated-link-action-btn" onClick={handleSendEmail}>
+                        {/* Send Icon (Paper Plane) */}
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M22 2L11 13M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                        Send Email
+                      </button>
+                      <button type="button" className="generated-link-action-btn" onClick={handlePreviewLink}>
+                        {/* External Link/Preview Icon */}
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M10 6H6C4.89543 6 4 6.89543 4 8V18C4 19.1046 4.89543 20 6 20H16C17.1046 20 18 19.1046 18 18V14M14 4L20 4M20 4V10M20 4L10 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                        Preview
+                      </button>
+                    </div>
+                  </div>
+                  <button type="button" className="generated-link-close-btn" onClick={handleClosePaymentModal}>Close</button>
+                </div>
+              ) : (
+                <div className="modal-footer modal-form-full-width">
+                  <button type="button" className="confirm-cancel-btn" onClick={handleClosePaymentModal}>Cancel</button>
+                  <button type="button" className="pay-now-btn" onClick={handlePayNow}>
+                    {/* Credit Card Icon (from Screenshot 2025-07-02 at 7.33.16 PM.png) */}
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '0.9rem', height: '0.9rem' }}>
+                      <path d="M20 4H4C3.44772 4 3 4.44772 3 5V19C3 19.5523 3.44772 20 4 20H20C20.5523 20 21 19.5523 21 19V5C21 4.44772 20.5523 4 20 4ZM5 7H19V9H5V7ZM5 11H17V13H5V11ZM5 15H13V17H5V15Z" />
+                    </svg>
+                    Pay Now
+                  </button>
+                  <button type="submit" className="create-user-btn">
+                    {/* Link Icon (from Screenshot 2025-07-02 at 7.33.37 PM.png) */}
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '0.9rem', height: '0.9rem' }}>
+                      <path d="M12 4H10C7.79086 4 6 5.79086 6 8C6 10.2091 7.79086 12 10 12H12V14H10C6.68629 14 4 11.3137 4 8C4 4.68629 6.68629 2 10 2H12V4ZM14 10H12C9.79086 10 8 11.7909 8 14C8 16.2091 9.79086 18 12 18H14V20H12C8.68629 20 6 17.3137 6 14C6 10.6863 8.68629 8 12 8H14V10ZM18 6H16V8H18C21.3137 8 24 10.6863 24 14C24 17.3137 21.3137 20 18 20H16V18H18C20.2091 18 22 16.2091 22 14C22 11.7909 20.2091 10 18 10H16V6Z" />
+                    </svg>
+                    Generate Link
+                  </button>
+                </div>
+              )}
 
               <div className="payment-modal-options modal-form-full-width">
                 <h4>Payment Options:</h4>
