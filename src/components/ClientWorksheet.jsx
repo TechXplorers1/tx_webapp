@@ -135,46 +135,179 @@ const applicationsData = {
 
 
 const ClientWorksheet = () => {
-  const navigate = useNavigate();
-  const [selectedDate, setSelectedDate] = useState(null); // For the daily date navigation ribbon
+  
+   const [activeTab, setActiveTab] = useState("Applications");
+  const [activeSubTab, setActiveSubTab] = useState("Resumes"); // New state for sub-tabs
+
+  
+
+  
+    // Handle tab change
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setActiveSubTab("Resumes"); // Reset sub-tab to default when switching main tabs
+
+  };
+
+   // Handle sub-tab change
+  const handleSubTabChange = (subTab) => {
+    setActiveSubTab(subTab);
+  };
+
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+  return (
+    <div
+      style={{
+        maxWidth: "1300px",
+        margin: "40px auto",
+        padding: "20px",
+        backgroundColor: "#ffffff",
+        borderRadius: "8px",
+        boxShadow: "0 4px 20px rgba(0, 0, 0, 0.08)",
+      }}
+    >
+      {/* Header */}
+      {/* <div
+        style={{
+          marginBottom: "20px",
+        }}
+      >
+        <h2
+          style={{
+            fontSize: "24px",
+            fontWeight: "bold",
+            color: "#333",
+            margin: "0",
+          }}
+        >
+          My Job Search Dashboard
+        </h2>
+        <p
+          style={{
+            fontSize: "16px",
+            color: "#555",
+            marginTop: "8px",
+          }}
+        >
+          Track your job applications and manage your documents
+        </p>
+      </div> */}
+
+      {/* Tabs */}
+      <div
+        style={{
+          display: "flex",
+          gap: "10px",
+        }}
+      >
+        <button
+          style={{
+            padding: "10px 20px",
+            border: "1px solid #ccc",
+            borderRadius: "8px",
+            cursor: "pointer",
+            transition: "background-color 0.3s ease",
+            ...(activeTab === "Applications" && {
+              backgroundColor: "#007bff",
+              color: "#fff",
+              borderColor: "#007bff",
+            }),
+          }}
+          onClick={() => handleTabChange("Applications")}
+        >
+          📑 Applications
+        </button>
+        <button
+          style={{
+            padding: "10px 20px",
+            border: "1px solid #ccc",
+            borderRadius: "8px",
+            cursor: "pointer",
+            transition: "background-color 0.3s ease",
+            ...(activeTab === "Documents" && {
+              backgroundColor: "#007bff",
+              color: "#fff",
+              borderColor: "#007bff",
+            }),
+          }}
+          onClick={() => handleTabChange("Documents")}
+        >
+          📂 Documents
+        </button>
+        <button
+          style={{
+            padding: "10px 20px",
+            border: "1px solid #ccc",
+            borderRadius: "8px",
+            cursor: "pointer",
+            transition: "background-color 0.3s ease",
+            ...(activeTab === "Billing" && {
+              backgroundColor: "#007bff",
+              color: "#fff",
+              borderColor: "#007bff",
+            }),
+          }}
+          onClick={() => handleTabChange("Billing")}
+        >
+          💳 Billing
+        </button>
+      </div>
+
+      {/* Content */}
+      <div
+        style={{
+          marginTop: "20px",
+          padding: "20px",
+          borderRadius: "8px",
+          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.08)",
+        }}
+      >
+        {activeTab === "Applications" && <Applications />}
+        {activeTab === "Documents" && <Documents
+            activeSubTab={activeSubTab}
+            handleSubTabChange={handleSubTabChange}
+        />}
+        {activeTab === "Billing" && <Billing />}
+      </div>
+    </div>
+  );
+}
+
+
+const Applications = () => {
+
+const navigate = useNavigate();
+
+
+
+ const [selectedDate, setSelectedDate] = useState(null); // For the daily date navigation ribbon
   const [dateRange, setDateRange] = useState([]);
   const [currentStartDate, setCurrentStartDate] = useState(new Date());
+
+
+
 
   // Categorical Filter states (kept for modal functionality, though modal button removed)
   const [filterWebsites, setFilterWebsites] = useState([]);
   const [filterPositions, setFilterPositions] = useState([]);
   const [filterCompanies, setFilterCompanies] = useState([]);
 
-  // State for search term
-  const [searchTerm, setSearchTerm] = useState('');
-  // State to control hover effect on search icon
-  const [isSearchHovered, setIsSearchHovered] = useState(false);
-
-  // States for date range filtering (DD-MM-YYYY string for display, internal logic uses Date objects)
-  const [startDateFilter, setStartDateFilter] = useState('');
-  const [endDateFilter, setEndDateFilter] = useState('');
-
-  // New state for the custom date range modal visibility
-  const [showDateRangeModal, setShowDateRangeModal] = useState(false);
-  // Temporary states for date inputs within the date range modal (Date objects for calendar component)
-  const [tempStartDate, setTempStartDate] = useState(null); // Date object for calendar
-  const [tempEndDate, setTempEndDate] = useState(null);   // Date object for calendar
-
-
-  // State for Job Description Modal
-  const [showJobDescriptionModal, setShowJobDescriptionModal] = useState(false);
-  const [currentJobDescription, setCurrentJobDescription] = useState('');
-
-
-  // Consolidated modal visibility state (kept for categorical filters if ever re-enabled)
-  const [showFilterModal, setShowFilterModal] = useState(false);
-
-  // Temporary selected options within the categorical filter modal
-  const [tempSelectedWebsites, setTempSelectedWebsites] = useState([]);
-  const [tempSelectedPositions, setTempSelectedPositions] = useState([]);
-  const [tempSelectedCompanies, setTempSelectedCompanies] = useState([]);
-
-  // Unique options for the filter modals
+    // Unique options for the filter modals
   const [uniqueWebsites, setUniqueWebsites] = useState([]);
   const [uniquePositions, setUniquePositions] = useState([]);
   const [uniqueCompanies, setUniqueCompanies] = useState([]);
@@ -207,6 +340,54 @@ const ClientWorksheet = () => {
     setUniquePositions(Array.from(allPositions).sort());
     setUniqueCompanies(Array.from(allCompanies).sort());
   }, []); // Empty dependency array means this runs once on mount
+
+
+  // Flatten all applications once and add their original date
+  const allApplicationsFlattened = useMemo(() => {
+    const flattened = [];
+    for (const dateKey in applicationsData) {
+      if (Object.prototype.hasOwnProperty.call(applicationsData, dateKey)) {
+        applicationsData[dateKey].forEach(app => {
+          flattened.push({ ...app, dateAdded: dateKey }); // Add the original date string to each app (DD-MM-YYYY)
+        });
+      }
+    }
+    return flattened;
+  }, [applicationsData]);
+
+
+  // State for search term
+  const [searchTerm, setSearchTerm] = useState('');
+  // State to control hover effect on search icon
+  const [isSearchHovered, setIsSearchHovered] = useState(false);
+
+  // States for date range filtering (DD-MM-YYYY string for display, internal logic uses Date objects)
+  const [startDateFilter, setStartDateFilter] = useState('');
+  const [endDateFilter, setEndDateFilter] = useState('');
+
+  // New state for the custom date range modal visibility
+  const [showDateRangeModal, setShowDateRangeModal] = useState(false);
+  // Temporary states for date inputs within the date range modal (Date objects for calendar component)
+  const [tempStartDate, setTempStartDate] = useState(null); // Date object for calendar
+  const [tempEndDate, setTempEndDate] = useState(null);   // Date object for calendar
+
+
+  // State for Job Description Modal
+  const [showJobDescriptionModal, setShowJobDescriptionModal] = useState(false);
+  const [currentJobDescription, setCurrentJobDescription] = useState('');
+
+
+  // Consolidated modal visibility state (kept for categorical filters if ever re-enabled)
+  const [showFilterModal, setShowFilterModal] = useState(false);
+
+  // Temporary selected options within the categorical filter modal
+  const [tempSelectedWebsites, setTempSelectedWebsites] = useState([]);
+  const [tempSelectedPositions, setTempSelectedPositions] = useState([]);
+  const [tempSelectedCompanies, setTempSelectedCompanies] = useState([]);
+
+
+
+
 
   // --- Handlers for the consolidated categorical filter modal (no longer directly accessible from a button) ---
   const handleOpenFilterModal = () => {
@@ -332,6 +513,7 @@ const ClientWorksheet = () => {
   };
 
 
+
   const downloadApplicationsData = () => {
     if (!filteredApplicationsForDisplay.length) return;
 
@@ -350,8 +532,8 @@ const ClientWorksheet = () => {
     XLSX.utils.book_append_sheet(wb, ws, sheetName);
     XLSX.writeFile(wb, `JobApplications_${sheetName.replace(/\s/g, '_')}.xlsx`);
   };
-
-  const showPreviousWeek = () => {
+  
+ const showPreviousWeek = () => {
     const newStartDate = new Date(currentStartDate);
     newStartDate.setDate(newStartDate.getDate() - 7);
     setCurrentStartDate(newStartDate);
@@ -371,21 +553,25 @@ const ClientWorksheet = () => {
     }
   };
 
-  // Flatten all applications once and add their original date
-  const allApplicationsFlattened = useMemo(() => {
-    const flattened = [];
-    for (const dateKey in applicationsData) {
-      if (Object.prototype.hasOwnProperty.call(applicationsData, dateKey)) {
-        applicationsData[dateKey].forEach(app => {
-          flattened.push({ ...app, dateAdded: dateKey }); // Add the original date string to each app (DD-MM-YYYY)
-        });
-      }
+
+  // Update the title dynamically based on active filters
+  const getApplicationsSectionTitle = () => {
+    const hasDateRangeFilter = startDateFilter && endDateFilter;
+    const hasSearchTerm = searchTerm !== '';
+    const hasCategoricalFilters = filterWebsites.length > 0 || filterPositions.length > 0 || filterCompanies.length > 0;
+
+    if (hasDateRangeFilter) {
+      return `Filtered Applications (From ${startDateFilter} - To ${endDateFilter})`;
+    } else if (hasSearchTerm || hasCategoricalFilters) {
+      return 'Filtered Applications (by search and/or other criteria)';
+    } else if (selectedDate) {
+      return `Applications for ${selectedDate}`;
     }
-    return flattened;
-  }, [applicationsData]);
+    return 'Job Applications'; // Default title if nothing selected/filtered
+  };
 
 
-  // Apply all filters to the relevant base set of applications
+    // Apply all filters to the relevant base set of applications
   const filteredApplicationsForDisplay = useMemo(() => {
     let baseApps = [];
 
@@ -441,22 +627,6 @@ const ClientWorksheet = () => {
     });
   }, [selectedDate, applicationsData, filterWebsites, filterPositions, filterCompanies, searchTerm, startDateFilter, endDateFilter, allApplicationsFlattened, isGlobalFilterActive]);
 
-
-  // Update the title dynamically based on active filters
-  const getApplicationsSectionTitle = () => {
-    const hasDateRangeFilter = startDateFilter && endDateFilter;
-    const hasSearchTerm = searchTerm !== '';
-    const hasCategoricalFilters = filterWebsites.length > 0 || filterPositions.length > 0 || filterCompanies.length > 0;
-
-    if (hasDateRangeFilter) {
-      return `Filtered Applications (From ${startDateFilter} - To ${endDateFilter})`;
-    } else if (hasSearchTerm || hasCategoricalFilters) {
-      return 'Filtered Applications (by search and/or other criteria)';
-    } else if (selectedDate) {
-      return `Applications for ${selectedDate}`;
-    }
-    return 'Job Applications'; // Default title if nothing selected/filtered
-  };
 
 
   return (
@@ -921,6 +1091,502 @@ const ClientWorksheet = () => {
   );
 };
 
+// Documents Tab Content
+const Documents = ({ activeSubTab, handleSubTabChange }) => {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "20px",
+      }}
+    >
+      <h3
+        style={{
+          fontSize: "20px",
+          fontWeight: "bold",
+          color: "#333",
+          marginBottom: "16px",
+        }}
+      >
+        My Documents
+      </h3>
+       {/* Sub-Tabs */}
+      <div
+        style={{
+          display: "flex",
+          gap: "10px",
+        }}
+      >
+        <button
+          style={{
+            padding: "8px 12px",
+            border: "1px solid #ccc",
+            borderRadius: "4px",
+            backgroundColor:
+              activeSubTab === "Resumes" ? "#007bff" : "#f0f0f0",
+            color: activeSubTab === "Resumes" ? "#fff" : "#333",
+            cursor: "pointer",
+          }}
+          onClick={() => handleSubTabChange("Resumes")}
+        >
+          Resumes (3)
+        </button>
+        <button
+          style={{
+            padding: "8px 12px",
+            border: "1px solid #ccc",
+            borderRadius: "4px",
+            backgroundColor:
+              activeSubTab === "CoverLetters" ? "#007bff" : "#f0f0f0",
+            color: activeSubTab === "CoverLetters" ? "#fff" : "#333",
+            cursor: "pointer",
+          }}
+          onClick={() => handleSubTabChange("CoverLetters")}
+        >
+          Cover Letters (3)
+        </button>
+        <button
+          style={{
+            padding: "8px 12px",
+            border: "1px solid #ccc",
+            borderRadius: "4px",
+            backgroundColor:
+              activeSubTab === "Interviews" ? "#007bff" : "#f0f0f0",
+            color: activeSubTab === "Interviews" ? "#fff" : "#333",
+            cursor: "pointer",
+          }}
+          onClick={() => handleSubTabChange("Interviews")}
+        >
+          Interviews (3)
+        </button>
+         <button
+          style={{
+            padding: "8px 12px",
+            border: "1px solid #ccc",
+            borderRadius: "4px",
+            backgroundColor:
+              activeSubTab === "Offers" ? "#007bff" : "#f0f0f0",
+            color: activeSubTab === "Offers" ? "#fff" : "#333",
+            cursor: "pointer",
+          }}
+          onClick={() => handleSubTabChange("Offers")}
+        >
+          Offers (2)
+        </button>
+      </div>
+
+     {/* Sub-Tab Content */}
+      <div>
+        {activeSubTab === "Resumes" && <Resumes />}
+        {activeSubTab === "CoverLetters" && <CoverLetters />}
+        {activeSubTab === "Interviews" && <Interviews />}
+        {activeSubTab === "Offers" && <Offers />}
+      </div>
+    </div>
+  );
+};
+
+// Resumes Sub-Tab Content
+const Resumes = () => {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "row",
+        gap: "20px",
+      }}
+    >
+      <div
+        style={{
+          padding: "40px",
+          border: "1px solid #ccc",
+          borderRadius: "8px",
+          width: "350px",
+          textAlign: "center",
+        }}
+      >
+        📄
+        john_anderson_resume_2025.pdf
+      </div>
+      <div
+        style={{
+          padding: "20px",
+          border: "1px solid #ccc",
+          borderRadius: "8px",
+          width: "350px",
+          textAlign: "center",
+        }}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          style={{ width: "24px", height: "24px", marginRight: "10px" }}
+        >
+          <path d="M13 10H11v4H9v2h6v-2h-2v-4h2zm8-2h-8l-5.4 6-3.4-4-4 5H5v2h14v-2H13l4-5-3.4 4L17 8z" />
+        </svg>
+        john_anderson_resume_tech_focused.pdf
+      </div>
+      <div
+        style={{
+          padding: "20px",
+          border: "1px solid #ccc",
+          borderRadius: "8px",
+          width: "350px",
+          textAlign: "center",
+        }}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          style={{ width: "24px", height: "24px", marginRight: "10px" }}
+        >
+          <path d="M13 10H11v4H9v2h6v-2h-2v-4h2zm8-2h-8l-5.4 6-3.4-4-4 5H5v2h14v-2H13l4-5-3.4 4L17 8z" />
+        </svg>
+        john_anderson_resume_senior_level.pdf
+      </div>
+    </div>
+  );
+};
+
+
+// Cover Letters Sub-Tab Content
+const CoverLetters = () => {
+ return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "row",
+        gap: "20px",
+      }}
+    >
+      <div
+        style={{
+          padding: "40px",
+          border: "1px solid #ccc",
+          borderRadius: "8px",
+          width: "350px",
+          textAlign: "center",
+        }}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          style={{ width: "24px", height: "24px", marginRight: "10px" }}
+        >
+          <path d="M13 10H11v4H9v2h6v-2h-2v-4h2zm8-2h-8l-5.4 6-3.4-4-4 5H5v2h14v-2H13l4-5-3.4 4L17 8z" />
+        </svg>
+        cover_letter_techflow.pdf
+      </div>
+      <div
+        style={{
+          padding: "40px",
+          border: "1px solid #ccc",
+          borderRadius: "8px",
+          width: "350px",
+          textAlign: "center",
+        }}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          style={{ width: "24px", height: "24px", marginRight: "10px" }}
+        >
+          <path d="M13 10H11v4H9v2h6v-2h-2v-4h2zm8-2h-8l-5.4 6-3.4-4-4 5H5v2h14v-2H13l4-5-3.4 4L17 8z" />
+        </svg>
+        cover_letter_startupxyz.pdf
+      </div>
+      <div
+        style={{
+          padding: "30px",
+          border: "1px solid #ccc",
+          borderRadius: "8px",
+          width: "350px",
+          textAlign: "center",
+        }}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          style={{ width: "24px", height: "24px", marginRight: "10px" }}
+        >
+          <path d="M13 10H11v4H9v2h6v-2h-2v-4h2zm8-2h-8l-5.4 6-3.4-4-4 5H5v2h14v-2H13l4-5-3.4 4L17 8z" />
+        </svg>
+        generic_cover_letter_template.pdf
+      </div>
+    </div>
+  );
+};
+
+// Interviews Sub-Tab Content
+const Interviews = () => {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "row",
+        gap: "20px",
+      }}
+    >
+      <div
+        style={{
+          padding: "40px",
+          border: "1px solid #ccc",
+          borderRadius: "8px",
+          width: "350px",
+          textAlign: "center",
+        }}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          style={{ width: "24px", height: "24px", marginRight: "10px" }}
+        >
+          <path d="M13 10H11v4H9v2h6v-2h-2v-4h2zm8-2h-8l-5.4 6-3.4-4-4 5H5v2h14v-2H13l4-5-3.4 4L17 8z" />
+        </svg>
+        techflow_interview_invitation.png
+      </div>
+      <div
+        style={{
+          padding: "30px",
+          border: "1px solid #ccc",
+          borderRadius: "8px",
+          width: "350px",
+          textAlign: "center",
+        }}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          style={{ width: "24px", height: "24px", marginRight: "10px" }}
+        >
+          <path d="M13 10H11v4H9v2h6v-2h-2v-4h2zm8-2h-8l-5.4 6-3.4-4-4 5H5v2h14v-2H13l4-5-3.4 4L17 8z" />
+        </svg>
+        webtech_interview_confirmation.pdf
+      </div>
+      <div
+        style={{
+          padding: "20px",
+          border: "1px solid #ccc",
+          borderRadius: "8px",
+          width: "350px",
+          textAlign: "center",
+        }}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          style={{ width: "24px", height: "24px", marginRight: "10px" }}
+        >
+          <path d="M13 10H11v4H9v2h6v-2h-2v-4h2zm8-2h-8l-5.4 6-3.4-4-4 5H5v2h14v-2H13l4-5-3.4 4L17 8z" />
+        </svg>
+        innovation_labs_interview_feedback.png
+      </div>
+    </div>
+  );
+};
+
+// Offers Sub-Tab Content
+const Offers = () => {
+ return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "row",
+        gap: "20px",
+      }}
+    >
+      <div
+        style={{
+          padding: "30px",
+          border: "1px solid #ccc",
+          borderRadius: "8px",
+          width: "350px",
+          textAlign: "center",
+        }}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          style={{ width: "24px", height: "24px", marginRight: "10px" }}
+        >
+          <path d="M13 10H11v4H9v2h6v-2h-2v-4h2zm8-2h-8l-5.4 6-3.4-4-4 5H5v2h14v-2H13l4-5-3.4 4L17 8z" />
+        </svg>
+        techflow_joboffer_senior_frontend.pdf
+      </div>
+      <div
+        style={{
+          padding: "30px",
+          border: "1px solid #ccc",
+          borderRadius: "8px",
+          width: "350px",
+          textAlign: "center",
+        }}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          style={{ width: "24px", height: "24px", marginRight: "10px" }}
+        >
+          <path d="M13 10H11v4H9v2h6v-2h-2v-4h2zm8-2h-8l-5.4 6-3.4-4-4 5H5v2h14v-2H13l4-5-3.4 4L17 8z" />
+        </svg>
+        startupxyz_offer_letter_react_dev.pdf
+      </div>
+  
+    </div>
+  );
+};
+
+
+
+
+
+// Billing Tab Content
+const Billing = () => {
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: "20px",
+      }}
+    >
+      <div
+        style={{
+          flex: 1,
+          padding: "20px",
+          backgroundColor: "#e9f7ff",
+          borderRadius: "8px",
+          textAlign: "center",
+        }}
+      >
+        <h3
+          style={{
+            fontSize: "20px",
+            fontWeight: "bold",
+            color: "#333",
+            marginBottom: "16px",
+          }}
+        >
+          Days Remaining
+        </h3>
+        <span
+          style={{
+            fontSize: "36px",
+            fontWeight: "bold",
+            color: "#333",
+          }}
+        >
+          0
+        </span>
+      </div>
+      <div
+        style={{
+          flex: 1,
+          padding: "20px",
+        }}
+      >
+        <h3
+          style={{
+            fontSize: "20px",
+            fontWeight: "bold",
+            color: "#333",
+            marginBottom: "16px",
+          }}
+        >
+          Last Payment
+        </h3>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            marginBottom: "10px",
+          }}
+        >
+          <span
+            style={{
+              fontSize: "16px",
+              color: "#555",
+            }}
+          >
+            Date:
+          </span>
+          <span
+            style={{
+              fontSize: "16px",
+              color: "#555",
+            }}
+          >
+            6/1/2025
+          </span>
+        </div>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            marginBottom: "10px",
+          }}
+        >
+          <span
+            style={{
+              fontSize: "16px",
+              color: "#555",
+            }}
+          >
+            Amount:
+          </span>
+          <span
+            style={{
+              fontSize: "16px",
+              color: "#555",
+            }}
+          >
+            $99.99
+          </span>
+        </div>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            marginBottom: "10px",
+          }}
+        >
+          <span
+            style={{
+              fontSize: "16px",
+              color: "#555",
+            }}
+          >
+            Status:
+          </span>
+          <span
+            style={{
+              padding: "4px 8px",
+              borderRadius: "4px",
+              backgroundColor: "#d1ffd1",
+              color: "#006400",
+            }}
+          >
+            completed
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+
+
 // --- Styles ---
 const filterButtonStyle = { // This style is technically unused now as the button is gone
   backgroundColor: '#007bff',
@@ -952,3 +1618,14 @@ const modalClearButtonStyle = {
 };
 
 export default ClientWorksheet;
+
+
+
+
+
+
+
+
+
+
+
