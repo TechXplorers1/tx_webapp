@@ -9,7 +9,7 @@ const ManagerWorkSheet = () => {
   });
 
   // State to manage the active tab
-  const [activeTab, setActiveTab] = useState('Overview'); // Default to 'Overview'
+  const [activeTab, setActiveTab] = useState('Applications'); // Default to 'Overview'
 
   // Effect to apply the theme class to the body and save to local storage
   useEffect(() => {
@@ -984,12 +984,12 @@ const ManagerWorkSheet = () => {
 
       {/* Tab Navigation */}
       <div className="tab-navigation">
-        <button
+        {/* <button
           className={`tab-button ${activeTab === 'Overview' ? 'active' : ''}`}
           onClick={() => setActiveTab('Overview')}
         >
           Overview
-        </button>
+        </button> */}
         <button
           className={`tab-button ${activeTab === 'Applications' ? 'active' : ''}`}
           onClick={() => setActiveTab('Applications')}
@@ -1256,8 +1256,8 @@ const ManagerWorkSheet = () => {
                   <th>Client</th>
                   <th>Job Title</th>
                   <th>Company</th>
-                  <th>Status</th>
-                  <th>Verification</th>
+                  {/* <th>Status</th>
+                  <th>Verification</th> */}
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -1270,14 +1270,14 @@ const ManagerWorkSheet = () => {
                   <td>John Anderson</td>
                   <td>Senior Frontend Developer</td>
                   <td>TechFlow Inc</td>
-                  <td><span className="status-badge interview">interview</span></td>
+                  {/* <td><span className="status-badge interview">interview</span></td>
                   <td>
                     <div className="verification-icons">
                       <i className="fas fa-circle-check"></i>
                       <span>manager verified</span>
                       <i className="fas fa-camera"></i>
                     </div>
-                  </td>
+                  </td> */}
                   <td>
                     <div className="action-icons">
                       <i className="fas fa-eye"></i>
@@ -1294,14 +1294,14 @@ const ManagerWorkSheet = () => {
                   <td>Sarah Mitchell</td>
                   <td>UX Designer</td>
                   <td>DesignCorp</td>
-                  <td><span className="status-badge applied">applied</span></td>
+                  {/* <td><span className="status-badge applied">applied</span></td>
                   <td>
                     <div className="verification-icons">
                       <i className="fas fa-circle-check"></i>
                       <span>pending</span>
                       <i className="fas fa-camera"></i>
                     </div>
-                  </td>
+                  </td> */}
                   <td>
                     <div className="action-icons">
                       <i className="fas fa-eye"></i>
@@ -1318,14 +1318,14 @@ const ManagerWorkSheet = () => {
                   <td>Michael Chen</td>
                   <td>Data Analyst</td>
                   <td>DataTech Solutions</td>
-                  <td><span className="status-badge applied">applied</span></td>
+                  {/* <td><span className="status-badge applied">applied</span></td>
                   <td>
                     <div className="verification-icons">
                       <i className="fas fa-circle-check"></i>
                       <span>pending</span>
                       <i className="fas fa-camera"></i>
                     </div>
-                  </td>
+                  </td> */}
                   <td>
                     <div className="action-icons">
                       <i className="fas fa-eye"></i>

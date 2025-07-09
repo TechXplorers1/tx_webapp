@@ -2059,7 +2059,7 @@ const WorkGroups = () => {
         }
 
         .um-user-card-details {
-            flex-grow: 1;
+            // flex-grow: 1;
             display: flex;
             flex-direction: column;
             gap: 0.1rem;
@@ -2157,7 +2157,7 @@ const WorkGroups = () => {
               onClick={() => setCurrentView('userManagement')}
               className={`um-nav-link ${currentView === 'userManagement' ? 'um-nav-link-active' : ''}`}
             >
-              User Management
+              Employee Management
             </a>
             <a
               href="#"
@@ -2221,7 +2221,7 @@ const WorkGroups = () => {
             onClick={() => setCurrentView('userManagement')}
             className={`um-nav-link ${currentView === 'userManagement' ? 'um-nav-link-active' : ''}`}
           >
-            User Management
+            Employee Management
           </a>
           <a
             href="#"
@@ -2243,15 +2243,15 @@ const WorkGroups = () => {
             <>
               <div className="um-header-section">
                 <div>
-                  <h1 className="um-title">User Management</h1>
-                  <p className="um-subtitle">Manage user accounts and designation assignments</p>
+                  <h1 className="um-title">Employee Management</h1>
+                  <p className="um-subtitle">Manage employee accounts and designation assignments</p>
                 </div>
                 <button
                   onClick={openAddUserModal}
                   className="um-add-btn"
                 >
                   <FaPlus />
-                  <span>Add New User</span>
+                  <span>Add New Employee</span>
                 </button>
               </div>
 
@@ -2266,7 +2266,7 @@ const WorkGroups = () => {
                       <div className="um-search-input-wrapper">
                           <input
                               type="text"
-                              placeholder="Search users, departments, or designations..."
+                              placeholder="Search employees, departments, or designations..."
                               className="um-search-input"
                               value={searchTerm}
                               onChange={(e) => setSearchTerm(e.target.value)}

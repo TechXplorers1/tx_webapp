@@ -1,707 +1,148 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Button } from 'react-bootstrap';
+import { Modal } from 'react-bootstrap';
+import { Country, State, City } from 'country-state-city';
 
 const EmployeeOnboardingWorkSheet = () => {
-
     const [employees, setEmployees] = useState([
         {
             id: 1,
-            firstName: "John",
-            lastName: "Doe",
-            gender: "Male",
-            dateOfBirth: "1990-05-15",
-            maritalStatus: "Single",
-            personalNumber: "1234567890",
-            alternativeNumber: "0987654321",
-            personalMail: "john.doe@example.com",
-            city: "New York",
-            state: "NY",
-            country: "USA",
-            dateOfJoin: "2023-09-01",
-            status: "Awaiting",
-            designations: "No designations assigned",
-            submittedOn: "2023-08-25 10:30 AM",
+            firstName: 'John',
+            lastName: 'Doe',
+            gender: 'Male',
+            dateOfBirth: '1990-05-15',
+            personalNumber: '1234567890',
+            alternativeNumber: '',
+            personalMail: 'john.doe@example.com',
+            dateOfJoin: '2023-09-01',
+            country: 'US',
+            state: 'NY',
+            city: 'New York',
+            zipcode: '10001',
+            address: '123 Main St',
+            submittedOn: '2025-06-26 at 12:31:22 PM',
+            status: 'Awaiting',
+            designations: '',
+            maritalStatus: 'Married',
         },
         {
             id: 2,
-            firstName: "Jane",
-            lastName: "Smith",
-            gender: "Female",
-            dateOfBirth: "1985-12-20",
-            maritalStatus: "Married",
-            personalNumber: "9876543210",
-            alternativeNumber: "0123456789",
-            personalMail: "jane.smith@example.com",
-            city: "Los Angeles",
-            state: "CA",
-            country: "USA",
-            dateOfJoin: "2023-10-15",
-            status: "Awaiting",
-            designations: "No designations assigned",
-            submittedOn: "2023-09-01 02:45 PM",
+            firstName: 'Jane',
+            lastName: 'Smith',
+            gender: 'Female',
+            dateOfBirth: '1988-11-22',
+            personalNumber: '9876543210',
+            alternativeNumber: '9988776655',
+            personalMail: 'jane.smith@example.com',
+            dateOfJoin: '2023-10-15',
+            country: 'US',
+            state: 'CA',
+            city: 'Los Angeles',
+            zipcode: '90001',
+            address: '456 Oak Ave',
+            submittedOn: '2025-06-26 at 12:31:22 PM',
+            status: 'Awaiting',
+            designations: '',
+            maritalStatus: 'Married',
         },
         {
             id: 3,
-            firstName: "Alice",
-            lastName: "Johnson",
-            gender: "Female",
-            dateOfBirth: "1995-07-10",
-            maritalStatus: "Single",
-            personalNumber: "5555555555",
-            alternativeNumber: "6666666666",
-            personalMail: "alice.johnson@example.com",
-            city: "Chicago",
-            state: "IL",
-            country: "USA",
-            dateOfJoin: "2023-11-01",
-            status: "Awaiting",
-            designations: "No designations assigned",
-            submittedOn: "2023-09-10 09:15 AM",
+            firstName: 'Alice',
+            lastName: 'Johnson',
+            gender: 'Female',
+            dateOfBirth: '1992-03-10',
+            personalNumber: '5555555555',
+            alternativeNumber: '',
+            personalMail: 'alice.johnson@example.com',
+            dateOfJoin: '2023-11-01',
+            country: 'US',
+            state: 'IL',
+            city: 'Chicago',
+            zipcode: '60601',
+            address: '789 Pine Ln',
+            submittedOn: '2025-06-26 at 12:31:22 PM',
+            status: 'Awaiting',
+            designations: '',
+            maritalStatus: 'Married',
         },
     ]);
-    // Inline styles to replicate the design from the image
-    const pageContainerStyle = {
-        fontFamily: "'Inter', sans-serif",
-        backgroundColor: '#f0f2f5', // Light gray background for the entire page
-        minHeight: '100vh',
-        padding: '30px',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        boxSizing: 'border-box',
-    };
 
-    const headerBoxStyle = {
-        backgroundColor: '#ffffff',
-        borderRadius: '12px',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
-        padding: '30px 40px',
-        marginBottom: '25px',
-        width: '100%',
-        maxWidth: '1300px',
-        display: 'flex',
-        flexDirection: 'column',
-        position: 'relative', // For positioning the button
-    };
+    const [activeTab, setActiveTab] = useState('Awaiting');
+    const [showDetailsModal, setShowDetailsModal] = useState(false);
+    const [selectedEmployee, setSelectedEmployee] = useState(null);
+    const [showEditForm, setShowEditForm] = useState(false);
+    const [editFormData, setEditFormData] = useState({});
+    const [showDesignationModal, setShowDesignationModal] = useState(false);
+    const [selectedDesignations, setSelectedDesignations] = useState([]);
 
-    const headerTitleStyle = {
-        fontSize: '28px',
-        fontWeight: '700',
-        color: '#2c3e50',
-        marginBottom: '8px',
-    };
+    const allCountries = Country.getAllCountries();
+    const [editFormStates, setEditFormStates] = useState([]);
+    const [editFormCities, setEditFormCities] = useState([]);
 
-    const headerDescriptionStyle = {
-        fontSize: '16px',
-        color: '#7f8c8d',
-        marginBottom: '25px',
-    };
+    // Dummy country codes (you can make this dynamic if needed)
+    const personalNumberCountryCode = 91; // Example for India
+    const alternativeNumberCountryCode = 91; // Example for India
 
-    const backButtonContainerStyle = {
-        position: 'absolute',
-        top: '30px',
-        right: '40px',
-    };
-
-    const backButtonStyle = {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        padding: '10px 20px',
-        backgroundColor: '#e7f0fa',
-        color: '#3498db',
-        border: '1px solid #c9e1f8',
-        borderRadius: '8px',
-        cursor: 'pointer',
-        fontSize: '15px',
-        fontWeight: '600',
-        transition: 'background-color 0.3s ease, border-color 0.3s ease',
-    };
-
-    const backButtonHoverStyle = {
-        backgroundColor: '#d5e4f5',
-        borderColor: '#b2d4f2',
-    };
-
-    const tabsContainerStyle = {
-        display: "flex",
-        gap: "20px",
-        marginBottom: "20px",
-    };
-
-    const tabStyle = {
-        padding: "10px 20px",
-        borderRadius: "8px",
-        cursor: "pointer",
-        fontSize: "16px",
-        fontWeight: "600",
-        color: "#555",
-    };
-
-    const activeTabStyle = {
-        backgroundColor: "#007bff",
-        color: "#fff",
-    };
-
-    const tabCountStyle = {
-        marginLeft: "5px",
-        fontSize: "14px",
-        fontWeight: "500",
-    };
-
-    // const activeTabCountStyle = {
-    //   backgroundColor: "#fff",
-    //   color: "#007bff",
-    // };
-
-    const tableContainerStyle = {
-        backgroundColor: "#ffffff",
-        borderRadius: "12px",
-        boxShadow: "0 4px 20px rgba(0, 0, 0, 0.08)",
-        padding: "30px",
-        width: "100%",
-        maxWidth: "1300px",
-        overflowX: "auto",
-    };
-
-    const tableStyle = {
-        width: "100%",
-        borderCollapse: "collapse",
-    };
-
-    const tableHeaderCellStyle = {
-        padding: "12px",
-        textAlign: "left",
-        backgroundColor: "#f0f2f5",
-        color: "#555",
-        borderBottom: "1px solid #ccc",
-    };
-    const tableRowStyle = {
-        backgroundColor: "#fff",
-        borderBottom: "1px solid #ddd",
-    };
-
-    const tableRowHoverStyle = {
-        backgroundColor: "#f9f9f9",
-    };
-
-    const tableDataCellStyle = {
-        padding: "12px",
-        borderBottom: "1px solid #ddd",
-    };
-
-    const statusBadgeStyle = {
-        padding: "5px 10px",
-        borderRadius: "15px",
-        fontSize: "12px",
-        fontWeight: "600",
-        display: "inline-flex",
-        alignItems: "center",
-    };
-
-    const awaitingStatusStyle = {
-        backgroundColor: "#ffc107",
-        color: "#000",
-    };
-
-    const reviewStatusStyle = {
-        backgroundColor: "#28a745",
-        color: "#fff",
-    };
-
-    const actionIconStyle = {
-        fontSize: '18px',
-        color: '#7f8c8d',
-        cursor: 'pointer',
-        marginRight: '15px',
-        transition: 'color 0.2s ease',
-    };
-
-    const actionIconHoverStyle = {
-        color: '#3498db',
-    };
-
-    // Styles for the Details Modal
-    const detailsModalTitleStyle = {
-        fontSize: '24px',
-        fontWeight: '700',
-        color: '#2c3e50',
-        textAlign: 'center',
-        marginBottom: '10px',
-    };
-
-    const detailsModalSubtitleStyle = {
-        fontSize: '14px',
-        color: '#7f8c8d',
-        textAlign: 'center',
-        marginBottom: '20px',
-    };
-
-    const detailsSectionStyle = {
-        marginBottom: '25px',
-    };
-
-    const detailsSectionTitleStyle = {
-        fontSize: '18px',
-        fontWeight: '600',
-        color: '#34495e',
-        borderBottom: '1px solid #ecf0f1',
-        paddingBottom: '8px',
-        marginBottom: '15px',
-    };
-
-    const detailRowStyle = {
-        display: 'flex',
-        marginBottom: '10px',
-    };
-
-
-    const sectionTitleStyle = {
-        color: '#34495e',
-        fontSize: '22px',
-        borderBottom: '2px solid #3498db',
-        paddingBottom: '10px',
-        marginBottom: '25px',
-        marginTop: '35px',
-        fontWeight: '600',
-    };
-    const detailLabelStyle = {
-        flex: '0 0 150px', // Fixed width for labels
-        fontWeight: '500',
-        color: '#555',
-        fontSize: '15px',
-    };
-
-    const detailValueStyle = {
-        flex: '1',
-        color: '#333',
-        fontSize: '15px',
-    };
-
-    const assignDesignationsButtonStyle = {
-        backgroundColor: '#3498db',
-        color: '#fff',
-        border: 'none',
-        padding: '8px 15px',
-        borderRadius: '6px',
-        cursor: 'pointer',
-        fontSize: '14px',
-        fontWeight: '500',
-        transition: 'background-color 0.3s ease',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '5px',
-    };
-
-    const assignDesignationsButtonHoverStyle = {
-        backgroundColor: '#2980b9',
-    };
-
-    const modalFooterButtonStyle = {
-        padding: '12px 25px',
-        borderRadius: '8px',
-        fontSize: '16px',
-        fontWeight: '600',
-        transition: 'background-color 0.3s ease, transform 0.2s ease',
-        border: 'none',
-        cursor: 'pointer',
-    };
-
-    const editDetailsButtonStyle = {
-        backgroundColor: '#e67e22',
-        color: '#fff',
-        ...modalFooterButtonStyle,
-    };
-
-    const editDetailsButtonHoverStyle = {
-        backgroundColor: '#d35400',
-        transform: 'translateY(-2px)',
-    };
-
-    const approveOnboardingButtonStyle = {
-        backgroundColor: '#2ecc71',
-        color: '#fff',
-        ...modalFooterButtonStyle,
-    };
-
-    const approveOnboardingButtonHoverStyle = {
-        backgroundColor: '#27ad60',
-        transform: 'translateY(-2px)',
-    };
-
-    const rejectApplicationButtonStyle = {
-        backgroundColor: '#e74c3c',
-        color: '#fff',
-        ...modalFooterButtonStyle,
-    };
-
-    const rejectApplicationButtonHoverStyle = {
-        backgroundColor: '#c0392b',
-        transform: 'translateY(-2px)',
-    };
-
-    // Styles for the Edit Form
-    const editFormContainerStyle = {
-        maxWidth: '800px',
-        margin: '40px auto',
-        padding: '35px',
-        border: '1px solid #e0e0e0',
-        borderRadius: '12px',
-        boxShadow: '0 8px 25px rgba(0, 0, 0, 0.08)',
-        background: '#ffffff',
-        fontFamily: "'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
-        color: '#333',
-    };
-
-    const editFormHeaderStyle = {
-        textAlign: 'center',
-        color: '#2c3e50',
-        marginBottom: '30px',
-        fontSize: '28px',
-        fontWeight: '600',
-    };
-
-    const editFormSectionTitleStyle = {
-        color: '#34495e',
-        fontSize: '22px',
-        borderBottom: '2px solid #3498db',
-        paddingBottom: '10px',
-        marginBottom: '25px',
-        marginTop: '35px',
-        fontWeight: '600',
-    };
-
-    const fieldStyle = {
-        width: '100%',
-        padding: '12px 15px',
-        border: '1px solid #dcdcdc',
-        borderRadius: '8px',
-        boxSizing: 'border-box',
-        fontSize: '15px',
-        transition: 'border-color 0.3s ease, box-shadow 0.3s ease',
-    };
-
-    const fieldFocusStyle = {
-        borderColor: '#3498db',
-        boxShadow: '0 0 0 3px rgba(52, 152, 219, 0.2)',
-        outline: 'none',
-    };
-
-    const selectFieldStyle = {
-        ...fieldStyle,
-        appearance: 'none', // Remove default arrow
-        backgroundImage: `url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20512%22%3E%3Cpath%20fill%3D%22%23333%22%20d%3D%22M192%20256L64%20128v256l128-128z%22%2F%3E%3C%2Fsvg%3E')`,
-        backgroundRepeat: 'no-repeat',
-        backgroundPosition: 'right 15px center',
-        backgroundSize: '12px',
-        paddingRight: '35px',
-    };
-
-    const textareaFieldStyle = {
-        ...fieldStyle,
-        resize: 'vertical',
-        minHeight: '90px',
-    };
-
-    const saveButtonEditStyle = {
-        backgroundColor: '#2ecc71',
-        color: '#fff',
-        border: 'none',
-        padding: '13px 25px',
-        borderRadius: '8px',
-        cursor: 'pointer',
-        fontSize: '17px',
-        fontWeight: '600',
-        transition: 'background-color 0.3s ease, transform 0.2s ease',
-        width: 'auto',
-        marginTop: '30px',
-        marginRight: '15px',
-    };
-
-    const labelStyle = {
-        fontSize: '15px',
-        fontWeight: '500',
-        color: '#555',
-        marginBottom: '8px',
-        display: 'block',
-    };
-
-    const selectStyle = {
-        ...fieldStyle,
-        height: '44px',
-    };
-    const textareaStyle = {
-        ...fieldStyle,
-        minHeight: '80px',
-    };
-
-    const cancelButtonEditStyle = {
-        backgroundColor: '#6c757d',
-        color: '#fff',
-        border: 'none',
-        padding: '13px 25px',
-        borderRadius: '8px',
-        cursor: 'pointer',
-        fontSize: '17px',
-        fontWeight: '600',
-        transition: 'background-color 0.3s ease, transform 0.2s ease',
-        width: 'auto',
-        marginTop: '30px',
-    };
-
-
-    // Styles for Assign Designations Modal
-    const designationModalBodyStyle = {
-        padding: '20px 30px',
-    };
-
-    const designationCheckboxStyle = {
-        marginBottom: '10px',
-        display: 'flex',
-        alignItems: 'center',
-    };
-
-    const designationInputCheckboxStyle = {
-        marginRight: '10px',
-        width: '18px',
-        height: '18px',
-        cursor: 'pointer',
-    };
-
-    const designationLabelStyle = {
-        fontSize: '16px',
-        color: '#333',
-        fontWeight: 'normal',
-        cursor: 'pointer',
-    };
-
-    const designationsList = [
+    const availableDesignations = [
         'Admin',
         'Job Application Specialist',
         'Manager',
         'Asset Manager',
         'Team Lead',
-        'HR Associate',
-        'Software Engineer',
-        'QA Engineer',
-        'Product Manager',
-        'UX Designer'
-    ];
-
-
-
-
-
-    const [showDetailsModal, setShowDetailsModal] = useState(false);
-    const [showEditForm, setShowEditForm] = useState(false);
-    const [showAssignDesignationsModal, setShowAssignDesignationsModal] = useState(false);
-    const [selectedEmployee, setSelectedEmployee] = useState(null);
-    const [showDesignationModal, setShowDesignationModal] = useState(false);
-    const [selectedDesignations, setSelectedDesignations] = useState([]);
-    const [editFormData, setEditFormData] = useState({});
-    const [designationsFormData, setDesignationsFormData] = useState([]); // Array to store selected designations
-
-    const [allCountries, setAllCountries] = useState([]);
-    const [editFormStates, setEditFormStates] = useState([]);
-    const [editFormCities, setEditFormCities] = useState([]);
-
-
-    const [awaitingEmployees, setAwaitingEmployees] = useState(employees || []);
-    const [reviewEmployees, setReviewEmployees] = useState([]);
-
-    const [activeTab, setActiveTab] = useState("Awaiting");
-
-    const [personalNumberCountryCode, setPersonalNumberCountryCode] = useState('');
-    const [alternativeNumberCountryCode, setAlternativeNumberCountryCode] = useState('');
-    const filteredEmployees = employees.filter((emp) => emp.status === activeTab);
-
-
-    const availableDesignations = [
-        "No designations assigned",
-        "Admin",
-        "Job Application Specialist",
-        "Manager",
-        "Asset Manager",
-        "Team Lead",
     ];
 
     useEffect(() => {
-        setAllCountries(allCountries);
-    }, []);
-
-    useEffect(() => {
-        if (selectedEmployee && showEditForm) {
-            // Pre-fill the edit form with the selected employee's details
+        if (selectedEmployee) {
             setEditFormData({
-                firstName: selectedEmployee.firstName || "",
-                lastName: selectedEmployee.lastName || "",
-                gender: selectedEmployee.gender || "",
-                dateOfBirth: selectedEmployee.dateOfBirth || "",
-                maritalStatus: selectedEmployee.maritalStatus || "",
-                personalNumber: selectedEmployee.personalNumber || "",
-                alternativeNumber: selectedEmployee.alternativeNumber || "",
-                personalMail: selectedEmployee.personalMail || "",
-                address: selectedEmployee.address || "",
-                country: selectedEmployee.country || "",
-                state: selectedEmployee.state || "",
-                city: selectedEmployee.city || "",
-                zipcode: selectedEmployee.zipcode || "",
-                dateOfJoin: selectedEmployee.dateOfJoin || "",
+                firstName: selectedEmployee.firstName,
+                lastName: selectedEmployee.lastName,
+                gender: selectedEmployee.gender,
+                dateOfBirth: selectedEmployee.dateOfBirth,
+                personalNumber: selectedEmployee.personalNumber,
+                alternativeNumber: selectedEmployee.alternativeNumber,
+                personalMail: selectedEmployee.personalMail,
+                dateOfJoin: selectedEmployee.dateOfJoin,
+                country: selectedEmployee.country,
+                state: selectedEmployee.state,
+                city: selectedEmployee.city,
+                zipcode: selectedEmployee.zipcode,
+                address: selectedEmployee.address,
             });
-
-            // Set the country code and populate states
-            const selectedCountry = allCountries.find(
-                (country) => country.isoCode === selectedEmployee.country
-            );
-            if (selectedCountry) {
-                setPersonalNumberCountryCode(selectedCountry.phonecode);
-                setAlternativeNumberCountryCode(selectedCountry.phonecode);
-
-                // Populate states based on the selected country
-                const states = State.getStatesOfCountry(selectedEmployee.country);
-                setEditFormStates(states);
-
-                // Populate cities based on the selected state
-                const selectedState = states.find(
-                    (state) => state.isoCode === selectedEmployee.state
-                );
-                if (selectedState) {
-                    const cities = City.getCitiesOfState(
-                        selectedEmployee.country,
-                        selectedEmployee.state
-                    );
-                    setEditFormCities(cities);
-                } else {
-                    setEditFormCities([]);
-                }
-            } else {
-                setEditFormStates([]);
-                setEditFormCities([]);
-            }
+            const states = State.getStatesOfCountry(selectedEmployee.country);
+            setEditFormStates(states);
+            const cities = City.getCitiesOfState(selectedEmployee.country, selectedEmployee.state);
+            setEditFormCities(cities);
         }
-    }, [selectedEmployee, showEditForm]);
-
-
-    // Function to handle designation assignment
-    const handleAssignDesignations = () => {
-        if (!selectedEmployee) {
-            console.error("No employee selected");
-            return;
-        }
-        setSelectedDesignations(selectedEmployee?.designations?.split(", ") || []);
-        setShowDesignationModal(true);
-    };
-
-    // Function to save selected designations
-    const saveDesignations = () => {
-        const updatedEmployee = {
-            ...selectedEmployee,
-            designations: selectedDesignations,
-        };
-        setEmployees((prevEmployees) =>
-            prevEmployees.map((employee) =>
-                employee.id === updatedEmployee.id ? updatedEmployee : employee
-            )
-        );
-        setShowDesignationModal(false);
-    };
-
-    const handleCloseDesignationModal = () => {
-        setSelectedDesignations([]);
-        setShowDesignationModal(false);
-    };
-
-
-    const handleDesignationChange = (designation) => {
-        setSelectedDesignations((prev) =>
-            prev.includes(designation)
-                ? prev.filter((d) => d !== designation)
-                : [...prev, designation]
-        );
-    };
-
-    const handleSaveDesignations = () => {
-        // Update the selected employee's designations
-        const updatedEmployee = {
-            ...selectedEmployee,
-            designations: selectedDesignations.join(", "), // Convert array to comma-separated string
-        };
-
-        // Update the correct state based on the active tab
-        if (activeTab === "Awaiting") {
-            setAwaitingEmployees((prev) =>
-                prev.map((emp) => (emp.id === updatedEmployee.id ? updatedEmployee : emp))
-            );
-        } else if (activeTab === "Review") {
-            setReviewEmployees((prev) =>
-                prev.map((emp) => (emp.id === updatedEmployee.id ? updatedEmployee : emp))
-            );
-        }
-
-        // Close the modal
-        setSelectedDesignations([]);
-        setShowDesignationModal(false);
-
-        // Optionally, show a success message
-        console.log("Designations saved successfully!");
-    };
-
+    }, [selectedEmployee]);
 
     const handleViewDetails = (employee) => {
         setSelectedEmployee(employee);
         setShowDetailsModal(true);
-        // setShowEditForm(false);
     };
 
     const handleEditDetails = () => {
-        // Pre-fill the edit form with the selected employee's details
-        setEditFormData({
-            firstName: selectedEmployee.firstName || "",
-            lastName: selectedEmployee.lastName || "",
-            gender: selectedEmployee.gender || "",
-            dateOfBirth: selectedEmployee.dateOfBirth || "",
-            maritalStatus: selectedEmployee.maritalStatus || "",
-            personalNumber: selectedEmployee.personalNumber || "",
-            alternativeNumber: selectedEmployee.alternativeNumber || "",
-            personalMail: selectedEmployee.personalMail || "",
-            address: selectedEmployee.address || "",
-            country: selectedEmployee.country || "",
-            state: selectedEmployee.state || "",
-            city: selectedEmployee.city || "",
-            zipcode: selectedEmployee.zipcode || "",
-            dateOfJoin: selectedEmployee.dateOfJoin || "",
-        });
-
-        // Set the states and cities based on the selected country
-        const selectedCountry = allCountries.find(
-            (country) => country.isoCode === selectedEmployee.country
-        );
-        if (selectedCountry) {
-            setPersonalNumberCountryCode(selectedCountry.phonecode);
-            setAlternativeNumberCountryCode(selectedCountry.phonecode);
-
-            const selectedState = State.getStatesOfCountry(selectedEmployee.country).find(
-                (state) => state.isoCode === selectedEmployee.state
-            );
-            if (selectedState) {
-                setEditFormStates(State.getStatesOfCountry(selectedEmployee.country));
-                setEditFormCities(City.getCitiesOfState(selectedEmployee.country, selectedEmployee.state));
-            } else {
-                setEditFormStates(State.getStatesOfCountry(selectedEmployee.country));
-                setEditFormCities([]);
-            }
-        } else {
-            setEditFormStates([]);
-            setEditFormCities([]);
-        }
-
         setShowDetailsModal(false);
         setShowEditForm(true);
     };
 
+    const handleCancelEdit = () => {
+        setShowEditForm(false);
+        setSelectedEmployee(null);
+        setEditFormData({});
+    };
+
+    const handleSaveEditedDetails = (e) => {
+        e.preventDefault();
+        setEmployees(employees.map(emp =>
+            emp.id === selectedEmployee.id ? { ...emp, ...editFormData } : emp
+        ));
+        setShowEditForm(false);
+        setSelectedEmployee(null); // Clear selected employee after saving
+        setEditFormData({});
+    };
+
     const handleEditFormChange = (e) => {
         const { name, value } = e.target;
-        setEditFormData((prevData) => ({
+        setEditFormData(prevData => ({
             ...prevData,
             [name]: value,
         }));
@@ -709,332 +150,508 @@ const EmployeeOnboardingWorkSheet = () => {
 
     const handleEditFormCountryChange = (e) => {
         const countryIsoCode = e.target.value;
-        const selectedCountry = allCountries.find(c => c.isoCode === countryIsoCode);
-        setEditFormData((prev) => ({ ...prev, country: countryIsoCode, state: '', city: '' }));
-        if (selectedCountry) {
-            setPersonalNumberCountryCode(selectedCountry.phonecode);
-            setAlternativeNumberCountryCode(selectedCountry.phonecode);
-        } else {
-            setPersonalNumberCountryCode('');
-            setAlternativeNumberCountryCode('');
-        }
-        setEditFormStates(selectedCountry ? (selectedCountry.states || []) : []);
-        setEditFormCities([]);
+        setEditFormData(prevData => ({
+            ...prevData,
+            country: countryIsoCode,
+            state: '', // Reset state when country changes
+            city: '' // Reset city when country changes
+        }));
+        setEditFormStates(State.getStatesOfCountry(countryIsoCode));
+        setEditFormCities([]); // Clear cities
     };
 
     const handleEditFormStateChange = (e) => {
-        const stateCode = e.target.value;
-        setEditFormData((prev) => ({ ...prev, state: stateCode, city: '' }));
-        const countryObj = allCountries.find(c => c.isoCode === editFormData.country);
-        if (countryObj) {
-            const stateObj = countryObj.states.find(s => s.isoCode === stateCode);
-            setEditFormCities(stateObj ? (stateObj.cities || []) : []);
-        } else {
-            setEditFormCities([]);
-        }
+        const stateIsoCode = e.target.value;
+        setEditFormData(prevData => ({
+            ...prevData,
+            state: stateIsoCode,
+            city: '' // Reset city when state changes
+        }));
+        setEditFormCities(City.getCitiesOfState(editFormData.country, stateIsoCode));
     };
 
     const handleEditFormCityChange = (e) => {
-        setEditFormData((prev) => ({ ...prev, city: e.target.value }));
+        const cityName = e.target.value;
+        setEditFormData(prevData => ({
+            ...prevData,
+            city: cityName,
+        }));
     };
 
-    const updateEmployee = (updatedEmployee) => {
-        // Assuming `employees` is the state holding all employees
-        setEmployees((prevEmployees) =>
-            prevEmployees.map((employee) =>
-                employee.id === updatedEmployee.id ? updatedEmployee : employee
-            )
-        );
-    };
-
-    const handleSaveEditedDetails = (e) => {
-        e.preventDefault();
-        setEmployees(prevEmployees =>
-            prevEmployees.map(emp =>
-                emp.id === selectedEmployee.id ? { ...emp, ...editFormData } : emp
-            )
-        );
-        setSelectedEmployee({ ...selectedEmployee, ...editFormData });
-        setShowEditForm(false);
-        setShowDetailsModal(true);
-    };
-
-    const handleCancelEdit = () => {
-        setShowEditForm(false);
-        setShowDetailsModal(true);
-    };
-
-    const getDisplayName = (type, code, countryCode = selectedEmployee?.country) => {
-        if (!code) return '-';
+    const getDisplayName = (type, isoCode, countryIsoCode = '') => {
+        if (!isoCode) return 'N/A';
         if (type === 'country') {
-            return allCountries.find(c => c.isoCode === code)?.name || code;
+            const country = allCountries.find(c => c.isoCode === isoCode);
+            return country ? country.name : isoCode;
+        } else if (type === 'state') {
+            const state = State.getStatesOfCountry(countryIsoCode).find(s => s.isoCode === isoCode);
+            return state ? state.name : isoCode;
         }
-        if (type === 'state') {
-            const countryObj = allCountries.find(c => c.isoCode === countryCode);
-            return countryObj?.states.find(s => s.isoCode === code)?.name || code;
-        }
-        return code;
+        return isoCode;
     };
 
+    const handleDesignationChange = (designation) => {
+        setSelectedDesignations(prevSelected =>
+            prevSelected.includes(designation)
+                ? prevSelected.filter(d => d !== designation)
+                : [...prevSelected, designation]
+        );
+    };
 
+    const handleSaveDesignations = () => {
+        setEmployees(employees.map(emp =>
+            emp.id === selectedEmployee.id
+                ? { ...emp, designations: selectedDesignations.join(', ') }
+                : emp
+        ));
+        setShowDesignationModal(false);
+        setSelectedEmployee(prev => ({ ...prev, designations: selectedDesignations.join(', ') }));
+    };
+
+    const handleCloseDesignationModal = () => {
+        setShowDesignationModal(false);
+    };
 
     const handleApprove = (employeeId) => {
-        // Find the employee to approve
-        const employeeToApprove = awaitingEmployees.find(
-            (emp) => emp.id === employeeId
-        );
-
-        if (employeeToApprove) {
-            // Remove the employee from the awaiting list
-            const updatedAwaitingEmployees = awaitingEmployees.filter(
-                (emp) => emp.id !== employeeId
-            );
-
-            // Add the employee to the review list with updated status
-            const updatedEmployee = { ...employeeToApprove, status: "Review" };
-            setAwaitingEmployees(updatedAwaitingEmployees);
-            setReviewEmployees((prevReviewEmployees) => [
-                ...prevReviewEmployees,
-                updatedEmployee,
-            ]);
-        }
+        setEmployees(employees.map(emp =>
+            emp.id === employeeId ? { ...emp, status: 'Review' } : emp
+        ));
+        setShowDetailsModal(false);
+        setSelectedEmployee(null);
     };
 
+    const filteredEmployees = employees.filter(emp => emp.status === activeTab);
 
+    // Styles
+    const containerStyle = {
+        padding: '20px',
+        fontFamily: 'Arial, sans-serif',
+        backgroundColor: '#f4f7f6',
+        minHeight: '100vh',
+    };
 
+    const headerStyle = {
+        textAlign: 'center',
+        color: '#333',
+        marginBottom: '30px',
+        fontSize: '2em',
+    };
 
+    const tabsContainerStyle = {
+        display: 'flex',
+        justifyContent: 'center',
+        marginBottom: '30px',
+        backgroundColor: '#e9ecef',
+        borderRadius: '8px',
+        padding: '5px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+    };
+
+    const tabButtonStyle = {
+        padding: '12px 25px',
+        border: 'none',
+        borderRadius: '6px',
+        cursor: 'pointer',
+        fontSize: '1em',
+        fontWeight: 'bold',
+        transition: 'background-color 0.3s ease, color 0.3s ease',
+        backgroundColor: 'transparent',
+        color: '#555',
+        margin: '0 5px',
+    };
+
+    const activeTabButtonStyle = {
+        ...tabButtonStyle,
+        backgroundColor: '#007bff',
+        color: '#fff',
+        boxShadow: '0 2px 8px rgba(0, 123, 255, 0.3)',
+    };
+
+    const tableContainerStyle = {
+        backgroundColor: '#fff',
+        padding: '20px',
+        borderRadius: '8px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        overflowX: 'auto',
+    };
+
+    const tableStyle = {
+        width: '100%',
+        borderCollapse: 'collapse',
+        marginTop: '20px',
+    };
+
+    const thStyle = {
+        padding: '12px 15px',
+        borderBottom: '2px solid #dee2e6',
+        textAlign: 'left',
+        backgroundColor: '#f8f9fa',
+        color: '#495057',
+        fontSize: '0.9em',
+        textTransform: 'uppercase',
+    };
+
+    const tdStyle = {
+        padding: '12px 15px',
+        borderBottom: '1px solid #dee2e6',
+        textAlign: 'left',
+        color: '#343a40',
+        fontSize: '0.9em',
+    };
+
+    const statusBadgeStyle = {
+        padding: '6px 12px',
+        borderRadius: '20px',
+        fontWeight: 'bold',
+        fontSize: '0.8em',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '5px',
+    };
+
+    const awaitingStatusStyle = {
+        backgroundColor: '#fff3cd',
+        color: '#856404',
+        border: '1px solid #ffeeba',
+    };
+
+    const reviewStatusStyle = {
+        backgroundColor: '#d1ecf1',
+        color: '#0c5460',
+        border: '1px solid #bee5eb',
+    };
+
+    const actionButtonStyle = {
+        backgroundColor: 'transparent',
+        border: 'none',
+        cursor: 'pointer',
+        fontSize: '1.1em',
+        margin: '0 5px',
+        color: '#007bff',
+        transition: 'color 0.2s ease',
+    };
+
+    const actionButtonHoverStyle = {
+        color: '#0056b3',
+    };
+
+    const detailsModalTitleStyle = {
+        fontSize: '1.8em',
+        fontWeight: 'bold',
+        color: '#333',
+        marginBottom: '10px',
+        textAlign: 'center',
+    };
+
+    const detailsModalSubtitleStyle = {
+        fontSize: '0.9em',
+        color: '#666',
+        marginBottom: '20px',
+        textAlign: 'center',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+    };
+
+    const detailsSectionStyle = {
+        marginBottom: '20px',
+        padding: '15px',
+        backgroundColor: '#f9f9f9',
+        borderRadius: '8px',
+        border: '1px solid #e9e9e9',
+    };
+
+    const detailsSectionTitleStyle = {
+        fontSize: '1.2em',
+        fontWeight: 'bold',
+        color: '#555',
+        marginBottom: '15px',
+        borderBottom: '1px solid #eee',
+        paddingBottom: '10px',
+    };
+
+    const detailLabelStyle = {
+        fontSize: '0.85em',
+        color: '#777',
+        marginBottom: '5px',
+        fontWeight: 'bold',
+    };
+
+    const detailValueStyle = {
+        fontSize: '1em',
+        color: '#333',
+        wordBreak: 'break-word',
+    };
+
+    const assignDesignationsButtonStyle = {
+        backgroundColor: '#e7f0fd',
+        color: '#007bff',
+        padding: '10px 15px',
+        borderRadius: '5px',
+        border: '1px solid #007bff',
+        cursor: 'pointer',
+        fontSize: '0.9em',
+        fontWeight: 'bold',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        transition: 'background-color 0.2s ease, color 0.2s ease',
+    };
+
+    const assignDesignationsButtonHoverStyle = {
+        backgroundColor: '#007bff',
+        color: '#fff',
+    };
+
+    const editDetailsButtonStyle = {
+        backgroundColor: '#ffc107',
+        color: '#343a40',
+        padding: '12px 25px',
+        borderRadius: '8px',
+        border: 'none',
+        cursor: 'pointer',
+        fontSize: '1em',
+        fontWeight: 'bold',
+        transition: 'background-color 0.2s ease',
+    };
+
+    const editDetailsButtonHoverStyle = {
+        backgroundColor: '#e0a800',
+    };
+
+    const approveOnboardingButtonStyle = {
+        backgroundColor: '#28a745',
+        color: '#fff',
+        padding: '12px 25px',
+        borderRadius: '8px',
+        border: 'none',
+        cursor: 'pointer',
+        fontSize: '1em',
+        fontWeight: 'bold',
+        transition: 'background-color 0.2s ease',
+    };
+
+    const approveOnboardingButtonHoverStyle = {
+        backgroundColor: '#218838',
+    };
+
+    const rejectApplicationButtonStyle = {
+        backgroundColor: '#dc3545',
+        color: '#fff',
+        padding: '12px 25px',
+        borderRadius: '8px',
+        border: 'none',
+        cursor: 'pointer',
+        fontSize: '1em',
+        fontWeight: 'bold',
+        transition: 'background-color 0.2s ease',
+    };
+
+    const rejectApplicationButtonHoverStyle = {
+        backgroundColor: '#c82333',
+    };
+
+    const editFormHeaderStyle = {
+        fontSize: '1.5em',
+        fontWeight: 'bold',
+        color: '#333',
+    };
+
+    const editFormSectionTitleStyle = {
+        fontSize: '1.3em',
+        color: '#007bff',
+        marginBottom: '15px',
+        borderBottom: '1px solid #e9e9e9',
+        paddingBottom: '8px',
+        marginTop: '20px',
+    };
+
+    const labelStyle = {
+        display: 'block',
+        marginBottom: '8px',
+        fontWeight: 'bold',
+        color: '#555',
+        fontSize: '0.9em',
+    };
+
+    const fieldStyle = {
+        width: '100%',
+        padding: '10px',
+        border: '1px solid #ced4da',
+        borderRadius: '5px',
+        fontSize: '1em',
+        boxSizing: 'border-box',
+    };
+
+    const selectStyle = {
+        width: '100%',
+        padding: '10px',
+        border: '1px solid #ced4da',
+        borderRadius: '5px',
+        fontSize: '1em',
+        boxSizing: 'border-box',
+        backgroundColor: '#fff',
+    };
+
+    const textareaStyle = {
+        width: '100%',
+        padding: '10px',
+        border: '1px solid #ced4da',
+        borderRadius: '5px',
+        fontSize: '1em',
+        minHeight: '80px',
+        resize: 'vertical',
+        boxSizing: 'border-box',
+    };
+
+    const saveButtonEditStyle = {
+        backgroundColor: '#2ecc71',
+        color: '#fff',
+        padding: '12px 25px',
+        borderRadius: '8px',
+        border: 'none',
+        cursor: 'pointer',
+        fontSize: '1em',
+        fontWeight: 'bold',
+        transition: 'background-color 0.2s ease',
+        marginRight: '10px',
+    };
+
+    const cancelButtonEditStyle = {
+        backgroundColor: '#6c757d',
+        color: '#fff',
+        padding: '12px 25px',
+        borderRadius: '8px',
+        border: 'none',
+        cursor: 'pointer',
+        fontSize: '1em',
+        fontWeight: 'bold',
+        transition: 'background-color 0.2s ease',
+    };
 
     return (
-        <div style={pageContainerStyle}>
-            {/* Header Box */}
-            <div style={headerBoxStyle}>
-                <div style={backButtonContainerStyle}>
+        <div style={containerStyle}>
+            <h1 style={headerStyle}>Employee Onboarding Worksheet</h1>
+            <p style={{ textAlign: 'center', color: '#666', marginBottom: '40px' }}>
+                Track and manage new employee onboarding process
+            </p>
 
-                </div>
-                <h1 style={headerTitleStyle}>Employee Onboarding Worksheet</h1>
-                <p style={headerDescriptionStyle}>Track and manage new employee onboarding process</p>
-
-                {/* Tabs */}
-                <div style={tabsContainerStyle}>
-                    <div
-                        style={{
-                            ...tabStyle,
-                            ...(activeTab === "Awaiting" && activeTabStyle),
-                        }}
-                        onClick={() => setActiveTab("Awaiting")}
-                    >
-                        Awaiting{" "}
-                        <span style={{ marginLeft: "5px", color: "#555" }}>
-                            {awaitingEmployees.length}
+            <div style={tabsContainerStyle}>
+                <button
+                    style={activeTab === 'Awaiting' ? activeTabButtonStyle : tabButtonStyle}
+                    onClick={() => setActiveTab('Awaiting')}
+                >
+                    Awaiting {employees.filter(emp => emp.status === 'Awaiting').length > 0 &&
+                        <span style={{ marginLeft: '5px', padding: '3px 8px', backgroundColor: '#dc3545', borderRadius: '50%', color: '#fff', fontSize: '0.8em' }}>
+                            {employees.filter(emp => emp.status === 'Awaiting').length}
                         </span>
-                    </div>
-                    <div
-                        style={{
-                            ...tabStyle,
-                            ...(activeTab === "Review" && activeTabStyle),
-                        }}
-                        onClick={() => setActiveTab("Review")}
-                    >
-                        Review{" "}
-                        <span style={{ marginLeft: "5px", color: "#555" }}>
-                            {reviewEmployees.length}
+                    }
+                </button>
+                <button
+                    style={activeTab === 'Review' ? activeTabButtonStyle : tabButtonStyle}
+                    onClick={() => setActiveTab('Review')}
+                >
+                    Review {employees.filter(emp => emp.status === 'Review').length > 0 &&
+                        <span style={{ marginLeft: '5px', padding: '3px 8px', backgroundColor: '#17a2b8', borderRadius: '50%', color: '#fff', fontSize: '0.8em' }}>
+                            {employees.filter(emp => emp.status === 'Review').length}
                         </span>
-                    </div>
-                </div>
+                    }
+                </button>
             </div>
 
-            {activeTab === "Awaiting" && (
-                <div style={tableContainerStyle}>
-                    <h2 style={sectionTitleStyle}>Awaiting Employees</h2>
-                    <table style={tableStyle}>
-                        <thead>
+            <div style={tableContainerStyle}>
+                <h3 style={{ color: '#333', marginBottom: '20px' }}>{activeTab} Employees</h3>
+                <table style={tableStyle}>
+                    <thead>
+                        <tr>
+                            <th style={thStyle}>Employee</th>
+                            <th style={thStyle}>Contact</th>
+                            <th style={thStyle}>Email</th>
+                            <th style={thStyle}>Location</th>
+                            <th style={thStyle}>Join Date</th>
+                            <th style={thStyle}>Status</th>
+                            <th style={thStyle}>Designations</th>
+                            <th style={thStyle}>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filteredEmployees.length === 0 ? (
                             <tr>
-                                <th style={tableHeaderCellStyle}>Employee</th>
-                                <th style={tableHeaderCellStyle}>Contact</th>
-                                <th style={tableHeaderCellStyle}>Email</th>
-                                <th style={tableHeaderCellStyle}>Location</th>
-                                <th style={tableHeaderCellStyle}>Join Date</th>
-                                <th style={tableHeaderCellStyle}>Status</th>
-                                <th style={tableHeaderCellStyle}>Designations</th>
-                                <th style={tableHeaderCellStyle}>Actions</th>
+                                <td colSpan="8" style={{ ...tdStyle, textAlign: 'center', padding: '20px' }}>
+                                    No {activeTab.toLowerCase()} employees found.
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            {awaitingEmployees
-                                .map((employee) => (
-                                    <tr key={employee.id}>
-                                        <td style={tableDataCellStyle}>
-                                            <div style={{ fontWeight: "bold" }}>
-                                                {employee.firstName} {employee.lastName}
-                                            </div>
-                                            <div style={{ color: "#555", fontSize: "13px" }}>
-                                                {employee.gender}
-                                            </div>
-                                        </td>
-                                        <td style={tableDataCellStyle}>{employee.personalNumber}</td>
-                                        <td style={tableDataCellStyle}>{employee.personalMail}</td>
-                                        <td style={tableDataCellStyle}>
-                                            {`${employee.city}, ${employee.state}`}
-                                        </td>
-                                        <td style={tableDataCellStyle}>{employee.dateOfJoin}</td>
-                                        <td style={tableDataCellStyle}>
-                                            <span
-                                                style={{
-                                                    padding: "4px 8px",
-                                                    borderRadius: "4px",
-                                                    backgroundColor:
-                                                        employee.status === "Awaiting"
-                                                            ? "#ffcc00"
-                                                            : employee.status === "In Review"
-                                                                ? "#2196f3"
-                                                                : "#4caf50",
-                                                    color: "#fff",
-                                                }}
-                                            >
-                                                {employee.status}
-                                            </span>
-                                        </td>
-                                        <td style={tableDataCellStyle}>
-                                            {employee.designations || "No designations assigned"}
-                                        </td>
-                                        <td style={tableDataCellStyle}>
-                                            {/* View Details Button */}
-                                            <span
-                                                style={actionIconStyle}
-                                                onMouseEnter={(e) =>
-                                                    Object.assign(e.target.style, actionIconHoverStyle)
-                                                }
-                                                onMouseLeave={(e) =>
-                                                    Object.assign(e.target.style, actionIconStyle)
-                                                }
-                                                title="View Details"
-                                                onClick={() => handleViewDetails(employee)}
-                                            >
-                                                &#128065;
-                                            </span>
-
-                                            {/* Approve Button */}
-                                            <span
-                                                style={actionIconStyle}
-                                                onMouseEnter={(e) =>
-                                                    Object.assign(e.target.style, actionIconHoverStyle)
-                                                }
-                                                onMouseLeave={(e) =>
-                                                    Object.assign(e.target.style, actionIconStyle)
-                                                }
-                                                title="Approve"
-                                                onClick={() => handleApprove(employee.id)}
-                                            >
-                                                &#10003;
-                                            </span>
-
-                                            {/* Reject Button */}
-                                            <span
-                                                style={actionIconStyle}
-                                                onMouseEnter={(e) =>
-                                                    Object.assign(e.target.style, actionIconHoverStyle)
-                                                }
-                                                onMouseLeave={(e) =>
-                                                    Object.assign(e.target.style, actionIconStyle)
-                                                }
-                                                title="Reject"
-                                            >
-                                                &#10060;
-                                            </span>
-                                        </td>
-                                    </tr>
-                                ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
-
-            {activeTab === "Review" && (
-                <div style={tableContainerStyle}>
-                    <h2 style={sectionTitleStyle}>Review Employees</h2>
-                    <table style={tableStyle}>
-                        <thead>
-                            <tr>
-                                <th style={tableHeaderCellStyle}>Employee</th>
-                                <th style={tableHeaderCellStyle}>Contact</th>
-                                <th style={tableHeaderCellStyle}>Email</th>
-                                <th style={tableHeaderCellStyle}>Location</th>
-                                <th style={tableHeaderCellStyle}>Join Date</th>
-                                <th style={tableHeaderCellStyle}>Status</th>
-                                <th style={tableHeaderCellStyle}>Designations</th>
-                                <th style={tableHeaderCellStyle}>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {reviewEmployees.map((employee) => (
-                                <tr
-                                    key={employee.id}
-                                    style={tableRowStyle}
-                                    onMouseEnter={(e) =>
-                                        Object.assign(e.currentTarget.style, tableRowStyle, tableRowHoverStyle)
-                                    }
-                                    onMouseLeave={(e) =>
-                                        Object.assign(e.currentTarget.style, tableRowStyle)
-                                    }
-                                >
-                                    <td style={tableDataCellStyle}>
-                                        <div style={{ fontWeight: "bold" }}>
-                                            {employee.firstName} {employee.lastName}
-                                        </div>
-                                        <div style={{ color: "#555", fontSize: "13px" }}>
-                                            {employee.gender}
-                                        </div>
+                        ) : (
+                            filteredEmployees.map((employee) => (
+                                <tr key={employee.id}>
+                                    <td style={tdStyle}>
+                                        <div style={{ fontWeight: 'bold' }}>{`${employee.firstName} ${employee.lastName}`}</div>
+                                        <div style={{ fontSize: '0.8em', color: '#777' }}>{employee.gender}</div>
                                     </td>
-                                    <td style={tableDataCellStyle}>{employee.personalNumber}</td>
-                                    <td style={tableDataCellStyle}>{employee.personalMail}</td>
-                                    <td style={tableDataCellStyle}>
-                                        {`${employee.city}, ${getDisplayName(
-                                            "state",
-                                            employee.state,
-                                            employee.country
-                                        )}`}
-                                    </td>
-                                    <td style={tableDataCellStyle}>{employee.dateOfJoin}</td>
-                                    <td style={tableDataCellStyle}>
-                                        <span style={{ ...statusBadgeStyle, ...reviewStatusStyle }}>
-                                            <span style={{ fontSize: "18px", lineHeight: "1", marginRight: "4px" }}>
-                                                &#x25CF;
-                                            </span>
-                                            {employee.status || "Review"}
+                                    <td style={tdStyle}>{employee.personalNumber}</td>
+                                    <td style={tdStyle}>{employee.personalMail}</td>
+                                    <td style={tdStyle}>{`${employee.city}, ${employee.state ? getDisplayName('state', employee.state, employee.country) : ''}, ${employee.country ? getDisplayName('country', employee.country) : ''}`}</td>
+                                    <td style={tdStyle}>{employee.dateOfJoin}</td>
+                                    <td style={tdStyle}>
+                                        <span style={{ ...statusBadgeStyle, ...(employee.status === 'Awaiting' ? awaitingStatusStyle : reviewStatusStyle) }}>
+                                            <span style={{ fontSize: '18px', lineHeight: '1', marginRight: '4px' }}>&#x25CF;</span>
+                                            {employee.status}
                                         </span>
                                     </td>
-                                    <td style={tableDataCellStyle}>
-                                        {employee.designations || "No designations assigned"}
-                                    </td>
-                                    <td style={tableDataCellStyle}>
-                                        <span
-                                            style={actionIconStyle}
-                                            onMouseEnter={(e) =>
-                                                Object.assign(e.target.style, actionIconHoverStyle)
-                                            }
-                                            onMouseLeave={(e) =>
-                                                Object.assign(e.target.style, actionIconStyle)
-                                            }
-                                            title="Edit"
-                                            onClick={() => {
-                                                setSelectedEmployee(employee);
-                                                setShowEditForm(true);
-                                            }}
+                                    <td style={tdStyle}>{employee.designations || 'No designations assigned'}</td>
+                                    <td style={tdStyle}>
+                                        <button
+                                            style={actionButtonStyle}
+                                            onMouseEnter={(e) => Object.assign(e.target.style, actionButtonStyle, actionButtonHoverStyle)}
+                                            onMouseLeave={(e) => Object.assign(e.target.style, actionButtonStyle)}
+                                            onClick={() => handleViewDetails(employee)}
                                         >
-                                            📝
-                                        </span>
+                                            &#128065;
+                                        </button>
+                                        <button
+                                            style={actionButtonStyle}
+                                            onMouseEnter={(e) => Object.assign(e.target.style, actionButtonStyle, actionButtonHoverStyle)}
+                                            onMouseLeave={(e) => Object.assign(e.target.style, actionButtonStyle)}
+                                            onClick={() => handleApprove(employee.id)}
+                                        >
+                                            &#10003;
+                                        </button>
+                                        <button
+                                            style={actionButtonStyle}
+                                            onMouseEnter={(e) => Object.assign(e.target.style, actionButtonStyle, actionButtonHoverStyle)}
+                                            onMouseLeave={(e) => Object.assign(e.target.style, actionButtonStyle)}
+                                        >
+                                            &#10060;
+                                        </button>
                                     </td>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
 
             {/* Employee Details Modal */}
             {selectedEmployee && showDetailsModal && (
                 <Modal show={showDetailsModal} onHide={() => setShowDetailsModal(false)} size="lg" centered>
                     <Modal.Header closeButton style={{ borderBottom: 'none', paddingBottom: '0' }}>
+                        {/* Back to Worksheet Link */}
+                        <button
+                            onClick={() => setShowDetailsModal(false)}
+                            style={{
+                                background: 'none',
+                                border: 'none',
+                                color: '#007bff',
+                                cursor: 'pointer',
+                                fontSize: '1em',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                paddingLeft: '10px'
+                            }}
+                        >
+                            &larr; Back to Worksheet
+                        </button>
                     </Modal.Header>
                     <Modal.Body style={{ paddingTop: '0' }}>
                         <h5 style={detailsModalTitleStyle}>Employee Onboarding Details</h5>
@@ -1091,7 +708,7 @@ const EmployeeOnboardingWorkSheet = () => {
                                 <div style={{ marginBottom: '10px' }}>
                                     <div style={detailLabelStyle}>Password Status</div>
                                     <div style={{ ...detailValueStyle, display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                        <span style={{ fontSize: '16px' }}>&#128274;</span> {selectedEmployee.passwordStatus || 'Not Created'}
+                                        <span style={{ fontSize: '16px' }}>&#128274;</span> {selectedEmployee.passwordStatus || 'Password Created'}
                                     </div>
                                 </div>
                             </div>
@@ -1134,7 +751,7 @@ const EmployeeOnboardingWorkSheet = () => {
                                     onMouseEnter={(e) => Object.assign(e.target.style, assignDesignationsButtonStyle, assignDesignationsButtonHoverStyle)}
                                     onMouseLeave={(e) => Object.assign(e.target.style, assignDesignationsButtonStyle)}
                                     onClick={() => {
-                                        setSelectedDesignations(selectedEmployee?.designations?.split(", ") || []);
+                                        setSelectedDesignations(selectedEmployee?.designations?.split(", ").filter(d => d !== '') || []);
                                         setShowDesignationModal(true);
                                     }}
                                 >
@@ -1452,40 +1069,38 @@ const EmployeeOnboardingWorkSheet = () => {
                         </form>
                     </Modal.Body>
                 </Modal>
-
-
-
             )}
 
             <Modal
                 show={showDesignationModal}
-                onHide={() => setShowDesignationModal(false)}
-                size="lg"
+                onHide={handleCloseDesignationModal}
+                size="md" // Changed size to md for a slightly smaller modal
                 centered
             >
                 <Modal.Header closeButton>
-                    <Modal.Title>Assign Designations</Modal.Title>
+                    <Modal.Title style={{ fontSize: '1.5em', fontWeight: 'bold' }}>Assign Designations</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
-                    <p>Assign designations to {selectedEmployee?.firstName}</p>
-                    <div>
+                    <p style={{ marginBottom: '20px', color: '#555' }}>Assign designations to {selectedEmployee?.firstName} {selectedEmployee?.lastName}</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                         {availableDesignations.map((designation) => (
-                            <div key={designation} style={{ marginBottom: '8px' }}>
+                            <div key={designation} style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
                                 <input
                                     type="checkbox"
                                     id={designation}
                                     value={designation}
                                     checked={selectedDesignations.includes(designation)}
-                                    onChange={(e) => handleDesignationChange(designation)}
+                                    onChange={() => handleDesignationChange(designation)}
+                                    style={{ marginRight: '10px', width: '20px', height: '20px' }}
                                 />
-                                <label htmlFor={designation} style={{ marginLeft: '8px' }}>
+                                <label htmlFor={designation} style={{ fontSize: '1.1em', color: '#333', cursor: 'pointer' }}>
                                     {designation}
                                 </label>
                             </div>
                         ))}
                     </div>
                 </Modal.Body>
-                <Modal.Footer>
+                <Modal.Footer style={{ borderTop: 'none', paddingTop: '0', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                     <button
                         style={{
                             backgroundColor: '#6c757d',
@@ -1495,20 +1110,26 @@ const EmployeeOnboardingWorkSheet = () => {
                             border: 'none',
                             cursor: 'pointer',
                             marginRight: '10px',
+                            transition: 'background-color 0.2s ease',
                         }}
+                        onMouseEnter={(e) => (e.target.style.backgroundColor = '#5a6268')}
+                        onMouseLeave={(e) => (e.target.style.backgroundColor = '#6c757d')}
                         onClick={handleCloseDesignationModal}
                     >
                         Cancel
                     </button>
                     <button
                         style={{
-                            backgroundColor: '#2980b9',
+                            backgroundColor: '#007bff', // Primary blue color
                             color: '#fff',
                             padding: '12px 25px',
                             borderRadius: '8px',
                             border: 'none',
                             cursor: 'pointer',
+                            transition: 'background-color 0.2s ease',
                         }}
+                        onMouseEnter={(e) => (e.target.style.backgroundColor = '#0056b3')}
+                        onMouseLeave={(e) => (e.target.style.backgroundColor = '#007bff')}
                         onClick={handleSaveDesignations}
                     >
                         Save Designations

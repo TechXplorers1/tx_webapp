@@ -1173,7 +1173,7 @@ const ClientDashboard = () => {
         </header>
 
         <h2 className="dashboard-title">
-          User Dashboard
+          Client Module
         </h2>
 
         {/* New container for Chart and Advertisements */}
