@@ -23,7 +23,6 @@ import TeamLeadData from './components/Dashboard/TeamLeadData';
 import EmployeeData from './components/Dashboard/EmployeeData';
 import Reports from './components/Reports';
 import WorkGroups from './components/workgroups';
-// import ClientWorkSheet from './components/ClientWorksheet';
 
 import EmployeeRegistrationForm from './components/employeeRegistrationForm';
 import EmployeeOnboardingWorkSheet from './components/employeeOnboardingSheet';
@@ -72,7 +71,6 @@ const App = () => {
         <Route path="/workgroups" element={<WorkGroups />} />
         <Route path="/adminworksheet" element={<AdminWorksheet/>} />
         <Route path="/managerworksheet" element={<ManagerWorksheet/>} />
-        {/* <Route path="/clientworksheet" element={<ClientWorkSheet/>} /> */}
         <Route path="/employee-registration-form" element={<EmployeeRegistrationForm />} />
         <Route path="/employee-onboarding-sheet" element={<EmployeeOnboardingWorkSheet />} />
 
