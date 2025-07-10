@@ -5,10 +5,6 @@ import 'bootstrap-icons/font/bootstrap-icons.css';
 import { Modal, Button, Form, Row, Col } from 'react-bootstrap';
 import { FaSearch, FaCalendarAlt } from 'react-icons/fa'; // Import FaSearch and FaCalendarAlt icons
 
-// Placeholder for DateRangeCalendar if it's not actually used or available
-// In a real application, ensure this import path is correct and the file exists.
-// import DateRangeCalendar from './DateRangeCalendar'; // Uncomment if DateRangeCalendar.jsx exists
-
 // Mock DateRangeCalendar for demonstration if the file is not provided
 const DateRangeCalendar = ({ initialStartDate, initialEndDate, onSelectRange }) => {
   const [start, setStart] = useState(initialStartDate);
@@ -140,8 +136,6 @@ const ClientWorksheet = () => {
   const [activeSubTab, setActiveSubTab] = useState("Resumes"); // New state for sub-tabs
 
   
-
-  
     // Handle tab change
   const handleTabChange = (tab) => {
     setActiveTab(tab);
@@ -155,21 +149,6 @@ const ClientWorksheet = () => {
   };
 
 
-
-
- 
-
-
-
-
-
-
-
-
-
-
-
-
   return (
     <div
       style={{
@@ -181,33 +160,6 @@ const ClientWorksheet = () => {
         boxShadow: "0 4px 20px rgba(0, 0, 0, 0.08)",
       }}
     >
-      {/* Header */}
-      {/* <div
-        style={{
-          marginBottom: "20px",
-        }}
-      >
-        <h2
-          style={{
-            fontSize: "24px",
-            fontWeight: "bold",
-            color: "#333",
-            margin: "0",
-          }}
-        >
-          My Job Search Dashboard
-        </h2>
-        <p
-          style={{
-            fontSize: "16px",
-            color: "#555",
-            marginTop: "8px",
-          }}
-        >
-          Track your job applications and manage your documents
-        </p>
-      </div> */}
-
       {/* Tabs */}
       <div
         style={{
@@ -519,7 +471,8 @@ const navigate = useNavigate();
 
     const dataToExport = filteredApplicationsForDisplay.map((app, index) => ({
       'S.No': index + 1,
-      'Website': app.website,
+      'Applied Date': app.dateAdded, // New column
+      'Platform': app.website,
       'Job Title': app.position,
       'Company': app.company,
       'Link': app.link,
@@ -928,11 +881,12 @@ const navigate = useNavigate();
               <thead>
                 <tr style={{ backgroundColor: '#007bff', color: 'white' }}>
                   <th style={{ padding: '12px', textAlign: 'center' }}>S.No</th>
+                  <th style={{ padding: '12px', textAlign: 'center' }}>Applied Date</th> {/* New Header */}
                   <th style={{ padding: '12px', textAlign: 'center' }}>Platform</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Job Title</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Company</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Link</th>
-                  <th style={{ padding: '12px', textAlign: 'center' }}>Job Description</th> {/* New Header */}
+                  <th style={{ padding: '12px', textAlign: 'center' }}>Job Description</th>
                 </tr>
               </thead>
               <tbody>
@@ -945,6 +899,7 @@ const navigate = useNavigate();
                     }}
                   >
                     <td style={{ padding: '12px' }}>{index + 1}</td>
+                    <td style={{ padding: '12px' }}>{app.dateAdded}</td> {/* Display Applied Date */}
                     <td style={{ padding: '12px' }}>{app.website}</td>
                     <td style={{ padding: '12px' }}>{app.position}</td>
                     <td style={{ padding: '12px' }}>{app.company}</td>
@@ -1449,8 +1404,6 @@ const Offers = () => {
 
 
 
-
-
 // Billing Tab Content
 const Billing = () => {
   return (
@@ -1585,8 +1538,6 @@ const Billing = () => {
 };
 
 
-
-
 // --- Styles ---
 const filterButtonStyle = { // This style is technically unused now as the button is gone
   backgroundColor: '#007bff',
@@ -1618,14 +1569,3 @@ const modalClearButtonStyle = {
 };
 
 export default ClientWorksheet;
-
-
-
-
-
-
-
-
-
-
-
