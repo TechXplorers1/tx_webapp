@@ -55,9 +55,9 @@ export default function LoginPage() {
     if (hasError) return;
 
     if (password === 'Password@123') {
-      if (email === 'admin@gmail.com') navigate('/admindashboard');
+      if (email === 'admin@gmail.com') navigate('/adminworksheet');
       else if (email === 'client@gmail.com') navigate('/clientdashboard');
-      else if (email === 'manager@gmail.com') navigate('/managers');
+      else if (email === 'manager@gmail.com') navigate('/managerworksheet');
       else if (email.includes('.tx')) navigate('/employees');
       else setLoginError("Invalid email or password.");
     } else {
