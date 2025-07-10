@@ -35,7 +35,8 @@ body {
 .dark-mode p,
 .dark-mode a,
 .dark-mode li,
-.dark-mode label {
+.dark-mode label,
+.dark-mode span.div {
   color: #f1f1f1 !important;
 }
 

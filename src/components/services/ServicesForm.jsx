@@ -108,7 +108,7 @@ const FormComponent = () => {
                 {/* First Name */}
                 <div style={formGroupStyle}>
                     <label htmlFor="firstName" style={labelStyle}>
-                        First Name * <span style={requiredStyle}>*</span>
+                        First Name <span style={requiredStyle}>*</span>
                     </label>
                     <input
                         type="text"
@@ -271,7 +271,6 @@ const formContainerStyle = {
     border: '1px solid #ddd',
     borderRadius: '12px',
     boxShadow: '0 8px 25px rgba(0, 0, 0, 0.1)',
-    background: '#ffffff',
 };
 
 const titleStyle = {

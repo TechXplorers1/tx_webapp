@@ -520,7 +520,7 @@ const navigate = useNavigate();
     const dataToExport = filteredApplicationsForDisplay.map((app, index) => ({
       'S.No': index + 1,
       'Website': app.website,
-      'Position': app.position,
+      'Job Title': app.position,
       'Company': app.company,
       'Link': app.link,
       'Job Description': app.jobDescription // Include job description in download
@@ -928,8 +928,8 @@ const navigate = useNavigate();
               <thead>
                 <tr style={{ backgroundColor: '#007bff', color: 'white' }}>
                   <th style={{ padding: '12px', textAlign: 'center' }}>S.No</th>
-                  <th style={{ padding: '12px', textAlign: 'center' }}>Website</th>
-                  <th style={{ padding: '12px', textAlign: 'center' }}>Position</th>
+                  <th style={{ padding: '12px', textAlign: 'center' }}>Platform</th>
+                  <th style={{ padding: '12px', textAlign: 'center' }}>Job Title</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Company</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Link</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Job Description</th> {/* New Header */}
