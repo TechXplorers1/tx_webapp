@@ -59,7 +59,7 @@ export default function LoginPage() {
                 localStorage.setItem('isLoggedIn', 'false');
                 localStorage.setItem('userRole', 'admin');
                 console.log("Admin Logged in:", email);
-                navigate('/admindashboard'); // Redirect to Admin Dashboard
+                navigate('/adminworksheet'); // Redirect to Admin Dashboard
             } else if (email === 'client@gmail.com') { // Example for a regular client
                 localStorage.setItem('isLoggedIn', 'true');
                 localStorage.setItem('userRole', 'client');
@@ -69,7 +69,7 @@ export default function LoginPage() {
                  localStorage.setItem('isLoggedIn', 'false');
                  localStorage.setItem('userRole', 'client'); // Assign 'client' role for generic users to match ProtectedRoute
                  console.log("Generic User Logged in:", email);
-                 navigate('/managers'); // Redirect to User Dashboard
+                 navigate('/managerworksheet'); // Redirect to User Dashboard
             }else if (email.includes('.tx')) {
                 localStorage.setItem('isLoggedIn', 'false');
                 localStorage.setItem('userRole', 'employee');
