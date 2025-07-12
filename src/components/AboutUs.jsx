@@ -61,11 +61,7 @@ function AboutUs() {
             </Carousel.Item>
           ))}
         </Carousel>
-        <div className="text-center mt-4">
-          <Button variant="primary" className="px-4 py-2">
-            EXPLORE TO KNOW MORE
-          </Button>
-        </div>
+       
       </Container>
 
       {/* Scrolling Video Section */}

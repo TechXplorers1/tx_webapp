@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Chart as ChartJS,
   LineElement,
@@ -10,6 +10,7 @@ import {
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 import { useNavigate } from 'react-router-dom';
+import styled from 'styled-components'; // Import styled-components
 
 ChartJS.register(
   LineElement,
@@ -19,6 +20,517 @@ ChartJS.register(
   Legend,
   Tooltip
 );
+
+// Styled-components for the Radio component
+const StyledWrapper = styled.div`
+  .glass-radio-group {
+    --bg: rgba(255, 255, 255, 0.06);
+    --text: #e5e5e5;
+
+    display: flex;
+    position: relative;
+    background: var(--bg);
+    border-radius: 1rem;
+    backdrop-filter: blur(12px);
+    box-shadow:
+      inset 1px 1px 4px rgba(255, 255, 255, 0.2),
+      inset -1px -1px 6px rgba(0, 0, 0, 0.3),
+      0 4px 12px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+    width: fit-content;
+  }
+
+  @media (max-width: 480px) {
+      .glass-radio-group {
+          flex-direction: column; /* Stack radio buttons on very small screens */
+          width: 80%; /* Wider to accommodate stacked labels */
+          border-radius: 1rem;
+          padding: 10px 0; /* Add vertical padding */
+      }
+      .glass-glider {
+          display: none; /* Hide glider when stacked */
+      }
+  }
+
+  .glass-radio-group input {
+    display: none;
+  }
+
+  .glass-radio-group label {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 80px;
+    font-size: 14px;
+    padding: 0.8rem 1.6rem;
+    cursor: pointer;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    color: var(--text);
+    position: relative;
+    z-index: 2;
+    transition: color 0.3s ease-in-out;
+  }
+
+  .glass-radio-group label:hover {
+    color: white;
+  }
+
+  .glass-radio-group input:checked + label {
+    color: #fff;
+  }
+
+  .glass-glider {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: calc(100% / 3);
+    border-radius: 1rem;
+    z-index: 1;
+    transition:
+      transform 0.5s cubic-bezier(0.37, 1.95, 0.66, 0.56),
+      background 0.4s ease-in-out,
+      box-shadow 0.4s ease-in-out;
+  }
+
+  /* Silver */
+  #glass-silver:checked ~ .glass-glider {
+    transform: translateX(0%);
+    background: linear-gradient(135deg, #c0c0c055, #e0e0e0);
+    box-shadow:
+      0 0 18px rgba(192, 192, 192, 0.5),
+      0 0 10px rgba(255, 255, 255, 0.4) inset;
+  }
+
+  /* Gold */
+  #glass-gold:checked ~ .glass-glider {
+    transform: translateX(100%);
+    background: linear-gradient(135deg, #ffd70055, #ffcc00);
+    box-shadow:
+      0 0 18px rgba(255, 215, 0, 0.5),
+      0 0 10px rgba(255, 235, 150, 0.4) inset;
+  }
+
+  /* Platinum */
+  #glass-platinum:checked ~ .glass-glider {
+    transform: translateX(200%);
+    background: linear-gradient(135deg, #d0e7ff55, #a0d8ff);
+    box-shadow:
+      0 0 18px rgba(160, 216, 255, 0.5),
+      0 0 10px rgba(200, 240, 255, 0.4) inset;
+  }
+`;
+
+// Radio Component (now accepts props for controlled state)
+const Radio = ({ selectedRadioPlan, handleRadioPlanChange }) => {
+  return (
+    <StyledWrapper>
+      <div className="glass-radio-group">
+        <input
+          type="radio"
+          name="plan"
+          id="glass-silver"
+          checked={selectedRadioPlan === 'glass-silver'}
+          onChange={() => handleRadioPlanChange('glass-silver')}
+        />
+        <label htmlFor="glass-silver">Silver</label>
+        <input
+          type="radio"
+          name="plan"
+          id="glass-gold"
+          checked={selectedRadioPlan === 'glass-gold'}
+          onChange={() => handleRadioPlanChange('glass-gold')}
+        />
+        <label htmlFor="glass-gold">Gold</label>
+        <input
+          type="radio"
+          name="plan"
+          id="glass-platinum"
+          checked={selectedRadioPlan === 'glass-platinum'}
+          onChange={() => handleRadioPlanChange('glass-platinum')}
+        />
+        <label htmlFor="glass-platinum">Platinum</label>
+        <div className="glass-glider" /> {/* This will be dynamically styled by the parent */}
+      </div>
+    </StyledWrapper>
+  );
+};
+
+
+// ClientHeader Component (formerly AdminHeader)
+const ClientHeader = ({
+  clientUserName,
+  clientInitials,
+  isDarkMode,
+  toggleTheme,
+  toggleSidebar,
+  isProfileDropdownOpen,
+  setIsProfileDropdownOpen,
+  profileDropdownRef,
+  onClientProfileClick,
+  onSubscriptionClick
+}) => {
+
+  // Effect to close profile dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // Check if profileDropdownRef.current exists and if the click is outside it
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
+        setIsProfileDropdownOpen(false);
+      }
+    };
+
+    // Attach the event listener when the component mounts
+    document.addEventListener('mousedown', handleClickOutside);
+    // Clean up the event listener when the component unmounts
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [profileDropdownRef, setIsProfileDropdownOpen]); // Dependencies: profileDropdownRef and setIsProfileDropdownOpen
+
+  return (
+    <>
+      {/* Inline styles for ClientHeader */}
+      <style>
+        {`
+        /* Import Inter font from Google Fonts */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        /* CSS Variables for theming (Header specific) */
+        :root {
+          --bg-header: #ffffff;
+          --text-primary: #1f2937;
+          --text-secondary: #6b7280;
+          --border-color: #e5e7eb;
+          --shadow-color-1: rgba(0, 0, 0, 0.05);
+          --icon-color: #6b7280;
+          --client-avatar-bg: #1f2937;
+          --client-avatar-text: #ffffff;
+          --logo-x-color: #2563eb;
+          --client-tag-bg: #e0f2f7;
+          --client-tag-text: #0891b2;
+          --bg-nav-link-hover: #f9fafb; /* For dropdown items */
+        }
+
+        html.dark-mode { /* Re-added dark mode styles */
+          --bg-header: #2d3748;
+          --text-primary: #e2e8f0;
+          --text-secondary: #a0aec0;
+          --border-color: #4a5568;
+          --shadow-color-1: rgba(0, 0, 0, 0.2);
+          --icon-color: #cbd5e0;
+          --client-avatar-bg: #4299e1;
+          --client-avatar-text: #ffffff;
+          --logo-x-color: #4299e1;
+          --client-tag-bg: #fbd38d;
+          --client-tag-text: #6b4617;
+          --bg-nav-link-hover: #4a5568; /* For dropdown items */
+        }
+
+        /* Profile Dropdown Styles */
+        .profile-dropdown-container {
+          position: relative;
+          cursor: pointer;
+          z-index: 60; /* Higher than header for dropdown to appear on top */
+        }
+
+        .profile-dropdown-menu {
+          position: absolute;
+          top: calc(100% + 0.5rem); /* Position below the avatar */
+          right: 0;
+          background-color: var(--bg-header); /* Use header background for consistency */
+          border-radius: 0.5rem;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+          border: 1px solid var(--border-color);
+          min-width: 12rem;
+          padding: 0.5rem 0;
+          list-style: none;
+          margin: 0;
+          opacity: 0;
+          visibility: hidden;
+          transform: translateY(-10px);
+          transition: opacity 0.2s ease-out, transform 0.2s ease-out, visibility 0.2s ease-out;
+        }
+
+        .profile-dropdown-menu.open {
+          opacity: 1;
+          visibility: visible;
+          transform: translateY(0);
+        }
+
+        .profile-dropdown-item {
+          padding: 0.75rem 1rem;
+          color: var(--text-primary);
+          font-size: 0.9rem;
+          font-weight: 500;
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          transition: background-color 0.15s ease;
+        }
+
+        .profile-dropdown-item:hover {
+          background-color: var(--bg-nav-link-hover);
+        }
+
+        .profile-dropdown-item.header {
+          font-weight: 600;
+          color: var(--text-secondary);
+          font-size: 0.8rem;
+          padding: 0.5rem 1rem;
+          border-bottom: 1px solid var(--border-color);
+          margin-bottom: 0.5rem;
+        }
+
+        .profile-dropdown-item.logout {
+          color: #ef4444; /* Red for logout */
+        }
+
+        .profile-dropdown-item.logout:hover {
+          background-color: #fee2e2; /* Light red background on hover */
+        }
+
+        /* Top Navigation Bar */
+        .ad-header {
+          background-color: var(--bg-header);
+          box-shadow: 0 1px 2px 0 var(--shadow-color-1);
+          padding: 1rem 1.5rem;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          position: sticky;
+          top: 0;
+          z-index: 50;
+        }
+
+        .ad-header-left {
+          display: flex;
+          align-items: center;
+          gap: 1.5rem;
+        }
+
+        .ad-logo {
+          display: flex;
+          align-items: center;
+          color: var(--text-primary);
+          font-size: 1.5rem;
+          font-weight: 700;
+        }
+        .ad-logo-x {
+          color: var(--logo-x-color);
+        }
+
+        .ad-header-right {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+        }
+
+        .ad-icon-btn {
+          color: var(--icon-color);
+          font-size: 1.125rem;
+          cursor: pointer;
+          background: none;
+          border: none;
+          padding: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .ad-icon-btn:hover {
+          color: #2563eb;
+        }
+
+        .ad-notification-icon {
+          position: relative;
+        }
+
+        .ad-notification-badge {
+          position: absolute;
+          top: -0.25rem;
+          right: -0.25rem;
+          background-color: #ef4444;
+          color: #ffffff;
+          font-size: 0.75rem;
+          border-radius: 9999px;
+          height: 1rem;
+          width: 1rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .ad-user-info {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .ad-user-info-text {
+          display: none;
+          flex-direction: column;
+          align-items: flex-end;
+          gap: 0.125rem;
+        }
+
+        @media (min-width: 768px) {
+          .ad-user-info-text {
+            display: flex;
+          }
+        }
+
+        .ad-user-name {
+          color: var(--text-primary);
+          font-size: 0.875rem;
+          font-weight: 600;
+          margin: 0;
+          padding: 0;
+          line-height: 1.2;
+        }
+
+        .ad-user-email {
+          color: var(--text-secondary);
+          font-size: 0.75rem;
+          margin: 0;
+          padding: 0;
+          line-height: 1.2;
+        }
+
+        /* Initials Avatar Styles */
+        .ad-initials-avatar {
+          width: 2.5rem;
+          height: 2.5rem;
+          border-radius: 9999px;
+          background-color: var(--client-avatar-bg);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .ad-initials-text {
+          color: var(--client-avatar-text);
+          font-size: 0.875rem;
+          font-weight: 600;
+        }
+
+        /* Client Tag in Header */
+        .ad-client-tag {
+            background-color: var(--client-tag-bg);
+            color: var(--client-tag-text);
+            padding: 0.125rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+            white-space: nowrap;
+            display: inline-flex; /* Ensure it behaves like a tag */
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .ad-hamburger-menu {
+          display: block;
+          padding: 0.5rem;
+          border-radius: 0.5rem;
+          background-color: var(--border-color);
+          transition: background-color 150ms;
+          cursor: pointer;
+        }
+
+        .ad-hamburger-menu:hover {
+          background-color: var(--text-secondary);
+        }
+
+        @media (min-width: 768px) {
+          .ad-hamburger-menu {
+            display: none;
+          }
+        }
+        `}
+      </style>
+      <header className="ad-header">
+        <div className="ad-header-left">
+          <div className="ad-logo">
+            <span>Tech</span>
+            <span className="ad-logo-x">X</span>
+            <span>plorers</span>
+          </div>
+        </div>
+
+        <div className="ad-header-right">
+          {/* Search Icon */}
+          <svg className="ad-icon-btn" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" style={{ width: '1.125rem', height: '1.125rem' }}>
+            <path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.1-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z"/>
+          </svg>
+          <div className="ad-notification-icon">
+            {/* Bell Icon */}
+            <svg className="ad-icon-btn" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1.125rem', height: '1.125rem' }}>
+              <path d="M224 0c-17.7 0-32 14.3-32 32V51.2C119 66 64 130.6 64 208v25.4c0 45.4-15.5 89.2-43.8 124.9L5.7 377.9c-2.7 4.4-3.4 9.7-1.7 14.6s4.6 8.5 9.8 10.1l39.5 12.8c10.6 3.4 21.8 3.9 32.7 1.4S120.3 400 128 392h192c7.7 8 17.5 13.6 28.3 16.3s22.1 1.9 32.7-1.4l39.5-12.8c5.2-1.7 8.2-6.1 9.8-10.1s1-10.2-1.7-14.6l-20.5-33.7C399.5 322.6 384 278.8 384 233.4V208c0-77.4-55-142-128-156.8V32c0-17.7-14.3-32-32-32zm0 96c61.9 0 112 50.1 112 112v25.4c0 47.9 13.9 94.6 39.7 134.6H184.3c25.8-40 39.7-86.7 39.7-134.6V208c0-61.9 50.1-112 112-112zm0 352a48 48 0 1 0 0-96 48 48 0 1 0 0 96z"/>
+            </svg>
+            <span className="ad-notification-badge">3</span>
+          </div>
+          <div className="profile-dropdown-container" ref={profileDropdownRef}>
+            <div className="ad-user-info" onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}>
+              <div className="ad-user-info-text">
+                <p className="ad-user-name">{clientUserName}</p>
+                <span className="ad-client-tag">
+                  {/* User Icon */}
+                  <svg className="ad-icon-btn" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ fontSize: '0.65rem', width: '0.65rem', height: '0.65rem' }}>
+                    <path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"/>
+                  </svg>
+                  Client
+                </span>
+              </div>
+              <div className="ad-initials-avatar">
+                <span className="ad-initials-text">{clientInitials}</span>
+              </div>
+            </div>
+            {isProfileDropdownOpen && (
+              <ul className="profile-dropdown-menu open">
+                <li className="profile-dropdown-item header">My Account</li>
+                <li className="profile-dropdown-item" onClick={onClientProfileClick}>
+                  {/* User Icon */}
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1rem', height: '1rem' }}>
+                    <path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"/>
+                  </svg>
+                  Client Profile
+                </li>
+                <li className="profile-dropdown-item" onClick={onSubscriptionClick}>
+                  {/* Credit Card Icon */}
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1rem', height: '1rem' }}>
+                    <path d="M22 9H2C1.44772 9 1 9.44772 1 10V19C1 19.5523 1.44772 20 2 20H22C22.5523 20 23 19.5523 23 19V10C23 9.44772 22.5523 9 22 9ZM3 11V18H21V11H3ZM22 4H2C1.44772 4 1 4.44772 1 5V7C1 7.55228 1.44772 8 2 8H22C22.5523 8 23 7.55228 23 7V5C23 4.44772 22.5523 4 22 4Z" />
+                  </svg>
+                  Subscription
+                </li>
+                <li className="profile-dropdown-item logout" onClick={() => window.location.href = '/'}>
+                  {/* Log Out Icon (Door with arrow from screenshot) */}
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1rem', height: '1rem' }}>
+                    <path d="M10 4H4C3.44772 4 3 4.44772 3 5V19C3 19.5523 3.44772 20 4 20H10C10.5523 20 11 19.5523 11 19V17H13V19C13 20.6569 11.6569 22 10 22H4C2.34315 22 1 20.6569 1 19V5C1 3.34315 2.34315 2 4 2H10C11.6569 2 13 3.34315 13 5V7H11V5C11 4.44772 10.5523 4 10 4ZM19.2929 10.2929L22.2929 13.2929C22.6834 13.6834 22.6834 14.3166 22.2929 14.7071L19.2929 17.7071C18.9024 18.0976 18.2692 18.0976 17.8787 17.7071C17.4882 17.3166 17.4882 16.6834 17.8787 16.2929L19.5858 14.5858H11C10.4477 14.5858 10 14.1381 10 13.5858C10 13.0335 10.4477 12.5858 11 12.5858H19.5858L17.8787 10.8787C17.4882 10.4882 17.4882 9.85497 17.8787 9.46447C18.2692 9.07395 18.9024 9.07395 19.2929 9.46447Z" />
+                  </svg>
+                  Log out
+                </li>
+              </ul>
+            )}
+          </div>
+        </div>
+
+        <button
+          className="ad-hamburger-menu"
+          onClick={toggleSidebar}
+        >
+          {/* Hamburger Icon */}
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1.125rem', height: '1.125rem' }}>
+            <path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/>
+          </svg>
+        </button>
+      </header>
+    </>
+  );
+};
+
 
 // Dimming Overlay Component
 const DimmingOverlay = ({ isVisible, onClick }) => {
@@ -32,12 +544,284 @@ const DimmingOverlay = ({ isVisible, onClick }) => {
         width: '100%',
         height: '100%',
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        zIndex: isVisible ? 99 : -1, // Z-index needs to be below modals (100) but above content
+        zIndex: isVisible ? 90 : -1, // Z-index needs to be below modals (100) but above content and header dropdown (60)
         opacity: isVisible ? 1 : 0,
         visibility: isVisible ? 'visible' : 'hidden',
         transition: 'opacity 0.3s ease, visibility 0.3s ease',
       }}
     />
+  );
+};
+
+
+// ClientProfile Component (now only shows profile details)
+const ClientProfile = ({
+  profilePlaceholder,
+  clientUserName,
+  onClose
+}) => {
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content-style" style={{ maxWidth: '90%', width: '1200px', padding: '30px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <button onClick={onClose} className="modal-close-button">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M13 1L1 13M1 1L13 13" stroke="#64748B" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+        </button>
+        <h3 style={{
+          marginBottom: '10px',
+          textAlign: 'center',
+          color: '#1e293b',
+          fontSize: '1.8rem',
+          fontWeight: '700'
+        }}>
+          Your Details
+        </h3>
+
+        <div className="profile-grid-container">
+          {/* Personal Information */}
+          <div className="profile-info-card">
+            <h4 className="profile-info-title">Personal Information</h4>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">First Name:</span>
+              <span className="profile-detail-value">Mukesh</span>
+            </div>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">Middle Name:</span>
+              <span className="profile-detail-value"> -</span>
+            </div>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">Last Name:</span>
+              <span className="profile-detail-value">Ambani</span>
+            </div>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">Date of Birth:</span>
+              <span className="profile-detail-value">1990-05-15</span>
+            </div>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">Gender:</span>
+              <span className="profile-detail-value">Male</span>
+            </div>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">Ethnicity:</span>
+              <span className="profile-detail-value">Caucasian</span>
+            </div>
+          </div>
+
+          {/* Contact Information */}
+          <div className="profile-info-card">
+            <h4 className="profile-info-title">Contact Information</h4>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">Address:</span>
+              <span className="profile-detail-value">123 Main St, San Francisco, CA</span>
+            </div>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">Zip Code:</span>
+              <span className="profile-detail-value">94105</span>
+            </div>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">Mobile:</span>
+              <span className="profile-detail-value">123-456-7890</span>
+            </div>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">Email:</span>
+              <span className="profile-detail-value">mukesh.ambani@example.com</span>
+            </div>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">Secondary Email:</span>
+              <span className="profile-detail-value">m.ambani.personal@example.com</span>
+            </div>
+          </div>
+
+          {/* Job Preferences & Status */}
+          <div className="profile-info-card">
+            <h4 className="profile-info-title">Job Preferences & Status</h4>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">Security Clearance:</span>
+              <span className="profile-detail-value">Yes</span>
+            </div>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">Clearance Level:</span>
+              <span className="profile-detail-value">Top Secret</span>
+            </div>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">Willing to Relocate:</span>
+              <span className="profile-detail-value">Yes</span>
+            </div>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">Work Preference:</span>
+              <span className="profile-detail-value">Hybrid</span>
+            </div>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">Restricted Companies:</span>
+              <span className="profile-detail-value">None</span>
+            </div>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">Jobs to Apply:</span>
+              <span className="profile-detail-value">Frontend, Fullstack</span>
+            </div>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">Technology Skills:</span>
+              <span className="profile-detail-value">React, JavaScript, HTML, CSS, Node.js</span>
+            </div>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">Current Salary:</span>
+              <span className="profile-detail-value">$110,000</span>
+            </div>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">Expected Salary:</span>
+              <span className="profile-detail-value">$130,000</span>
+            </div>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">Visa Status:</span>
+              <span className="profile-detail-value">H1B</span>
+            </div>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">Other Visa Status:</span>
+              <span className="profile-detail-value">-</span>
+            </div>
+          </div>
+
+          {/* Education Details */}
+          <div className="profile-info-card">
+            <h4 className="profile-info-title">Education Details</h4>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">School Name:</span>
+              <span className="profile-detail-value">University of California, Berkeley</span>
+            </div>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">School Address:</span>
+              <span className="profile-detail-value">Berkeley, CA</span>
+            </div>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">School Phone:</span>
+              <span className="profile-detail-value">555-123-4567</span>
+            </div>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">Course of Study:</span>
+              <span className="profile-detail-value">Computer Science</span>
+            </div>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">Graduation Date:</span>
+              <span className="profile-detail-value">2012-05-20</span>
+            </div>
+          </div>
+
+          {/* Employment Details */}
+          <div className="profile-info-card">
+            <h4 className="profile-info-title">Employment Details</h4>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">Current Company:</span>
+              <span className="profile-detail-value">Web-tech Solutions</span>
+            </div>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">Current Designation:</span>
+              <span className="profile-detail-value">Senior Frontend Developer</span>
+            </div>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">Preferred Interview Time:</span>
+              <span className="profile-detail-value">Morning</span>
+            </div>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">Earliest Joining Date:</span>
+              <span className="profile-detail-value">2025-08-01</span>
+            </div>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">Relieving Date:</span>
+              <span className="profile-detail-value">2023-07-31</span>
+            </div>
+          </div>
+
+          {/* References */}
+          <div className="profile-info-card">
+            <h4 className="profile-info-title">References</h4>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">Reference Name:</span>
+              <span className="profile-detail-value">Jane Smith</span>
+            </div>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">Reference Phone:</span>
+              <span className="profile-detail-value">555-987-6543</span>
+            </div>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">Reference Address:</span>
+              <span className="profile-detail-value">456 Oak Ave</span>
+            </div>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">Reference Email:</span>
+              <span className="profile-detail-value">jane.smith@example.com</span>
+            </div>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">Reference Role:</span>
+              <span className="profile-detail-value">Manager</span>
+            </div>
+          </div>
+
+          {/* Job Portal Accounts */}
+          <div className="profile-info-card">
+            <h4 className="profile-info-title">Job Portal Accounts</h4>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">Account Name:</span>
+              <span className="profile-detail-value">john.anderson.linkedin</span>
+            </div>
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">Credentials:</span>
+              <span className="profile-detail-value">********</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// New SubscriptionDetailsModal Component
+const SubscriptionDetailsModal = ({
+  togglePaymentModal,
+  currentPlanPrice,
+  daysLeftInPlan,
+  onClose
+}) => {
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content-style" style={{ maxWidth: '500px', padding: '40px', background: '#ffffff', color: '#1e293b' }}>
+        <button onClick={onClose} className="modal-close-button" style={{ color: '#64748B' }}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M13 1L1 13M1 1L13 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+        </button>
+        <h3 style={{
+          marginBottom: '30px',
+          textAlign: 'center',
+          color: '#1e293b',
+          fontSize: '1.8rem',
+          fontWeight: '700'
+        }}>
+          Your Subscription Details
+        </h3>
+        <div className="subscription-details-card" style={{ background: '#f8fafc', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+          <div className="subscription-detail-item" style={{ borderBottom: '1px solid #e2e8f0' }}>
+            <p className="subscription-detail-label" style={{ color: '#64748b' }}>Current Plan</p>
+            <strong className="subscription-detail-value" style={{ color: '#1e293b' }}>1 Month Plan</strong>
+          </div>
+          <div className="subscription-detail-item" style={{ borderBottom: '1px solid #e2e8f0' }}>
+            <p className="subscription-detail-label" style={{ color: '#64748b' }}>Price</p>
+            <strong className="subscription-detail-value" style={{ color: '#1e293b' }}>{currentPlanPrice}</strong>
+          </div>
+          <div className="subscription-detail-item" style={{ borderBottom: 'none' }}>
+            <p className="subscription-detail-label" style={{ color: '#64748b' }}>Days Left</p>
+            <strong className="subscription-detail-value" style={{ color: '#1e293b' }}>{daysLeftInPlan}</strong>
+          </div>
+        </div>
+        <button
+          onClick={() => { onClose(); togglePaymentModal(); }}
+          className="renew-button-style"
+          style={{ marginTop: '30px' }}
+        >
+          Renew Plan
+        </button>
+      </div>
+    </div>
   );
 };
 
@@ -48,13 +832,44 @@ const ClientDashboard = () => {
   const [showInterviewsModal, setShowInterviewsModal] = useState(false);
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showClientProfileModal, setShowClientProfileModal] = useState(false);
+  const [showSubscriptionDetailsModal, setShowSubscriptionDetailsModal] = useState(false);
   const [selectedRadioPlan, setSelectedRadioPlan] = useState('glass-silver'); // Default to Silver
 
+  // State for ClientHeader
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const profileDropdownRef = useRef(null);
+
+  // Mock Client User Data (formerly Admin User Data)
+  const clientUserName = "Mukesh Ambani";
+  const clientInitials = "MA";
+  const currentPlanPrice = "$199"; // Example data for subscription
+  const daysLeftInPlan = "28"; // Example data for subscription
+
+  // Toggle Dark/Light Mode function
+  const toggleTheme = () => {
+    setIsDarkMode(prevMode => !prevMode);
+    document.documentElement.classList.toggle('dark-mode');
+  };
 
   const toggleMenu = () => setMenuOpen(!menuOpen);
   const toggleInterviewsModal = () => setShowInterviewsModal(!showInterviewsModal);
   const toggleResumeModal = () => setShowResumeModal(!showResumeModal);
   const togglePaymentModal = () => setShowPaymentModal(!showPaymentModal);
+  const toggleClientProfileModal = () => setShowClientProfileModal(!showClientProfileModal);
+  const toggleSubscriptionDetailsModal = () => setShowSubscriptionDetailsModal(!showSubscriptionDetailsModal);
+
+  // Handlers for profile dropdown items
+  const handleClientProfileClick = () => {
+    setIsProfileDropdownOpen(false); // Close dropdown
+    setShowClientProfileModal(true); // Open client profile modal
+  };
+
+  const handleSubscriptionClick = () => {
+    setIsProfileDropdownOpen(false); // Close dropdown
+    setShowSubscriptionDetailsModal(true); // Open new subscription details modal
+  };
 
   const profilePlaceholder = "https://imageio.forbes.com/specials-images/imageserve/5c7d7829a7ea434b351ba0b6/0x0.jpg?format=jpg&crop=1837,1839,x206,y250,safe&height=416&width=416&fit=bounds";
 
@@ -271,8 +1086,8 @@ const ClientDashboard = () => {
     alert('Downloading the latest resume... (This is a placeholder action)');
   };
 
-  // Determine if the overlay should be visible
-  const isOverlayVisible = menuOpen || showInterviewsModal || showResumeModal || showPaymentModal;
+  // Determine if the overlay should be visible (for all modals and sidebar)
+  const isOverlayVisible = menuOpen || showInterviewsModal || showResumeModal || showPaymentModal || showClientProfileModal || showSubscriptionDetailsModal;
 
 
   return (
@@ -287,7 +1102,99 @@ const ClientDashboard = () => {
           color: #1e293b;
           min-height: 100vh;
           display: flex;
+          flex-direction: column; /* Changed to column to stack header and content */
           overflow-x: hidden; /* Prevent horizontal scroll due to fixed sidebar */
+        }
+
+        html.dark-mode .client-dashboard-container {
+          background: #1a202c;
+          color: #e2e8f0;
+        }
+
+        html.dark-mode .modal-content-style {
+          background: #2d3748;
+          border: 1px solid #4a5568;
+        }
+
+        html.dark-mode .modal-close-button {
+          color: #a0aec0;
+        }
+
+        html.dark-mode .modal-close-button:hover {
+          background-color: #4a5568;
+        }
+
+        html.dark-mode .modal-table-header {
+          background-color: #4a5568;
+          color: #cbd5e1;
+        }
+
+        html.dark-mode .modal-table-cell {
+          background-color: #2d3748;
+          color: #e2e8f0;
+          border-bottom: 1px solid #4a5568;
+        }
+
+        html.dark-mode .modal-table-row:hover {
+          background-color: #4a5568;
+        }
+
+        html.dark-mode .chart-and-ads-container {
+          background: #2d3748;
+          border: 1px solid #4a5568;
+        }
+
+        html.dark-mode .ad-placeholder {
+          background: #2d3748;
+          border: 1px solid #4a5568;
+          box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+
+        html.dark-mode .ad-placeholder p {
+          color: #a0aec0;
+        }
+
+        html.dark-mode .dashboard-title {
+          color: #e2e8f0;
+        }
+
+        html.dark-mode .sidebar-menu {
+          background: #2d3748;
+          color: #e2e8f0;
+          box-shadow: -4px 0 20px rgba(0,0,0,0.3);
+        }
+
+        html.dark-mode .sidebar-menu h4 {
+          color: #e2e8f0;
+        }
+
+        html.dark-mode .sidebar-menu div[style*="background-color: #f8fafc"] {
+          background-color: #4a5568 !important;
+        }
+
+        html.dark-mode .sidebar-menu p[style*="color: #64748b"] {
+          color: #a0aec0 !important;
+        }
+
+        html.dark-mode .sidebar-menu p[style*="color: #1e293b"] {
+          color: #e2e8f0 !important;
+        }
+
+        html.dark-mode .help-support-button {
+          color: #a0aec0;
+        }
+
+        html.dark-mode .help-support-button:hover {
+          color: #63b3ed;
+        }
+
+        html.dark-mode .logout-button {
+          background: #4a5568;
+          color: #fc8181;
+        }
+
+        html.dark-mode .logout-button:hover {
+          background-color: #6b4617;
         }
 
         /* Styles for various buttons and cards */
@@ -313,7 +1220,51 @@ const ClientDashboard = () => {
           background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
         }
 
-        .renew-plan-button {
+        /* New Renew Button Style */
+        .renew-button-style {
+          width: 6.5em;
+          height: 2.3em;
+          margin: 0.5em auto; /* Center the button */
+          background: black;
+          color: white;
+          border: none;
+          border-radius: 0.625em;
+          font-size: 20px;
+          font-weight: bold;
+          cursor: pointer;
+          position: relative;
+          z-index: 1;
+          overflow: hidden;
+          display: block; /* Ensure it takes full width of its container for margin:auto */
+          text-align: center; /* Center text if display:block */
+          line-height: 2.3em; /* Vertically center text */
+        }
+
+        .renew-button-style:hover {
+          color: black;
+        }
+
+        .renew-button-style:after {
+          content: "";
+          background: white;
+          position: absolute;
+          z-index: -1;
+          left: -20%;
+          right: -20%;
+          top: 0;
+          bottom: 0;
+          transform: skewX(-45deg) scale(0, 1);
+          transition: all 0.5s;
+        }
+
+        .renew-button-style:hover:after {
+          transform: skewX(-45deg) scale(1, 1);
+          -webkit-transition: all 0.5s;
+          transition: all 0.5s;
+        }
+
+
+        .renew-plan-button { /* This is for the sidebar button */
           background: linear-gradient(135deg, #4ade80 0%, #3b82f6 100%);
           color: white;
           border: none;
@@ -372,7 +1323,7 @@ const ClientDashboard = () => {
             background-color: #fee2e2;
         }
 
-        .back-button {
+        .back-button { /* This style is now unused for the ClientProfile modal */
             background: #ffffff;
             color: #3b82f6;
             border: 1px solid #e2e8f0;
@@ -657,81 +1608,17 @@ const ClientDashboard = () => {
         }
 
 
-        /* Payment Radio Buttons Specific Styles */
-        .radio-group {
-          display: flex;
-          position: relative;
-          background: rgba(255, 255, 255, 0.06);
-          border-radius: 1rem;
-          backdrop-filter: blur(12px);
-          box-shadow: inset 1px 1px 4px rgba(255, 255, 255, 0.2), inset -1px -1px 6px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.15);
-          overflow: hidden;
-          width: fit-content;
-          margin: 20px auto 30px auto;
-        }
-        @media (max-width: 480px) {
-            .radio-group {
-                flex-direction: column; /* Stack radio buttons on very small screens */
-                width: 80%; /* Wider to accommodate stacked labels */
-                border-radius: 1rem;
-                padding: 10px 0; /* Add vertical padding */
-            }
-            .radio-glider {
-                display: none; /* Hide glider when stacked */
-            }
-        }
-
-        .hidden-radio-input {
-          display: none;
-        }
-
-        .radio-label-base {
-          flex: 1;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          min-width: 80px;
-          font-size: 14px;
-          padding: 0.8rem 1.6rem;
-          cursor: pointer;
-          font-weight: 600;
-          letter-spacing: 0.3px;
-          position: relative;
-          z-index: 2;
-          transition: color 0.3s ease-in-out;
-        }
-        input[type="radio"]:checked + .radio-label-base {
-          color: #fff;
-        }
-        .radio-label-base:hover {
-          color: white;
-        }
-        @media (max-width: 480px) {
-            .radio-label-base {
-                padding: 10px 15px; /* Adjust padding for stacked */
-                justify-content: flex-start; /* Align text to left when stacked */
-            }
-        }
-
-        .radio-glider {
-          position: absolute;
-          top: 0;
-          bottom: 0;
-          width: calc(100% / 3);
-          border-radius: 1rem;
-          z-index: 1;
-          transition: transform 0.5s cubic-bezier(0.37, 1.95, 0.66, 0.56), background 0.4s ease-in-out, box-shadow 0.4s ease-in-out;
-        }
-
         /* General element responsiveness */
         .main-content-area {
             flex-grow: 1;
             padding: 24px;
             max-width: 100%;
+            padding-top: 80px; /* Added padding to account for fixed header */
         }
         @media (max-width: 768px) {
             .main-content-area {
                 padding: 15px; /* Smaller padding on mobile */
+                padding-top: 70px; /* Adjust for smaller header on mobile */
             }
             .dashboard-title {
                 font-size: 1.5rem; /* Smaller title on mobile */
@@ -762,8 +1649,149 @@ const ClientDashboard = () => {
                 margin: 20px 0;
             }
         }
+
+        /* ClientProfile Modal Specific Styles */
+        .profile-info-card {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        html.dark-mode .profile-info-card {
+            background: #4a5568;
+            border: 1px solid #64748B;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .profile-info-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #1e293b;
+            width: 100%;
+            text-align: center;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        html.dark-mode .profile-info-title {
+            color: #e2e8f0;
+            border-bottom: 1px solid #64748B;
+        }
+
+        .profile-detail-row {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+            color: #334155;
+        }
+        html.dark-mode .profile-detail-row {
+            color: #e2e8f0;
+        }
+
+        .profile-detail-row .profile-detail-label {
+            font-weight: 500;
+            color: #475569;
+            flex-basis: 40%;
+            text-align: left;
+        }
+        html.dark-mode .profile-detail-row .profile-detail-label {
+            color: #cbd5e1;
+        }
+
+        .profile-detail-row .profile-detail-value {
+            flex-basis: 60%;
+            text-align: right;
+            font-weight: 400;
+        }
+        html.dark-mode .profile-detail-row .profile-detail-value {
+            color: #e2e8f0;
+        }
+
+
+        /* Subscription Details Modal Specific Styles */
+        .subscription-details-card {
+          display: flex;
+          flex-direction: column;
+          gap: 15px;
+          width: 100%;
+          padding: 20px;
+          background-color: #f8fafc;
+          border-radius: 12px;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+          margin-bottom: 0;
+          color: #1e293b;
+        }
+
+        html.dark-mode .subscription-details-card {
+          background-color: #4a5568;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+          color: #e2e8f0;
+        }
+
+        .subscription-detail-item {
+          text-align: center;
+          padding: 10px 0;
+          border-bottom: 1px solid #e2e8f0;
+        }
+        .subscription-detail-item:last-child {
+          border-bottom: none;
+        }
+        html.dark-mode .subscription-detail-item {
+          border-bottom: 1px solid #64748B;
+        }
+
+        .subscription-detail-label {
+          margin: 0;
+          font-size: 0.9rem;
+          color: #64748b;
+          font-weight: 500;
+        }
+        html.dark-mode .subscription-detail-label {
+          color: #a0aec0;
+        }
+
+        .subscription-detail-value {
+          display: block;
+          font-size: 1.5rem;
+          font-weight: 700;
+          color: #1e293b;
+          margin-top: 5px;
+        }
+        html.dark-mode .subscription-detail-value {
+          color: #e2e8f0;
+        }
+
+        @media (max-width: 768px) {
+          .subscription-details-card {
+            padding: 15px;
+            gap: 10px;
+          }
+          .subscription-detail-value {
+            font-size: 1.3rem;
+          }
+        }
         `}
       </style>
+
+      {/* Client Header */}
+      <ClientHeader
+        clientUserName={clientUserName}
+        clientInitials={clientInitials}
+        isDarkMode={isDarkMode}
+        toggleTheme={toggleTheme}
+        toggleSidebar={toggleMenu}
+        isProfileDropdownOpen={isProfileDropdownOpen}
+        setIsProfileDropdownOpen={setIsProfileDropdownOpen}
+        profileDropdownRef={profileDropdownRef}
+        onClientProfileClick={handleClientProfileClick}
+        onSubscriptionClick={handleSubscriptionClick}
+      />
 
       {/* Dimming Overlay */}
       <DimmingOverlay
@@ -773,10 +1801,12 @@ const ClientDashboard = () => {
           if (showInterviewsModal) setShowInterviewsModal(false);
           if (showResumeModal) setShowResumeModal(false);
           if (showPaymentModal) setShowPaymentModal(false);
+          if (showClientProfileModal) setShowClientProfileModal(false);
+          if (showSubscriptionDetailsModal) setShowSubscriptionDetailsModal(false);
         }}
       />
 
-      {/* Interviews Modal */}
+      {/* Interviews Modal (remains light theme, but will respond to dark mode toggle) */}
       {showInterviewsModal && (
         <div className="modal-overlay">
           <div className="modal-content-style">
@@ -846,7 +1876,7 @@ const ClientDashboard = () => {
         </div>
       )}
 
-      {/* Resume Modal */}
+      {/* Resume Modal (remains light theme, but will respond to dark mode toggle) */}
       {showResumeModal && (
         <div className="modal-overlay">
           <div className="modal-content-style">
@@ -948,61 +1978,31 @@ const ClientDashboard = () => {
       {/* Payment Plan Modal */}
       {showPaymentModal && (
         <div className="modal-overlay">
-          <div style={{ ...modalContentStyle, maxWidth: '600px', padding: '40px', background: '#334155' }}> {/* Dark background for glass effect */}
+          {/* Removed ...modalContentStyle and applied specific styles directly */}
+          <div className="modal-content-style" style={{ maxWidth: '600px', padding: '40px', background: '#334155', color: '#f1f5f9' }}>
             <button onClick={togglePaymentModal} className="modal-close-button">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M13 1L1 13M1 1L13 13" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round"/> {/* Lighter color for contrast */}
+                <path d="M13 1L1 13M1 1L13 13" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round"/>
               </svg>
             </button>
             <h3 style={{
               marginBottom: '30px',
               textAlign: 'center',
-              color: '#f1f5f9', // Lighter text color for dark background
+              color: '#f1f5f9',
               fontSize: '1.8rem',
               fontWeight: '700'
             }}>
               Choose Your Plan
             </h3>
 
-            {/* Glass Radio Group */}
-            <div className="radio-group">
-              <input
-                type="radio"
-                name="plan"
-                id="glass-silver"
-                checked={selectedRadioPlan === 'glass-silver'}
-                onChange={() => handleRadioPlanChange('glass-silver')}
-                className="hidden-radio-input"
-              />
-              <label htmlFor="glass-silver" className="radio-label-base">
-                Silver
-              </label>
-
-              <input
-                type="radio"
-                name="plan"
-                id="glass-gold"
-                checked={selectedRadioPlan === 'glass-gold'}
-                onChange={() => handleRadioPlanChange('glass-gold')}
-                className="hidden-radio-input"
-              />
-              <label htmlFor="glass-gold" className="radio-label-base">
-                Gold
-              </label>
-
-              <input
-                type="radio"
-                name="plan"
-                id="glass-platinum"
-                checked={selectedRadioPlan === 'glass-platinum'}
-                onChange={() => handleRadioPlanChange('glass-platinum')}
-                className="hidden-radio-input"
-              />
-              <label htmlFor="glass-platinum" className="radio-label-base">
-                Platinum
-              </label>
-              <div className="radio-glider" style={getGliderDynamicStyle()} />
+            {/* Integrated Radio Component */}
+            <div style={{ margin: '20px auto 30px auto', width: 'fit-content' }}>
+                <Radio
+                    selectedRadioPlan={selectedRadioPlan}
+                    handleRadioPlanChange={handleRadioPlanChange}
+                />
             </div>
+
 
             {/* Display details of the currently selected plan */}
             {currentSelectedPlanDetails && (
@@ -1034,8 +2034,27 @@ const ClientDashboard = () => {
         </div>
       )}
 
+      {/* Client Profile Modal (now responds to dark mode toggle) */}
+      {showClientProfileModal && (
+        <ClientProfile
+          profilePlaceholder={profilePlaceholder}
+          clientUserName={clientUserName}
+          onClose={toggleClientProfileModal}
+        />
+      )}
+
+      {/* Subscription Details Modal (now responds to dark mode toggle) */}
+      {showSubscriptionDetailsModal && (
+        <SubscriptionDetailsModal
+          togglePaymentModal={togglePaymentModal}
+          currentPlanPrice={currentPlanPrice}
+          daysLeftInPlan={daysLeftInPlan}
+          onClose={toggleSubscriptionDetailsModal}
+        />
+      )}
+
       {/* Sidebar Menu */}
-      <div style={{
+      <div className="sidebar-menu" style={{
         position: 'fixed',
         top: 0,
         right: menuOpen ? 0 : '-280px',
@@ -1045,7 +2064,7 @@ const ClientDashboard = () => {
         color: '#1e293b',
         padding: '24px',
         boxShadow: '4px 0 20px rgba(0,0,0,0.08)',
-        zIndex: 100, // Higher z-index for sidebar
+        zIndex: 100,
         transition: 'right 0.3s ease-out',
         display: 'flex',
         flexDirection: 'column',
@@ -1081,7 +2100,7 @@ const ClientDashboard = () => {
           fontSize: '1.25rem',
           color: '#1e293b'
         }}>
-          Mukesh Ambani
+          {clientUserName}
         </h4>
 
         {/* Plan Details */}
@@ -1104,9 +2123,9 @@ const ClientDashboard = () => {
           </div>
         </div>
 
-        {/* Renewal Button */}
+        {/* Renew Plan Button in Sidebar */}
         <button
-          onClick={togglePaymentModal} // Calls the new toggle function
+          onClick={togglePaymentModal}
           className="renew-plan-button"
         >
           Renew Plan
@@ -1145,51 +2164,20 @@ const ClientDashboard = () => {
 
       {/* Main Content Area */}
       <div className="main-content-area">
-        {/* Header */}
-        <header style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '32px',
-          flexWrap: 'wrap',
-          gap: '16px'
-        }}>
-          <button
-            onClick={() => navigate('/')}
-            className="back-button"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginRight: '6px' }}>
-              <path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            Back
-          </button>
-
-          <button
-            onClick={toggleMenu}
-            className="menu-toggle-button"
-          >
-            &#9776;
-          </button>
-        </header>
-
         <h2 className="dashboard-title">
           Client Module
         </h2>
 
-        {/* New container for Chart and Advertisements */}
         <div className="chart-and-ads-container">
-          {/* Left Advertisement */}
           <div className="ad-column">
             <div className="ad-placeholder">
               <p style={{ color: '#475569', marginBottom: '10px' }}>Sponsored</p>
-              {/* Added onError for image fallback */}
-              <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAF0AAAB4CAMAAACnzg50AAAAb1BMVEX////oISfmAADnAAv++Pj86ennAAfoHiT0rq/oGSDqQUTnExv4zs7zoqPpPED97+/nDBbxlZbsUlX739/51tbwiIjsW173wsP2ubrynJzubnD1s7TvfoDpNDjsV1npMDPudXfsYWTxj5HtaGnrTE7x/01uAAAFPElEQVRoge2abZuqIBCGcVCIsBUzs9Qyq///Gw++oICa7Vn61v1l9yJ4HIdxYFCE1gjC0+ac3ur99lJ5nlddttf6lp43pzBYHbuMH4W79EgBgAjBGaOUei2UMsaFIPIX75juwsj/pXKU3R8VgBTtFRegjGOASx6H0ZvKwal8SuEVXeMaXADel9map/wwfQrgzDRP4MYLEizp/gOCuXljTI7b3w+LXvKzvJI2GyYBVFc5hUV2SIIgiBrk3yTMCjnRV+k84yblFS63bO4C2YMRTrV+UOXxKfFfTZnvJ6f7g4JmE+WE3jKz26GUd6qkqVR+xrMmzBNlcTNTdLyASJPx5xz44GUMP3E4WnfIdrGM9Yngsy7jXaZphPcLwWy4AKSj6bj3B2F10ceWn2zSI28cK+NS2PIX3kx2E/H1vUj62ww2V076CwjtwlfZxjA7njrpKLxfMWAtKEhqiD/EGFLSj7xWAS8vIJo74LnWOwQOz13Q2Xw+Cj10OqDQusdgBby8BKt3nblJvAWONdMROuadrw/pFrCt3ArgcTIymOsgZ+wZt6J+eLwZt9p6LjhviVh6RJmnHsXDch+Mt70HrHlCYS1mrVbwZ9cvurzqxbDID7Y0Qt4QlUvgbqb2a/04XCfqh4kz20wrGUyFs+xXkkGl+W1MzOM4mElnJ11ePg7Cq7bXR16Wx1E+Q5uhF8/LW17vfyoqCDfEw6k4QgUMVgiZK9Qzot8V0UzgKqVHh9ODDw8Aw7PiMtJYbwMu9cUgGEbKX0YTt3pcBHnvMFHNzGnf59qaRmKj1f+Zi0B2NMeWovXK49UitcHCY0+r8TgXguJudooq6mF+eqHddCqhDQ2dVMyogy0kB97Xs3Z0s6flNPfkE9u/RfrbvUHHAU/FqffuLmCNyJtOK9s6EkdoO51WI4H/jXyaWvDOmfpu6niSrQ97k4xM1HmyPuxNkknAU8+ZuEz+dtA4DBmEnnbQiNKh+iQX4GJ90NsUdtCQhST+X4R20MD/5ZR5fHt7xB2KI2RVIqx2qv4wg0bE60N+wdkMGrKyBv0Sa+sI7vJAQ2CpOxVHyFCnP47VjQWEu8wDDaW+gDhcOjqMBWR+p/gHQt3x4Go/oNBzAaWOxRGqtILdbR5o0HKBSNe7/5L7mAvA5dLRoW0mHeeBBi0XEJdLR4c/PE6T/b0L9mpa+e0D6jdlvOOlo2PIBeBuCzky5IK5YvfPqKChless06AKSzY9BXBBzT6zdHT0m0m8+Yh6nwtgsVT/E/1pBPtEyKjC0jx9cEhbI9inD85oC0v79MEZ5yYXTE4fXNFuJvFnQkYWltzl6YONL/cFzreQIzJoHJ4+2JTC/RZyRBaWDk8fbEJsnNo7JuKUfUwcoc/sNhQ1/szS0XGGzywdHSfnVYdO4vT0YYLrQtXk9lH1T7r9y5cvX758+fLl//BN5hrneg5tL+VQfvnR6F89HrXGqt9Uh9V2oOoL7k1lHwU9LmOvS4qS9kszWVS0H5n1hXSiPjprPhjrzzQyYEObqhF2YL+r1EdSWdpGG8mD/xTyz1AUtY0tJ3XvGVw2RcdQme3w5E1oVKiRxeC1GK+edmUwLYRn1OeIsfHNVmAwqI9N0ZJ6pKOMt9SfoFEq9dHvyvFT9VIfqT7ZsNT9PcEKVbpnIBRMHQFN1VM+2ECFqsstdYQOinGiE0WQ4mV1XKuBT7yo/pIzLKuT4ZjiShbUQwPVGqiGUrM9UTcZ+u+qP2BwOwZ1EJZiIB188Lugou9GcPSu+njY7nElXmpvnEb14R1U/72Sqf4PKRxKjs0AvGoAAAAASUVORK5CYII=" alt="Advertisement 1" onError={(e)=>{e.target.onerror = null; e.target.src='https://placehold.co/120x300/e0f2f7/475569?text=Ad+Load+Error'}}/>
+              <img src="https://placehold.co/120x300/e0f2f7/475569?text=Ad+1" alt="Advertisement 1" onError={(e)=>{e.target.onerror = null; e.target.src='https://placehold.co/120x300/e0f2f7/475569?text=Ad+Load+Error'}}/>
               <p style={{ marginTop: '10px', color: '#64748b' }}>Discover new opportunities!</p>
             </div>
           </div>
 
-          {/* Chart Section */}
-          <div style={chartSectionStyle}> {/* Keep chartSectionStyle inline for transitions */}
+          <div style={chartSectionStyle}>
             <h4 style={{
               marginBottom: '20px',
               textAlign: 'center',
@@ -1202,12 +2190,10 @@ const ClientDashboard = () => {
             <Line data={data} options={options} />
           </div>
 
-          {/* Right Advertisement */}
           <div className="ad-column">
             <div className="ad-placeholder">
               <p style={{ color: '#475569', marginBottom: '10px' }}>Promoted</p>
-              {/* Added onError for image fallback */}
-              <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAMAAAAOusbgAAAAV1BMVEX///9mZmZjY2NdXV1gYGBZWVn8/Pzy8vKgoKBWVlZxcXHj4+OJiYmvr6+rq6v29vZsbGzs7OyRkZG1tbV5eXnNzc3c3NzExMS9vb3W1taBgYGZmZlPT0/9pgcuAAADvUlEQVRoge2b23KjMAyGsWRjDgYczpC8/3Mu0LQNlCRWUL2zO/kvelPG39iSJdlWguCtf1FF2mRl7x2b5qNAVJFnbFsighBC+gXrs5JiEWY+ua1AcRVWHrlVDJ9coTp/3OhrupPi9u9wxSX0xc1WXKh9cbsV159vneIVV6jUDzesYcWF0Q83yHEz4cYPN91wvblWKddgHPxwU7XmyrMf7iZ0TAut/XB1snZp6StaDmsLo7faYx0sMffFDcztSvsseW6jVuyx8Ci+fUuCp4i1BktZnjxyr2BANJ7i1aeWzGRN5ikR3kinaap/tdKZjiZ9X/VN+pCSNlVUGmPKqGo4bN7mNSqFk6a/ptpf2LQvYfq3hFkSFYromOF1ZmN5s10BY/tjyDZPYlyH7cnVY5u/nDN0jnI7oJgmNLG/Fj3Nk52PPj6U2Wse0Fi5N+Cyc23U6CA8dSPsU6/fJS8seBj9WL7VmJiUxj78ZJ41vdzVIz4ecw6Uz74Qc/KgLfcpubfMVNHI2+LiGNmdG9Zc813I7imzfGpfktA1aVa8XIgdq6KWz76zsHasPsORFYyRa+TsWRfavfjUlnPChGI745wwodgOObmydOayWhhqQrSsGS0sCUnxdGHkUo7LnEELKIUvY/CgeFagGS3snBpmtfHzAR0FCaXIZNxMQLqJOfMVALSbCcNn45ji0yFnqUUxccFo4qSggNXzEV3BlDgdnP4H8PiesSewsBSv5gTT9jEjmPTkxhhAaC9QnCETDAXMenqhXHYxpkVaXswZwaQQ0jG6Nano2r4kHRIleBWMXJqVOU8wAqx7+RNxXvcI6f6q2zHf9zjfcWnGQ9ss5Rw4GYPmotiVzBlCFrneKA68Rp6Exi1oc8948m3bu0QSzjxxFchxeI4e+METWj2/d+IsBr7l0qex7e1gUexg5fQX1trtAmjb3cEgdCo5+d0LEhfuj86h45KOiZk5Rbkf0gveO3pCy2THd901y7ofo1itTOkRHRirTdo1jOHbUrQWUc3m2NLQnlPZ3kTcgtaNmPyL3vSUsnAhobcJsLwSvNQDzJClXmvzLg7XIoQjzErtwSkDIVaudeycDvB62+Kh+kse6Wo/0C1wsNXa3CWDRMT7XkDohbhD3hsbUNoxqqqstGK/x4jh9xLnbVUA6jJWX01lesjry7bnBy4cv1po4Hu5QcZgum2CLToj1Q0bE55GPh2B+mhNQ3se9vem7kqBSwubVOLFPq69YfuyTuqybx+NWLR9ZIw597zdzmFBqWDeeiv4A4ezNLG3VJ07AAAAAElFTkSuQmCC" alt="Advertisement 2" onError={(e)=>{e.target.onerror = null; e.target.src='https://placehold.co/120x300/f0f9ff/475569?text=Ad+Load+Error'}}/>
+              <img src="https://placehold.co/120x300/f0f9ff/475569?text=Ad+2" alt="Advertisement 2" onError={(e)=>{e.target.onerror = null; e.target.src='https://placehold.co/120x300/f0f9ff/475569?text=Ad+Load+Error'}}/>
               <p style={{ marginTop: '10px', color: '#64748b' }}>Boost your career today!</p>
             </div>
           </div>
@@ -1222,14 +2208,11 @@ const ClientDashboard = () => {
           </button>
         </div>
 
-        {/* Cards Section */}
         <div className="cards-section">
-          {/* Interviews Card */}
           <div
             onClick={toggleInterviewsModal}
             className="interviews-card"
           >
-            {/* Background elements, keep inline for now as they don't have pseudo-classes */}
             <div style={{
               position: 'absolute',
               bottom: '-20px',
@@ -1266,12 +2249,10 @@ const ClientDashboard = () => {
             </div>
           </div>
 
-          {/* Resume Card */}
           <div
             onClick={toggleResumeModal}
             className="resume-card"
           >
-            {/* Background elements */}
             <div style={{
               position: 'absolute',
               bottom: '-20px',

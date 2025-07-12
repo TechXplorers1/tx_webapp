@@ -90,7 +90,6 @@ function Careers() {
         <h2 className="careers-title">FEATURED JOBS</h2>
         <p className="careers-subtext text-center">
           At TechXplorers, we're not just hiring — we're investing in explorers who want to build, learn, and grow. Whether you're a fresher, intern, or pro — there's a place for you here.
-          <p>👉 Apply Now | 🚀 Shape the future with us</p>
         </p>
       </Container>
 
