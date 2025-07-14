@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   Chart as ChartJS,
   LineElement,
@@ -10,7 +10,11 @@ import {
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 import { useNavigate } from 'react-router-dom';
-import styled from 'styled-components'; // Import styled-components
+import styled from 'styled-components';
+import { utils, writeFile } from 'xlsx'; // Corrected import: Using named exports
+import 'bootstrap-icons/font/bootstrap-icons.css'; // For icons in Applications tab
+import { Modal, Button, Form, Row, Col } from 'react-bootstrap'; // For modals in Applications tab and others
+import { FaCalendarAlt } from 'react-icons/fa'; // For calendar icon in Applications tab
 
 ChartJS.register(
   LineElement,
@@ -21,7 +25,7 @@ ChartJS.register(
   Tooltip
 );
 
-// Styled-components for the Radio component
+// --- Styled Components for Radio ---
 const StyledWrapper = styled.div`
   .glass-radio-group {
     --bg: rgba(255, 255, 255, 0.06);
@@ -158,7 +162,7 @@ const Radio = ({ selectedRadioPlan, handleRadioPlanChange }) => {
 };
 
 
-// ClientHeader Component (formerly AdminHeader)
+// --- ClientHeader Component ---
 const ClientHeader = ({
   clientUserName,
   clientInitials,
@@ -169,7 +173,10 @@ const ClientHeader = ({
   setIsProfileDropdownOpen,
   profileDropdownRef,
   onClientProfileClick,
-  onSubscriptionClick
+  onSubscriptionClick,
+  unreadNotificationsCount,
+  onNotificationClick,
+  onLogoutClick
 }) => {
 
   // Effect to close profile dropdown when clicking outside
@@ -345,6 +352,7 @@ const ClientHeader = ({
 
         .ad-notification-icon {
           position: relative;
+          cursor: pointer; /* Make it clear it's clickable */
         }
 
         .ad-notification-badge {
@@ -360,6 +368,7 @@ const ClientHeader = ({
           display: flex;
           align-items: center;
           justify-content: center;
+          ${unreadNotificationsCount === 0 ? 'display: none;' : ''} /* Hide badge if no notifications */
         }
 
         .ad-user-info {
@@ -461,16 +470,14 @@ const ClientHeader = ({
         </div>
 
         <div className="ad-header-right">
-          {/* Search Icon */}
-          <svg className="ad-icon-btn" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" style={{ width: '1.125rem', height: '1.125rem' }}>
-            <path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.1-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z"/>
-          </svg>
-          <div className="ad-notification-icon">
+          <div className="ad-notification-icon" onClick={onNotificationClick}>
             {/* Bell Icon */}
             <svg className="ad-icon-btn" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1.125rem', height: '1.125rem' }}>
               <path d="M224 0c-17.7 0-32 14.3-32 32V51.2C119 66 64 130.6 64 208v25.4c0 45.4-15.5 89.2-43.8 124.9L5.7 377.9c-2.7 4.4-3.4 9.7-1.7 14.6s4.6 8.5 9.8 10.1l39.5 12.8c10.6 3.4 21.8 3.9 32.7 1.4S120.3 400 128 392h192c7.7 8 17.5 13.6 28.3 16.3s22.1 1.9 32.7-1.4l39.5-12.8c5.2-1.7 8.2-6.1 9.8-10.1s1-10.2-1.7-14.6l-20.5-33.7C399.5 322.6 384 278.8 384 233.4V208c0-77.4-55-142-128-156.8V32c0-17.7-14.3-32-32-32zm0 96c61.9 0 112 50.1 112 112v25.4c0 47.9 13.9 94.6 39.7 134.6H184.3c25.8-40 39.7-86.7 39.7-134.6V208c0-61.9 50.1-112 112-112zm0 352a48 48 0 1 0 0-96 48 48 0 1 0 0 96z"/>
             </svg>
-            <span className="ad-notification-badge">3</span>
+            {unreadNotificationsCount > 0 && (
+              <span className="ad-notification-badge">{unreadNotificationsCount}</span>
+            )}
           </div>
           <div className="profile-dropdown-container" ref={profileDropdownRef}>
             <div className="ad-user-info" onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}>
@@ -496,7 +503,7 @@ const ClientHeader = ({
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1rem', height: '1rem' }}>
                     <path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"/>
                   </svg>
-                  Client Profile
+                  Your Profile
                 </li>
                 <li className="profile-dropdown-item" onClick={onSubscriptionClick}>
                   {/* Credit Card Icon */}
@@ -505,7 +512,7 @@ const ClientHeader = ({
                   </svg>
                   Subscription
                 </li>
-                <li className="profile-dropdown-item logout" onClick={() => window.location.href = '/'}>
+                <li className="profile-dropdown-item logout" onClick={onLogoutClick}>
                   {/* Log Out Icon (Door with arrow from screenshot) */}
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1rem', height: '1rem' }}>
                     <path d="M10 4H4C3.44772 4 3 4.44772 3 5V19C3 19.5523 3.44772 20 4 20H10C10.5523 20 11 19.5523 11 19V17H13V19C13 20.6569 11.6569 22 10 22H4C2.34315 22 1 20.6569 1 19V5C1 3.34315 2.34315 2 4 2H10C11.6569 2 13 3.34315 13 5V7H11V5C11 4.44772 10.5523 4 10 4ZM19.2929 10.2929L22.2929 13.2929C22.6834 13.6834 22.6834 14.3166 22.2929 14.7071L19.2929 17.7071C18.9024 18.0976 18.2692 18.0976 17.8787 17.7071C17.4882 17.3166 17.4882 16.6834 17.8787 16.2929L19.5858 14.5858H11C10.4477 14.5858 10 14.1381 10 13.5858C10 13.0335 10.4477 12.5858 11 12.5858H19.5858L17.8787 10.8787C17.4882 10.4882 17.4882 9.85497 17.8787 9.46447C18.2692 9.07395 18.9024 9.07395 19.2929 9.46447Z" />
@@ -532,7 +539,7 @@ const ClientHeader = ({
 };
 
 
-// Dimming Overlay Component
+// --- Dimming Overlay Component ---
 const DimmingOverlay = ({ isVisible, onClick }) => {
   return (
     <div
@@ -541,9 +548,13 @@ const DimmingOverlay = ({ isVisible, onClick }) => {
         position: 'fixed',
         top: 0,
         left: 0,
-        width: '100%',
-        height: '100%',
+        width: '100vw',
+        height: '100vh',
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backdropFilter: 'blur(4px)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
         zIndex: isVisible ? 90 : -1, // Z-index needs to be below modals (100) but above content and header dropdown (60)
         opacity: isVisible ? 1 : 0,
         visibility: isVisible ? 'visible' : 'hidden',
@@ -554,10 +565,10 @@ const DimmingOverlay = ({ isVisible, onClick }) => {
 };
 
 
-// ClientProfile Component (now only shows profile details)
+// --- ClientProfile Component ---
 const ClientProfile = ({
-  profilePlaceholder,
-  clientUserName,
+  profilePlaceholder, // Not used in this version but kept for consistency with original prop signature
+  clientUserName, // Not used in this version but kept for consistency with original prop signature
   onClose
 }) => {
   return (
@@ -775,7 +786,7 @@ const ClientProfile = ({
   );
 };
 
-// New SubscriptionDetailsModal Component
+// --- SubscriptionDetailsModal Component ---
 const SubscriptionDetailsModal = ({
   togglePaymentModal,
   currentPlanPrice,
@@ -825,29 +836,1392 @@ const SubscriptionDetailsModal = ({
   );
 };
 
+// --- PaymentPlanModal Component ---
+const PaymentPlanModal = ({ selectedRadioPlan, handleRadioPlanChange, handleProceedToPayment, onClose }) => {
+  const planOptions = {
+    'glass-silver': { name: 'Silver', price: '$199', period: '/month', features: ['Full dashboard access', 'Monthly chart updates', 'Basic support'] },
+    'glass-gold': { name: 'Gold', price: '$499', period: '/3 months', features: ['All Silver features', 'Priority support', 'Quarterly review calls'] },
+    'glass-platinum': { name: 'Platinum', price: '$999', period: '/year', features: ['All Gold features', 'Dedicated account manager', 'Annual strategic planning session'] },
+  };
+  const currentSelectedPlanDetails = planOptions[selectedRadioPlan];
 
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content-style" style={{ maxWidth: '600px', padding: '40px', background: '#334155', color: '#f1f5f9' }}>
+        <button onClick={onClose} className="modal-close-button">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M13 1L1 13M1 1L13 13" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+        </button>
+        <h3 style={{
+          marginBottom: '30px',
+          textAlign: 'center',
+          color: '#f1f5f9',
+          fontSize: '1.8rem',
+          fontWeight: '700'
+        }}>
+          Choose Your Plan
+        </h3>
+
+        {/* Integrated Radio Component */}
+        <div style={{ margin: '20px auto 30px auto', width: 'fit-content' }}>
+            <Radio
+                selectedRadioPlan={selectedRadioPlan}
+                handleRadioPlanChange={handleRadioPlanChange}
+            />
+        </div>
+
+
+        {/* Display details of the currently selected plan */}
+        {currentSelectedPlanDetails && (
+          <div style={selectedPlanDetailsStyle}>
+            <h4 style={paymentPlanTitleStyle}>{currentSelectedPlanDetails.name} Plan</h4>
+            <p style={paymentPlanPriceStyle}>
+              {currentSelectedPlanDetails.price}
+              <span style={paymentPlanPeriodStyle}>{currentSelectedPlanDetails.period}</span>
+            </p>
+            <ul style={paymentPlanFeaturesListStyle}>
+              {currentSelectedPlanDetails.features.map((feature, index) => (
+                <li key={index} style={{ marginBottom: '8px', display: 'flex', alignItems: 'center' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px', color: '#4ade80' }}>
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                  {feature}
+                </li>
+              ))}
+            </ul>
+            <button
+              onClick={handleProceedToPayment}
+              style={paymentPlanSelectButtonStyle}
+            >
+              Proceed to Payment
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// --- NotificationModal Component ---
+const NotificationModal = ({ notifications, onClose }) => {
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content-style" style={{ maxWidth: '500px', padding: '40px', background: '#ffffff', color: '#1e293b' }}>
+        <button onClick={onClose} className="modal-close-button" style={{ color: '#64748B' }}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M13 1L1 13M1 1L13 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+        </button>
+        <h3 style={{ marginBottom: '30px', textAlign: 'center', color: '#1e293b', fontSize: '1.8rem', fontWeight: '700' }}>
+          Notifications
+        </h3>
+        {notifications.length === 0 ? (
+          <p style={{ textAlign: 'center' }}>No new notifications.</p>
+        ) : (
+          <ul style={{ listStyle: 'none', padding: 0 }}>
+            {notifications.map((notification, index) => (
+              <li key={index} style={{ padding: '10px 0', borderBottom: '1px solid #e2e8f0' }}>
+                <p style={{ fontWeight: '600', marginBottom: '5px' }}>{notification.title}</p>
+                <p style={{ fontSize: '0.9rem', color: '#64748b' }}>{notification.message}</p>
+                <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{notification.time}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// --- AttachmentModal Component ---
+const AttachmentModal = ({ attachments, onClose }) => {
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content-style" style={{ maxWidth: '700px', padding: '40px', background: '#ffffff', color: '#1e293b' }}>
+        <button onClick={onClose} className="modal-close-button" style={{ color: '#64748B' }}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M13 1L1 13M1 1L13 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+        </button>
+        <h3 style={{ marginBottom: '30px', textAlign: 'center', color: '#1e293b', fontSize: '1.8rem', fontWeight: '700' }}>
+          Interview Attachments
+        </h3>
+        {attachments.length === 0 ? (
+          <p style={{ textAlign: 'center' }}>No attachments available for this interview.</p>
+        ) : (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: 'center' }}>
+            {attachments.map((attachment, index) => (
+              <div key={index} style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', width: '200px', height: '150px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc' }}>
+                <img
+                  src={attachment}
+                  alt={`Attachment ${index + 1}`}
+                  style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                  onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/200x150/e2e8f0/64748B?text=Image+Error'; }}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// --- Mock DateRangeCalendar ---
+const DateRangeCalendar = ({ initialStartDate, initialEndDate, onSelectRange }) => {
+  const [start, setStart] = useState(initialStartDate);
+  const [end, setEnd] = useState(initialEndDate);
+
+  useEffect(() => {
+    onSelectRange(start, end);
+  }, [start, end, onSelectRange]);
+
+  const handleStartDateChange = (e) => {
+    const newDate = e.target.value ? new Date(e.target.value) : null;
+    setStart(newDate);
+  };
+
+  const handleEndDateChange = (e) => {
+    const newDate = e.target.value ? new Date(e.target.value) : null;
+    setEnd(newDate);
+  };
+
+  const formatToInputDate = (date) => {
+    if (!date) return '';
+    const d = new Date(date);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
+  return (
+    <div style={{ padding: '15px', border: '1px solid #eee', borderRadius: '8px' }}>
+      <p style={{ fontWeight: 'bold', marginBottom: '10px' }}>Select Date Range:</p>
+      <Form.Group controlId="tempStartDate" className="mb-3">
+        <Form.Label>From Date:</Form.Label>
+        <Form.Control
+          type="date"
+          value={formatToInputDate(start)}
+          onChange={handleStartDateChange}
+        />
+      </Form.Group>
+      <Form.Group controlId="tempEndDate" className="mb-3">
+        <Form.Label>To Date:</Form.Label>
+        <Form.Control
+          type="date"
+          value={formatToInputDate(end)}
+          onChange={handleEndDateChange}
+        />
+      </Form.Group>
+    </div>
+  );
+};
+
+// --- HELPER FUNCTIONS ---
+
+// Format date as DD-MM-YYYY
+const formatDate = (date) => {
+  if (!date) return ''; // Handle empty date
+  const d = new Date(date);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}-${month}-${year}`;
+};
+
+// Format date string from DD-MM-YYYY to YYYY-MM-DD for Date constructor
+const convertDDMMYYYYtoYYYYMMDD = (dateString) => {
+  if (!dateString) return '';
+  const parts = dateString.split('-'); // ["DD", "MM", "YYYY"]
+  if (parts.length === 3) {
+    return `${parts[2]}-${parts[1]}-${parts[0]}`; // "YYYY-MM-DD"
+  }
+  return dateString; // Return as is if format is unexpected
+};
+
+
+// Generate 7-day date range for the ribbon
+const generateDateRange = (startDate) => {
+  const dates = [];
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(startDate);
+    date.setDate(startDate.getDate() + i);
+    dates.push(formatDate(date));
+  }
+  return dates;
+};
+
+// --- SAMPLE APPLICATIONS DATA ---
+const applicationsData = {
+  [formatDate(new Date())]: [ // Today's date
+    { id: 1, website: 'LinkedIn', position: 'Frontend Developer', company: 'Tech Corp', link: '#', dateAdded: formatDate(new Date()), jobDescription: 'Develop and maintain web applications using React.js, proficient in HTML, CSS, JavaScript, and modern front-end build tools.' },
+    { id: 10, website: 'Company Site', position: 'Fullstack Engineer', company: 'Innovate Solutions', link: '#', dateAdded: formatDate(new Date()), jobDescription: 'Design, develop, and deploy full-stack applications with expertise in Node.js, Python, and database management (SQL/NoSQL).' },
+    { id: 11, website: 'Indeed', position: 'DevOps Specialist', company: 'CloudWorks', link: '#', dateAdded: formatDate(new Date()), jobDescription: 'Implement and manage CI/CD pipelines, automate infrastructure using tools like Docker, Kubernetes, and Ansible. Cloud platform experience (AWS/Azure/GCP) is a plus.' },
+    { id: 12, website: 'Glassdoor', position: 'QA Engineer', company: 'Quality First', link: '#', dateAdded: formatDate(new Date()), jobDescription: 'Execute test plans, identify and document software defects, and contribute to the overall quality assurance process for web and mobile applications.' },
+    { id: 13, website: 'LinkedIn', position: 'Product Designer', company: 'Creative Minds', link: '#', dateAdded: formatDate(new Date()), jobDescription: 'Create intuitive and engaging user experiences through wireframes, prototypes, and user flows. Proficient in Figma, Sketch, or Adobe XD.' },
+  ],
+  [formatDate(new Date(new Date().setDate(new Date().getDate() - 1)))]: [ // Yesterday
+    { id: 2, website: 'Indeed', position: 'Backend Engineer', company: 'Data Systems', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 1))), jobDescription: 'Develop robust server-side logic and APIs using Java Spring Boot. Experience with RESTful services and microservices architecture is required.' },
+    { id: 14, website: 'Company Site', position: 'Data Scientist', company: 'Analytics Inc.', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 1))), jobDescription: 'Analyze large datasets to extract actionable insights. Build predictive models using machine learning techniques and Python/R.' },
+  ],
+  [formatDate(new Date(new Date().setDate(new Date().getDate() - 2)))]: [ // Two days ago
+    { id: 3, website: 'Glassdoor', position: 'Product Manager', company: 'Innovate Inc', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 2))), jobDescription: 'Define product vision, strategy, and roadmap. Collaborate with engineering, design, and marketing teams to deliver successful products.' },
+    { id: 4, website: 'AngelList', position: 'Startup Engineer', company: 'New Ventures', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 2))), jobDescription: 'Work across the stack in a fast-paced startup environment. Opportunity to contribute to all phases of product development.' },
+    { id: 15, website: 'LinkedIn', position: 'Mobile Developer', company: 'AppGenius', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 2))), jobDescription: 'Develop native iOS or Android applications. Strong knowledge of Swift/Kotlin and mobile UI/UX principles.' },
+  ],
+  [formatDate(new Date(new Date().setDate(new Date().getDate() - 3)))]: [ // Three days ago
+    { id: 16, website: 'Indeed', position: 'Network Administrator', company: 'SecureNet', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 3))), jobDescription: 'Manage and maintain network infrastructure, troubleshoot connectivity issues, and ensure network security and performance.' },
+  ],
+  [formatDate(new Date(new Date().setDate(new Date().getDate() - 4)))]: [ // Four days ago
+    { id: 17, website: 'Company Site', position: 'Cybersecurity Analyst', company: 'Guardian Systems', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 4))), jobDescription: 'Monitor security systems, respond to incidents, and implement security measures to protect organizational data and systems.' },
+    { id: 18, website: 'LinkedIn', position: 'Technical Writer', company: 'DocuWrite', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 4))), jobDescription: 'Produce clear, concise, and comprehensive technical documentation for software products, including user manuals and API documentation.' },
+  ],
+  [formatDate(new Date(new Date().setDate(new Date().getDate() - 5)))]: [ // Five days ago
+    { id: 19, website: 'Glassdoor', position: 'Scrum Master', company: 'Agile Teams', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 5))), jobDescription: 'Facilitate agile ceremonies, remove impediments, and coach development teams in Scrum principles and practices to maximize delivery.' },
+  ],
+  [formatDate(new Date(new Date().setDate(new Date().getDate() - 6)))]: [ // Six days ago
+    { id: 20, website: 'CloudComputing', position: 'Cloud Engineer', company: 'Sky Computing', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 6))), jobDescription: 'Design, deploy, and manage cloud-based solutions on AWS, Azure, or GCP. Experience with cloud automation and cost optimization.' },
+    { id: 21, website: 'Other', position: 'Marketing Specialist', company: 'Brand Boost', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 6))), jobDescription: 'Develop and execute digital marketing campaigns, analyze market trends, and manage social media presence to enhance brand visibility.' },
+  ],
+  // Add more applications for dates in the future or past as needed for testing scrolling
+  [formatDate(new Date(new Date().setDate(new Date().getDate() + 1)))]: [ // Tomorrow
+    { id: 22, website: 'LinkedIn', position: 'Senior Software Architect', company: 'Innovate Tomorrow', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() + 1))), jobDescription: 'Lead the architectural design and development of complex software systems, ensuring scalability, reliability, and performance.' }
+  ],
+  [formatDate(new Date(new Date().setDate(new Date().getDate() + 2)))]: [ // Day after tomorrow
+    { id: 23, website: 'Indeed', position: 'Lead Data Scientist', company: 'Future AI', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() + 2))), jobDescription: 'Lead a team of data scientists to develop and deploy advanced analytical solutions and machine learning models.' }
+  ],
+};
+
+
+// --- Applications Tab Content ---
+const Applications = ({
+  selectedDate, setSelectedDate, dateRange, currentStartDate, setCurrentStartDate,
+  showPreviousWeek, showNextWeek, searchTerm, setSearchTerm,
+  startDateFilter, setStartDateFilter, endDateFilter, setEndDateFilter,
+  showDateRangeModal, setShowDateRangeModal, tempStartDate, setTempStartDate, tempEndDate, setTempEndDate,
+  handleDateRangeChangeFromCalendar, handleApplyDateRange, handleClearDateRangeInModal,
+  showJobDescriptionModal, setShowJobDescriptionModal, currentJobDescription, setCurrentJobDescription,
+  handleOpenJobDescriptionModal, handleCloseJobDescriptionModal,
+  filterWebsites, setFilterWebsites, filterPositions, setFilterPositions, filterCompanies, setFilterCompanies,
+  uniqueWebsites, uniquePositions, uniqueCompanies,
+  showFilterModal, setShowFilterModal, tempSelectedWebsites, setTempSelectedWebsites, tempSelectedPositions, setTempSelectedPositions, tempSelectedCompanies, setTempSelectedCompanies,
+  handleOpenFilterModal, handleCloseFilterModal, handleApplyCategoricalFilters, handleClearTempFiltersInModal,
+  handleWebsiteCheckboxChange, handlePositionCheckboxChange, handleCompanyCheckboxChange,
+  isGlobalFilterActive, clearAllFilters, getApplicationsSectionTitle, filteredApplicationsForDisplay,
+  downloadApplicationsData, applicationsData, allApplicationsFlattened,
+  activeWorksheetTab, setActiveWorksheetTab // New prop to control worksheet tabs
+}) => {
+
+
+  return (
+    <div style={{
+      fontFamily: 'Arial, sans-serif',
+      maxWidth: '1200px',
+      margin: '0 auto',
+      padding: '20px',
+      backgroundColor: '#f8f9fa',
+      borderRadius: '8px',
+      boxShadow: '0 4px 8px rgba(0,0,0,0.05)'
+    }}>
+      {/* Date navigation with arrows and horizontal scroll */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: '20px',
+        background: '#fff',
+        padding: '10px',
+        borderRadius: '8px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+      }}>
+        <button
+          onClick={showPreviousWeek}
+          style={{
+            background: '#007bff',
+            color: 'white',
+            border: 'none',
+            padding: '8px 12px',
+            borderRadius: '5px',
+            cursor: 'pointer',
+            marginRight: '10px',
+            fontSize: '16px',
+            flexShrink: 0
+          }}
+        >
+          ◀
+        </button>
+
+        <div style={{
+          overflowX: 'auto',
+          whiteSpace: 'nowrap',
+          padding: '10px 0',
+          flexGrow: 1,
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+        }}>
+          <div style={{ display: 'inline-flex', gap: '8px' }}>
+            {dateRange.map((date) => (
+              <div
+                key={date}
+                onClick={() => setSelectedDate(date)}
+                style={{
+                  display: 'inline-block',
+                  padding: '10px 15px',
+                  borderRadius: '5px',
+                  backgroundColor: selectedDate === date ? '#007bff' : '#e9ecef',
+                  color: selectedDate === date ? 'white' : '#333',
+                  cursor: 'pointer',
+                  minWidth: '100px',
+                  textAlign: 'center',
+                  transition: 'all 0.2s ease',
+                  boxShadow: selectedDate === date ? '0 2px 5px rgba(0,123,255,0.3)' : 'none',
+                  flexShrink: 0
+                }}
+              >
+                {date}
+                {applicationsData[date] && (
+                  <div style={{
+                    fontSize: '12px',
+                    marginTop: '5px',
+                    fontWeight: 'bold',
+                    color: selectedDate === date ? 'rgba(255,255,255,0.8)' : '#666'
+                  }}>
+                    {applicationsData[date].length} application(s)
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <button
+          onClick={showNextWeek}
+          disabled={new Date(currentStartDate.getFullYear(), currentStartDate.getMonth(), currentStartDate.getDate() + 7).getTime() > new Date().getTime()}
+          style={{
+            background: '#007bff',
+            color: 'white',
+            border: 'none',
+            padding: '8px 12px',
+            borderRadius: '5px',
+            cursor: 'pointer',
+            marginLeft: '10px',
+            fontSize: '16px',
+            opacity: new Date(currentStartDate.getFullYear(), currentStartDate.getMonth(), currentStartDate.getDate() + 7).getTime() > new Date().getTime() ? 0.5 : 1,
+            flexShrink: 0
+          }}
+        >
+          ▶
+        </button>
+      </div>
+
+      {/* Applications section */}
+      <div style={{
+        backgroundColor: '#fff',
+        padding: '20px',
+        borderRadius: '8px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+      }}>
+        {/* Centered Heading */}
+        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+          <h3 style={{ margin: '0 auto', color: '#333' }}>
+            {getApplicationsSectionTitle()}
+          </h3>
+        </div>
+
+        {/* Download Button (Left), and Search Bar + Date Range (Right) */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between', // Pushes left group and right group to ends
+          alignItems: 'center',
+          marginBottom: '15px',
+          flexWrap: 'wrap', // Allows wrapping on smaller screens
+          gap: '10px' // Gap between items when wrapped
+        }}>
+          {/* Left Group: Download button */}
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button
+              onClick={downloadApplicationsData}
+              disabled={!filteredApplicationsForDisplay.length}
+              style={{
+                backgroundColor: '#007bff',
+                color: 'white',
+                border: 'none',
+                padding: '8px 16px',
+                borderRadius: '6px',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                opacity: !filteredApplicationsForDisplay.length ? 0.5 : 1,
+                transition: 'all 0.2s',
+                flexShrink: 0 // Prevent shrinking
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Download
+            </button>
+
+            {/* Clear All Filters Button (Always present with global filters) */}
+            {isGlobalFilterActive && (
+              <button
+                onClick={clearAllFilters}
+                style={{
+                  backgroundColor: '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s',
+                  whiteSpace: 'nowrap',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px'
+                }}
+              >
+                <i className="bi bi-x-circle"></i>
+                Clear All Filters
+              </button>
+            )}
+          </div>
+
+          {/* Right Group: Search Bar + Date Range (Always open) */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px', // Gap between search and date picker
+            flexWrap: 'wrap', // Allow wrapping for responsiveness
+            justifyContent: 'flex-end', // Aligns this entire group to the right
+            flexGrow: 1, // Allows this group to take available space
+          }}>
+            {/* Search Bar (Always open at fixed size) */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                background: '#ffffff',
+                borderRadius: '25px',
+                padding: '8px 18px',
+                border: '1px solid #ccc',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                width: '250px', // Fixed width as requested
+                transition: 'width 0.3s ease-in-out',
+              }}
+            >
+              <input
+                type="text"
+                placeholder="Search data..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  outline: 'none',
+                  flexGrow: 1,
+                  fontSize: '1rem',
+                  padding: '0',
+                  width: '100%', // Take full width of its container
+                  color: '#333',
+                  whiteSpace: 'nowrap',
+                }}
+              />
+              {/* Removed FaSearch icon here as per request 1 */}
+            </div>
+
+            {/* Combined Date Range Picker Icon Trigger */}
+            <div
+              onClick={() => setShowDateRangeModal(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center', // Center the icon
+                background: '#ffffff',
+                borderRadius: '6px',
+                padding: '8px 12px',
+                border: '1px solid #ccc',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                flexShrink: 0,
+                width: '40px', // Fixed width for icon only
+                height: '40px', // Fixed height for icon only
+                cursor: 'pointer',
+              }}
+            >
+              <FaCalendarAlt style={{
+                fontSize: '1.1rem',
+                color: (startDateFilter && endDateFilter) ? '#007bff' : '#666', // Dynamic color
+                transition: 'color 0.2s', // Smooth color transition
+              }} />
+            </div>
+          </div>
+        </div>
+
+        {filteredApplicationsForDisplay.length > 0 ? (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{
+              width: '100%',
+              minWidth: '700px',
+              borderCollapse: 'collapse',
+            }}>
+              <thead>
+                <tr style={{ backgroundColor: '#007bff', color: 'white' }}>
+                  <th style={{ padding: '12px', textAlign: 'center' }}>S.No</th>
+                  <th style={{ padding: '12px', textAlign: 'center' }}>Applied Date</th> {/* New Header */}
+                  <th style={{ padding: '12px', textAlign: 'center' }}>Platform</th>
+                  <th style={{ padding: '12px', textAlign: 'center' }}>Job Title</th>
+                  <th style={{ padding: '12px', textAlign: 'center' }}>Company</th>
+                  <th style={{ padding: '12px', textAlign: 'center' }}>Link</th>
+                  <th style={{ padding: '12px', textAlign: 'center' }}>Job Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredApplicationsForDisplay.map((app, index) => (
+                  <tr
+                    key={app.id}
+                    style={{
+                      borderBottom: '1px solid #eee',
+                      backgroundColor: index % 2 === 0 ? '#fdfdfd' : '#f0f8ff' // Light alternating colors
+                    }}
+                  >
+                    <td style={{ padding: '12px' }}>{index + 1}</td>
+                    <td style={{ padding: '12px' }}>{app.dateAdded}</td> {/* Display Applied Date */}
+                    <td style={{ padding: '12px' }}>{app.website}</td>
+                    <td style={{ padding: '12px' }}>{app.position}</td>
+                    <td style={{ padding: '12px' }}>{app.company}</td>
+                    <td style={{ padding: '12px' }}>
+                      <a href={app.link} target="_blank" rel="noopener noreferrer" style={{ color: '#007bff', textDecoration: 'none' }}>
+                        Link
+                      </a>
+                    </td>
+                    <td style={{ padding: '12px' }}>
+                      <Button
+                        variant="link"
+                        onClick={() => handleOpenJobDescriptionModal(app.jobDescription)}
+                        style={{ padding: '0', border: 'none', color: '#007bff', textDecoration: 'underline' }}
+                      >
+                        View
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p style={{ textAlign: 'center', color: '#666' }}>No applications found for this date with the current filters.</p>
+        )}
+      </div>
+
+      {/* --- Date Range Picker Modal --- */}
+      <Modal show={showDateRangeModal} onHide={() => setShowDateRangeModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Select Date Range</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <DateRangeCalendar
+            initialStartDate={tempStartDate}
+            initialEndDate={tempEndDate}
+            onSelectRange={handleDateRangeChangeFromCalendar}
+          />
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleClearDateRangeInModal} style={modalClearButtonStyle}>
+            Clear
+          </Button>
+          <Button variant="primary" onClick={handleApplyDateRange}>
+            Apply
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* --- Job Description View Modal --- */}
+      <Modal show={showJobDescriptionModal} onHide={handleCloseJobDescriptionModal} centered size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title>Job Description</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p style={{ whiteSpace: 'pre-wrap' }}>{currentJobDescription}</p>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleCloseJobDescriptionModal}>
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* --- Consolidated Categorical Filter Modal (Still present, but not accessible from a button) --- */}
+      {/* Keeping this modal and its related states/logic in case you wish to re-enable categorical filtering later */}
+      <Modal show={showFilterModal} onHide={handleCloseFilterModal} centered size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title>Apply Filters</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form>
+            <Row>
+              {/* Website Filter Column */}
+              <Col md={4} style={{ borderRight: '1px solid #eee', paddingRight: '15px' }}>
+                <h5 style={{ marginBottom: '15px' }}>Filter by Website</h5>
+                <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                  {uniqueWebsites.map(website => (
+                    <Form.Check
+                      key={website}
+                      type="checkbox"
+                      id={`modal-website-${website}`}
+                      label={website}
+                      value={website}
+                      checked={tempSelectedWebsites.includes(website)}
+                      onChange={handleWebsiteCheckboxChange}
+                      style={{ marginBottom: '8px' }}
+                    />
+                  ))}
+                </div>
+              </Col>
+
+              {/* Position Filter Column */}
+              <Col md={4} style={{ borderRight: '1px solid #eee', paddingRight: '15px' }}>
+                <h5 style={{ marginBottom: '15px' }}>Filter by Position</h5>
+                <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                  {uniquePositions.map(position => (
+                    <Form.Check
+                      key={position}
+                      type="checkbox"
+                      id={`modal-position-${position}`}
+                      label={position}
+                      value={position}
+                      checked={tempSelectedPositions.includes(position)}
+                      onChange={handlePositionCheckboxChange}
+                      style={{ marginBottom: '8px' }}
+                    />
+                  ))}
+                </div>
+              </Col>
+
+              {/* Company Filter Column */}
+              <Col md={4}>
+                <h5 style={{ marginBottom: '15px' }}>Filter by Company</h5>
+                <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                  {uniqueCompanies.map(company => (
+                    <Form.Check
+                      key={company}
+                      type="checkbox"
+                      id={`modal-company-${company}`}
+                      label={company}
+                      value={company}
+                      checked={tempSelectedCompanies.includes(company)}
+                      onChange={handleCompanyCheckboxChange}
+                      style={{ marginBottom: '8px' }}
+                    />
+                  ))}
+                </div>
+              </Col>
+            </Row>
+          </Form>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleClearTempFiltersInModal} style={modalClearButtonStyle}>
+            <i className="bi bi-trash"></i> Clear Selections
+          </Button>
+          <Button variant="primary" onClick={handleApplyCategoricalFilters}>
+            Apply Filters
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+    </div>
+  );
+};
+
+// --- Documents Tab Content ---
+const Documents = ({ activeSubTab, handleSubTabChange, setActiveWorksheetTab }) => { // setActiveWorksheetTab prop added
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "20px",
+        fontFamily: 'Arial, sans-serif',
+        maxWidth: '1200px',
+        margin: '0 auto',
+        padding: '20px',
+        backgroundColor: '#f8f9fa',
+        borderRadius: '8px',
+        boxShadow: '0 4px 8px rgba(0,0,0,0.05)'
+      }}
+    >
+      <h3
+        style={{
+          fontSize: "20px",
+          fontWeight: "bold",
+          color: "#333",
+          marginBottom: "16px",
+          textAlign: 'center'
+        }}
+      >
+        My Documents
+      </h3>
+      {/* Sub-Tabs */}
+      <div
+        style={{
+          display: "flex",
+          gap: "10px",
+          justifyContent: 'center', // Center the sub-tabs
+          flexWrap: 'wrap', // Allow wrapping
+        }}
+      >
+        <button
+          style={{
+            padding: "8px 12px",
+            border: "1px solid #ccc",
+            borderRadius: "4px",
+            backgroundColor:
+              activeSubTab === "Resumes" ? "#007bff" : "#f0f0f0",
+            color: activeSubTab === "Resumes" ? "#fff" : "#333",
+            cursor: "pointer",
+          }}
+          onClick={() => handleSubTabChange("Resumes")}
+        >
+          Resumes (3)
+        </button>
+        <button
+          style={{
+            padding: "8px 12px",
+            border: "1px solid #ccc",
+            borderRadius: "4px",
+            backgroundColor:
+              activeSubTab === "CoverLetters" ? "#007bff" : "#f0f0f0",
+            color: activeSubTab === "CoverLetters" ? "#fff" : "#333",
+            cursor: "pointer",
+          }}
+          onClick={() => handleSubTabChange("CoverLetters")}
+        >
+          Cover Letters (3)
+        </button>
+        <button
+          style={{
+            padding: "8px 12px",
+            border: "1px solid #ccc",
+            borderRadius: "4px",
+            backgroundColor:
+              activeSubTab === "Interviews" ? "#007bff" : "#f0f0f0",
+            color: activeSubTab === "Interviews" ? "#fff" : "#333",
+            cursor: "pointer",
+          }}
+          onClick={() => handleSubTabChange("Interviews")}
+        >
+          Interviews (3)
+        </button>
+        <button
+          style={{
+            padding: "8px 12px",
+            border: "1px solid #ccc",
+            borderRadius: "4px",
+            backgroundColor:
+              activeSubTab === "Offers" ? "#007bff" : "#f0f0f0",
+            color: activeSubTab === "Offers" ? "#fff" : "#333",
+            cursor: "pointer",
+          }}
+          onClick={() => handleSubTabChange("Offers")}
+        >
+          Offers (2)
+        </button>
+      </div>
+
+      {/* Sub-Tab Content */}
+      <div>
+        {activeSubTab === "Resumes" && <Resumes />}
+        {activeSubTab === "CoverLetters" && <CoverLetters />}
+        {activeSubTab === "Interviews" && <Interviews />}
+        {activeSubTab === "Offers" && <Offers />}
+      </div>
+    </div>
+  );
+};
+
+// Resumes Sub-Tab Content
+const Resumes = () => {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "row",
+        gap: "20px",
+        flexWrap: 'wrap', // Allow wrapping for responsiveness
+        marginTop: '20px',
+        justifyContent: 'center' // Center the document cards
+      }}
+    >
+      <div
+        style={{
+          padding: "40px",
+          border: "1px solid #ccc",
+          borderRadius: "8px",
+          width: "350px",
+          textAlign: "center",
+          boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+          backgroundColor: '#fff',
+        }}
+      >
+        📄
+        john_anderson_resume_2025.pdf
+      </div>
+      <div
+        style={{
+          padding: "20px",
+          border: "1px solid #ccc",
+          borderRadius: "8px",
+          width: "350px",
+          textAlign: "center",
+          boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+          backgroundColor: '#fff',
+        }}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          style={{ width: "24px", height: "24px", marginRight: "10px" }}
+        >
+          <path d="M13 10H11v4H9v2h6v-2h-2v-4h2zm8-2h-8l-5.4 6-3.4-4-4 5H5v2h14v-2H13l4-5-3.4 4L17 8z" />
+        </svg>
+        john_anderson_resume_tech_focused.pdf
+      </div>
+      <div
+        style={{
+          padding: "20px",
+          border: "1px solid #ccc",
+          borderRadius: "8px",
+          width: "350px",
+          textAlign: "center",
+          boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+          backgroundColor: '#fff',
+        }}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          style={{ width: "24px", height: "24px", marginRight: "10px" }}
+        >
+          <path d="M13 10H11v4H9v2h6v-2h-2v-4h2zm8-2h-8l-5.4 6-3.4-4-4 5H5v2h14v-2H13l4-5-3.4 4L17 8z" />
+        </svg>
+        john_anderson_resume_senior_level.pdf
+      </div>
+    </div>
+  );
+};
+
+
+// Cover Letters Sub-Tab Content
+const CoverLetters = () => {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "row",
+        gap: "20px",
+        flexWrap: 'wrap', // Allow wrapping for responsiveness
+        marginTop: '20px',
+        justifyContent: 'center' // Center the document cards
+      }}
+    >
+      <div
+        style={{
+          padding: "40px",
+          border: "1px solid #ccc",
+          borderRadius: "8px",
+          width: "350px",
+          textAlign: "center",
+          boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+          backgroundColor: '#fff',
+        }}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          style={{ width: "24px", height: "24px", marginRight: "10px" }}
+        >
+          <path d="M13 10H11v4H9v2h6v-2h-2v-4h2zm8-2h-8l-5.4 6-3.4-4-4 5H5v2h14v-2H13l4-5-3.4 4L17 8z" />
+        </svg>
+        cover_letter_techflow.pdf
+      </div>
+      <div
+        style={{
+          padding: "40px",
+          border: "1px solid #ccc",
+          borderRadius: "8px",
+          width: "350px",
+          textAlign: "center",
+          boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+          backgroundColor: '#fff',
+        }}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          style={{ width: "24px", height: "24px", marginRight: "10px" }}
+        >
+          <path d="M13 10H11v4H9v2h6v-2h-2v-4h2zm8-2h-8l-5.4 6-3.4-4-4 5H5v2h14v-2H13l4-5-3.4 4L17 8z" />
+        </svg>
+        cover_letter_startupxyz.pdf
+      </div>
+      <div
+        style={{
+          padding: "30px",
+          border: "1px solid #ccc",
+          borderRadius: "8px",
+          width: "350px",
+          textAlign: "center",
+          boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+          backgroundColor: '#fff',
+        }}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          style={{ width: "24px", height: "24px", marginRight: "10px" }}
+        >
+          <path d="M13 10H11v4H9v2h6v-2h-2v-4h2zm8-2h-8l-5.4 6-3.4-4-4 5H5v2h14v-2H13l4-5-3.4 4L17 8z" />
+        </svg>
+        generic_cover_letter_template.pdf
+      </div>
+    </div>
+  );
+};
+
+// Interviews Sub-Tab Content
+const Interviews = () => {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "row",
+        gap: "20px",
+        flexWrap: 'wrap', // Allow wrapping for responsiveness
+        marginTop: '20px',
+        justifyContent: 'center' // Center the document cards
+      }}
+    >
+      <div
+        style={{
+          padding: "40px",
+          border: "1px solid #ccc",
+          borderRadius: "8px",
+          width: "350px",
+          textAlign: "center",
+          boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+          backgroundColor: '#fff',
+        }}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          style={{ width: "24px", height: "24px", marginRight: "10px" }}
+        >
+          <path d="M13 10H11v4H9v2h6v-2h-2v-4h2zm8-2h-8l-5.4 6-3.4-4-4 5H5v2h14v-2H13l4-5-3.4 4L17 8z" />
+        </svg>
+        techflow_interview_invitation.png
+      </div>
+      <div
+        style={{
+          padding: "30px",
+          border: "1px solid #ccc",
+          borderRadius: "8px",
+          width: "350px",
+          textAlign: "center",
+          boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+          backgroundColor: '#fff',
+        }}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          style={{ width: "24px", height: "24px", marginRight: "10px" }}
+        >
+          <path d="M13 10H11v4H9v2h6v-2h-2v-4h2zm8-2h-8l-5.4 6-3.4-4-4 5H5v2h14v-2H13l4-5-3.4 4L17 8z" />
+        </svg>
+        webtech_interview_confirmation.pdf
+      </div>
+      <div
+        style={{
+          padding: "20px",
+          border: "1px solid #ccc",
+          borderRadius: "8px",
+          width: "350px",
+          textAlign: "center",
+          boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+          backgroundColor: '#fff',
+        }}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          style={{ width: "24px", height: "24px", marginRight: "10px" }}
+        >
+          <path d="M13 10H11v4H9v2h6v-2h-2v-4h2zm8-2h-8l-5.4 6-3.4-4-4 5H5v2h14v-2H13l4-5-3.4 4L17 8z" />
+        </svg>
+        innovation_labs_interview_feedback.png
+      </div>
+    </div>
+  );
+};
+
+// Offers Sub-Tab Content
+const Offers = () => {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "row",
+        gap: "20px",
+        flexWrap: 'wrap', // Allow wrapping for responsiveness
+        marginTop: '20px',
+        justifyContent: 'center' // Center the document cards
+      }}
+    >
+      <div
+        style={{
+          padding: "30px",
+          border: "1px solid #ccc",
+          borderRadius: "8px",
+          width: "350px",
+          textAlign: "center",
+          boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+          backgroundColor: '#fff',
+        }}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          style={{ width: "24px", height: "24px", marginRight: "10px" }}
+        >
+          <path d="M13 10H11v4H9v2h6v-2h-2v-4h2zm8-2h-8l-5.4 6-3.4-4-4 5H5v2h14v-2H13l4-5-3.4 4L17 8z" />
+        </svg>
+        techflow_joboffer_senior_frontend.pdf
+      </div>
+      <div
+        style={{
+          padding: "30px",
+          border: "1px solid #ccc",
+          borderRadius: "8px",
+          width: "350px",
+          textAlign: "center",
+          boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+          backgroundColor: '#fff',
+        }}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          style={{ width: "24px", height: "24px", marginRight: "10px" }}
+        >
+          <path d="M13 10H11v4H9v2h6v-2h-2v-4h2zm8-2h-8l-5.4 6-3.4-4-4 5H5v2h14v-2H13l4-5-3.4 4L17 8z" />
+        </svg>
+        startupxyz_offer_letter_react_dev.pdf
+      </div>
+
+    </div>
+  );
+};
+
+// --- WorksheetView Component (New) ---
+// This component will house the Applications and Documents tabs
+const WorksheetView = ({ setActiveTab, activeWorksheetTab, setActiveWorksheetTab,
+  selectedDate, setSelectedDate, dateRange, currentStartDate, setCurrentStartDate,
+  showPreviousWeek, showNextWeek, searchTerm, setSearchTerm,
+  startDateFilter, setStartDateFilter, endDateFilter, setEndDateFilter,
+  showDateRangeModal, setShowDateRangeModal, tempStartDate, setTempStartDate, tempEndDate, setTempEndDate,
+  handleDateRangeChangeFromCalendar, handleApplyDateRange, handleClearDateRangeInModal,
+  showJobDescriptionModal, setShowJobDescriptionModal, currentJobDescription, setCurrentJobDescription,
+  handleOpenJobDescriptionModal, handleCloseJobDescriptionModal,
+  filterWebsites, setFilterWebsites, filterPositions, setFilterPositions, filterCompanies, setFilterCompanies,
+  uniqueWebsites, uniquePositions, uniqueCompanies,
+  showFilterModal, setShowFilterModal, tempSelectedWebsites, setTempSelectedWebsites, tempSelectedPositions, setTempSelectedPositions, tempSelectedCompanies, setTempSelectedCompanies,
+  handleOpenFilterModal, handleCloseFilterModal, handleApplyCategoricalFilters, handleClearTempFiltersInModal,
+  handleWebsiteCheckboxChange, handlePositionCheckboxChange, handleCompanyCheckboxChange,
+  isGlobalFilterActive, clearAllFilters, getApplicationsSectionTitle, filteredApplicationsForDisplay,
+  downloadApplicationsData, applicationsData, allApplicationsFlattened,
+  activeSubTab, setActiveSubTab, // New prop to pass sub-tab state for Documents
+  setIsInWorksheetView // New prop to allow WorksheetView to set its own visibility
+}) => {
+  return (
+    <div style={{
+      maxWidth: '1200px',
+      margin: '0 auto',
+      padding: '20px',
+      backgroundColor: '#f8f9fa',
+      borderRadius: '8px',
+      boxShadow: '0 4px 8px rgba(0,0,0,0.05)'
+    }}>
+      {/* Back button for the entire worksheet view */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '20px',
+        borderBottom: '1px solid #eee',
+        paddingBottom: '15px'
+      }}>
+        <button
+          onClick={() => setIsInWorksheetView(false)} // Go back to the main Dashboard view
+          style={{
+            background: '#ffffff',
+            color: '#3b82f6',
+            border: '1px solid #e2e8f0',
+            padding: '8px 16px',
+            borderRadius: '6px',
+            fontSize: '0.875rem',
+            fontWeight: '500',
+            cursor: 'pointer',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+            display: 'flex',
+            alignItems: 'center',
+            transition: 'background-color 0.2s',
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginRight: '6px' }}>
+            <path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Back
+        </button>
+        {/* Removed the "Job Applications Worksheet" title here, it's now inside the Applications component */}
+        <div style={{ width: '100px' }}></div> {/* Spacer */}
+      </div>
+
+      {/* Tabs for Applications and Documents within the Worksheet View */}
+      <div
+        style={{
+          display: "flex",
+          gap: "10px",
+          marginBottom: "20px",
+          flexWrap: 'wrap', // Allow tabs to wrap on smaller screens
+        }}
+      >
+        <button
+          style={{
+            padding: "10px 20px",
+            border: "1px solid #ccc",
+            borderRadius: "8px",
+            cursor: "pointer",
+            transition: "background-color 0.3s ease",
+            backgroundColor: activeWorksheetTab === "Applications" ? "#007bff" : "#e9ecef",
+            color: activeWorksheetTab === "Applications" ? "#fff" : "#333",
+            borderColor: activeWorksheetTab === "Applications" ? "#007bff" : "#ccc",
+          }}
+          onClick={() => setActiveWorksheetTab("Applications")}
+        >
+          Applications
+        </button>
+        <button
+          style={{
+            padding: "10px 20px",
+            border: "1px solid #ccc",
+            borderRadius: "8px",
+            cursor: "pointer",
+            transition: "background-color 0.3s ease",
+            backgroundColor: activeWorksheetTab === "Documents" ? "#007bff" : "#e9ecef",
+            color: activeWorksheetTab === "Documents" ? "#fff" : "#333",
+            borderColor: activeWorksheetTab === "Documents" ? "#007bff" : "#ccc",
+          }}
+          onClick={() => setActiveWorksheetTab("Documents")}
+        >
+          Documents
+        </button>
+      </div>
+
+      {/* Conditional Rendering based on activeWorksheetTab */}
+      {activeWorksheetTab === "Applications" && (
+        <Applications
+          selectedDate={selectedDate}
+          setSelectedDate={setSelectedDate}
+          dateRange={dateRange}
+          currentStartDate={currentStartDate}
+          setCurrentStartDate={setCurrentStartDate}
+          showPreviousWeek={showPreviousWeek}
+          showNextWeek={showNextWeek}
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          startDateFilter={startDateFilter}
+          setStartDateFilter={setStartDateFilter}
+          endDateFilter={endDateFilter}
+          setEndDateFilter={setEndDateFilter}
+          showDateRangeModal={showDateRangeModal}
+          setShowDateRangeModal={setShowDateRangeModal}
+          tempStartDate={tempStartDate}
+          setTempStartDate={setTempStartDate}
+          tempEndDate={tempEndDate}
+          setTempEndDate={tempEndDate}
+          handleDateRangeChangeFromCalendar={handleDateRangeChangeFromCalendar}
+          handleApplyDateRange={handleApplyDateRange}
+          handleClearDateRangeInModal={handleClearDateRangeInModal}
+          showJobDescriptionModal={showJobDescriptionModal}
+          setShowJobDescriptionModal={setShowJobDescriptionModal}
+          currentJobDescription={currentJobDescription}
+          setCurrentJobDescription={setCurrentJobDescription}
+          handleOpenJobDescriptionModal={handleOpenJobDescriptionModal}
+          handleCloseJobDescriptionModal={handleCloseJobDescriptionModal}
+          filterWebsites={filterWebsites}
+          setFilterWebsites={setFilterWebsites}
+          filterPositions={filterPositions}
+          setFilterPositions={setFilterPositions}
+          filterCompanies={filterCompanies}
+          setFilterCompanies={setFilterCompanies}
+          uniqueWebsites={uniqueWebsites}
+          uniquePositions={uniquePositions}
+          uniqueCompanies={uniqueCompanies}
+          showFilterModal={showFilterModal}
+          setShowFilterModal={setShowFilterModal}
+          tempSelectedWebsites={tempSelectedWebsites}
+          setTempSelectedWebsites={setTempSelectedWebsites}
+          tempSelectedPositions={tempSelectedPositions}
+          setTempSelectedPositions={setTempSelectedPositions}
+          tempSelectedCompanies={tempSelectedCompanies}
+          setTempSelectedCompanies={setTempSelectedCompanies}
+          handleOpenFilterModal={() => setShowFilterModal(true)}
+          handleCloseFilterModal={() => setShowFilterModal(false)}
+          handleApplyCategoricalFilters={() => {
+            setFilterWebsites(tempSelectedWebsites);
+            setFilterPositions(tempSelectedPositions);
+            setFilterCompanies(tempSelectedCompanies);
+            setShowFilterModal(false);
+          }}
+          handleClearTempFiltersInModal={() => {
+            setTempSelectedWebsites([]);
+            setTempSelectedPositions([]);
+            setTempSelectedCompanies([]);
+          }}
+          handleWebsiteCheckboxChange={handleWebsiteCheckboxChange}
+          handlePositionCheckboxChange={handlePositionCheckboxChange}
+          handleCompanyCheckboxChange={handleCompanyCheckboxChange}
+          isGlobalFilterActive={isGlobalFilterActive}
+          clearAllFilters={clearAllFilters}
+          getApplicationsSectionTitle={getApplicationsSectionTitle}
+          filteredApplicationsForDisplay={filteredApplicationsForDisplay}
+          downloadApplicationsData={downloadApplicationsData}
+          applicationsData={applicationsData}
+          allApplicationsFlattened={allApplicationsFlattened}
+          activeWorksheetTab={activeWorksheetTab} // Pass down
+          setActiveWorksheetTab={setActiveWorksheetTab} // Pass down
+        />
+      )}
+
+      {activeWorksheetTab === "Documents" && (
+        <Documents
+          activeSubTab={activeSubTab}
+          handleSubTabChange={setActiveSubTab}
+          setActiveWorksheetTab={setActiveWorksheetTab} // Pass down
+        />
+      )}
+    </div>
+  );
+};
+
+
+// --- ClientDashboard Main Component ---
 const ClientDashboard = () => {
   const navigate = useNavigate();
+
+  // Initialize activeTab from localStorage, default to "Dashboard" if not found
+  const [activeTab, setActiveTab] = useState(() => {
+    const savedTab = localStorage.getItem('activeClientDashboardTab');
+    return savedTab || "Dashboard";
+  });
+
+  // Effect to save activeTab to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('activeClientDashboardTab', activeTab);
+  }, [activeTab]);
+
+  // New state to manage the visibility of the "Worksheet" specific view
+  const [isInWorksheetView, setIsInWorksheetView] = useState(() => {
+    // Check if the saved tab is 'Applications' or 'Documents' to determine initial isInWorksheetView
+    const savedTab = localStorage.getItem('activeClientDashboardTab');
+    return savedTab === "Applications" || savedTab === "Documents";
+  });
+
+  // State for tabs within the WorksheetView (Applications or Documents)
+  const [activeWorksheetTab, setActiveWorksheetTab] = useState(() => {
+    // If we're starting in WorksheetView, determine which sub-tab was active
+    const savedTab = localStorage.getItem('activeClientDashboardTab');
+    if (savedTab === "Applications" || savedTab === "Documents") {
+      return savedTab;
+    }
+    return "Applications"; // Default to Applications if starting in worksheet view
+  });
+
+
+  // States from clientdashboard.txt
   const [menuOpen, setMenuOpen] = useState(false);
   const [showInterviewsModal, setShowInterviewsModal] = useState(false);
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showClientProfileModal, setShowClientProfileModal] = useState(false);
   const [showSubscriptionDetailsModal, setShowSubscriptionDetailsModal] = useState(false);
-  const [selectedRadioPlan, setSelectedRadioPlan] = useState('glass-silver'); // Default to Silver
+  const [selectedRadioPlan, setSelectedRadioPlan] = useState('glass-silver');
 
-  // State for ClientHeader
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const profileDropdownRef = useRef(null);
 
-  // Mock Client User Data (formerly Admin User Data)
   const clientUserName = "Mukesh Ambani";
   const clientInitials = "MA";
-  const currentPlanPrice = "$199"; // Example data for subscription
-  const daysLeftInPlan = "28"; // Example data for subscription
+  const currentPlanPrice = "$199";
+  const daysLeftInPlan = "28";
 
-  // Toggle Dark/Light Mode function
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(3);
+  const [notifications, setNotifications] = useState([
+    { title: 'New Feature Alert', message: 'Discover our new analytics dashboard!', time: '2 hours ago' },
+    { title: 'Payment Due Soon', message: 'Your subscription renews in 3 days.', time: '1 day ago' },
+    { title: 'Profile Update', message: 'Your profile information has been updated.', time: '2 days ago' },
+  ]);
+  const [showNotificationsModal, setShowNotificationsModal] = useState(false);
+
+  const [showAttachmentModal, setShowAttachmentModal] = useState(false);
+  const [currentAttachments, setCurrentAttachments] = useState([]);
+
+  // States for Applications tab (from clientworksheet.txt)
+  const [selectedDate, setSelectedDate] = useState(null); // For the daily date navigation ribbon
+  const [dateRange, setDateRange] = useState([]);
+  const [currentStartDate, setCurrentStartDate] = useState(new Date());
+
+  const [filterWebsites, setFilterWebsites] = useState([]);
+  const [filterPositions, setFilterPositions] = useState([]);
+  const [filterCompanies, setFilterCompanies] = useState([]);
+
+  const [uniqueWebsites, setUniqueWebsites] = useState([]);
+  const [uniquePositions, setUniquePositions] = useState([]);
+  const [uniqueCompanies, setUniqueCompanies] = useState([]);
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [startDateFilter, setStartDateFilter] = useState('');
+  const [endDateFilter, setEndDateFilter] = useState('');
+  const [showDateRangeModal, setShowDateRangeModal] = useState(false);
+  const [tempStartDate, setTempStartDate] = useState(null);
+  const [tempEndDate, setTempEndDate] = useState(null);
+
+  const [showJobDescriptionModal, setShowJobDescriptionModal] = useState(false);
+  const [currentJobDescription, setCurrentJobDescription] = useState('');
+
+  const [showFilterModal, setShowFilterModal] = useState(false); // Categorical filter modal
+  const [tempSelectedWebsites, setTempSelectedWebsites] = useState([]);
+  const [tempSelectedPositions, setTempSelectedPositions] = useState([]);
+  const [tempSelectedCompanies, setTempSelectedCompanies] = useState([]);
+
+  // States for Documents tab
+  const [activeSubTab, setActiveSubTab] = useState("Resumes");
+
+
+  // --- Handlers for ClientDashboard (main component) ---
   const toggleTheme = () => {
     setIsDarkMode(prevMode => !prevMode);
     document.documentElement.classList.toggle('dark-mode');
@@ -861,19 +2235,67 @@ const ClientDashboard = () => {
   const toggleSubscriptionDetailsModal = () => setShowSubscriptionDetailsModal(!showSubscriptionDetailsModal);
 
   // Handlers for profile dropdown items
-  const handleClientProfileClick = () => {
+  const handleClientProfileClick = useCallback(() => {
     setIsProfileDropdownOpen(false); // Close dropdown
     setShowClientProfileModal(true); // Open client profile modal
-  };
+  }, []);
 
-  const handleSubscriptionClick = () => {
+  const handleSubscriptionClick = useCallback(() => {
     setIsProfileDropdownOpen(false); // Close dropdown
     setShowSubscriptionDetailsModal(true); // Open new subscription details modal
+  }, []);
+
+  const handleNotificationClick = useCallback(() => {
+    setShowNotificationsModal(true);
+    setUnreadNotificationsCount(0); // Mark all as read when modal is opened
+  }, []);
+
+  const closeNotificationsModal = useCallback(() => {
+    setShowNotificationsModal(false);
+  }, []);
+
+  const handleAttachmentClick = useCallback((attachments) => {
+    setCurrentAttachments(attachments);
+    setShowAttachmentModal(true);
+  }, []);
+
+  const closeAttachmentModal = useCallback(() => {
+    setShowAttachmentModal(false);
+    setCurrentAttachments([]); // Clear attachments when closing
+  }, []);
+
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('activeClientDashboardTab'); // Clear persisted tab on logout
+    navigate('/'); // Redirect to home/login page
+    console.log("User logged out successfully.");
+    setIsProfileDropdownOpen(false); // Close dropdown
+  }, [navigate]);
+
+  // Example of how to add a new notification (you'd replace this with actual logic)
+  const addNewNotification = () => {
+    const newNotification = {
+      title: 'New Update Available',
+      message: 'A new version of the dashboard has been released!',
+      time: new Date().toLocaleTimeString(),
+    };
+    setNotifications(prev => [newNotification, ...prev]);
+    setUnreadNotificationsCount(prev => prev + 1);
   };
+
+  // Optional: Simulate updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // You would replace this with actual checks for updates (e.g., fetching from an API)
+      // For demonstration, let's add a new notification every 30 seconds
+      // addNewNotification();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const profilePlaceholder = "https://imageio.forbes.com/specials-images/imageserve/5c7d7829a7ea434b351ba0b6/0x0.jpg?format=jpg&crop=1837,1839,x206,y250,safe&height=416&width=416&fit=bounds";
 
-  // --- Dynamic Chart Date Generation ---
+  // Chart data for Dashboard content
   const generateChartLabelsForPastDays = (numDays) => {
     const labels = [];
     const today = new Date();
@@ -994,16 +2416,16 @@ const ClientDashboard = () => {
     }
   };
 
-  // Mock data for Scheduled Interviews
+  // Mock data for Scheduled Interviews (UPDATED with attachment field)
   const scheduledInterviews = [
-    { id: 1, date: '2025-06-15', time: '10:00 AM', company: 'Innovate Solutions', role: 'Software Developer', recruiterMailId: 'alice.j@innovate.com', round: 'Round 1' },
-    { id: 2, date: '2025-06-18', time: '02:30 PM', company: 'Global Tech Corp', role: 'UX Designer', recruiterMailId: 'bob.w@globaltech.com', round: 'Round 2' },
-    { id: 3, date: '2025-06-20', time: '11:00 AM', company: 'Data Insights Ltd.', role: 'Data Analyst', recruiterMailId: 'charlie.b@datainsights.com', round: 'Final Round' },
-    { id: 4, date: '2025-06-22', time: '09:00 AM', company: 'FutureTech Inc.', role: 'Project Manager', recruiterMailId: 'david.l@futuretech.net', round: 'Round 1' },
-    { id: 5, date: '2025-06-25', time: '01:00 PM', company: 'Digital Innovators', role: 'DevOps Engineer', recruiterMailId: 'eve.d@digitalinnov.io', round: 'Round 3' },
-    { id: 6, date: '2025-06-28', time: '03:45 PM', company: 'Quant Computing', role: 'Machine Learning Scientist', recruiterMailId: 'frank.w@quantcomp.ai', round: 'Round 2' },
-    { id: 7, date: '2025-07-01', time: '10:30 AM', company: 'CyberSec Solutions', role: 'Cybersecurity Analyst', recruiterMailId: 'grace.k@cybersec.com', round: 'Round 1' },
-    { id: 8, date: '2025-07-03', time: '04:00 PM', company: 'HealthTech Connect', role: 'Mobile App Developer', recruiterMailId: 'henry.g@healthtech.org', round: 'Final Round' },
+    { id: 1, date: '2025-06-15', time: '10:00 AM', company: 'Innovate Solutions', role: 'Software Developer', recruiterMailId: 'alice.j@innovate.com', round: 'Round 1', attachments: ['https://placehold.co/200x150/FFD700/000000?text=Screenshot+1'] },
+    { id: 2, date: '2025-06-18', time: '02:30 PM', company: 'Global Tech Corp', role: 'UX Designer', recruiterMailId: 'bob.w@globaltech.com', round: 'Round 2', attachments: ['https://placehold.co/200x150/ADD8E6/000000?text=Design+Brief', 'https://placehold.co/200x150/90EE90/000000?text=Wireframes'] },
+    { id: 3, date: '2025-06-20', time: '11:00 AM', company: 'Data Insights Ltd.', role: 'Data Analyst', recruiterMailId: 'charlie.b@datainsights.com', round: 'Final Round', attachments: [] },
+    { id: 4, date: '2025-06-22', time: '09:00 AM', company: 'FutureTech Inc.', role: 'Project Manager', recruiterMailId: 'david.l@futuretech.net', round: 'Round 1', attachments: ['https://placehold.co/200x150/FFC0CB/000000?text=Project+Spec'] },
+    { id: 5, date: '2025-06-25', time: '01:00 PM', company: 'Digital Innovators', role: 'DevOps Engineer', recruiterMailId: 'eve.d@digitalinnov.io', round: 'Round 3', attachments: [] },
+    { id: 6, date: '2025-06-28', time: '03:45 PM', company: 'Quant Computing', role: 'Machine Learning Scientist', recruiterMailId: 'frank.w@quantcomp.ai', round: 'Round 2', attachments: ['https://placehold.co/200x150/DDA0DD/000000?text=Algorithm+Flow'] },
+    { id: 7, date: '2025-07-01', time: '10:30 AM', company: 'CyberSec Solutions', role: 'Cybersecurity Analyst', recruiterMailId: 'grace.k@cybersec.com', round: 'Round 1', attachments: ['https://placehold.co/200x150/F08080/000000?text=Security+Report'] },
+    { id: 8, date: '2025-07-03', time: '04:00 PM', company: 'HealthTech Connect', role: 'Mobile App Developer', recruiterMailId: 'henry.g@healthtech.org', round: 'Final Round', attachments: [] },
   ];
 
   // Mock data for Resume & Job Portal Updates
@@ -1043,9 +2465,6 @@ const ClientDashboard = () => {
     const currentPlan = planOptions[selectedRadioPlan];
     if (currentPlan) {
       console.log(`Proceeding with: ${currentPlan.name} plan for ${currentPlan.price}`);
-      // In a real application, you'd trigger a payment gateway here
-      // For now, we'll just close the modal and show an alert.
-      alert(`Proceeding with the ${currentPlan.name} plan for ${currentPlan.price}. Payment integration would go here!`);
       togglePaymentModal();
     }
   };
@@ -1055,7 +2474,7 @@ const ClientDashboard = () => {
     setSelectedRadioPlan(planId);
   };
 
-  // Function to get glider style based on selected plan
+  // Function to get glider style based on selected plan (not directly used in render, but kept for logic)
   const getGliderDynamicStyle = () => {
     let transformValue = 'translateX(0%)';
     let backgroundValue = 'linear-gradient(135deg, #c0c0c055, #e0e0e0)';
@@ -1083,11 +2502,279 @@ const ClientDashboard = () => {
 
   // Handler for downloading resume
   const handleDownloadResume = () => {
-    alert('Downloading the latest resume... (This is a placeholder action)');
+    console.log('Downloading the latest resume... (This is a placeholder action)');
   };
 
+  // --- Handlers for Applications tab ---
+
+  // Effect to generate initial date range and select today's date for Applications tab
+  useEffect(() => {
+    const today = new Date();
+    const initialStartDate = new Date(today);
+    initialStartDate.setDate(today.getDate() - 6);
+    setCurrentStartDate(initialStartDate);
+    setDateRange(generateDateRange(initialStartDate));
+    setSelectedDate(formatDate(today));
+  }, []);
+
+  // Effect to populate unique filter options from all application data for Applications tab
+  useEffect(() => {
+    const allWebsites = new Set();
+    const allPositions = new Set();
+    const allCompanies = new Set();
+
+    Object.values(applicationsData).forEach(dateApps => {
+      dateApps.forEach(app => {
+        allWebsites.add(app.website);
+        allPositions.add(app.position);
+        allCompanies.add(app.company);
+      });
+    });
+
+    setUniqueWebsites(Array.from(allWebsites).sort());
+    setUniquePositions(Array.from(allPositions).sort());
+    setUniqueCompanies(Array.from(allCompanies).sort());
+  }, []);
+
+  // Flatten all applications once and add their original date for Applications tab
+  const allApplicationsFlattened = useMemo(() => {
+    const flattened = [];
+    for (const dateKey in applicationsData) {
+      if (Object.prototype.hasOwnProperty.call(applicationsData, dateKey)) {
+        applicationsData[dateKey].forEach(app => {
+          flattened.push({ ...app, dateAdded: dateKey }); // Add the original date string to each app (DD-MM-YYYY)
+        });
+      }
+    }
+    return flattened;
+  }, []);
+
+
+  // Helper to determine if any global filter (search, date range, or categorical) is active
+  const isGlobalFilterActive = useMemo(() => {
+    return searchTerm !== '' ||
+      startDateFilter !== '' ||
+      endDateFilter !== '' ||
+      filterWebsites.length > 0 ||
+      filterPositions.length > 0 ||
+      filterCompanies.length > 0;
+  }, [searchTerm, startDateFilter, endDateFilter, filterWebsites, filterPositions, filterCompanies]);
+
+  // Function to clear ALL applied filters and reset temp states (for main page button)
+  const clearAllFilters = () => {
+    setSearchTerm('');
+    setStartDateFilter('');
+    setEndDateFilter('');
+    setFilterWebsites([]); // Clear categorical filters too on global clear
+    setFilterPositions([]);
+    setFilterCompanies([]);
+    setTempStartDate(null); // Clear temp states for date range modal
+    setTempEndDate(null);   // Clear temp states for date range modal
+    setTempSelectedWebsites([]); // Clear temp states for categorical modal
+    setTempSelectedPositions([]);
+    setTempSelectedCompanies([]);
+  };
+
+  // Checkbox change handlers for temporary selections within the categorical modal
+  const handleWebsiteCheckboxChange = (event) => {
+    const { value, checked } = event.target;
+    setTempSelectedWebsites(prev =>
+      checked ? [...prev, value] : prev.filter(item => item !== value)
+    );
+  };
+
+  const handlePositionCheckboxChange = (event) => {
+    const { value, checked } = event.target;
+    setTempSelectedPositions(prev =>
+      checked ? [...prev, value] : prev.filter(item => item !== value)
+    );
+  };
+
+  const handleCompanyCheckboxChange = (event) => {
+    const { value, checked } = event.target;
+    setTempSelectedCompanies(prev =>
+      checked ? [...prev, value] : prev.filter(item => item !== value)
+    );
+  };
+
+
+  // --- Handlers for the NEW Date Range Picker Modal ---
+  const handleOpenDateRangeModal = () => {
+    // Convert DD-MM-YYYY strings back to Date objects for the calendar component
+    setTempStartDate(startDateFilter ? new Date(convertDDMMYYYYtoYYYYMMDD(startDateFilter)) : null);
+    setTempEndDate(endDateFilter ? new Date(convertDDMMYYYYtoYYYYMMDD(endDateFilter)) : null);
+    setShowDateRangeModal(true);
+  };
+
+  const handleCloseDateRangeModal = () => {
+    setShowDateRangeModal(false);
+  };
+
+  // Callback from DateRangeCalendar when a range is selected
+  const handleDateRangeChangeFromCalendar = useCallback((start, end) => {
+    setTempStartDate(start);
+    setTempEndDate(end);
+  }, []);
+
+  const handleApplyDateRange = () => {
+    // Validate dates before applying (optional, but good practice)
+    if (tempStartDate && tempEndDate && tempStartDate > tempEndDate) {
+      console.error('Start date cannot be after end date.');
+      // You might want to show a user-friendly error message here
+      return;
+    }
+    // Set the main filter states (converted back to DD-MM-YYYY strings for consistency)
+    setStartDateFilter(tempStartDate ? formatDate(tempStartDate) : '');
+    setEndDateFilter(tempEndDate ? formatDate(tempEndDate) : '');
+    setShowDateRangeModal(false);
+  };
+
+  const handleClearDateRangeInModal = () => {
+    setTempStartDate(null);
+    setTempEndDate(null);
+  };
+
+  // --- Handlers for Job Description Modal ---
+  const handleOpenJobDescriptionModal = (description) => {
+    setCurrentJobDescription(description);
+    setShowJobDescriptionModal(true);
+  };
+
+  const handleCloseJobDescriptionModal = () => {
+    setShowJobDescriptionModal(false);
+    setCurrentJobDescription('');
+  };
+
+  const downloadApplicationsData = () => {
+    if (!filteredApplicationsForDisplay.length) return;
+
+    const dataToExport = filteredApplicationsForDisplay.map((app, index) => ({
+      'S.No': index + 1,
+      'Applied Date': app.dateAdded,
+      'Platform': app.website,
+      'Job Title': app.position,
+      'Company': app.company,
+      'Link': app.link,
+      'Job Description': app.jobDescription
+    }));
+
+    const ws = utils.json_to_sheet(dataToExport); // Use utils from named import
+    const wb = utils.book_new(); // Use utils from named import
+    const sheetName = isGlobalFilterActive ? 'Filtered Applications' : `Applications ${selectedDate}`;
+    utils.book_append_sheet(wb, ws, sheetName); // Use utils from named import
+    writeFile(wb, `JobApplications_${sheetName.replace(/\s/g, '_')}.xlsx`); // Use writeFile from named import
+  };
+
+  const showPreviousWeek = () => {
+    const newStartDate = new Date(currentStartDate);
+    newStartDate.setDate(newStartDate.getDate() - 7);
+    setCurrentStartDate(newStartDate);
+    setDateRange(generateDateRange(newStartDate));
+  };
+
+  const showNextWeek = () => {
+    const newStartDate = new Date(currentStartDate);
+    newStartDate.setDate(newStartDate.getDate() + 7);
+
+    const today = new Date();
+    // Only allow navigating to future weeks if there's actual data in those weeks
+    // For simplicity here, we only check against today's date to prevent going too far into future
+    if (newStartDate.getTime() <= today.getTime() || Object.keys(applicationsData).some(date => new Date(convertDDMMYYYYtoYYYYMMDD(date)).getTime() >= newStartDate.getTime())) {
+      setCurrentStartDate(newStartDate);
+      setDateRange(generateDateRange(newStartDate));
+    }
+  };
+
+
+  // Update the title dynamically based on active filters
+  const getApplicationsSectionTitle = () => {
+    const hasDateRangeFilter = startDateFilter && endDateFilter;
+    const hasSearchTerm = searchTerm !== '';
+    const hasCategoricalFilters = filterWebsites.length > 0 || filterPositions.length > 0 || filterCompanies.length > 0;
+
+    if (hasDateRangeFilter) {
+      return `Filtered Applications (From ${startDateFilter} - To ${endDateFilter})`;
+    } else if (hasSearchTerm || hasCategoricalFilters) {
+      return 'Filtered Applications (by search and/or other criteria)';
+    } else if (selectedDate) {
+      return `Applications for ${selectedDate}`;
+    }
+    return 'Job Applications'; // Default title if nothing selected/filtered
+  };
+
+
+  // Apply all filters to the relevant base set of applications
+  const filteredApplicationsForDisplay = useMemo(() => {
+    let baseApps = [];
+
+    const isDateRangeFilterSet = startDateFilter !== '' && endDateFilter !== '';
+    const isSearchActiveOnly = searchTerm !== '' && !isDateRangeFilterSet;
+    const isCategoricalFilterActiveOnly = (filterWebsites.length > 0 || filterPositions.length > 0 || filterCompanies.length > 0) && !isDateRangeFilterSet;
+
+    if (isDateRangeFilterSet) {
+        // If date range is explicitly set, always filter from all data
+        baseApps = allApplicationsFlattened;
+    } else if (isSearchActiveOnly || isCategoricalFilterActiveOnly) {
+        // If only search or categorical filters are active, filter only for the selected ribbon date
+        // If no ribbon date is selected, default to today
+        const targetDate = selectedDate || formatDate(new Date());
+        baseApps = applicationsData[targetDate] || [];
+    } else if (selectedDate) {
+        // If only a ribbon date is selected (and no other global filters active), use that date's data.
+        baseApps = applicationsData[selectedDate] || [];
+    } else {
+        // Default case, if no filters active and no ribbon date selected, show data for today.
+        baseApps = applicationsData[formatDate(new Date())] || [];
+    }
+
+
+    return baseApps.filter(app => {
+      const matchesWebsite = filterWebsites.length === 0 || filterWebsites.includes(app.website);
+      const matchesPosition = filterPositions.length === 0 || filterPositions.includes(app.position);
+      const matchesCompany = filterCompanies.length === 0 || filterCompanies.includes(app.company);
+
+      const lowerCaseSearchTerm = searchTerm.toLowerCase();
+      const matchesSearchTerm =
+        searchTerm === '' ||
+        app.website.toLowerCase().includes(lowerCaseSearchTerm) ||
+        app.position.toLowerCase().includes(lowerCaseSearchTerm) ||
+        app.company.toLowerCase().includes(lowerCaseSearchTerm) ||
+        (app.jobDescription && app.jobDescription.toLowerCase().includes(lowerCaseSearchTerm)); // Search in job description
+
+
+      // Date Range Filter logic (applies only if startDateFilter or endDateFilter are explicitly set)
+      let matchesDateRange = true;
+      if (startDateFilter || endDateFilter) {
+        // Convert DD-MM-YYYY (app.dateAdded) to YYYY-MM-DD for Date constructor comparability
+        // And normalize to start/end of day for accurate range comparison
+        const appDate = new Date(convertDDMMYYYYtoYYYYMMDD(app.dateAdded));
+        appDate.setHours(0, 0, 0, 0); // Normalize to start of day
+
+        const start = startDateFilter ? new Date(convertDDMMYYYYtoYYYYMMDD(startDateFilter)) : null;
+        const end = endDateFilter ? new Date(convertDDMMYYYYtoYYYYMMDD(endDateFilter)) : null;
+
+        if (start) start.setHours(0, 0, 0, 0);
+        if (end) end.setHours(23, 59, 59, 999);
+
+        matchesDateRange =
+          (!start || appDate >= start) &&
+          (!end || appDate <= end);
+      }
+
+      // Combine all conditions
+      return matchesWebsite && matchesPosition && matchesCompany && matchesSearchTerm && matchesDateRange;
+    });
+  }, [selectedDate, applicationsData, filterWebsites, filterPositions, filterCompanies, searchTerm, startDateFilter, endDateFilter, allApplicationsFlattened, isGlobalFilterActive]);
+
+
   // Determine if the overlay should be visible (for all modals and sidebar)
-  const isOverlayVisible = menuOpen || showInterviewsModal || showResumeModal || showPaymentModal || showClientProfileModal || showSubscriptionDetailsModal;
+  const isOverlayVisible = useMemo(() => {
+    return menuOpen || showInterviewsModal || showResumeModal || showPaymentModal ||
+           showClientProfileModal || showSubscriptionDetailsModal ||
+           showNotificationsModal || showAttachmentModal || showDateRangeModal || showJobDescriptionModal || showFilterModal;
+  }, [menuOpen, showInterviewsModal, showResumeModal, showPaymentModal,
+      showClientProfileModal, showSubscriptionDetailsModal,
+      showNotificationsModal, showAttachmentModal, showDateRangeModal, showJobDescriptionModal, showFilterModal]);
 
 
   return (
@@ -1281,6 +2968,7 @@ const ClientDashboard = () => {
         .renew-plan-button:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+            background: #2563eb;
         }
 
         .help-support-button {
@@ -1327,32 +3015,18 @@ const ClientDashboard = () => {
             background: #ffffff;
             color: #3b82f6;
             border: 1px solid #e2e8f0;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 0.875rem;
-            font-weight: 500;
-            cursor: pointer;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-            display: flex;
-            align-items: center;
-            transition: background-color 0.2s;
+            padding: '8px 16px';
+            borderRadius: '6px';
+            fontSize: '0.875rem';
+            fontWeight: '500';
+            cursor: 'pointer';
+            boxShadow: '0 1px 2px rgba(0,0,0,0.05)';
+            display: 'flex';
+            alignItems: 'center';
+            transition: 'background-color 0.2s';
         }
         .back-button:hover {
             background-color: #f8fafc;
-        }
-
-        .menu-toggle-button {
-            font-size: 24px;
-            cursor: pointer;
-            color: #64748b;
-            padding: 8px;
-            border-radius: 6px;
-            transition: background-color 0.2s;
-            background: none; /* Ensure no default button background */
-            border: none; /* Ensure no default button border */
-        }
-        .menu-toggle-button:hover {
-            background-color: #f1f5f9;
         }
 
         .worksheet-button {
@@ -1651,6 +3325,18 @@ const ClientDashboard = () => {
         }
 
         /* ClientProfile Modal Specific Styles */
+        .profile-grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            width: 100%;
+        }
+        @media (max-width: 768px) {
+            .profile-grid-container {
+                grid-template-columns: 1fr; /* Stack on small screens */
+            }
+        }
+
         .profile-info-card {
             background: #f8fafc;
             border-radius: 12px;
@@ -1791,6 +3477,9 @@ const ClientDashboard = () => {
         profileDropdownRef={profileDropdownRef}
         onClientProfileClick={handleClientProfileClick}
         onSubscriptionClick={handleSubscriptionClick}
+        unreadNotificationsCount={unreadNotificationsCount}
+        onNotificationClick={handleNotificationClick}
+        onLogoutClick={handleLogout}
       />
 
       {/* Dimming Overlay */}
@@ -1803,10 +3492,15 @@ const ClientDashboard = () => {
           if (showPaymentModal) setShowPaymentModal(false);
           if (showClientProfileModal) setShowClientProfileModal(false);
           if (showSubscriptionDetailsModal) setShowSubscriptionDetailsModal(false);
+          if (showNotificationsModal) setShowNotificationsModal(false);
+          if (showAttachmentModal) setShowAttachmentModal(false);
+          if (showDateRangeModal) setShowDateRangeModal(false);
+          if (showJobDescriptionModal) setShowJobDescriptionModal(false);
+          if (showFilterModal) setShowFilterModal(false);
         }}
       />
 
-      {/* Interviews Modal (remains light theme, but will respond to dark mode toggle) */}
+      {/* Modals */}
       {showInterviewsModal && (
         <div className="modal-overlay">
           <div className="modal-content-style">
@@ -1834,6 +3528,7 @@ const ClientDashboard = () => {
                     <th className="modal-table-header">Role</th>
                     <th className="modal-table-header">Recruiter Mail ID</th>
                     <th className="modal-table-header">Round</th>
+                    <th className="modal-table-header">Attachment</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1867,6 +3562,36 @@ const ClientDashboard = () => {
                           {interview.round}
                         </div>
                       </td>
+                      <td className="modal-table-cell">
+                        {interview.attachments && interview.attachments.length > 0 ? (
+                          <button
+                            onClick={() => handleAttachmentClick(interview.attachments)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              padding: '5px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              color: '#3b82f6',
+                              fontWeight: '600',
+                              fontSize: '0.85rem',
+                              borderRadius: '4px',
+                              transition: 'background-color 0.2s',
+                            }}
+                          >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                              <polyline points="13 2 13 9 20 9"></polyline>
+                              <path d="M16 21v-6a2 2 0 0 1 2-2h2l-5 5-5-5h2a2 2 0 0 1 2 2v6z"></path>
+                            </svg>
+                            ({interview.attachments.length})
+                          </button>
+                        ) : (
+                          <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>N/A</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -1876,7 +3601,6 @@ const ClientDashboard = () => {
         </div>
       )}
 
-      {/* Resume Modal (remains light theme, but will respond to dark mode toggle) */}
       {showResumeModal && (
         <div className="modal-overlay">
           <div className="modal-content-style">
@@ -1928,21 +3652,6 @@ const ClientDashboard = () => {
                           fontSize: '0.75rem',
                           fontWeight: '600'
                         }}>
-                          {update.status === 'Updated' && (
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ marginRight: '4px' }}>
-                              <path d="M10 3L4.5 8.5L2 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                          )}
-                          {update.status === 'Reviewed' && (
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ marginRight: '4px' }}>
-                              <path d="M6 3V6L8 7M11 6C11 8.76142 8.76142 11 6 11C3.23858 11 1 8.76142 1 6C1 3.23858 3.23858 1 6 1C8.76142 1 11 3.23858 11 6Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                          )}
-                          {update.status === 'Completed' && (
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ marginRight: '4px' }}>
-                              <path d="M9 3L4.5 7.5L3 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                          )}
                           {update.status}
                         </div>
                       </td>
@@ -1975,66 +3684,15 @@ const ClientDashboard = () => {
         </div>
       )}
 
-      {/* Payment Plan Modal */}
       {showPaymentModal && (
-        <div className="modal-overlay">
-          {/* Removed ...modalContentStyle and applied specific styles directly */}
-          <div className="modal-content-style" style={{ maxWidth: '600px', padding: '40px', background: '#334155', color: '#f1f5f9' }}>
-            <button onClick={togglePaymentModal} className="modal-close-button">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M13 1L1 13M1 1L13 13" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-            </button>
-            <h3 style={{
-              marginBottom: '30px',
-              textAlign: 'center',
-              color: '#f1f5f9',
-              fontSize: '1.8rem',
-              fontWeight: '700'
-            }}>
-              Choose Your Plan
-            </h3>
-
-            {/* Integrated Radio Component */}
-            <div style={{ margin: '20px auto 30px auto', width: 'fit-content' }}>
-                <Radio
-                    selectedRadioPlan={selectedRadioPlan}
-                    handleRadioPlanChange={handleRadioPlanChange}
-                />
-            </div>
-
-
-            {/* Display details of the currently selected plan */}
-            {currentSelectedPlanDetails && (
-              <div style={selectedPlanDetailsStyle}>
-                <h4 style={paymentPlanTitleStyle}>{currentSelectedPlanDetails.name} Plan</h4>
-                <p style={paymentPlanPriceStyle}>
-                  {currentSelectedPlanDetails.price}
-                  <span style={paymentPlanPeriodStyle}>{currentSelectedPlanDetails.name === 'Silver' ? '/month' : currentSelectedPlanDetails.name === 'Gold' ? '/3 months' : '/year'}</span>
-                </p>
-                <ul style={paymentPlanFeaturesListStyle}>
-                  {currentSelectedPlanDetails.features.map((feature, index) => (
-                    <li key={index} style={{ marginBottom: '8px', display: 'flex', alignItems: 'center' }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px', color: '#4ade80' }}>
-                        <polyline points="20 6 9 17 4 12"></polyline>
-                      </svg>
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-                <button
-                  onClick={handleProceedToPayment}
-                  style={paymentPlanSelectButtonStyle}
-                >
-                  Proceed to Payment
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
+        <PaymentPlanModal
+          selectedRadioPlan={selectedRadioPlan}
+          handleRadioPlanChange={handleRadioPlanChange}
+          handleProceedToPayment={handleProceedToPayment}
+          onClose={togglePaymentModal}
+        />
       )}
 
-      {/* Client Profile Modal (now responds to dark mode toggle) */}
       {showClientProfileModal && (
         <ClientProfile
           profilePlaceholder={profilePlaceholder}
@@ -2043,13 +3701,26 @@ const ClientDashboard = () => {
         />
       )}
 
-      {/* Subscription Details Modal (now responds to dark mode toggle) */}
       {showSubscriptionDetailsModal && (
         <SubscriptionDetailsModal
           togglePaymentModal={togglePaymentModal}
           currentPlanPrice={currentPlanPrice}
           daysLeftInPlan={daysLeftInPlan}
           onClose={toggleSubscriptionDetailsModal}
+        />
+      )}
+
+      {showNotificationsModal && (
+        <NotificationModal
+          notifications={notifications}
+          onClose={closeNotificationsModal}
+        />
+      )}
+
+      {showAttachmentModal && (
+        <AttachmentModal
+          attachments={currentAttachments}
+          onClose={closeAttachmentModal}
         />
       )}
 
@@ -2148,11 +3819,7 @@ const ClientDashboard = () => {
         </button>
 
         <button
-          onClick={() => {
-            localStorage.removeItem('isLoggedIn');
-            navigate('/');
-            toggleMenu();
-          }}
+          onClick={handleLogout}
           className="logout-button"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginRight: '8px' }}>
@@ -2164,137 +3831,398 @@ const ClientDashboard = () => {
 
       {/* Main Content Area */}
       <div className="main-content-area">
-        <h2 className="dashboard-title">
-          Client Module
-        </h2>
+        {/* Conditional rendering for Client Module vs. Worksheet View */}
+        {!isInWorksheetView ? (
+          <>
+            <h2 className="dashboard-title">
+              Client Module
+            </h2>
 
-        <div className="chart-and-ads-container">
-          <div className="ad-column">
-            <div className="ad-placeholder">
-              <p style={{ color: '#475569', marginBottom: '10px' }}>Sponsored</p>
-              <img src="https://placehold.co/120x300/e0f2f7/475569?text=Ad+1" alt="Advertisement 1" onError={(e)=>{e.target.onerror = null; e.target.src='https://placehold.co/120x300/e0f2f7/475569?text=Ad+Load+Error'}}/>
-              <p style={{ marginTop: '10px', color: '#64748b' }}>Discover new opportunities!</p>
+            {/* Tabs for Dashboard, Applications, Documents */}
+            <div
+              style={{
+                display: "flex",
+                gap: "10px",
+                marginBottom: "20px",
+                flexWrap: 'wrap', // Allow tabs to wrap on smaller screens
+              }}
+            >
             </div>
-          </div>
 
-          <div style={chartSectionStyle}>
-            <h4 style={{
-              marginBottom: '20px',
-              textAlign: 'center',
-              color: '#475569',
-              fontSize: '1.125rem',
-              fontWeight: '600'
-            }}>
-              Job Source Performance
-            </h4>
-            <Line data={data} options={options} />
-          </div>
+            {/* Content for main dashboard tabs */}
+            {activeTab === "Dashboard" && (
+              <>
+                <div className="chart-and-ads-container">
+                  <div className="ad-column">
+                    <div className="ad-placeholder">
+                      <p style={{ color: '#475569', marginBottom: '10px' }}>Sponsored</p>
+                      <img src="https://placehold.co/120x300/e0f2f7/475569?text=Ad+1" alt="Advertisement 1" onError={(e)=>{e.target.onerror = null; e.target.src='https://placehold.co/120x300/e0f2f7/475569?text=Ad+Load+Error'}}/>
+                      <p style={{ marginTop: '10px', color: '#64748b' }}>Discover new opportunities!</p>
+                    </div>
+                  </div>
 
-          <div className="ad-column">
-            <div className="ad-placeholder">
-              <p style={{ color: '#475569', marginBottom: '10px' }}>Promoted</p>
-              <img src="https://placehold.co/120x300/f0f9ff/475569?text=Ad+2" alt="Advertisement 2" onError={(e)=>{e.target.onerror = null; e.target.src='https://placehold.co/120x300/f0f9ff/475569?text=Ad+Load+Error'}}/>
-              <p style={{ marginTop: '10px', color: '#64748b' }}>Boost your career today!</p>
-            </div>
-          </div>
-        </div>
+                  <div style={chartSectionStyle}>
+                    <h4 style={{
+                      marginBottom: '20px',
+                      textAlign: 'center',
+                      color: '#475569',
+                      fontSize: '1.125rem',
+                      fontWeight: '600'
+                    }}>
+                      Job Source Performance
+                    </h4>
+                    <Line data={data} options={options} />
+                  </div>
 
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <button
-            onClick={() => navigate('/clientworksheet')}
-            className="worksheet-button"
-          >
-            Go to Work Sheet
-          </button>
-        </div>
+                  <div className="ad-column">
+                    <div className="ad-placeholder">
+                      <p style={{ color: '#475569', marginBottom: '10px' }}>Promoted</p>
+                      <img src="https://placehold.co/120x300/f0f9ff/475569?text=Ad+2" alt="Advertisement 2" onError={(e)=>{e.target.onerror = null; e.target.src='https://placehold.co/120x300/f0f9ff/475569?text=Ad+Load+Error'}}/>
+                      <p style={{ marginTop: '10px', color: '#64748b' }}>Boost your career today!</p>
+                    </div>
+                  </div>
+                </div>
 
-        <div className="cards-section">
-          <div
-            onClick={toggleInterviewsModal}
-            className="interviews-card"
-          >
-            <div style={{
-              position: 'absolute',
-              bottom: '-20px',
-              right: '-20px',
-              width: '120px',
-              height: '120px',
-              background: 'radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%)',
-              zIndex: 1
-            }}></div>
-            <div style={{
-              position: 'absolute',
-              top: '-30px',
-              left: '-30px',
-              width: '100px',
-              height: '100px',
-              background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)',
-              zIndex: 1
-            }}></div>
-            <div style={{ position: 'relative', zIndex: 2 }}>
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" style={{ marginBottom: '16px' }}>
-                <path d="M8 7V3M16 7V3M7 11H17M5 21H19C20.1046 21 21 20.1046 21 19V7C21 5.89543 20.1046 5 19 5H5C3.89543 5 3 5.89543 3 7V19C3 20.1046 3.89543 21 5 21Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              <div style={{ fontSize: '1.25rem', letterSpacing: '0.5px' }}>
-                INTERVIEWS SCHEDULED
-              </div>
-              <div style={{
-                fontSize: '0.875rem',
-                opacity: '0.9',
-                marginTop: '8px',
-                fontWeight: '400'
-              }}>
-                {scheduledInterviews.length} upcoming
-              </div>
-            </div>
-          </div>
+                <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+                  <button
+                    onClick={() => {
+                      setIsInWorksheetView(true); // Switch to worksheet view
+                      setActiveWorksheetTab("Applications"); // Default to Applications tab within worksheet
+                    }}
+                    className="worksheet-button"
+                  >
+                    Go to Worksheet
+                  </button>
+                </div>
 
-          <div
-            onClick={toggleResumeModal}
-            className="resume-card"
-          >
-            <div style={{
-              position: 'absolute',
-              bottom: '-20px',
-              right: '-20px',
-              width: '120px',
-              height: '120px',
-              background: 'radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%)',
-              zIndex: 1
-            }}></div>
-            <div style={{
-              position: 'absolute',
-              top: '-30px',
-              left: '-30px',
-              width: '100px',
-              height: '100px',
-              background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)',
-              zIndex: 1
-            }}></div>
-            <div style={{ position: 'relative', zIndex: 2 }}>
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" style={{ marginBottom: '16px' }}>
-                <path d="M9 12H15M9 16H15M10 3H14C15.1046 3 16 3.89543 16 5V20C16 20.5523 15.5523 21 15 21H9C8.44772 21 8 20.5523 8 20V5C8 3.89543 8.89543 3 10 3Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              <div style={{ fontSize: '1.25rem', letterSpacing: '0.5px' }}>
-                RESUME UPDATES
-              </div>
-              <div style={{
-                fontSize: '0.875rem',
-                opacity: '0.9',
-                marginTop: '8px',
-                fontWeight: '400'
-              }}>
-                {filteredResumeUpdates.length} recent updates
-              </div>
-            </div>
-          </div>
-        </div>
+                <div className="cards-section">
+                  <div
+                    onClick={toggleInterviewsModal}
+                    className="interviews-card"
+                  >
+                    <div style={{
+                      position: 'absolute',
+                      bottom: '-20px',
+                      right: '-20px',
+                      width: '120px',
+                      height: '120px',
+                      background: 'radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%)',
+                      zIndex: 1
+                    }}></div>
+                    <div style={{
+                      position: 'absolute',
+                      top: '-30px',
+                      left: '-30px',
+                      width: '100px',
+                      height: '100px',
+                      background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)',
+                      zIndex: 1
+                    }}></div>
+                    <div style={{ position: 'relative', zIndex: 2 }}>
+                      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" style={{ marginBottom: '16px' }}>
+                        <path d="M8 7V3M16 7V3M7 11H17M5 21H19C20.1046 21 21 20.1046 21 19V7C21 5.89543 20.1046 5 19 5H5C3.89543 5 3 5.89543 3 7V19C3 20.1046 3.89543 21 5 21Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      <div style={{ fontSize: '1.25rem', letterSpacing: '0.5px' }}>
+                        INTERVIEWS SCHEDULED
+                      </div>
+                      <div style={{
+                        fontSize: '0.875rem',
+                        opacity: '0.9',
+                        marginTop: '8px',
+                        fontWeight: '400'
+                      }}>
+                        {scheduledInterviews.length} upcoming
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    onClick={toggleResumeModal}
+                    className="resume-card"
+                  >
+                    <div style={{
+                      position: 'absolute',
+                      bottom: '-20px',
+                      right: '-20px',
+                      width: '120px',
+                      height: '120px',
+                      background: 'radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%)',
+                      zIndex: 1
+                    }}></div>
+                    <div style={{
+                      position: 'absolute',
+                      top: '-30px',
+                      left: '-30px',
+                      width: '100px',
+                      height: '100px',
+                      background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)',
+                      zIndex: 1
+                    }}></div>
+                    <div style={{ position: 'relative', zIndex: 2 }}>
+                      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" style={{ marginBottom: '16px' }}>
+                        <path d="M9 12H15M9 16H15M10 3H14C15.1046 3 16 3.89543 16 5V20C16 20.5523 15.5523 21 15 21H9C8.44772 21 8 20.5523 8 20V5C8 3.89543 8.89543 3 10 3Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      <div style={{ fontSize: '1.25rem', letterSpacing: '0.5px' }}>
+                        RESUME UPDATES
+                      </div>
+                      <div style={{
+                        fontSize: '0.875rem',
+                        opacity: '0.9',
+                        marginTop: '8px',
+                        fontWeight: '400'
+                      }}>
+                        {filteredResumeUpdates.length} recent updates
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* If activeTab is 'Applications' or 'Documents' directly from the main tabs, render WorksheetView */}
+            {activeTab === "Applications" && !isInWorksheetView && (
+              <WorksheetView
+                setActiveTab={setActiveTab}
+                activeWorksheetTab={"Applications"} // Force Applications tab
+                setActiveWorksheetTab={setActiveWorksheetTab}
+                selectedDate={selectedDate}
+                setSelectedDate={setSelectedDate}
+                dateRange={dateRange}
+                currentStartDate={currentStartDate}
+                setCurrentStartDate={setCurrentStartDate}
+                showPreviousWeek={showPreviousWeek}
+                showNextWeek={showNextWeek}
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                startDateFilter={startDateFilter}
+                setStartDateFilter={setStartDateFilter}
+                endDateFilter={endDateFilter}
+                setEndDateFilter={setEndDateFilter}
+                showDateRangeModal={showDateRangeModal}
+                setShowDateRangeModal={setShowDateRangeModal}
+                tempStartDate={tempStartDate}
+                setTempStartDate={setTempStartDate}
+                tempEndDate={tempEndDate}
+                setTempEndDate={tempEndDate}
+                handleDateRangeChangeFromCalendar={handleDateRangeChangeFromCalendar}
+                handleApplyDateRange={handleApplyDateRange}
+                handleClearDateRangeInModal={handleClearDateRangeInModal}
+                showJobDescriptionModal={showJobDescriptionModal}
+                setShowJobDescriptionModal={setShowJobDescriptionModal}
+                currentJobDescription={currentJobDescription}
+                setCurrentJobDescription={setCurrentJobDescription}
+                handleOpenJobDescriptionModal={handleOpenJobDescriptionModal}
+                handleCloseJobDescriptionModal={handleCloseJobDescriptionModal}
+                filterWebsites={filterWebsites}
+                setFilterWebsites={setFilterWebsites}
+                filterPositions={filterPositions}
+                setFilterPositions={setFilterPositions}
+                filterCompanies={filterCompanies}
+                setFilterCompanies={setFilterCompanies}
+                uniqueWebsites={uniqueWebsites}
+                uniquePositions={uniquePositions}
+                uniqueCompanies={uniqueCompanies}
+                showFilterModal={showFilterModal}
+                setShowFilterModal={setShowFilterModal}
+                tempSelectedWebsites={tempSelectedWebsites}
+                setTempSelectedWebsites={setTempSelectedWebsites}
+                tempSelectedPositions={tempSelectedPositions}
+                setTempSelectedPositions={setTempSelectedPositions}
+                tempSelectedCompanies={tempSelectedCompanies}
+                setTempSelectedCompanies={setTempSelectedCompanies}
+                handleOpenFilterModal={() => setShowFilterModal(true)}
+                handleCloseFilterModal={() => setShowFilterModal(false)}
+                handleApplyCategoricalFilters={() => {
+                  setFilterWebsites(tempSelectedWebsites);
+                  setFilterPositions(tempSelectedPositions);
+                  setFilterCompanies(tempSelectedCompanies);
+                  setShowFilterModal(false);
+                }}
+                handleClearTempFiltersInModal={() => {
+                  setTempSelectedWebsites([]);
+                  setTempSelectedPositions([]);
+                  setTempSelectedCompanies([]);
+                }}
+                handleWebsiteCheckboxChange={handleWebsiteCheckboxChange}
+                handlePositionCheckboxChange={handlePositionCheckboxChange}
+                handleCompanyCheckboxChange={handleCompanyCheckboxChange}
+                isGlobalFilterActive={isGlobalFilterActive}
+                clearAllFilters={clearAllFilters}
+                getApplicationsSectionTitle={getApplicationsSectionTitle}
+                filteredApplicationsForDisplay={filteredApplicationsForDisplay}
+                downloadApplicationsData={downloadApplicationsData}
+                applicationsData={applicationsData}
+                allApplicationsFlattened={allApplicationsFlattened}
+                setActiveSubTab={setActiveSubTab}
+                setIsInWorksheetView={setIsInWorksheetView}
+              />
+            )}
+
+            {activeTab === "Documents" && !isInWorksheetView && (
+              <WorksheetView
+                setActiveTab={setActiveTab}
+                activeWorksheetTab={"Documents"} // Force Documents tab
+                setActiveWorksheetTab={setActiveWorksheetTab}
+                selectedDate={selectedDate}
+                setSelectedDate={setSelectedDate}
+                dateRange={dateRange}
+                currentStartDate={currentStartDate}
+                setCurrentStartDate={setCurrentStartDate}
+                showPreviousWeek={showPreviousWeek}
+                showNextWeek={showNextWeek}
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                startDateFilter={startDateFilter}
+                setStartDateFilter={setStartDateFilter}
+                endDateFilter={endDateFilter}
+                setEndDateFilter={setEndDateFilter}
+                showDateRangeModal={showDateRangeModal}
+                setShowDateRangeModal={setShowDateRangeModal}
+                tempStartDate={tempStartDate}
+                setTempStartDate={setTempStartDate}
+                tempEndDate={tempEndDate}
+                setTempEndDate={tempEndDate}
+                handleDateRangeChangeFromCalendar={handleDateRangeChangeFromCalendar}
+                handleApplyDateRange={handleApplyDateRange}
+                handleClearDateRangeInModal={handleClearDateRangeInModal}
+                showJobDescriptionModal={showJobDescriptionModal}
+                setShowJobDescriptionModal={setShowJobDescriptionModal}
+                currentJobDescription={currentJobDescription}
+                setCurrentJobDescription={setCurrentJobDescription}
+                handleOpenJobDescriptionModal={handleOpenJobDescriptionModal}
+                handleCloseJobDescriptionModal={handleCloseJobDescriptionModal}
+                filterWebsites={filterWebsites}
+                setFilterWebsites={setFilterWebsites}
+                filterPositions={filterPositions}
+                setFilterPositions={setFilterPositions}
+                filterCompanies={filterCompanies}
+                setFilterCompanies={setFilterCompanies}
+                uniqueWebsites={uniqueWebsites}
+                uniquePositions={uniquePositions}
+                uniqueCompanies={uniqueCompanies}
+                showFilterModal={showFilterModal}
+                setShowFilterModal={setShowFilterModal}
+                tempSelectedWebsites={tempSelectedWebsites}
+                setTempSelectedWebsites={setTempSelectedWebsites}
+                tempSelectedPositions={tempSelectedPositions}
+                setTempSelectedPositions={setTempSelectedPositions}
+                tempSelectedCompanies={tempSelectedCompanies}
+                setTempSelectedCompanies={setTempSelectedCompanies}
+                handleOpenFilterModal={() => setShowFilterModal(true)}
+                handleCloseFilterModal={() => setShowFilterModal(false)}
+                handleApplyCategoricalFilters={() => {
+                  setFilterWebsites(tempSelectedWebsites);
+                  setFilterPositions(tempSelectedPositions);
+                  setFilterCompanies(tempSelectedCompanies);
+                  setShowFilterModal(false);
+                }}
+                handleClearTempFiltersInModal={() => {
+                  setTempSelectedWebsites([]);
+                  setTempSelectedPositions([]);
+                  setTempSelectedCompanies([]);
+                }}
+                handleWebsiteCheckboxChange={handleWebsiteCheckboxChange}
+                handlePositionCheckboxChange={handlePositionCheckboxChange}
+                handleCompanyCheckboxChange={handleCompanyCheckboxChange}
+                isGlobalFilterActive={isGlobalFilterActive}
+                clearAllFilters={clearAllFilters}
+                getApplicationsSectionTitle={getApplicationsSectionTitle}
+                filteredApplicationsForDisplay={filteredApplicationsForDisplay}
+                downloadApplicationsData={downloadApplicationsData}
+                applicationsData={applicationsData}
+                allApplicationsFlattened={allApplicationsFlattened}
+                activeSubTab={activeSubTab} // Pass sub-tab state for Documents
+                setActiveSubTab={setActiveSubTab} // Pass sub-tab state for Documents
+                setIsInWorksheetView={setIsInWorksheetView} // Pass down
+              />
+            )}
+          </>
+        ) : (
+          // Render the WorksheetView when isInWorksheetView is true
+          <WorksheetView
+            setActiveTab={setActiveTab} // To go back to main Dashboard
+            activeWorksheetTab={activeWorksheetTab}
+            setActiveWorksheetTab={setActiveWorksheetTab}
+            selectedDate={selectedDate}
+            setSelectedDate={setSelectedDate}
+            dateRange={dateRange}
+            currentStartDate={currentStartDate}
+            setCurrentStartDate={setCurrentStartDate}
+            showPreviousWeek={showPreviousWeek}
+            showNextWeek={showNextWeek}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            startDateFilter={startDateFilter}
+            setStartDateFilter={setStartDateFilter}
+            endDateFilter={endDateFilter}
+            setEndDateFilter={setEndDateFilter}
+            showDateRangeModal={showDateRangeModal}
+            setShowDateRangeModal={setShowDateRangeModal}
+            tempStartDate={tempStartDate}
+            setTempStartDate={setTempStartDate}
+            tempEndDate={tempEndDate}
+            setTempEndDate={tempEndDate}
+            handleDateRangeChangeFromCalendar={handleDateRangeChangeFromCalendar}
+            handleApplyDateRange={handleApplyDateRange}
+            handleClearDateRangeInModal={handleClearDateRangeInModal}
+            showJobDescriptionModal={showJobDescriptionModal}
+            setShowJobDescriptionModal={setShowJobDescriptionModal}
+            currentJobDescription={currentJobDescription}
+            setCurrentJobDescription={setCurrentJobDescription}
+            handleOpenJobDescriptionModal={handleOpenJobDescriptionModal}
+            handleCloseJobDescriptionModal={handleCloseJobDescriptionModal}
+            filterWebsites={filterWebsites}
+            setFilterWebsites={setFilterWebsites}
+            filterPositions={filterPositions}
+            setFilterPositions={setFilterPositions}
+            filterCompanies={filterCompanies}
+            setFilterCompanies={setFilterCompanies}
+            uniqueWebsites={uniqueWebsites}
+            uniquePositions={uniquePositions}
+            uniqueCompanies={uniqueCompanies}
+            showFilterModal={showFilterModal}
+            setShowFilterModal={setShowFilterModal}
+            tempSelectedWebsites={tempSelectedWebsites}
+            setTempSelectedWebsites={setTempSelectedWebsites}
+            tempSelectedPositions={tempSelectedPositions}
+            setTempSelectedPositions={setTempSelectedPositions}
+            tempSelectedCompanies={tempSelectedCompanies}
+            setTempSelectedCompanies={setTempSelectedCompanies}
+            handleOpenFilterModal={() => setShowFilterModal(true)}
+            handleCloseFilterModal={() => setShowFilterModal(false)}
+            handleApplyCategoricalFilters={() => {
+              setFilterWebsites(tempSelectedWebsites);
+              setFilterPositions(tempSelectedPositions);
+              setFilterCompanies(tempSelectedCompanies);
+              setShowFilterModal(false);
+            }}
+            handleClearTempFiltersInModal={() => {
+              setTempSelectedWebsites([]);
+              setTempSelectedPositions([]);
+              setTempSelectedCompanies([]);
+            }}
+            handleWebsiteCheckboxChange={handleWebsiteCheckboxChange}
+            handlePositionCheckboxChange={handlePositionCheckboxChange}
+            handleCompanyCheckboxChange={handleCompanyCheckboxChange}
+            isGlobalFilterActive={isGlobalFilterActive}
+            clearAllFilters={clearAllFilters}
+            getApplicationsSectionTitle={getApplicationsSectionTitle}
+            filteredApplicationsForDisplay={filteredApplicationsForDisplay}
+            downloadApplicationsData={downloadApplicationsData}
+            applicationsData={applicationsData}
+            allApplicationsFlattened={allApplicationsFlattened}
+            activeSubTab={activeSubTab} // Pass sub-tab state for Documents
+            setActiveSubTab={setActiveSubTab} // Pass sub-tab state for Documents
+            setIsInWorksheetView={setIsInWorksheetView} // Pass down
+          />
+        )}
+
       </div>
     </div>
   );
 };
 
-// --- STYLES (kept as constants for clarity, but they are NOT inline styles with pseudo-classes) ---
+// --- STYLES (Combined from both files) ---
 const chartSectionStyle = {
   width: '100%',
   maxWidth: '1000px',
@@ -2360,6 +4288,20 @@ const paymentPlanSelectButtonStyle = {
   width: '100%',
   boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
   transition: 'background-color 0.2s, transform 0.2s',
+};
+
+const modalClearButtonStyle = {
+  backgroundColor: '#f0ad4e',
+  color: 'white',
+  border: 'none',
+  padding: '8px 12px',
+  borderRadius: '6px',
+  fontSize: '0.875rem',
+  cursor: 'pointer',
+  transition: 'background-color 0.2s',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '5px'
 };
 
 export default ClientDashboard;
