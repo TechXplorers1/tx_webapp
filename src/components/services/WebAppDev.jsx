@@ -146,7 +146,7 @@ const WebAppDev = () => {
           </button>
           &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;------or------ &nbsp; &nbsp; &nbsp;
           <button onClick={handleApplyNow} className="contact-button btn-lg btn-primary mb-5">
-            Apply Now
+            Register Now
           </button>
         </div>
       </section>

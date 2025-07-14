@@ -133,7 +133,7 @@ TechXplorers specializes in a wide range of mobile solutions including Bluetooth
             Contact Us
           </button>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;------or------ &nbsp; &nbsp; &nbsp;
           <button onClick={handleApplyNow} className="contact-button btn-lg btn-primary mb-5">
-            Apply Now
+            Register Now
           </button>
         </div>
       </section>

@@ -30,7 +30,7 @@ const LandingPage = () => {
     { name: 'UK', position: [51.505, -0.09] },
     { name: 'Nigeria', position: [6.5244, 3.3792] },
     { name: 'Australia', position: [-33.8688, 151.2093] },
-    { name: 'India', position: [28.6139, 77.209] },
+    { name: 'India', position: [14.666386222572966, 77.59006709376247] },
   ];
 
 
@@ -103,7 +103,11 @@ const LandingPage = () => {
         <Container fluid className="px-0">
           <Row className="gx-3 mx-auto">
             <Col md={4} className="service-card">
-              <div className="service-overlay-container position-relative">
+              <div
+                className="service-overlay-container position-relative"
+                onClick={() => navigate("/services/web-app-development")}
+                style={{ cursor: 'pointer' }}
+              >
                 <img
                   src={WebAnalyticsImg}
                   alt="WebAnalytics Service"
@@ -115,7 +119,11 @@ const LandingPage = () => {
               </div>
             </Col>
             <Col md={4} className="service-card">
-              <div className="service-overlay-container position-relative">
+              <div
+                className="service-overlay-container position-relative"
+                onClick={() => navigate("/services/digital-marketing")}
+                style={{ cursor: 'pointer' }}
+              >
                 <img
                   src={ProjectPlanningImg}
                   alt="Project Planning"
@@ -127,7 +135,11 @@ const LandingPage = () => {
               </div>
             </Col>
             <Col md={4} className="service-card">
-              <div className="service-overlay-container position-relative">
+              <div
+                className="service-overlay-container position-relative"
+                onClick={() => navigate("/services/job-support")}
+                style={{ cursor: 'pointer' }}
+              >
                 <img
                   src={techSupportImg}
                   alt="Tech Support"

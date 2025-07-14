@@ -135,7 +135,7 @@ const ITTalentSupply = () => {
           </button>
           &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;------or------ &nbsp; &nbsp; &nbsp;
           <button onClick={handleApplyNow} className="contact-button btn-lg btn-primary">
-            Apply Now
+            Register Now
           </button>
         </div>
       </section>

@@ -157,7 +157,7 @@ const ClientWorksheet = () => {
         padding: "20px",
         backgroundColor: "#ffffff",
         borderRadius: "8px",
-        boxShadow: "0 4px 20px rgba(0, 0, 0, 0.08)",
+        boxShadow: "0 2px 2px rgba(0, 0, 0, 0.08)",
       }}
     >
       {/* Tabs */}
@@ -226,7 +226,7 @@ const ClientWorksheet = () => {
           marginTop: "20px",
           padding: "20px",
           borderRadius: "8px",
-          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.08)",
+          boxShadow: "0 2px 2px rgba(0, 0, 0, 0.08)",
         }}
       >
         {activeTab === "Applications" && <Applications />}
@@ -1056,6 +1056,40 @@ const Documents = ({ activeSubTab, handleSubTabChange }) => {
         gap: "20px",
       }}
     >
+  {/* Header with back button */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '30px',
+        borderBottom: '1px solid #eee',
+        paddingBottom: '20px'
+      }}>
+        <button
+          onClick={() => navigate('/clientdashboard')}
+          style={{
+            background: '#ffffff',
+            color: '#3b82f6',
+            border: '1px solid #e2e8f0',
+            padding: '8px 16px',
+            borderRadius: '6px',
+            fontSize: '0.875rem',
+            fontWeight: '500',
+            cursor: 'pointer',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+            display: 'flex',
+            alignItems: 'center',
+            transition: 'background-color 0.2s',
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginRight: '6px' }}>
+            <path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Back
+        </button>
+      </div>
+
+
       <h3
         style={{
           fontSize: "20px",

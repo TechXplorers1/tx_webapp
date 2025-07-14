@@ -122,7 +122,7 @@ const DigitalMarketing = () => {
           </button>
           &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;------or------ &nbsp; &nbsp; &nbsp;
           <button onClick={handleApplyNow} className="btn-lg btn-primary contact-button">
-            Apply Now
+            Register Now
           </button>
         </div>
       </section>

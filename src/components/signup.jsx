@@ -51,7 +51,7 @@ export default function SignupPage() {
 
     if (!hasError) {
       console.log("User Registered with Email:", email);
-      navigate('/candidateform');
+      navigate('/login');
     }
   };
 
@@ -176,6 +176,7 @@ export default function SignupPage() {
                   padding: "12px 0",
                   transition: "background-color 0.3s ease"
                 }}
+                onClick={() => navigate("/login")}
               >
                 Sign Up
               </Button>

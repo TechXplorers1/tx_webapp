@@ -121,7 +121,7 @@ Our comprehensive job support services are designed to assist IT professionals i
             className="contact-button btn-lg btn-primary"
             onClick={() => navigate('/services/job-contact-form')}
           >
-            Apply Now
+            Register Now
           </button>
         </div>
       </section>

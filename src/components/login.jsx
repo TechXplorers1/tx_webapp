@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
 import JsNavbar from './JsNavbar';
 import { Button, Modal, Form } from 'react-bootstrap';
@@ -21,9 +21,31 @@ export default function LoginPage() {
   const [otpSent, setOtpSent] = useState(false);
   const [enteredOtp, setEnteredOtp] = useState("");
   const [generatedOtp, setGeneratedOtp] = useState("");
+  const [otpError, setOtpError] = useState(""); // New state for OTP error
+  const [otpTimer, setOtpTimer] = useState(60); // Timer for OTP resend
+  const [isResendingOtp, setIsResendingOtp] = useState(false); // State to control resend button
+
+  const [otpVerified, setOtpVerified] = useState(false); // New state to track OTP verification
+  const [showNewPasswordModal, setShowNewPasswordModal] = useState(false); // New state for new password modal
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [newPasswordError, setNewPasswordError] = useState(""); // New state for new password error
+  const [confirmPasswordError, setConfirmPasswordError] = useState(""); // New state for confirm password error
+
   const [showSuccess, setShowSuccess] = useState(false);
+
+  // Effect for OTP timer
+  useEffect(() => {
+    let timerInterval;
+    if (otpSent && otpTimer > 0) {
+      timerInterval = setInterval(() => {
+        setOtpTimer((prevTimer) => prevTimer - 1);
+      }, 1000);
+    } else if (otpTimer === 0) {
+      setIsResendingOtp(false); // Allow resend when timer runs out
+    }
+    return () => clearInterval(timerInterval);
+  }, [otpSent, otpTimer]);
 
   const validatePassword = (value) => {
     if (value.length < 8) return 'Password must be at least 8 characters';
@@ -66,22 +88,65 @@ export default function LoginPage() {
   };
 
   const sendOtp = () => {
-    if (!forgotEmail.includes("@")) return alert("Enter a valid email");
+    if (!forgotEmail.includes("@")) {
+      // Using a custom alert/message box instead of browser's alert()
+      alert("Please enter a valid email address."); // Placeholder for a custom message box
+      return;
+    }
+    // Simulate OTP generation
     const otp = Math.floor(1000 + Math.random() * 9000).toString();
     setGeneratedOtp(otp);
-    alert(`OTP sent to ${forgotEmail}: ${otp}`);
+    // Using a custom alert/message box instead of browser's alert()
+    alert(`OTP sent to ${forgotEmail}: ${otp}`); // Placeholder for a custom message box
     setOtpSent(true);
+    setOtpTimer(60); // Reset timer
+    setIsResendingOtp(true); // Disable resend button immediately
+    setOtpError(""); // Clear any previous OTP errors
   };
 
-  const resetPassword = () => {
-    if (enteredOtp !== generatedOtp) return alert("Invalid OTP");
-    if (newPassword !== confirmPassword) return alert("Passwords do not match");
-    const error = validatePassword(newPassword);
-    if (error) return alert(error);
+  const verifyOtp = () => {
+    if (enteredOtp === generatedOtp) {
+      setOtpVerified(true);
+      setOtpError("");
+      setShowForgotModal(false); // Close the OTP modal
+      setShowNewPasswordModal(true); // Open the new password modal
+    } else {
+      setOtpError("Invalid OTP. Please try again.");
+    }
+  };
 
-    setShowForgotModal(false);
+  const createNewPassword = () => {
+    setNewPasswordError("");
+    setConfirmPasswordError("");
+
+    let hasError = false;
+    const passError = validatePassword(newPassword);
+    if (passError) {
+      setNewPasswordError(passError);
+      hasError = true;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setConfirmPasswordError("Passwords do not match.");
+      hasError = true;
+    }
+
+    if (hasError) return;
+
+    // Simulate password update
+    console.log("New password set:", newPassword);
+
+    setShowNewPasswordModal(false);
     setShowSuccess(true);
     setTimeout(() => setShowSuccess(false), 4000);
+    // Reset all forgot password states
+    setForgotEmail("");
+    setOtpSent(false);
+    setEnteredOtp("");
+    setGeneratedOtp("");
+    setOtpVerified(false);
+    setNewPassword("");
+    setConfirmPassword("");
   };
 
   return (
@@ -158,7 +223,20 @@ export default function LoginPage() {
           <div className="text-end mb-3">
             <span
               style={{ color: '#007bff', fontWeight: 600, cursor: 'pointer' }}
-              onClick={() => setShowForgotModal(true)}
+              onClick={() => {
+                setShowForgotModal(true);
+                setOtpSent(false); // Reset OTP sent state when opening modal
+                setOtpVerified(false); // Reset OTP verified state
+                setForgotEmail(""); // Clear previous email
+                setEnteredOtp(""); // Clear previous OTP
+                setOtpError(""); // Clear OTP error
+                setNewPassword(""); // Clear new password fields
+                setConfirmPassword("");
+                setNewPasswordError("");
+                setConfirmPasswordError("");
+                setOtpTimer(60); // Reset timer
+                setIsResendingOtp(false); // Reset resend state
+              }}
             >
               Forgot Password?
             </span>
@@ -180,7 +258,7 @@ export default function LoginPage() {
         </Form>
       </div>
 
-      {/* Forgot Password Modal */}
+      {/* Forgot Password (Send OTP / Enter OTP) Modal */}
       <Modal show={showForgotModal} onHide={() => setShowForgotModal(false)} centered>
         <Modal.Header closeButton><Modal.Title>Reset Password</Modal.Title></Modal.Header>
         <Modal.Body>
@@ -195,43 +273,66 @@ export default function LoginPage() {
               />
             </Form.Group>
           ) : (
-            <>
-              <Form.Group className="mb-2">
-                <Form.Label>Enter OTP</Form.Label>
-                <Form.Control
-                  type="text"
-                  value={enteredOtp}
-                  onChange={(e) => setEnteredOtp(e.target.value)}
-                  placeholder="Enter 4-digit OTP"
-                />
-              </Form.Group>
-              <Form.Group className="mb-2">
-                <Form.Label>New Password</Form.Label>
-                <Form.Control
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="New Password"
-                />
-              </Form.Group>
-              <Form.Group>
-                <Form.Label>Confirm Password</Form.Label>
-                <Form.Control
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirm Password"
-                />
-              </Form.Group>
-            </>
+            <Form.Group>
+              <Form.Label>Enter OTP sent to {forgotEmail}</Form.Label>
+              <Form.Control
+                type="text"
+                value={enteredOtp}
+                onChange={(e) => setEnteredOtp(e.target.value)}
+                placeholder="Enter 4-digit OTP"
+                isInvalid={!!otpError}
+              />
+              <Form.Control.Feedback type="invalid">{otpError}</Form.Control.Feedback>
+            </Form.Group>
           )}
         </Modal.Body>
         <Modal.Footer>
           {!otpSent ? (
             <Button variant="primary" onClick={sendOtp}>Send OTP</Button>
           ) : (
-            <Button variant="success" onClick={resetPassword}>Reset Password</Button>
+            <>
+              <Button variant="primary" onClick={verifyOtp} disabled={enteredOtp.length !== 4}>Verify OTP</Button>
+              <Button
+                variant="secondary"
+                onClick={sendOtp}
+                disabled={isResendingOtp && otpTimer > 0}
+              >
+                {isResendingOtp && otpTimer > 0 ? `Resend OTP (${otpTimer}s)` : 'Resend OTP'}
+              </Button>
+            </>
           )}
+        </Modal.Footer>
+      </Modal>
+
+      {/* Create New Password Modal */}
+      <Modal show={showNewPasswordModal} onHide={() => setShowNewPasswordModal(false)} centered>
+        <Modal.Header closeButton><Modal.Title>Create New Password</Modal.Title></Modal.Header>
+        <Modal.Body>
+          <Form.Group className="mb-2">
+            <Form.Label>New Password</Form.Label>
+            <Form.Control
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="New Password"
+              isInvalid={!!newPasswordError}
+            />
+            <Form.Control.Feedback type="invalid">{newPasswordError}</Form.Control.Feedback>
+          </Form.Group>
+          <Form.Group>
+            <Form.Label>Confirm Password</Form.Label>
+            <Form.Control
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirm Password"
+              isInvalid={!!confirmPasswordError}
+            />
+            <Form.Control.Feedback type="invalid">{confirmPasswordError}</Form.Control.Feedback>
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="success" onClick={createNewPassword}>Set New Password</Button>
         </Modal.Footer>
       </Modal>
 
@@ -249,3 +350,4 @@ export default function LoginPage() {
     </div>
   );
 }
+

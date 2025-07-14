@@ -1,9 +1,441 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef  } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Modal } from 'react-bootstrap'; // Using react-bootstrap Modal
 
+
+
+// AdminHeader Component - Provided by the user
+const AdminHeader = ({
+  adminUserName,
+  adminInitials,
+  isDarkMode,
+  toggleTheme,
+  toggleSidebar,
+  isProfileDropdownOpen,
+  setIsProfileDropdownOpen,
+  profileDropdownRef
+}) => {
+
+  // Effect to close profile dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // Check if profileDropdownRef.current exists and if the click is outside it
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
+        setIsProfileDropdownOpen(false);
+      }
+    };
+
+    // Attach the event listener when the component mounts
+    document.addEventListener('mousedown', handleClickOutside);
+    // Clean up the event listener when the component unmounts
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [profileDropdownRef, setIsProfileDropdownOpen]); // Dependencies: profileDropdownRef and setIsProfileDropdownOpen
+
+  return (
+    <>
+      {/* Inline styles for AdminHeader - extracted from AdminWorksheet.jsx */}
+      <style>
+        {`
+        /* Import Inter font from Google Fonts */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        /* CSS Variables for theming (Header specific) */
+        :root {
+          --bg-header: #ffffff;
+          --text-primary: #1f2937;
+          --text-secondary: #6b7280;
+          --border-color: #e5e7eb;
+          --shadow-color-1: rgba(0, 0, 0, 0.05);
+          --icon-color: #6b7280;
+          --admin-avatar-bg: #1f2937;
+          --admin-avatar-text: #ffffff;
+          --logo-x-color: #2563eb;
+          --admin-tag-bg: #fee2e2;
+          --admin-tag-text: #991b1b;
+          --bg-nav-link-hover: #f9fafb; /* For dropdown items */
+        }
+
+        html.dark-mode {
+          --bg-header: #2d3748;
+          --text-primary: #e2e8f0;
+          --text-secondary: #a0aec0;
+          --border-color: #4a5568;
+          --shadow-color-1: rgba(0, 0, 0, 0.2);
+          --icon-color: #cbd5e0;
+          --admin-avatar-bg: #4299e1;
+          --admin-avatar-text: #ffffff;
+          --logo-x-color: #4299e1;
+          --admin-tag-bg: #fbd38d;
+          --admin-tag-text: #6b4617;
+          --bg-nav-link-hover: #4a5568; /* For dropdown items */
+        }
+
+        /* Profile Dropdown Styles */
+        .profile-dropdown-container {
+          position: relative;
+          cursor: pointer;
+          z-index: 60; /* Higher than header for dropdown to appear on top */
+        }
+
+        .profile-dropdown-menu {
+          position: absolute;
+          top: calc(100% + 0.5rem); /* Position below the avatar */
+          right: 0;
+          background-color: var(--bg-header); /* Use header background for consistency */
+          border-radius: 0.5rem;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+          border: 1px solid var(--border-color);
+          min-width: 12rem;
+          padding: 0.5rem 0;
+          list-style: none;
+          margin: 0;
+          opacity: 0;
+          visibility: hidden;
+          transform: translateY(-10px);
+          transition: opacity 0.2s ease-out, transform 0.2s ease-out, visibility 0.2s ease-out;
+        }
+
+        .profile-dropdown-menu.open {
+          opacity: 1;
+          visibility: visible;
+          transform: translateY(0);
+        }
+
+        .profile-dropdown-item {
+          padding: 0.75rem 1rem;
+          color: var(--text-primary);
+          font-size: 0.9rem;
+          font-weight: 500;
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          transition: background-color 0.15s ease;
+        }
+
+        .profile-dropdown-item:hover {
+          background-color: var(--bg-nav-link-hover);
+        }
+
+        .profile-dropdown-item.header {
+          font-weight: 600;
+          color: var(--text-secondary);
+          font-size: 0.8rem;
+          padding: 0.5rem 1rem;
+          border-bottom: 1px solid var(--border-color);
+          margin-bottom: 0.5rem;
+        }
+
+        .profile-dropdown-item.logout {
+          color: #ef4444; /* Red for logout */
+        }
+
+        .profile-dropdown-item.logout:hover {
+          background-color: #fee2e2; /* Light red background on hover */
+        }
+
+        /* Top Navigation Bar */
+        .ad-header {
+          background-color: var(--bg-header);
+          box-shadow: 0 1px 2px 0 var(--shadow-color-1);
+          padding: 1rem 1.5rem;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          position: sticky;
+          top: 0;
+          z-index: 50;
+        }
+
+        .ad-header-left {
+          display: flex;
+          align-items: center;
+          gap: 1.5rem;
+        }
+
+        .ad-logo {
+          display: flex;
+          align-items: center;
+          color: var(--text-primary);
+          font-size: 1.5rem;
+          font-weight: 700;
+        }
+        .ad-logo-x {
+          color: var(--logo-x-color);
+        }
+
+        .ad-header-right {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+        }
+
+        .ad-icon-btn {
+          color: var(--icon-color);
+          font-size: 1.125rem;
+          cursor: pointer;
+          background: none;
+          border: none;
+          padding: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .ad-icon-btn:hover {
+          color: #2563eb;
+        }
+
+        .ad-notification-icon {
+          position: relative;
+        }
+
+        .ad-notification-badge {
+          position: absolute;
+          top: -0.25rem;
+          right: -0.25rem;
+          background-color: #ef4444;
+          color: #ffffff;
+          font-size: 0.75rem;
+          border-radius: 9999px;
+          height: 1rem;
+          width: 1rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .ad-user-info {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .ad-user-info-text {
+          display: none;
+          flex-direction: column;
+          align-items: flex-end;
+          gap: 0.125rem;
+        }
+
+        @media (min-width: 768px) {
+          .ad-user-info-text {
+            display: flex;
+          }
+        }
+
+        .ad-user-name {
+          color: var(--text-primary);
+          font-size: 0.875rem;
+          font-weight: 600;
+          margin: 0;
+          padding: 0;
+          line-height: 1.2;
+        }
+
+        .ad-user-email {
+          color: var(--text-secondary);
+          font-size: 0.75rem;
+          margin: 0;
+          padding: 0;
+          line-height: 1.2;
+        }
+
+        /* Initials Avatar Styles */
+        .ad-initials-avatar {
+          width: 2.5rem;
+          height: 2.5rem;
+          border-radius: 9999px;
+          background-color: var(--admin-avatar-bg);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .ad-initials-text {
+          color: var(--admin-avatar-text);
+          font-size: 0.875rem;
+          font-weight: 600;
+        }
+
+        /* Admin Tag in Header */
+        .ad-admin-tag {
+            background-color: var(--admin-tag-bg);
+            color: var(--admin-tag-text);
+            padding: 0.125rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+            white-space: nowrap;
+            display: inline-flex; /* Ensure it behaves like a tag */
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .ad-hamburger-menu {
+          display: block;
+          padding: 0.5rem;
+          border-radius: 0.5rem;
+          background-color: var(--border-color);
+          transition: background-color 150ms;
+          cursor: pointer;
+        }
+
+        .ad-hamburger-menu:hover {
+          background-color: var(--text-secondary);
+        }
+
+        @media (min-width: 768px) {
+          .ad-hamburger-menu {
+            display: none;
+          }
+        }
+        `}
+      </style>
+      <header className="ad-header">
+        <div className="ad-header-left">
+          <div className="ad-logo">
+            <span>Tech</span>
+            <span className="ad-logo-x">X</span>
+            <span>plorers</span>
+          </div>
+        </div>
+
+        <div className="ad-header-right">
+          {/* Search Icon */}
+          <svg className="ad-icon-btn" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" style={{ width: '1.125rem', height: '1.125rem' }}>
+            <path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.1-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z"/>
+          </svg>
+          <div className="ad-notification-icon">
+            {/* Bell Icon */}
+            <svg className="ad-icon-btn" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1.125rem', height: '1.125rem' }}>
+              <path d="M224 0c-17.7 0-32 14.3-32 32V51.2C119 66 64 130.6 64 208v25.4c0 45.4-15.5 89.2-43.8 124.9L5.7 377.9c-2.7 4.4-3.4 9.7-1.7 14.6s4.6 8.5 9.8 10.1l39.5 12.8c10.6 3.4 21.8 3.9 32.7 1.4S120.3 400 128 392h192c7.7 8 17.5 13.6 28.3 16.3s22.1 1.9 32.7-1.4l39.5-12.8c5.2-1.7 8.2-6.1 9.8-10.1s1-10.2-1.7-14.6l-20.5-33.7C399.5 322.6 384 278.8 384 233.4V208c0-77.4-55-142-128-156.8V32c0-17.7-14.3-32-32-32zm0 96c61.9 0 112 50.1 112 112v25.4c0 47.9 13.9 94.6 39.7 134.6H184.3c25.8-40 39.7-86.7 39.7-134.6V208c0-61.9 50.1-112 112-112zm0 352a48 48 0 1 0 0-96 48 48 0 1 0 0 96z"/>
+            </svg>
+            <span className="ad-notification-badge">3</span>
+          </div>
+          {/* Dark/Light Mode Toggle Button */}
+          <button
+            onClick={toggleTheme}
+            className="ad-icon-btn"
+            aria-label={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          >
+            {isDarkMode ? (
+              // Sun Icon (FiSun equivalent)
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: '1.125rem', height: '1.125rem' }}>
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+              </svg>
+            ) : (
+              // Moon Icon (FiMoon equivalent)
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: '1.125rem', height: '1.125rem' }}>
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+              </svg>
+            )}
+          </button>
+          <div className="profile-dropdown-container" ref={profileDropdownRef}>
+            <div className="ad-user-info" onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}>
+              <div className="ad-user-info-text">
+                <p className="ad-user-name">{adminUserName}</p>
+                <span className="ad-admin-tag">
+                  {/* User Icon */}
+                  <svg className="ad-icon-btn" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ fontSize: '0.65rem', width: '0.65rem', height: '0.65rem' }}>
+                    <path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"/>
+                  </svg>
+                  Admin
+                </span>
+              </div>
+              <div className="ad-initials-avatar">
+                <span className="ad-initials-text">{adminInitials}</span>
+              </div>
+            </div>
+            {isProfileDropdownOpen && (
+              <ul className="profile-dropdown-menu open">
+                <li className="profile-dropdown-item header">My Account</li>
+                <li className="profile-dropdown-item">
+                  {/* User Icon */}
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1rem', height: '1rem' }}>
+                    <path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"/>
+                  </svg>
+                  Profile
+                </li>
+                <li className="profile-dropdown-item">
+                  {/* Settings Icon (Gear icon from screenshot) */}
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1rem', height: '1rem' }}>
+                    <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM13.07 4.11C16.96 4.41 20 7.71 20 12C20 16.3 16.96 19.59 13.07 19.89L13.07 4.11ZM10.93 4.11L10.93 19.89C7.04 19.59 4 16.3 4 12C4 7.71 7.04 4.41 10.93 4.11Z" />
+                  </svg>
+                  Settings
+                </li>
+                <li className="profile-dropdown-item logout" onClick={() => window.location.href = '/'}>
+                  {/* Log Out Icon (Door with arrow from screenshot) */}
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1rem', height: '1rem' }}>
+                    <path d="M10 4H4C3.44772 4 3 4.44772 3 5V19C3 19.5523 3.44772 20 4 20H10C10.5523 20 11 19.5523 11 19V17H13V19C13 20.6569 11.6569 22 10 22H4C2.34315 22 1 20.6569 1 19V5C1 3.34315 2.34315 2 4 2H10C11.6569 2 13 3.34315 13 5V7H11V5C11 4.44772 10.5523 4 10 4ZM19.2929 10.2929L22.2929 13.2929C22.6834 13.6834 22.6834 14.3166 22.2929 14.7071L19.2929 17.7071C18.9024 18.0976 18.2692 18.0976 17.8787 17.7071C17.4882 17.3166 17.4882 16.6834 17.8787 16.2929L19.5858 14.5858H11C10.4477 14.5858 10 14.1381 10 13.5858C10 13.0335 10.4477 12.5858 11 12.5858H19.5858L17.8787 10.8787C17.4882 10.4882 17.4882 9.85497 17.8787 9.46447C18.2692 9.07395 18.9024 9.07395 19.2929 9.46447Z" />
+                  </svg>
+                  Log out
+                </li>
+              </ul>
+            )}
+          </div>
+        </div>
+
+        <button
+          className="ad-hamburger-menu"
+          onClick={toggleSidebar}
+        >
+          {/* Hamburger Icon */}
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1.125rem', height: '1.125rem' }}>
+            <path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/>
+          </svg>
+        </button>
+      </header>
+    </>
+  );
+};
+
+
+
+
 const EmployeeData = () => {
   const navigate = useNavigate();
+
+  // State for theme and profile dropdown for AdminHeader
+  const [theme, setTheme] = useState(() => {
+    const savedTheme = localStorage.getItem('theme');
+    return savedTheme ? savedTheme : 'light';
+  });
+
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const profileDropdownRef = useRef(null);
+
+  useEffect(() => {
+    document.documentElement.className = theme + '-mode';
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prevTheme) => {
+      const newTheme = prevTheme === 'light' ? 'dark' : 'light';
+      localStorage.setItem('theme', newTheme);
+      return newTheme;
+    });
+  };
+
+  // Dummy toggleSidebar function as it's required by AdminHeader but not explicitly defined for EmployeeData's context
+  // You might want to implement a proper sidebar functionality if needed.
+  const toggleSidebar = () => {
+    console.log("Toggle sidebar functionality goes here.");
+  };
+
+
+
   // Initial active tab is now 'New Clients'
   const [activeTab, setActiveTab] = useState('New Clients');
   // NEW: State for the active sub-tab (for client-specific data)
@@ -813,6 +1245,16 @@ const EmployeeData = () => {
 
   return (
     <div style={containerStyle}>
+      <AdminHeader
+        adminUserName="Employee User" // Placeholder name for employee
+        adminInitials="EU" // Placeholder initials
+        isDarkMode={theme === 'dark'}
+        toggleTheme={toggleTheme}
+        toggleSidebar={toggleSidebar} // Pass the dummy toggleSidebar
+        isProfileDropdownOpen={isProfileDropdownOpen}
+        setIsProfileDropdownOpen={setIsProfileDropdownOpen}
+        profileDropdownRef={profileDropdownRef}
+      />
       {/* Centralized CSS styles for hover effects and animations */}
       <style>
         {`
@@ -2260,7 +2702,7 @@ const containerStyle = {
   background: '#f8fafc',
   color: '#1e293b',
   minHeight: '100vh',
-  padding: '24px 32px',
+  padding: '0',
 };
 
 const headerStyle = {
@@ -2288,6 +2730,7 @@ const tabsContainerStyle = {
   border: '1px solid #e2e8f0',
   flexWrap: 'wrap', // Allow tabs to wrap on smaller screens
   justifyContent: 'center', // Center tabs if they wrap
+  marginLeft:'20px',
 };
 
 const tabButtonStyle = {
@@ -2319,7 +2762,7 @@ const cardStyle = {
   background: '#ffffff',
   borderRadius: '12px',
   padding: '24px',
-  boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
+  boxShadow: '0 1px 1px rgba(0,0,0,0.05)',
   border: '1px solid #e2e8f0',
   display: 'flex',
   flexDirection: 'column',
@@ -2513,9 +2956,9 @@ const applicationsSectionStyle = {
   background: '#ffffff',
   borderRadius: '12px',
   padding: '24px',
-  boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
+  boxShadow: '0 1px 1px rgba(0,0,0,0.05)',
   border: '1px solid #e2e8f0',
-  marginBottom: '32px',
+  marginBottom: '5px',
 };
 
 const subLabelStyle = {
@@ -2616,9 +3059,9 @@ const clientApplicationsContainerStyle = {
   background: '#ffffff',
   borderRadius: '12px',
   padding: '24px',
-  boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
+  boxShadow: '0 1px 1px rgba(0,0,0,0.05)',
   border: '1px solid #e2e8f0',
-  marginBottom: '24px',
+  marginBottom: '4px',
 };
 
 const clientApplicationsHeaderStyle = {
