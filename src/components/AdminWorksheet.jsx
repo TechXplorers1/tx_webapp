@@ -1,35 +1,35 @@
-import React, { useState, useEffect, useRef } from 'react'; // Import useRef
+import React, { useState, useEffect, useRef } from 'react'; // Import employeeef
 
 const AdminWorksheet = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [currentView, setCurrentView] = useState('userManagement'); // Default view to User Management
+  const [currentView, setCurrentView] = useState(' employeeManagement'); // Default view to employee Management
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false); // New state for profile dropdown
   const profileDropdownRef = useRef(null); // Ref for the profile dropdown area
 
-  const [users, setUsers] = useState([
-    { id: 1, name: 'Admin User', email: 'admin@techxplorers.in', roles: ['admin', 'active', 'Management'] },
+  const [employees, setemployees] = useState([
+    { id: 1, name: 'Admin employee', email: 'admin@techxplorers.in', roles: ['admin', 'active', 'Management'] },
     { id: 2, name: 'Sarah Wilson', email: 'manager@techxplorers.in', roles: ['manager', 'active', 'Management'] },
     { id: 3, name: 'Michael Johnson', email: 'teamlead@techxplorers.in', roles: ['team lead', 'active', 'Tech Placement'] },
     { id: 4, name: 'Asset Manager', email: 'assets@techxplorers.in', roles: ['asset manager', 'active', 'Operations'] },
     { id: 5, name: 'John Employee', email: 'employee@techxplorers.in', roles: ['employee', 'active', 'Development'] },
     { id: 6, name: 'John Client', email: 'client', roles: ['client', 'active', 'External'] }, // Changed role to 'client' for consistency
-    { id: 7, name: 'Regular User', email: 'user@techxplorers.in', roles: ['user', 'active', 'Development'] },
+    { id: 7, name: 'Regular employee', email: 'employee@techxplorers.in', roles: ['employee', 'active', 'Development'] },
   ]);
   const [searchTerm, setSearchTerm] = useState('');
 
   // States for modals
-  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
-  const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
+  const [isAddemployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false);
+  const [isEditemployeeModalOpen, setIsEditemployeeModalOpen] = useState(false);
   const [isDeleteConfirmModalOpen, setIsDeleteConfirmModalOpen] = useState(false);
-  const [userToDeleteId, setUserToDeleteId] = useState(null);
-  const [currentUserToEdit, setCurrentUserToEdit] = useState(null);
+  const [employeeToDeleteId, setemployeeToDeleteId] = useState(null);
+  const [currentemployeeToEdit, setCurrentemployeeToEdit] = useState(null);
 
-  // State for the new user form
-  const [newUser, setNewUser] = useState({
+  // State for the new employee form
+  const [newemployee, setNewemployee] = useState({
     fullName: '',
     email: '',
-    role: 'User', // Default role
+    role: 'employee', // Default role
     department: 'No department assigned', // Default department
     accountStatus: 'Active', // Default status
     temporaryPassword: '',
@@ -88,8 +88,8 @@ const AdminWorksheet = () => {
   ];
 
 
-  const adminUserName = "Admin User";
-  const adminUserEmail = "administrator@company.com";
+  const adminemployeeName = "Admin employee";
+  const adminemployeeEmail = "administrator@company.com";
 
   const getInitials = (name) => {
     if (!name) return '';
@@ -102,7 +102,7 @@ const AdminWorksheet = () => {
     return '';
   };
 
-  const adminInitials = getInitials(adminUserName);
+  const adminInitials = getInitials(adminemployeeName);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -123,7 +123,7 @@ const AdminWorksheet = () => {
 
   // Effect to manage body scroll when any modal is open
   useEffect(() => {
-    if (isAddUserModalOpen || isEditUserModalOpen || isDeleteConfirmModalOpen || isEditDepartmentModalOpen || isDeleteDepartmentConfirmModalOpen || isCreateDepartmentModalOpen || isPaymentModalOpen) {
+    if (isAddemployeeModalOpen || isEditemployeeModalOpen || isDeleteConfirmModalOpen || isEditDepartmentModalOpen || isDeleteDepartmentConfirmModalOpen || isCreateDepartmentModalOpen || isPaymentModalOpen) {
       document.body.classList.add('no-scroll');
     } else {
       document.body.classList.remove('no-scroll');
@@ -132,7 +132,7 @@ const AdminWorksheet = () => {
     return () => {
       document.body.classList.remove('no-scroll');
     };
-  }, [isAddUserModalOpen, isEditUserModalOpen, isDeleteConfirmModalOpen, isEditDepartmentModalOpen, isDeleteDepartmentConfirmModalOpen, isCreateDepartmentModalOpen, isPaymentModalOpen]);
+  }, [isAddemployeeModalOpen, isEditemployeeModalOpen, isDeleteConfirmModalOpen, isEditDepartmentModalOpen, isDeleteDepartmentConfirmModalOpen, isCreateDepartmentModalOpen, isPaymentModalOpen]);
 
   // Effect to close profile dropdown when clicking outside
   useEffect(() => {
@@ -173,33 +173,33 @@ const AdminWorksheet = () => {
     setSearchTerm(event.target.value);
   };
 
-  const filteredUsers = users.filter(user =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.roles.some(role => role.toLowerCase().includes(searchTerm.toLowerCase()))
+  const filteredemployees = employees.filter(employee =>
+    employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    employee.roles.some(role => role.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  // Add User Modal Handlers
-  const handleAddUserClick = () => {
-    setIsAddUserModalOpen(true);
+  // Add employee Modal Handlers
+  const handleAddEmployeeClick = () => {
+    setIsAddEmployeeModalOpen(true);
   };
 
-  const handleCloseAddUserModal = () => {
-    setIsAddUserModalOpen(false);
-    setNewUser({
+  const handleCloseAddEmployeeModal = () => {
+    setIsAddEmployeeModalOpen(false);
+    setNewemployee({
       fullName: '',
       email: '',
-      role: 'User',
+      role: 'employee',
       department: 'No department assigned',
       accountStatus: 'Active',
       temporaryPassword: '',
     });
   };
 
-  const handleNewUserChange = (e) => {
+  const handleNewemployeeChange = (e) => {
     const { name, value } = e.target;
-    setNewUser(prevUser => ({
-      ...prevUser,
+    setNewemployee(prevemployee => ({
+      ...prevemployee,
       [name]: value
     }));
   };
@@ -210,116 +210,116 @@ const AdminWorksheet = () => {
     for (let i = 0; i < 12; i++) {
       password += chars.charAt(Math.floor(Math.random() * chars.length));
     }
-    setNewUser(prevUser => ({
-      ...prevUser,
+    setNewemployee(prevemployee => ({
+      ...prevemployee,
       temporaryPassword: password
     }));
   };
 
-  const handleCreateUserAccount = (e) => {
+  const handleCreateemployeeAccount = (e) => {
     e.preventDefault();
-    const newUserId = users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1;
-    const newRoles = [newUser.role.toLowerCase()];
-    if (newUser.accountStatus.toLowerCase() === 'active') {
+    const newemployeeId = employees.length > 0 ? Math.max(...employees.map(u => u.id)) + 1 : 1;
+    const newRoles = [newemployee.role.toLowerCase()];
+    if (newemployee.accountStatus.toLowerCase() === 'active') {
       newRoles.push('active');
-    } else if (newUser.accountStatus.toLowerCase() === 'inactive') {
+    } else if (newemployee.accountStatus.toLowerCase() === 'inactive') {
       newRoles.push('inactive');
-    } else if (newUser.accountStatus.toLowerCase() === 'pending') {
+    } else if (newemployee.accountStatus.toLowerCase() === 'pending') {
       newRoles.push('pending');
     }
-    if (newUser.department !== 'No department assigned') {
-      newRoles.push(newUser.department.toLowerCase()); // Ensure department is lowercase for consistency
+    if (newemployee.department !== 'No department assigned') {
+      newRoles.push(newemployee.department.toLowerCase()); // Ensure department is lowercase for consistency
     }
-    setUsers(prevUsers => [
-      ...prevUsers,
+    setemployees(prevemployees => [
+      ...prevemployees,
       {
-        id: newUserId,
-        name: newUser.fullName,
-        email: newUser.email,
+        id: newemployeeId,
+        name: newemployee.fullName,
+        email: newemployee.email,
         roles: newRoles,
       }
     ]);
-    handleCloseAddUserModal();
+    handleCloseAddEmployeeModal();
   };
 
-  // Edit User Modal Handlers
-  const handleEditUserClick = (userId) => {
-    const user = users.find(u => u.id === userId);
-    if (user) {
+  // Edit employee Modal Handlers
+  const handleEditEmployeeClick = (employeeId) => {
+    const employee = employees.find(u => u.id === employeeId);
+    if (employee) {
       // Extract the department from roles, assuming it's one of the departmentOptions
-      const userDepartment = departmentOptions.find(dept => user.roles.includes(dept.toLowerCase())) || 'No department assigned';
+      const employeeDepartment = departmentOptions.find(dept => employee.roles.includes(dept.toLowerCase())) || 'No department assigned';
       // Extract account status
-      const userAccountStatus = accountStatusOptions.find(status => user.roles.includes(status.toLowerCase())) || 'Active';
+      const employeeAccountStatus = accountStatusOptions.find(status => employee.roles.includes(status.toLowerCase())) || 'Active';
       // Extract role
-      const userRole = roleOptions.find(role => user.roles.includes(role.value.toLowerCase()))?.value || 'User';
+      const employeeRole = roleOptions.find(role => employee.roles.includes(role.value.toLowerCase()))?.value || 'employee';
 
-      setCurrentUserToEdit({
-        id: user.id,
-        fullName: user.name,
-        email: user.email,
-        role: userRole,
-        department: userDepartment,
-        accountStatus: userAccountStatus,
+      setCurrentemployeeToEdit({
+        id: employee.id,
+        fullName: employee.name,
+        email: employee.email,
+        role: employeeRole,
+        department: employeeDepartment,
+        accountStatus: employeeAccountStatus,
         temporaryPassword: '', // Password is not editable directly, or would be handled securely
       });
-      setIsEditUserModalOpen(true);
+      setIsEditemployeeModalOpen(true);
     }
   };
 
-  const handleCloseEditUserModal = () => {
-    setIsEditUserModalOpen(false);
-    setCurrentUserToEdit(null);
+  const handleCloseEditemployeeModal = () => {
+    setIsEditemployeeModalOpen(false);
+    setCurrentemployeeToEdit(null);
   };
 
-  const handleEditUserChange = (e) => {
+  const handleEditemployeeChange = (e) => {
     const { name, value } = e.target;
-    setCurrentUserToEdit(prevUser => ({
-      ...prevUser,
+    setCurrentemployeeToEdit(prevemployee => ({
+      ...prevemployee,
       [name]: value
     }));
   };
 
-  const handleUpdateUserAccount = (e) => {
+  const handleUpdateemployeeAccount = (e) => {
     e.preventDefault();
-    setUsers(prevUsers => prevUsers.map(user => {
-      if (user.id === currentUserToEdit.id) {
+    setemployees(prevemployees => prevemployees.map(employee => {
+      if (employee.id === currentemployeeToEdit.id) {
         // Reconstruct roles based on updated form data
-        const updatedRoles = [currentUserToEdit.role.toLowerCase()];
-        if (currentUserToEdit.accountStatus.toLowerCase() === 'active') {
+        const updatedRoles = [currentemployeeToEdit.role.toLowerCase()];
+        if (currentemployeeToEdit.accountStatus.toLowerCase() === 'active') {
           updatedRoles.push('active');
-        } else if (currentUserToEdit.accountStatus.toLowerCase() === 'inactive') {
+        } else if (currentemployeeToEdit.accountStatus.toLowerCase() === 'inactive') {
           updatedRoles.push('inactive');
-        } else if (currentUserToEdit.accountStatus.toLowerCase() === 'pending') {
+        } else if (currentemployeeToEdit.accountStatus.toLowerCase() === 'pending') {
           updatedRoles.push('pending');
         }
-        if (currentUserToEdit.department !== 'No department assigned') {
-          updatedRoles.push(currentUserToEdit.department.toLowerCase());
+        if (currentemployeeToEdit.department !== 'No department assigned') {
+          updatedRoles.push(currentemployeeToEdit.department.toLowerCase());
         }
         return {
-          ...user,
-          name: currentUserToEdit.fullName,
-          email: currentUserToEdit.email,
+          ...employee,
+          name: currentemployeeToEdit.fullName,
+          email: currentemployeeToEdit.email,
           roles: updatedRoles,
         };
       }
-      return user;
+      return employee;
     }));
-    handleCloseEditUserModal();
+    handleCloseEditemployeeModal();
   };
 
-  // Delete User Confirmation Handlers
-  const handleDeleteUserClick = (userId) => {
-    setUserToDeleteId(userId);
+  // Delete employee Confirmation Handlers
+  const handleDeleteemployeeClick = (employeeId) => {
+    setemployeeToDeleteId(employeeId);
     setIsDeleteConfirmModalOpen(true);
   };
 
   const handleCancelDelete = () => {
     setIsDeleteConfirmModalOpen(false);
-    setUserToDeleteId(null);
+    setemployeeToDeleteId(null);
   };
 
   const handleConfirmDelete = () => {
-    setUsers(users.filter(user => user.id !== userToDeleteId));
+    setemployees(employees.filter(employee => employee.id !== employeeToDeleteId));
     handleCancelDelete();
   };
 
@@ -330,8 +330,8 @@ const AdminWorksheet = () => {
 
   const filteredDepartments = departments.filter(dept => {
     const matchesSearch = dept.name.toLowerCase().includes(departmentSearchTerm.toLowerCase()) ||
-                          dept.description.toLowerCase().includes(departmentSearchTerm.toLowerCase()) ||
-                          dept.head.toLowerCase().includes(departmentSearchTerm.toLowerCase());
+      dept.description.toLowerCase().includes(departmentSearchTerm.toLowerCase()) ||
+      dept.head.toLowerCase().includes(departmentSearchTerm.toLowerCase());
     return matchesSearch; // Only filter by search term
   });
 
@@ -500,18 +500,18 @@ const AdminWorksheet = () => {
 
   // Define options for the radio button navigation
   const adminViewOptions = [
-    { value: 'userManagement', label: 'User Management' },
-    { value: 'departments', label: 'Departments' },
     { value: 'clientManagement', label: 'Client Management' }, // Keep the tab
+    { value: 'departments', label: 'Departments' },
+    { value: ' employeeManagement', label: 'Employee Management' },
   ];
 
   // Data for dropdowns
   const roleOptions = [
-    { value: 'Administrator', label: 'Administrator', description: 'Full system access and user management' },
+    { value: 'Administrator', label: 'Administrator', description: 'Full system access and employee management' },
     { value: 'Manager', label: 'Manager', description: 'Manages teams and oversees operations' },
     { value: 'Team Lead', label: 'Team Lead', description: 'Leads a team and monitors activities' },
     { value: 'Employee', label: 'Employee', description: 'Standard employee access for job processing' },
-    { value: 'User', label: 'User', description: 'General user access for job seeking' },
+    { value: 'employee', label: 'employee', description: 'General employee access for job seeking' },
     { value: 'Client', label: 'Client', description: 'Client access for job applications and hiring' },
     { value: 'Asset Manager', label: 'Asset Manager', description: 'Asset and equipment management' },
   ];
@@ -533,7 +533,7 @@ const AdminWorksheet = () => {
   ];
 
   // Head of Department options for the edit department modal.
-  // This should ideally come from a list of users with appropriate roles.
+  // This should ideally come from a list of employees with appropriate roles.
   const headOfDepartmentOptions = [
     'Not assigned',
     'Sarah Wilson',
@@ -760,23 +760,23 @@ const AdminWorksheet = () => {
           --radio-border-bottom-active: #2563eb; /* Blue border for active tab (not used in new style) */
           --radio-border-color: #e5e7eb; /* Border color for the bottom of the tab group (not used in new style) */
 
-          /* User Management Specific Colors */
-          --user-card-bg: #ffffff;
-          --user-card-border: #e5e7eb;
-          --user-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-          --user-avatar-bg: #E0F2FE; /* Light blue for user avatars */
-          --user-avatar-icon: #2563EB; /* Blue for user avatar icon */
-          --user-name-color: #1f2937;
-          --user-email-color: #6b7280;
+          /* employee Management Specific Colors */
+          --employee-card-bg: #ffffff;
+          --employee-card-border: #e5e7eb;
+          --employee-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+          --employee-avatar-bg: #E0F2FE; /* Light blue for employee avatars */
+          --employee-avatar-icon: #2563EB; /* Blue for employee avatar icon */
+          --employee-name-color: #1f2937;
+          --employee-email-color: #6b7280;
           --action-btn-border: #e5e7eb;
           --action-btn-text: #4b5563;
           --action-btn-hover-bg: #f9fafb;
           --delete-btn-bg: #EF4444;
           --delete-btn-hover-bg: #DC2626;
           --delete-btn-text: #ffffff;
-          --add-user-btn-bg: #2563EB;
-          --add-user-btn-hover-bg: #1D4ED8;
-          --add-user-btn-text: #ffffff;
+          --add-employee-btn-bg: #2563EB;
+          --add-employee-btn-hover-bg: #1D4ED8;
+          --add-employee-btn-text: #ffffff;
           --search-input-bg: #ffffff;
           --search-input-border: #d1d5db;
           --search-input-text: #1f2937;
@@ -895,23 +895,23 @@ const AdminWorksheet = () => {
           --radio-border-bottom-active: #4299e1; /* Blue border for active tab (not used in new style) */
           --radio-border-color: #4a5568; /* Border color for the bottom of the tab group (not used in new style) */
 
-          /* User Management Specific Dark Mode Colors */
-          --user-card-bg: #2d3748;
-          --user-card-border: #4a5568;
-          --user-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-          --user-avatar-bg: #3182ce; /* Darker blue for user avatars */
-          --user-avatar-icon: #ffffff; /* White for user avatar icon */
-          --user-name-color: #e2e8f0;
-          --user-email-color: #a0aec0;
+          /* employee Management Specific Dark Mode Colors */
+          --employee-card-bg: #2d3748;
+          --employee-card-border: #4a5568;
+          --employee-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+          --employee-avatar-bg: #3182ce; /* Darker blue for employee avatars */
+          --employee-avatar-icon: #ffffff; /* White for employee avatar icon */
+          --employee-name-color: #e2e8f0;
+          --employee-email-color: #a0aec0;
           --action-btn-border: #4a5568;
           --action-btn-text: #cbd5e0;
           --action-btn-hover-bg: #4a5568;
           --delete-btn-bg: #DC2626;
           --delete-btn-hover-bg: #B91C1C;
           --delete-btn-text: #ffffff;
-          --add-user-btn-bg: #4299e1;
-          --add-user-btn-hover-bg: #3182ce;
-          --add-user-btn-text: #ffffff;
+          --add-employee-btn-bg: #4299e1;
+          --add-employee-btn-hover-bg: #3182ce;
+          --add-employee-btn-text: #ffffff;
           --search-input-bg: #2d3748;
           --search-input-border: #4a5568;
           --search-input-text: #e2e8f0;
@@ -1123,13 +1123,13 @@ const AdminWorksheet = () => {
           justify-content: center;
         }
 
-        .ad-user-info {
+        .ad-employee-info {
           display: flex;
           align-items: center;
           gap: 0.5rem;
         }
 
-        .ad-user-info-text {
+        .ad-employee-info-text {
           display: none;
           flex-direction: column;
           align-items: flex-end;
@@ -1137,12 +1137,12 @@ const AdminWorksheet = () => {
         }
 
         @media (min-width: 768px) {
-          .ad-user-info-text {
+          .ad-employee-info-text {
             display: flex;
           }
         }
 
-        .ad-user-name {
+        .ad-employee-name {
           color: var(--text-primary);
           font-size: 0.875rem;
           font-weight: 600;
@@ -1151,7 +1151,7 @@ const AdminWorksheet = () => {
           line-height: 1.2;
         }
 
-        .ad-user-email {
+        .ad-employee-email {
           color: var(--text-secondary);
           font-size: 0.75rem;
           margin: 0;
@@ -1265,9 +1265,9 @@ const AdminWorksheet = () => {
         }
 
         .ad-content-wrapper {
-          max-width: 80rem;
-          margin-left: auto;
-          margin-right: auto;
+          max-width: 100rem;
+          // margin-left: auto;
+          // margin-right: auto;
           background-color: var(--bg-body);
           border-radius: 0.5rem;
           padding: 0;
@@ -1367,12 +1367,12 @@ const AdminWorksheet = () => {
         /* End of Custom Radio Button Styles */
 
 
-        /* User Management Specific Styles */
-        .user-management-container {
+        /* employee Management Specific Styles */
+        .employee-management-container {
             padding: 0 1.5rem 1.5rem; /* Consistent padding with other sections */
         }
 
-        .user-management-box { /* New container for the user management section */
+        .employee-management-box { /* New container for the employee management section */
             background-color: var(--bg-card);
             border-radius: 0.75rem;
             box-shadow: 0 4px 6px -1px var(--shadow-color-1), 0 2px 4px -1px var(--shadow-color-3);
@@ -1381,7 +1381,7 @@ const AdminWorksheet = () => {
             margin-top: 1.5rem; /* Space from the radio buttons */
         }
 
-        .user-management-header {
+        .employee-management-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -1390,13 +1390,13 @@ const AdminWorksheet = () => {
             gap: 1rem; /* Space between elements when wrapped */
         }
 
-        .user-management-title {
+        .employee-management-title {
             font-size: 1.5rem;
             font-weight: 600;
             color: var(--text-primary);
         }
 
-        .user-search-add {
+        .employee-search-add {
             display: flex;
             align-items: center;
             gap: 0.75rem;
@@ -1404,7 +1404,7 @@ const AdminWorksheet = () => {
             max-width: 400px; /* Limit width on larger screens */
         }
 
-        .user-search-input {
+        .employee-search-input {
             flex-grow: 1;
             padding: 0.6rem 1rem;
             border: 1px solid var(--search-input-border);
@@ -1418,21 +1418,21 @@ const AdminWorksheet = () => {
             box-sizing: border-box;
         }
 
-        .user-search-input::placeholder {
+        .employee-search-input::placeholder {
             color: var(--search-placeholder-color);
         }
 
-        .user-search-input:focus {
-            border-color: var(--add-user-btn-bg);
+        .employee-search-input:focus {
+            border-color: var(--add-employee-btn-bg);
         }
 
-        .add-user-btn {
+        .add-employee-btn {
             display: flex;
             align-items: center;
             gap: 0.5rem;
             padding: 0.6rem 1rem;
-            background-color: var(--add-user-btn-bg);
-            color: var(--add-user-btn-text);
+            background-color: var(--add-employee-btn-bg);
+            color: var(--add-employee-btn-text);
             border-radius: 0.5rem;
             font-weight: 500;
             transition: background-color 0.2s;
@@ -1442,21 +1442,21 @@ const AdminWorksheet = () => {
             white-space: nowrap; /* Prevent text from wrapping */
         }
 
-        .add-user-btn:hover {
-            background-color: var(--add-user-btn-hover-bg);
+        .add-employee-btn:hover {
+            background-color: var(--add-employee-btn-hover-bg);
         }
 
-        .user-list {
+        .employee-list {
             display: flex;
             flex-direction: column;
             gap: 1rem;
         }
 
-        .user-card {
-            background-color: var(--user-card-bg);
+        .employee-card {
+            background-color: var(--employee-card-bg);
             border-radius: 0.75rem;
-            box-shadow: var(--user-card-shadow);
-            border: 1px solid var(--user-card-border);
+            box-shadow: var(--employee-card-shadow);
+            border: 1px solid var(--employee-card-border);
             padding: 1.25rem 1.5rem;
             display: flex;
             align-items: center;
@@ -1464,47 +1464,47 @@ const AdminWorksheet = () => {
             flex-wrap: wrap; /* Allow content to wrap on small screens */
         }
 
-        .user-card-left {
+        .employee-card-left {
             display: flex;
             align-items: center;
             gap: 1rem;
-            flex-grow: 1; /* Allow user info to take space */
+            flex-grow: 1; /* Allow employee info to take space */
         }
 
-        .user-avatar {
+        .employee-avatar {
             width: 3rem;
             height: 3rem;
             border-radius: 9999px;
-            background-color: var(--user-avatar-bg);
+            background-color: var(--employee-avatar-bg);
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
         }
 
-        .user-avatar-icon {
-            color: var(--user-avatar-icon);
+        .employee-avatar-icon {
+            color: var(--employee-avatar-icon);
             font-size: 1.5rem;
         }
 
-        .user-info {
+        .employee-info {
             display: flex;
             flex-direction: column;
             align-items: flex-start; /* Ensure content starts on the left */
         }
 
-        .user-name {
+        .employee-name {
             font-size: 1rem;
             font-weight: 600;
-            color: var(--user-name-color);
+            color: var(--employee-name-color);
         }
 
-        .user-email {
+        .employee-email {
             font-size: 0.875rem;
-            color: var(--user-email-color);
+            color: var(--employee-email-color);
         }
 
-        .user-roles {
+        .employee-roles {
             display: flex;
             flex-wrap: wrap;
             gap: 0.5rem;
@@ -1519,7 +1519,7 @@ const AdminWorksheet = () => {
             white-space: nowrap;
         }
 
-        .user-actions {
+        .employee-actions {
             display: flex;
             gap: 0.75rem;
             flex-shrink: 0; /* Prevent actions from shrinking */
@@ -1722,7 +1722,7 @@ const AdminWorksheet = () => {
             gap: 0.75rem; /* Space between buttons in footer */
         }
 
-        .create-user-btn {
+        .create-employee-btn {
             padding: 0.75rem 1.5rem;
             background-color: var(--modal-create-btn-bg);
             color: var(--modal-create-btn-text);
@@ -1734,7 +1734,7 @@ const AdminWorksheet = () => {
             transition: background-color 0.2s;
         }
 
-        .create-user-btn:hover {
+        .create-employee-btn:hover {
             background-color: var(--modal-create-btn-hover);
         }
 
@@ -2502,12 +2502,12 @@ const AdminWorksheet = () => {
         <div className="ad-header-right">
           {/* Search Icon */}
           <svg className="ad-icon-btn" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" style={{ width: '1.125rem', height: '1.125rem' }}>
-            <path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.1-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z"/>
+            <path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.1-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z" />
           </svg>
           <div className="ad-notification-icon">
             {/* Bell Icon */}
             <svg className="ad-icon-btn" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1.125rem', height: '1.125rem' }}>
-              <path d="M224 0c-17.7 0-32 14.3-32 32V51.2C119 66 64 130.6 64 208v25.4c0 45.4-15.5 89.2-43.8 124.9L5.7 377.9c-2.7 4.4-3.4 9.7-1.7 14.6s4.6 8.5 9.8 10.1l39.5 12.8c10.6 3.4 21.8 3.9 32.7 1.4S120.3 400 128 392h192c7.7 8 17.5 13.6 28.3 16.3s22.1 1.9 32.7-1.4l39.5-12.8c5.2-1.7 8.2-6.1 9.8-10.1s1-10.2-1.7-14.6l-20.5-33.7C399.5 322.6 384 278.8 384 233.4V208c0-77.4-55-142-128-156.8V32c0-17.7-14.3-32-32-32zm0 96c61.9 0 112 50.1 112 112v25.4c0 47.9 13.9 94.6 39.7 134.6H184.3c25.8-40 39.7-86.7 39.7-134.6V208c0-61.9 50.1-112 112-112zm0 352a48 48 0 1 0 0-96 48 48 0 1 0 0 96z"/>
+              <path d="M224 0c-17.7 0-32 14.3-32 32V51.2C119 66 64 130.6 64 208v25.4c0 45.4-15.5 89.2-43.8 124.9L5.7 377.9c-2.7 4.4-3.4 9.7-1.7 14.6s4.6 8.5 9.8 10.1l39.5 12.8c10.6 3.4 21.8 3.9 32.7 1.4S120.3 400 128 392h192c7.7 8 17.5 13.6 28.3 16.3s22.1 1.9 32.7-1.4l39.5-12.8c5.2-1.7 8.2-6.1 9.8-10.1s1-10.2-1.7-14.6l-20.5-33.7C399.5 322.6 384 278.8 384 233.4V208c0-77.4-55-142-128-156.8V32c0-17.7-14.3-32-32-32zm0 96c61.9 0 112 50.1 112 112v25.4c0 47.9 13.9 94.6 39.7 134.6H184.3c25.8-40 39.7-86.7 39.7-134.6V208c0-61.9 50.1-112 112-112zm0 352a48 48 0 1 0 0-96 48 48 0 1 0 0 96z" />
             </svg>
             <span className="ad-notification-badge">3</span>
           </div>
@@ -2538,14 +2538,14 @@ const AdminWorksheet = () => {
             )}
           </button>
           <div className="profile-dropdown-container" ref={profileDropdownRef}> {/* Added ref here */}
-            <div className="ad-user-info" onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}> {/* Toggle dropdown */}
-              <div className="ad-user-info-text">
-                <p className="ad-user-name">{adminUserName}</p>
+            <div className="ad-employee-info" onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}> {/* Toggle dropdown */}
+              <div className="ad-employee-info-text">
+                <p className="ad-employee-name">{adminemployeeName}</p>
                 {/* Added Admin Tag */}
                 <span className="ad-admin-tag">
-                  {/* User Icon */}
+                  {/* employee Icon */}
                   <svg className="ad-icon-btn" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ fontSize: '0.65rem', width: '0.65rem', height: '0.65rem' }}>
-                    <path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"/>
+                    <path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z" />
                   </svg>
                   Admin
                 </span>
@@ -2558,9 +2558,9 @@ const AdminWorksheet = () => {
               <ul className="profile-dropdown-menu open">
                 <li className="profile-dropdown-item header">My Account</li>
                 <li className="profile-dropdown-item">
-                  {/* User Icon */}
+                  {/* employee Icon */}
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1rem', height: '1rem' }}>
-                    <path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"/>
+                    <path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z" />
                   </svg>
                   Profile
                 </li>
@@ -2589,7 +2589,7 @@ const AdminWorksheet = () => {
         >
           {/* Hamburger Icon */}
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1.125rem', height: '1.125rem' }}>
-            <path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/>
+            <path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z" />
           </svg>
         </button>
       </header>
@@ -2626,7 +2626,7 @@ const AdminWorksheet = () => {
             <div>
               {/* Changed title here */}
               <h1 className="ad-title">Admin Worksheet</h1>
-              <p className="ad-subtitle">System administration and user management</p>
+              <p className="ad-subtitle">System administration and Employee management</p>
             </div>
           </div>
 
@@ -2646,45 +2646,45 @@ const AdminWorksheet = () => {
             ))}
           </div>
 
-          {currentView === 'userManagement' && (
-            <div className="user-management-container">
-              <div className="user-management-box"> {/* New User Management Box */}
-                <div className="user-management-header">
-                  <h2 className="user-management-title">User Management</h2>
-                  <div className="user-search-add">
+          {currentView === ' employeeManagement' && (
+            <div className="employee-management-container">
+              <div className="employee-management-box"> {/* New employee Management Box */}
+                <div className="employee-management-header">
+                  <h2 className="employee-management-title">Employee Management</h2>
+                  <div className="employee-search-add">
                     <input
                       type="text"
-                      placeholder="Search users..."
-                      className="user-search-input"
+                      placeholder="Search employees..."
+                      className="employee-search-input"
                       value={searchTerm}
                       onChange={handleSearchChange}
                     />
-                    <button className="add-user-btn" onClick={handleAddUserClick}>
+                    <button className="add-employee-btn" onClick={handleAddEmployeeClick}>
                       {/* Plus Icon (Font Awesome: fa-plus) */}
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '0.9rem', height: '0.9rem' }}>
-                        <path d="M256 80c0-17.7-14.3-32-32-32s-32 14.3-32 32V224H48c-17.7 0-32 14.3-32 32s14.3 32 32 32H192V432c0 17.7 14.3 32 32 32s32-14.3 32-32V288H400c17.7 0 32-14.3 32-32s-14.3-32-32-32H256V80z"/>
+                        <path d="M256 80c0-17.7-14.3-32-32-32s-32 14.3-32 32V224H48c-17.7 0-32 14.3-32 32s14.3 32 32 32H192V432c0 17.7 14.3 32 32 32s32-14.3 32-32V288H400c17.7 0 32-14.3 32-32s-14.3-32-32-32H256V80z" />
                       </svg>
-                      Add User
+                      Add Employee
                     </button>
                   </div>
                 </div>
 
-                <div className="user-list">
-                  {filteredUsers.length > 0 ? (
-                    filteredUsers.map(user => (
-                      <div className="user-card" key={user.id}>
-                        <div className="user-card-left">
-                          <div className="user-avatar">
-                            {/* User Icon for Avatar (Font Awesome: fa-user) */}
+                <div className="employee-list">
+                  {filteredemployees.length > 0 ? (
+                    filteredemployees.map(employee => (
+                      <div className="employee-card" key={employee.id}>
+                        <div className="employee-card-left">
+                          <div className="employee-avatar">
+                            {/* employee Icon for Avatar (Font Awesome: fa-employee) */}
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1.5rem', height: '1.5rem' }}>
-                              <path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"/>
+                              <path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z" />
                             </svg>
                           </div>
-                          <div className="user-info">
-                            <div className="user-name">{user.name}</div>
-                            <div className="user-email">{user.email}</div>
-                            <div className="user-roles">
-                              {user.roles.map(role => (
+                          <div className="employee-info">
+                            <div className="employee-name">{employee.name}</div>
+                            <div className="employee-email">{employee.email}</div>
+                            <div className="employee-roles">
+                              {employee.roles.map(role => (
                                 <span
                                   key={role}
                                   className="role-tag"
@@ -2699,18 +2699,18 @@ const AdminWorksheet = () => {
                             </div>
                           </div>
                         </div>
-                        <div className="user-actions">
-                          <button className="action-btn" onClick={() => handleEditUserClick(user.id)}>
+                        <div className="employee-actions">
+                          <button className="action-btn" onClick={() => handleEditEmployeeClick(employee.id)}>
                             {/* Edit Icon (Font Awesome: fa-pen-to-square) */}
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" fill="currentColor" style={{ width: '0.8rem', height: '0.8rem' }}>
-                              <path d="M402.6 83.2l90.2 90.2c12.5 12.5 12.5 32.8 0 45.3l-56.6 56.6c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3l56.6-56.6L362.4 97.5c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0zm-16.3 16.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3l160-160c12.5-12.5 32.8-12.5 45.3 0s12.5 32.8 0 45.3zM128 448H64V384c0-17.7-14.3-32-32-32s-32 14.3-32 32v96c0 17.7 14.3 32 32 32H128c17.7 0 32-14.3 32-32s-14.3-32-32-32zM480 352c-17.7 0-32 14.3-32 32v64H192c-17.7 0-32 14.3-32 32s14.3 32 32 32H480c17.7 0 32-14.3 32-32V384c0-17.7-14.3-32-32-32z"/>
+                              <path d="M402.6 83.2l90.2 90.2c12.5 12.5 12.5 32.8 0 45.3l-56.6 56.6c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3l56.6-56.6L362.4 97.5c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0zm-16.3 16.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3l160-160c12.5-12.5 32.8-12.5 45.3 0s12.5 32.8 0 45.3zM128 448H64V384c0-17.7-14.3-32-32-32s-32 14.3-32 32v96c0 17.7 14.3 32 32 32H128c17.7 0 32-14.3 32-32s-14.3-32-32-32zM480 352c-17.7 0-32 14.3-32 32v64H192c-17.7 0-32 14.3-32 32s14.3 32 32 32H480c17.7 0 32-14.3 32-32V384c0-17.7-14.3-32-32-32z" />
                             </svg>
                             Edit
                           </button>
-                          <button className="action-btn delete-btn" onClick={() => handleDeleteUserClick(user.id)}>
+                          <button className="action-btn delete-btn" onClick={() => handleDeleteemployeeClick(employee.id)}>
                             {/* Trash Can Icon (Font Awesome: fa-trash-can) */}
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '0.8rem', height: '0.8rem' }}>
-                              <path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"/>
+                              <path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z" />
                             </svg>
                             Delete
                           </button>
@@ -2719,11 +2719,11 @@ const AdminWorksheet = () => {
                     ))
                   ) : (
                     <div className="ad-card" style={{ textAlign: 'center', padding: '2rem' }}>
-                      <p className="ad-subtitle">No users found matching your search criteria.</p>
+                      <p className="ad-subtitle">No employees found matching your search criteria.</p>
                     </div>
                   )}
                 </div>
-              </div> {/* End of user-management-box */}
+              </div> {/* End of employee-management-box */}
             </div>
           )}
 
@@ -2738,7 +2738,7 @@ const AdminWorksheet = () => {
                   <button className="create-department-btn" onClick={handleCreateDepartmentClick}>
                     {/* Plus Icon (Font Awesome: fa-plus) */}
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '0.9rem', height: '0.9rem' }}>
-                      <path d="M256 80c0-17.7-14.3-32-32-32s-32 14.3-32 32V224H48c-17.7 0-32 14.3-32 32s14.3 32 32 32H192V432c0 17.7 14.3 32 32 32s32-14.3 32-32V288H400c17.7 0 32-14.3 32-32s-14.3-32-32-32H256V80z"/>
+                      <path d="M256 80c0-17.7-14.3-32-32-32s-32 14.3-32 32V224H48c-17.7 0-32 14.3-32 32s14.3 32 32 32H192V432c0 17.7 14.3 32 32 32s32-14.3 32-32V288H400c17.7 0 32-14.3 32-32s-14.3-32-32-32H256V80z" />
                     </svg>
                     Create Department
                   </button>
@@ -2750,7 +2750,7 @@ const AdminWorksheet = () => {
                     <div className="department-stat-card-icon-wrapper total">
                       {/* Building Icon (Font Awesome: fa-building) */}
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1.25rem', height: '1.25rem' }}>
-                        <path d="M192 32c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32V480c0 17.7-14.3 32-32 32H224c-17.7 0-32-14.3-32-32V32zm64 0V480H384V32H256zM64 128c-17.7 0-32 14.3-32 32V480c0 17.7 14.3 32 32 32H160c17.7 0 32-14.3 32-32V160c0-17.7-14.3-32-32-32H64zm32 32V448h32V160H96z"/>
+                        <path d="M192 32c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32V480c0 17.7-14.3 32-32 32H224c-17.7 0-32-14.3-32-32V32zm64 0V480H384V32H256zM64 128c-17.7 0-32 14.3-32 32V480c0 17.7 14.3 32 32 32H160c17.7 0 32-14.3 32-32V160c0-17.7-14.3-32-32-32H64zm32 32V448h32V160H96z" />
                       </svg>
                     </div>
                     <div className="department-stat-card-value">{departments.length}</div>
@@ -2762,7 +2762,7 @@ const AdminWorksheet = () => {
                     <div className="department-stat-card-icon-wrapper active">
                       {/* Check Circle Icon (Font Awesome: fa-check-circle) */}
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" style={{ width: '1.25rem', height: '1.25rem' }}>
-                        <path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM369 209L241 337c-9.4 9.4-24.6 9.4-33.9 0l-64-64c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l47 47L335 175c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9z"/>
+                        <path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM369 209L241 337c-9.4 9.4-24.6 9.4-33.9 0l-64-64c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l47 47L335 175c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9z" />
                       </svg>
                     </div>
                     <div className="department-stat-card-value">{departments.filter(d => d.status === 'active').length}</div>
@@ -2772,7 +2772,7 @@ const AdminWorksheet = () => {
                   {/* Total Employees Card - ICON CHANGED HERE */}
                   <div className="department-stat-card">
                     <div className="department-stat-card-icon-wrapper employees">
-                      {/* New User Icon (from Screenshot 2025-07-02 at 7.30.49 PM.png) */}
+                      {/* New employee Icon (from Screenshot 2025-07-02 at 7.30.49 PM.png) */}
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1.25rem', height: '1.25rem' }}>
                         <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2ZM12 5C13.6569 5 15 6.34315 15 8C15 9.65685 13.6569 11 12 11C10.3431 11 9 9.65685 9 8C9 6.34315 10.3431 5 12 5ZM12 19.25C9.03261 19.25 6.48033 17.6169 5 15.1672C5.00001 13.197 8.33333 12.1667 12 12.1667C15.6667 12.1667 19 13.197 19 15.1672C17.5197 17.6169 14.9674 19.25 12 19.25Z" />
                       </svg>
@@ -2816,7 +2816,7 @@ const AdminWorksheet = () => {
                             <td>{dept.head}</td>
                             <td>
                               <div className="employee-count">
-                                {/* New User Icon (from Screenshot 2025-07-02 at 7.30.49 PM.png) */}
+                                {/* New employee Icon (from Screenshot 2025-07-02 at 7.30.49 PM.png) */}
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '0.8rem', height: '0.8rem' }}>
                                   <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2ZM12 5C13.6569 5 15 6.34315 15 8C15 9.65685 13.6569 11 12 11C10.3431 11 9 9.65685 9 8C9 6.34315 10.3431 5 12 5ZM12 19.25C9.03261 19.25 6.48033 17.6169 5 15.1672C5.00001 13.197 8.33333 12.1667 12 12.1667C15.6667 12.1667 19 13.197 19 15.1672C17.5197 17.6169 14.9674 19.25 12 19.25Z" />
                                 </svg>
@@ -2825,9 +2825,9 @@ const AdminWorksheet = () => {
                             </td>
                             <td>
                               <span className="status-tag" style={{
-                                    backgroundColor: getRoleTagBg(dept.status),
-                                    color: getRoleTagText(dept.status),
-                                  }}>
+                                backgroundColor: getRoleTagBg(dept.status),
+                                color: getRoleTagText(dept.status),
+                              }}>
                                 {dept.status}
                               </span>
                             </td>
@@ -2837,13 +2837,13 @@ const AdminWorksheet = () => {
                                 <button className="action-btn" onClick={() => handleEditDepartmentClick(dept.id)}>
                                   {/* Edit Icon (Font Awesome: fa-pen-to-square) */}
                                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" fill="currentColor" style={{ width: '0.8rem', height: '0.8rem' }}>
-                                    <path d="M402.6 83.2l90.2 90.2c12.5 12.5 12.5 32.8 0 45.3l-56.6 56.6c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3l56.6-56.6L362.4 97.5c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0zm-16.3 16.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3l160-160c12.5-12.5 32.8-12.5 45.3 0s12.5 32.8 0 45.3zM128 448H64V384c0-17.7-14.3-32-32-32s-32 14.3-32 32v96c0 17.7 14.3 32 32 32H128c17.7 0 32-14.3 32-32s-14.3-32-32-32zM480 352c-17.7 0-32 14.3-32 32v64H192c-17.7 0-32 14.3-32 32s14.3 32 32 32H480c17.7 0 32-14.3 32-32V384c0-17.7-14.3-32-32-32z"/>
+                                    <path d="M402.6 83.2l90.2 90.2c12.5 12.5 12.5 32.8 0 45.3l-56.6 56.6c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3l56.6-56.6L362.4 97.5c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0zm-16.3 16.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3l160-160c12.5-12.5 32.8-12.5 45.3 0s12.5 32.8 0 45.3zM128 448H64V384c0-17.7-14.3-32-32-32s-32 14.3-32 32v96c0 17.7 14.3 32 32 32H128c17.7 0 32-14.3 32-32s-14.3-32-32-32zM480 352c-17.7 0-32 14.3-32 32v64H192c-17.7 0-32 14.3-32 32s14.3 32 32 32H480c17.7 0 32-14.3 32-32V384c0-17.7-14.3-32-32-32z" />
                                   </svg>
                                 </button>
                                 <button className="action-btn delete-btn" onClick={() => handleDeleteDepartmentClick(dept.id)}>
                                   {/* Trash Can Icon (Font Awesome: fa-trash-can) */}
                                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '0.8rem', height: '0.8rem' }}>
-                                    <path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"/>
+                                    <path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z" />
                                   </svg>
                                 </button>
                               </div>
@@ -2909,7 +2909,7 @@ const AdminWorksheet = () => {
                   <span className="search-icon-wrapper">
                     {/* Search Icon (SVG) */}
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" style={{ width: '1rem', height: '1rem' }}>
-                      <path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.1-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z"/>
+                      <path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.1-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z" />
                     </svg>
                   </span>
                   <input
@@ -3004,76 +3004,82 @@ const AdminWorksheet = () => {
                             <td>
                               <div className="action-buttons">
                                 {clientFilter === 'registered' && (
-                                  <>
-                                    <button
-                                      onClick={() => handleAcceptClient(client.id)}
-                                      className="action-button accept"
-                                    >
-                                      Accept
-                                    </button>
-                                    <button
-                                      onClick={() => handleDeclineClient(client.id)}
-                                      className="action-button decline"
-                                    >
-                                      Decline
-                                    </button>
-                                  </>
-                                )}
-                                {(clientFilter === 'unassigned' || clientFilter === 'restored') && (
-                                  <button
-                                    onClick={() => handleAssignClient(client.id)}
-                                    className="action-button assign"
-                                    disabled={!selectedManagerPerClient[client.id]}
-                                  >
-                                    Assign
-                                  </button>
-                                )}
-                                {clientFilter === 'active' && (
-                                  editingClientId === client.id ? (
-                                    <>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
                                       <button
-                                        onClick={() => handleSaveManagerChange(client.id)}
-                                        className="action-button save"
-                                        disabled={!tempSelectedManager}
+                                        onClick={() => handleAcceptClient(client.id)}
+                                        className="action-button accept"
                                       >
-                                        Save
+                                        Accept
                                       </button>
                                       <button
-                                        onClick={handleCancelEdit}
-                                        className="action-button cancel"
+                                        onClick={() => handleDeclineClient(client.id)}
+                                        className="action-button decline"
                                       >
-                                        Cancel
+                                        Decline
                                       </button>
-                                    </>
-                                  ) : (
-                                    <button
-                                      onClick={() => handleEditManager(client)}
-                                      className="action-button edit-manager"
-                                    >
-                                      Edit Manager
-                                    </button>
-                                  )
-                                )}
-                                {clientFilter === 'rejected' && (
-                                  <button
-                                    onClick={() => handleRestoreClient(client.id)}
-                                    className="action-button restore"
-                                  >
-                                    Restore
-                                  </button>
-                                )}
-                                {/* Send Payment Link Button */}
-                                <button
-                                  onClick={() => handleOpenPaymentModal(client)}
-                                  className="action-button send-payment-link"
-                                >
-                                  {/* Credit Card Icon (from Screenshot 2025-07-02 at 7.33.16 PM.png) */}
-                                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '0.9rem', height: '0.9rem' }}>
-                                    <path d="M20 4H4C3.44772 4 3 4.44772 3 5V19C3 19.5523 3.44772 20 4 20H20C20.5523 20 21 19.5523 21 19V5C21 4.44772 20.5523 4 20 4ZM5 7H19V9H5V7ZM5 11H17V13H5V11ZM5 15H13V17H5V15Z" />
-                                  </svg>
-                                  Send Payment Link
-                                </button>
-                              </div>
+                                    </div>
+                                     </div>
+
+                                    )}
+                                    {(clientFilter === 'unassigned' || clientFilter === 'restored') && (
+                                      <button
+                                        onClick={() => handleAssignClient(client.id)}
+                                        className="action-button assign"
+                                        disabled={!selectedManagerPerClient[client.id]}
+                                      >
+                                        Assign
+                                      </button>
+                                    )}
+                                    {clientFilter === 'active' && (
+                                      editingClientId === client.id ? (
+                                        <>
+                                          <button
+                                            onClick={() => handleSaveManagerChange(client.id)}
+                                            className="action-button save"
+                                            disabled={!tempSelectedManager}
+                                          >
+                                            Save
+                                          </button>
+                                          <button
+                                            onClick={handleCancelEdit}
+                                            className="action-button cancel"
+                                          >
+                                            Cancel
+                                          </button>
+                                        </>
+                                      ) : (
+                                        <button
+                                          onClick={() => handleEditManager(client)}
+                                          className="action-button edit-manager"
+                                        >
+                                          Edit Manager
+                                        </button>
+                                      )
+                                    )}
+                                    {clientFilter === 'rejected' && (
+                                      <button
+                                        onClick={() => handleRestoreClient(client.id)}
+                                        className="action-button restore"
+                                      >
+                                        Restore
+                                      </button>
+                                    )}
+                                    {/* Send Payment Link Button */}
+                                    <div>
+                                      <button
+                                        onClick={() => handleOpenPaymentModal(client)}
+                                        className="action-button send-payment-link"
+                                      >
+                                        {/* Credit Card Icon (from Screenshot 2025-07-02 at 7.33.16 PM.png) */}
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '0.9rem', height: '0.9rem' }}>
+                                          <path d="M20 4H4C3.44772 4 3 4.44772 3 5V19C3 19.5523 3.44772 20 4 20H20C20.5523 20 21 19.5523 21 19V5C21 4.44772 20.5523 4 20 4ZM5 7H19V9H5V7ZM5 11H17V13H5V11ZM5 15H13V17H5V15Z" />
+                                        </svg>
+                                        Send Payment Link
+                                      </button>
+                                    </div>
+                                  </div>
+                                  
                             </td>
                           </tr>
                         ))
@@ -3102,18 +3108,18 @@ const AdminWorksheet = () => {
         </div>
       </main>
 
-      {/* Create New User Account Modal */}
-      {isAddUserModalOpen && (
+      {/* Create New employee Account Modal */}
+      {isAddemployeeModalOpen && (
         <div className="modal-overlay open">
           <div className="modal-content">
             <div className="modal-header">
               <div>
-                <h3 className="modal-title">Create New User Account</h3>
-                <p className="modal-subtitle">Create a new user account for the TechXplorers platform. Select the appropriate role and fill in all required information.</p>
+                <h3 className="modal-title">Create New employee Account</h3>
+                <p className="modal-subtitle">Create a new employee account for the TechXplorers platform. Select the appropriate role and fill in all required information.</p>
               </div>
-              <button className="modal-close-btn" onClick={handleCloseAddUserModal}>&times;</button>
+              <button className="modal-close-btn" onClick={handleCloseAddEmployeeModal}>&times;</button>
             </div>
-            <form className="modal-form" onSubmit={handleCreateUserAccount}>
+            <form className="modal-form" onSubmit={handleCreateemployeeAccount}>
               <div className="form-group">
                 <label htmlFor="fullName" className="form-label">Full Name *</label>
                 <input
@@ -3122,8 +3128,8 @@ const AdminWorksheet = () => {
                   name="fullName"
                   className="form-input"
                   placeholder="Enter full name"
-                  value={newUser.fullName}
-                  onChange={handleNewUserChange}
+                  value={newemployee.fullName}
+                  onChange={handleNewemployeeChange}
                   required
                 />
               </div>
@@ -3135,8 +3141,8 @@ const AdminWorksheet = () => {
                   name="email"
                   className="form-input"
                   placeholder="Enter email address"
-                  value={newUser.email}
-                  onChange={handleNewUserChange}
+                  value={newemployee.email}
+                  onChange={handleNewemployeeChange}
                   required
                 />
               </div>
@@ -3146,8 +3152,8 @@ const AdminWorksheet = () => {
                   id="role"
                   name="role"
                   className="form-select"
-                  value={newUser.role}
-                  onChange={handleNewUserChange}
+                  value={newemployee.role}
+                  onChange={handleNewemployeeChange}
                   required
                 >
                   {roleOptions.map(option => (
@@ -3157,7 +3163,7 @@ const AdminWorksheet = () => {
                   ))}
                 </select>
                 <p className="role-description">
-                  {roleOptions.find(option => option.value === newUser.role)?.description}
+                  {roleOptions.find(option => option.value === newemployee.role)?.description}
                 </p>
               </div>
               <div className="form-group">
@@ -3166,8 +3172,8 @@ const AdminWorksheet = () => {
                   id="department"
                   name="department"
                   className="form-select"
-                  value={newUser.department}
-                  onChange={handleNewUserChange}
+                  value={newemployee.department}
+                  onChange={handleNewemployeeChange}
                 >
                   {departmentOptions.map(option => (
                     <option key={option} value={option}>
@@ -3182,8 +3188,8 @@ const AdminWorksheet = () => {
                   id="accountStatus"
                   name="accountStatus"
                   className="form-select"
-                  value={newUser.accountStatus}
-                  onChange={handleNewUserChange}
+                  value={newemployee.accountStatus}
+                  onChange={handleNewemployeeChange}
                 >
                   {accountStatusOptions.map(option => (
                     <option key={option} value={option}>
@@ -3201,40 +3207,40 @@ const AdminWorksheet = () => {
                     name="temporaryPassword"
                     className="form-input"
                     placeholder="Enter temporary password"
-                    value={newUser.temporaryPassword}
-                    onChange={handleNewUserChange}
+                    value={newemployee.temporaryPassword}
+                    onChange={handleNewemployeeChange}
                     required
                   />
                   <button type="button" className="generate-password-btn" onClick={generateTemporaryPassword}>
                     {/* Eye Icon (Font Awesome: fa-eye) */}
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" fill="currentColor" style={{ width: '1rem', height: '1rem' }}>
-                        <path d="M288 80c-65.2 0-118.8 29.6-159.9 67.7C89.3 183.5 64 223.8 64 256c0 32.2 25.3 72.5 64.1 108.3C169.2 402.4 222.8 432 288 432s118.8-29.6 159.9-67.7C486.7 328.5 512 288.2 512 256c0-32.2-25.3-72.5-64.1-108.3C406.8 109.6 353.2 80 288 80zM96 256c0-10.8 2.8-21.6 7.9-31.7c17.5-35.3 47.6-64.7 85.8-84.3c15.2-7.8 31.5-12 48.3-12s33.1 4.2 48.3 12c38.2 19.6 68.3 49 85.8 84.3c5.1 10.1 7.9 20.9 7.9 31.7s-2.8 21.6-7.9 31.7c-17.5 35.3-47.6 64.7-85.8-84.3c-15.2 7.8-31.5 12-48.3 12s-33.1-4.2-48.3-12c-38.2-19.6-68.3-49-85.8-84.3C98.8 277.6 96 266.8 96 256zm192 0a64 64 0 1 0 0-128 64 64 0 1 0 0 128z"/>
+                      <path d="M288 80c-65.2 0-118.8 29.6-159.9 67.7C89.3 183.5 64 223.8 64 256c0 32.2 25.3 72.5 64.1 108.3C169.2 402.4 222.8 432 288 432s118.8-29.6 159.9-67.7C486.7 328.5 512 288.2 512 256c0-32.2-25.3-72.5-64.1-108.3C406.8 109.6 353.2 80 288 80zM96 256c0-10.8 2.8-21.6 7.9-31.7c17.5-35.3 47.6-64.7 85.8-84.3c15.2-7.8 31.5-12 48.3-12s33.1 4.2 48.3 12c38.2 19.6 68.3 49 85.8 84.3c5.1 10.1 7.9 20.9 7.9 31.7s-2.8 21.6-7.9 31.7c-17.5 35.3-47.6 64.7-85.8-84.3c-15.2 7.8-31.5 12-48.3 12s-33.1-4.2-48.3-12c-38.2-19.6-68.3-49-85.8-84.3C98.8 277.6 96 266.8 96 256zm192 0a64 64 0 1 0 0-128 64 64 0 1 0 0 128z" />
                     </svg>
                     Generate
                   </button>
                 </div>
-                <p className="role-description">The user will be prompted to change this password on first login.</p>
+                <p className="role-description">The employee will be prompted to change this password on first login.</p>
               </div>
               <div className="modal-footer modal-form-full-width">
-                <button type="submit" className="create-user-btn">Create User Account</button>
+                <button type="submit" className="create-employee-btn">Create employee Account</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* Edit User Account Modal */}
-      {isEditUserModalOpen && currentUserToEdit && (
+      {/* Edit employee Account Modal */}
+      {isEditemployeeModalOpen && currentemployeeToEdit && (
         <div className="modal-overlay open">
           <div className="modal-content">
             <div className="modal-header">
               <div>
-                <h3 className="modal-title">Edit User Account</h3>
-                <p className="modal-subtitle">Modify the details for {currentUserToEdit.fullName}.</p>
+                <h3 className="modal-title">Edit employee Account</h3>
+                <p className="modal-subtitle">Modify the details for {currentemployeeToEdit.fullName}.</p>
               </div>
-              <button className="modal-close-btn" onClick={handleCloseEditUserModal}>&times;</button>
+              <button className="modal-close-btn" onClick={handleCloseEditemployeeModal}>&times;</button>
             </div>
-            <form className="modal-form" onSubmit={handleUpdateUserAccount}>
+            <form className="modal-form" onSubmit={handleUpdateemployeeAccount}>
               <div className="form-group">
                 <label htmlFor="editFullName" className="form-label">Full Name *</label>
                 <input
@@ -3243,8 +3249,8 @@ const AdminWorksheet = () => {
                   name="fullName"
                   className="form-input"
                   placeholder="Enter full name"
-                  value={currentUserToEdit.fullName}
-                  onChange={handleEditUserChange}
+                  value={currentemployeeToEdit.fullName}
+                  onChange={handleEditemployeeChange}
                   required
                 />
               </div>
@@ -3256,8 +3262,8 @@ const AdminWorksheet = () => {
                   name="email"
                   className="form-input"
                   placeholder="Enter email address"
-                  value={currentUserToEdit.email}
-                  onChange={handleEditUserChange}
+                  value={currentemployeeToEdit.email}
+                  onChange={handleEditemployeeChange}
                   required
                 />
               </div>
@@ -3267,8 +3273,8 @@ const AdminWorksheet = () => {
                   id="editRole"
                   name="role"
                   className="form-select"
-                  value={currentUserToEdit.role}
-                  onChange={handleEditUserChange}
+                  value={currentemployeeToEdit.role}
+                  onChange={handleEditemployeeChange}
                   required
                 >
                   {roleOptions.map(option => (
@@ -3278,7 +3284,7 @@ const AdminWorksheet = () => {
                   ))}
                 </select>
                 <p className="role-description">
-                  {roleOptions.find(option => option.value === currentUserToEdit.role)?.description}
+                  {roleOptions.find(option => option.value === currentemployeeToEdit.role)?.description}
                 </p>
               </div>
               <div className="form-group">
@@ -3287,8 +3293,8 @@ const AdminWorksheet = () => {
                   id="editDepartment"
                   name="department"
                   className="form-select"
-                  value={currentUserToEdit.department}
-                  onChange={handleEditUserChange}
+                  value={currentemployeeToEdit.department}
+                  onChange={handleEditemployeeChange}
                 >
                   {departmentOptions.map(option => (
                     <option key={option} value={option}>
@@ -3303,8 +3309,8 @@ const AdminWorksheet = () => {
                   id="editAccountStatus"
                   name="accountStatus"
                   className="form-select"
-                  value={currentUserToEdit.accountStatus}
-                  onChange={handleEditUserChange}
+                  value={currentemployeeToEdit.accountStatus}
+                  onChange={handleEditemployeeChange}
                 >
                   {accountStatusOptions.map(option => (
                     <option key={option} value={option}>
@@ -3317,22 +3323,22 @@ const AdminWorksheet = () => {
                   It would usually be a separate "Change Password" flow.
               */}
               <div className="modal-footer modal-form-full-width">
-                <button type="button" className="confirm-cancel-btn" onClick={handleCloseEditUserModal}>Cancel</button>
-                <button type="submit" className="create-user-btn">Update User Account</button>
+                <button type="button" className="confirm-cancel-btn" onClick={handleCloseEditemployeeModal}>Cancel</button>
+                <button type="submit" className="create-employee-btn">Update employee Account</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* Delete User Confirmation Modal */}
+      {/* Delete employee Confirmation Modal */}
       {isDeleteConfirmModalOpen && (
         <div className="modal-overlay open">
           <div className="modal-content">
             <div className="modal-header" style={{ marginBottom: '1rem' }}>
               <div>
                 <h3 className="modal-title">Confirm Deletion</h3>
-                <p className="modal-subtitle">Are you sure you want to delete this user? This action cannot be undone.</p>
+                <p className="modal-subtitle">Are you sure you want to delete this employee? This action cannot be undone.</p>
               </div>
               <button className="modal-close-btn" onClick={handleCancelDelete}>&times;</button>
             </div>
@@ -3414,7 +3420,7 @@ const AdminWorksheet = () => {
                 </select>
               </div>
               <div className="modal-footer modal-form-full-width">
-                <button type="submit" className="create-user-btn">Create Department</button>
+                <button type="submit" className="create-employee-btn">Create Department</button>
                 <button type="button" className="confirm-cancel-btn" onClick={handleCloseCreateDepartmentModal}>Cancel</button>
               </div>
             </form>
@@ -3516,7 +3522,7 @@ const AdminWorksheet = () => {
               </div>
               <div className="modal-footer modal-form-full-width">
                 <button type="button" className="confirm-cancel-btn" onClick={handleCloseEditDepartmentModal}>Cancel</button>
-                <button type="submit" className="create-user-btn">Update Department</button>
+                <button type="submit" className="create-employee-btn">Update Department</button>
               </div>
             </form>
           </div>
@@ -3656,7 +3662,7 @@ const AdminWorksheet = () => {
                     </svg>
                     Pay Now
                   </button>
-                  <button type="submit" className="create-user-btn">
+                  <button type="submit" className="create-employee-btn">
                     {/* Link Icon (from Screenshot 2025-07-02 at 7.33.37 PM.png) */}
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '0.9rem', height: '0.9rem' }}>
                       <path d="M12 4H10C7.79086 4 6 5.79086 6 8C6 10.2091 7.79086 12 10 12H12V14H10C6.68629 14 4 11.3137 4 8C4 4.68629 6.68629 2 10 2H12V4ZM14 10H12C9.79086 10 8 11.7909 8 14C8 16.2091 9.79086 18 12 18H14V20H12C8.68629 20 6 17.3137 6 14C6 10.6863 8.68629 8 12 8H14V10ZM18 6H16V8H18C21.3137 8 24 10.6863 24 14C24 17.3137 21.3137 20 18 20H16V18H18C20.2091 18 22 16.2091 22 14C22 11.7909 20.2091 10 18 10H16V6Z" />

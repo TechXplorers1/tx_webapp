@@ -12,7 +12,7 @@ const ManagerWorkSheet = () => {
   const [activeTab, setActiveTab] = useState('Assignments'); // Default to 'Assignments'
 
   // State for logged-in user's name and avatar initial
-  const [userName, setUserName] = useState('Chaveen'); // Changed from Balaji to Chaveen
+  const [userName, setUserName] = useState('Sreenivasulu'); // Changed from Balaji to Chaveen
   const [userAvatarLetter, setUserAvatarLetter] = useState('C'); // Derived from userName
 
   // NEW STATE: State to control the visibility of the profile dropdown

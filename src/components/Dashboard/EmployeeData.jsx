@@ -404,6 +404,17 @@ const AdminHeader = ({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
 const EmployeeData = () => {
   const navigate = useNavigate();
 
@@ -878,13 +889,28 @@ const EmployeeData = () => {
   const handleSaveNewApplication = () => {
     if (!selectedClientForApplication) return;
 
-    const newApp = {
-      id: Date.now(),
-      clientId: selectedClientForApplication.id, // Ensure clientId is set
-      ...newApplicationFormData,
-      status: 'Applied', // Default status for new applications
-      appliedDate: new Date().toISOString().split('T')[0], // Current date
-    };
+  // Process attachments if any
+  const attachments = newApplicationFormData.attachments?.map(file => ({
+    id: Date.now() + Math.random(), // Unique ID for each file
+    clientId: selectedClientForApplication.id,
+    name: file.name,
+    size: `${(file.size / 1024).toFixed(1)} KB`,
+    type: 'application attachment', // Special type for application attachments
+    status: 'Uploaded',
+    uploadDate: new Date().toISOString().split('T')[0],
+    notes: `Attached to ${newApplicationFormData.jobTitle} application`,
+    file: file // Keep the file object for download/view
+  })) || [];
+
+
+      const newApp = {
+    id: Date.now(),
+    clientId: selectedClientForApplication.id,
+    ...newApplicationFormData,
+    status: 'Applied',
+    appliedDate: new Date().toISOString().split('T')[0],
+    attachments: attachments
+  };
 
     setAssignedClients(prevClients => {
       const updatedClients = prevClients.map(client =>
@@ -892,6 +918,8 @@ const EmployeeData = () => {
           ? {
               ...client,
               jobApplications: [newApp, ...client.jobApplications], // Prepend new application
+              // Add the attachments to the client's files as well
+            files: [...attachments, ...client.files]
             }
           : client
       );
@@ -901,7 +929,7 @@ const EmployeeData = () => {
     });
     setShowAddApplicationModal(false);
     setNewApplicationFormData({
-      jobTitle: '', company: '', platform: '', jobUrl: '', salaryRange: '', location: '', notes: ''
+      jobTitle: '', company: '', platform: '', jobUrl: '', salaryRange: '', location: '', notes: '', attachments: []
     });
   };
 
@@ -914,7 +942,7 @@ const EmployeeData = () => {
     // Find the client associated with this application to set selectedClientForApplication
     const client = assignedClients.find(c => c.jobApplications.some(appItem => appItem.id === application.id));
     setSelectedClientForApplication(client);
-    setEditedApplicationFormData({ ...application }); // Copy for editing
+    setEditedApplicationFormData({ ...application, attachments: application.attachments || [] }); // Copy for editing
     setShowEditApplicationModal(true);
   };
 
@@ -932,7 +960,15 @@ const EmployeeData = () => {
           ? {
               ...client,
               jobApplications: client.jobApplications.map(app =>
-                app.id === editedApplicationFormData.id ? editedApplicationFormData : app
+                app.id === editedApplicationFormData.id ?{
+              ...editedApplicationFormData,
+              attachments: editedApplicationFormData.attachments.map(file => ({
+                name: file.name,
+                size: file.size,
+                type: file.type,
+                uploadDate: file.uploadDate
+              }))
+            } : app
               ),
             }
           : client
@@ -1763,6 +1799,7 @@ const EmployeeData = () => {
                             <th style={applicationTableHeaderCellStyle}>Platform</th>
                             <th style={applicationTableHeaderCellStyle}>Link</th> {/* New Link Header */}
                             <th style={applicationTableHeaderCellStyle}>Applied Date</th>
+                            <th style={applicationTableHeaderCellStyle}>Attachments</th>
                             <th style={applicationTableHeaderCellStyle}>Actions</th>
                           </tr>
                         </thead>
@@ -1791,6 +1828,28 @@ const EmployeeData = () => {
                                 </td> {/* New Link Column */}
                             
                                 <td style={applicationTableDataCellStyle}>{app.appliedDate}</td>
+
+                                  <td style={applicationTableDataCellStyle}>
+        {app.attachments && app.attachments.length > 0 ? (
+          <button 
+            onClick={() => {
+              setViewedApplication(app);
+              setShowViewApplicationModal(true);
+            }}
+            style={{ 
+              background: 'none', 
+              border: 'none', 
+              color: '#3b82f6', 
+              textDecoration: 'underline',
+              cursor: 'pointer'
+            }}
+          >
+            View ({app.attachments.length})
+          </button>
+        ) : 'N/A'}
+      </td>
+
+
                                 <td style={applicationTableDataCellStyle}>
                                   <button onClick={() => handleViewApplication(app)} style={actionButtonAppStyle}>
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -2146,8 +2205,23 @@ const EmployeeData = () => {
               {/* NEW: Client Data Tab Content */}
               {activeSubTab === 'Client data' && (
                 <div style={{ ...applicationsSectionStyle, marginTop: '24px' }}>
-                  <h2 style={sectionTitleStyle}>Full Client Details for {selectedClient.name}</h2>
-                  <p style={subLabelStyle}>Comprehensive information about the selected client.</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      <div>
+        <h2 style={sectionTitleStyle}>Full Client Details for {selectedClient.name}</h2>
+        <p style={subLabelStyle}>Comprehensive information about the selected client.</p>
+      </div>
+      <button
+        style={addApplicationButtonStyle}
+        onClick={() => handleOpenAddApplicationModal(selectedClient)}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        Add Application
+      </button>
+    </div>
+
                   <div style={clientDataGridStyle}>
                     <div style={clientDataSectionStyle}>
                       <h3 style={clientDataSectionTitleStyle}>Personal Information</h3>
@@ -2348,6 +2422,51 @@ const EmployeeData = () => {
               <p style={modalViewDetailItemStyle}><strong>Salary Range:</strong> {viewedApplication.salaryRange || '-'}</p>
               <p style={modalViewDetailItemStyle}><strong>Location:</strong> {viewedApplication.location || '-'}</p>
               <p style={modalViewDetailItemStyle}><strong>Status:</strong> <span style={{ ...applicationStatusBadgeStyle, ...getApplicationStatusStyle(viewedApplication.status) }}>{viewedApplication.status}</span></p>
+         <div style={{ ...modalViewDetailItemStyle, gridColumn: '1 / -1' }}>
+      <strong>Attachments:</strong>
+      {viewedApplication.attachments && viewedApplication.attachments.length > 0 ? (
+        <div style={{ marginTop: '10px' }}>
+          {viewedApplication.attachments.map((file, index) => (
+            <div key={index} style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              padding: '8px', 
+              background: '#f8fafc', 
+              borderRadius: '6px',
+              marginBottom: '8px'
+            }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ marginRight: '10px' }}>
+                <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                <polyline points="13 2 13 9 20 9"></polyline>
+              </svg>
+              <div style={{ flexGrow: 1 }}>
+                <div>{file.name}</div>
+                <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                  {file.size} • {file.uploadDate}
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  setViewedFile(file);
+                  setShowViewApplicationModal(false);
+                  setShowViewFileModal(true);
+                }}
+                style={{
+                  background: '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  padding: '5px 10px',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                View
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : 'N/A'}
+    </div>
               <p style={modalViewDetailItemStyle}><strong>Applied Date:</strong> {viewedApplication.appliedDate}</p>
               <p style={{ ...modalViewDetailItemStyle, gridColumn: '1 / -1' }}><strong>Notes:</strong> {viewedApplication.notes || '-'}</p>
             </div>
@@ -2449,6 +2568,66 @@ const EmployeeData = () => {
                   <option value="Offered">Offered</option>
                 </select>
               </div>
+
+        {/* Add this new field for attachments */}
+        <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
+          <label style={modalLabelStyle}>Attachments</label>
+          <input
+            type="file"
+            multiple
+            onChange={(e) => {
+              const newFiles = Array.from(e.target.files).map(file => ({
+                name: file.name,
+                size: `${(file.size / 1024).toFixed(1)} KB`,
+                type: file.type,
+                uploadDate: new Date().toLocaleString(),
+                file: file
+              }));
+              setEditedApplicationFormData(prev => ({ 
+                ...prev, 
+                attachments: [...prev.attachments, ...newFiles] 
+              }));
+            }}
+            style={modalInputStyle}
+          />
+          {editedApplicationFormData.attachments.length > 0 && (
+            <div style={{ marginTop: '10px' }}>
+              <p style={{ fontSize: '0.9rem', marginBottom: '5px' }}>Attached files:</p>
+              <ul style={{ listStyle: 'none', padding: 0 }}>
+                {editedApplicationFormData.attachments.map((file, index) => (
+                  <li key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ marginRight: '8px' }}>
+                      <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                      <polyline points="13 2 13 9 20 9"></polyline>
+                    </svg>
+                    <span style={{ fontSize: '0.85rem' }}>{file.name} ({file.size})</span>
+                    <button 
+                      onClick={() => {
+                        const updatedAttachments = [...editedApplicationFormData.attachments];
+                        updatedAttachments.splice(index, 1);
+                        setEditedApplicationFormData(prev => ({ ...prev, attachments: updatedAttachments }));
+                      }}
+                      style={{ 
+                        background: 'none', 
+                        border: 'none', 
+                        color: '#ef4444', 
+                        marginLeft: '10px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                      </svg>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+
+
               <div style={modalFormFieldGroupStyle}>
                 <label style={modalLabelStyle}>Applied Date <span style={{ color: 'red' }}>*</span></label>
                 <input
@@ -2570,32 +2749,92 @@ const EmployeeData = () => {
         </Modal>
       )}
 
-      {/* View File Details Modal */}
-      {viewedFile && (
-        <Modal show={showViewFileModal} onHide={() => setShowViewFileModal(false)} size="lg" centered>
-          <Modal.Header closeButton style={modalHeaderStyle}>
-            <Modal.Title style={modalTitleStyle}>File Details</Modal.Title>
-          </Modal.Header>
-          <Modal.Body style={modalBodyStyle}>
-            <div style={modalViewDetailsGridStyle}>
-              <p style={modalViewDetailItemStyle}><strong>File Name:</strong> {viewedFile.name}</p>
-              <p style={modalViewDetailItemStyle}><strong>File Type:</strong> {viewedFile.type}</p>
-              <p style={modalViewDetailItemStyle}><strong>File Size:</strong> {viewedFile.size}</p>
-              <p style={modalViewDetailItemStyle}><strong>Status:</strong> <span style={{ fontWeight: '600', color: '#10b981' }}>{viewedFile.status}</span></p>
-              <p style={modalViewDetailItemStyle}><strong>Upload Date:</strong> {viewedFile.uploadDate}</p>
-              <p style={{ ...modalViewDetailItemStyle, gridColumn: '1 / -1' }}><strong>Notes:</strong> {viewedFile.notes || '-'}</p>
-            </div>
-          </Modal.Body>
-          <Modal.Footer style={modalFooterStyle}>
-            <button
-              onClick={() => setShowViewFileModal(false)}
-              style={modalCancelButtonStyle}
-            >
-              Close
-            </button>
-          </Modal.Footer>
-        </Modal>
-      )}
+{viewedFile && (
+  <Modal show={showViewFileModal} onHide={() => setShowViewFileModal(false)} size="lg" centered>
+    <Modal.Header closeButton style={modalHeaderStyle}>
+      <Modal.Title style={modalTitleStyle}>File Viewer: {viewedFile.name}</Modal.Title>
+    </Modal.Header>
+    <Modal.Body style={modalBodyStyle}>
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        gap: '20px',
+        minHeight: '300px',
+        justifyContent: 'center'
+      }}>
+        {/* File preview content - simplified to just show file info */}
+        <div style={{ 
+          width: '100%', 
+          textAlign: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '15px'
+        }}>
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">
+            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+            <polyline points="13 2 13 9 20 9"></polyline>
+          </svg>
+          <p style={{ color: '#64748b' }}>File preview not available in demo</p>
+          <button 
+            style={{
+              background: '#3b82f6',
+              color: 'white',
+              padding: '10px 20px',
+              borderRadius: '8px',
+              textDecoration: 'none',
+              border: 'none',
+              cursor: 'pointer'
+            }}
+            onClick={() => alert(`Downloading ${viewedFile.name}... (Demo mode)`)}
+          >
+            Download File (Demo)
+          </button>
+        </div>
+      </div>
+      
+      <div style={{ 
+        marginTop: '20px',
+        padding: '15px',
+        background: '#f8fafc',
+        borderRadius: '8px'
+      }}>
+        <p style={{ marginBottom: '10px' }}><strong>File Details:</strong></p>
+        <div style={modalViewDetailsGridStyle}>
+          <p style={modalViewDetailItemStyle}><strong>File Name:</strong> {viewedFile.name}</p>
+          <p style={modalViewDetailItemStyle}><strong>File Type:</strong> {viewedFile.type}</p>
+          <p style={modalViewDetailItemStyle}><strong>File Size:</strong> {viewedFile.size}</p>
+          <p style={modalViewDetailItemStyle}><strong>Upload Date:</strong> {viewedFile.uploadDate}</p>
+          {viewedFile.notes && (
+            <p style={{ ...modalViewDetailItemStyle, gridColumn: '1 / -1' }}>
+              <strong>Notes:</strong> {viewedFile.notes}
+            </p>
+          )}
+        </div>
+      </div>
+    </Modal.Body>
+    <Modal.Footer style={modalFooterStyle}>
+      <button
+        onClick={() => {
+          setShowViewFileModal(false);
+          if (viewedApplication) {
+            setShowViewApplicationModal(true);
+          }
+        }}
+        style={modalCancelButtonStyle}
+      >
+        Back to Application
+      </button>
+      <button
+        onClick={() => setShowViewFileModal(false)}
+        style={modalCancelButtonStyle}
+      >
+        Close
+      </button>
+    </Modal.Footer>
+  </Modal>
+)}
 
       {/* Edit File Details Modal */}
       {editedFileFormData && (
@@ -2702,7 +2941,7 @@ const containerStyle = {
   background: '#f8fafc',
   color: '#1e293b',
   minHeight: '100vh',
-  padding: '0',
+  padding: '24px 32px',
 };
 
 const headerStyle = {
@@ -2730,7 +2969,6 @@ const tabsContainerStyle = {
   border: '1px solid #e2e8f0',
   flexWrap: 'wrap', // Allow tabs to wrap on smaller screens
   justifyContent: 'center', // Center tabs if they wrap
-  marginLeft:'20px',
 };
 
 const tabButtonStyle = {
@@ -2762,7 +3000,7 @@ const cardStyle = {
   background: '#ffffff',
   borderRadius: '12px',
   padding: '24px',
-  boxShadow: '0 1px 1px rgba(0,0,0,0.05)',
+  boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
   border: '1px solid #e2e8f0',
   display: 'flex',
   flexDirection: 'column',
@@ -2956,9 +3194,9 @@ const applicationsSectionStyle = {
   background: '#ffffff',
   borderRadius: '12px',
   padding: '24px',
-  boxShadow: '0 1px 1px rgba(0,0,0,0.05)',
+  boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
   border: '1px solid #e2e8f0',
-  marginBottom: '5px',
+  marginBottom: '32px',
 };
 
 const subLabelStyle = {
@@ -3059,9 +3297,9 @@ const clientApplicationsContainerStyle = {
   background: '#ffffff',
   borderRadius: '12px',
   padding: '24px',
-  boxShadow: '0 1px 1px rgba(0,0,0,0.05)',
+  boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
   border: '1px solid #e2e8f0',
-  marginBottom: '4px',
+  marginBottom: '24px',
 };
 
 const clientApplicationsHeaderStyle = {
@@ -3311,6 +3549,8 @@ const getFileTypeBadgeStyle = (type) => {
       return { backgroundColor: '#f3e8ff', color: '#8b5cf6' };
     case 'report':
       return { backgroundColor: '#ffe4e6', color: '#ef4444' };
+    case 'application attachment':
+      return { backgroundColor: '#dbeafe', color: '#1d4ed8' };
     default:
       return { backgroundColor: '#e2e8f0', color: '#475569' };
   }
