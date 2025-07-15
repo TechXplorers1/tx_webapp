@@ -3737,9 +3737,6 @@ const ManagerWorkSheet = () => {
                 <div className="profile-dropdown-item" onClick={handleProfileClick}>
                   <i className="fas fa-user-circle"></i> Profile
                 </div>
-                <div className="profile-dropdown-item" onClick={handleSettingsClick}>
-                  <i className="fas fa-cog"></i> Settings
-                </div>
                 <div className="profile-dropdown-item" onClick={handleLogout}>
                   <i className="fas fa-sign-out-alt"></i> Logout
                 </div>
