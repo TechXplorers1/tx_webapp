@@ -168,7 +168,7 @@ const ClientHeader = ({
   clientInitials,
   isDarkMode,
   toggleTheme,
-  toggleSidebar,
+  toggleSidebar, // This prop is no longer used for the hamburger menu, but kept for consistency
   isProfileDropdownOpen,
   setIsProfileDropdownOpen,
   profileDropdownRef,
@@ -440,24 +440,7 @@ const ClientHeader = ({
             gap: 0.25rem;
         }
 
-        .ad-hamburger-menu {
-          display: block;
-          padding: 0.5rem;
-          border-radius: 0.5rem;
-          background-color: var(--border-color);
-          transition: background-color 150ms;
-          cursor: pointer;
-        }
-
-        .ad-hamburger-menu:hover {
-          background-color: var(--text-secondary);
-        }
-
-        @media (min-width: 768px) {
-          .ad-hamburger-menu {
-            display: none;
-          }
-        }
+        /* Hamburger menu is removed, so no styles are needed for it */
         `}
       </style>
       <header className="ad-header">
@@ -524,15 +507,7 @@ const ClientHeader = ({
           </div>
         </div>
 
-        <button
-          className="ad-hamburger-menu"
-          onClick={toggleSidebar}
-        >
-          {/* Hamburger Icon */}
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1.125rem', height: '1.125rem' }}>
-            <path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/>
-          </svg>
-        </button>
+        {/* Removed the hamburger menu button */}
       </header>
     </>
   );
@@ -836,6 +811,360 @@ const SubscriptionDetailsModal = ({
   );
 };
 
+// --- PaymentOptionsModal Component (NEW) ---
+const PaymentOptionsModal = ({ onClose, selectedPlanName, selectedPlanPrice }) => {
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('card'); // Default to card
+
+  const handlePaymentMethodSelect = (method) => {
+    setSelectedPaymentMethod(method);
+  };
+
+  const handlePayClick = () => {
+    console.log(`Processing payment for ${selectedPlanName} plan (${selectedPlanPrice}) via ${selectedPaymentMethod}`);
+    // In a real application, this would trigger a payment gateway integration
+    // For now, just close the modal after a short delay
+    setTimeout(() => {
+      onClose();
+      // Optionally show a success message or navigate
+    }, 1000);
+  };
+
+  return (
+    <div className="modal-overlay">
+      <div className="payment-modal-content-wrapper">
+        <button onClick={onClose} className="modal-close-button" style={{ top: '20px', right: '20px' }}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M13 1L1 13M1 1L13 13" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+        </button>
+
+        <div className="payment-modal-grid">
+          {/* Payment Information Section */}
+          <div className="payment-info-section">
+            <div className="payment-section-header">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '10px' }}>
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+              Payment Information
+              <span className="ssl-badge">256-bit SSL</span>
+            </div>
+
+            <h4 className="payment-sub-heading">Choose Payment Method</h4>
+            <div className="payment-method-options">
+              <div
+                className={`payment-method-card ${selectedPaymentMethod === 'card' ? 'selected' : ''}`}
+                onClick={() => handlePaymentMethodSelect('card')}
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                  <line x1="1" y1="10" x2="23" y2="10"></line>
+                </svg>
+                <span>Visa + Mastercard - Amex</span>
+              </div>
+              <div
+                className={`payment-method-card ${selectedPaymentMethod === 'paypal' ? 'selected' : ''}`}
+                onClick={() => handlePaymentMethodSelect('paypal')}
+              >
+                <img src="https://www.paypalobjects.com/paypal-ui/logos/svg/paypal-mark-color.svg" alt="PayPal" style={{ height: '24px' }} />
+                <span>Pay with PayPal</span>
+              </div>
+              <div
+                className={`payment-method-card ${selectedPaymentMethod === 'direct_transfer' ? 'selected' : ''}`}
+                onClick={() => handlePaymentMethodSelect('direct_transfer')}
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+                <span>Direct transfer</span>
+              </div>
+            </div>
+
+            <p className="all-methods-secured">All methods secured</p>
+
+            {/* Card Payment Form (visible if 'card' is selected) */}
+            {selectedPaymentMethod === 'card' && (
+              <div className="card-form">
+                <label htmlFor="emailAddress">Email Address</label>
+                <input type="email" id="emailAddress" placeholder="john@example.com" />
+
+                <label htmlFor="cardNumber">Card Number</label>
+                <input type="text" id="cardNumber" placeholder="1234 5678 9012 3456" />
+
+                <div className="form-row">
+                  <div>
+                    <label htmlFor="expiryDate">Expiry Date</label>
+                    <input type="text" id="expiryDate" placeholder="MM/YY" />
+                  </div>
+                  <div>
+                    <label htmlFor="cvv">CVV</label>
+                    <input type="text" id="cvv" placeholder="123" />
+                  </div>
+                </div>
+
+                <label htmlFor="cardholderName">Cardholder Name</label>
+                <input type="text" id="cardholderName" placeholder="John Doe" />
+
+                <div className="checkbox-group">
+                  <input type="checkbox" id="saveCard" />
+                  <label htmlFor="saveCard">Save this card for future payments</label>
+                </div>
+                <div className="checkbox-group">
+                  <input type="checkbox" id="rememberMe" defaultChecked />
+                  <label htmlFor="rememberMe">Remember me for faster checkout</label>
+                </div>
+              </div>
+            )}
+
+            {/* PayPal Details (visible if 'paypal' is selected) */}
+            {selectedPaymentMethod === 'paypal' && (
+              <div style={{
+                padding: '20px',
+                textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '20px',
+                color: '#1e293b', // Dark text for light mode
+                background: '#f8fafc',
+                borderRadius: '12px',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                border: '1px solid #e2e8f0'
+              }}>
+                <div style={{
+                  width: '60px',
+                  height: '60px',
+                  borderRadius: '50%',
+                  backgroundColor: '#e0f2fe', // Light blue background for icon
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  marginBottom: '10px'
+                }}>
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                    <line x1="1" y1="10" x2="23" y2="10"></line>
+                  </svg>
+                </div>
+                <h3 style={{ fontSize: '1.5rem', fontWeight: '700', margin: '0' }}>Continue with PayPal</h3>
+                <p style={{ fontSize: '1rem', color: '#475569', margin: '0' }}>
+                  You'll be securely redirected to PayPal to complete your payment of
+                  <span style={{ fontWeight: '600', color: '#1e293b', marginLeft: '5px' }}>{selectedPlanPrice}</span>
+                </p>
+                <button
+                  onClick={() => {
+                    // In a real app, this would initiate PayPal redirect
+                    window.open('https://www.paypal.com', '_blank'); // Placeholder for actual PayPal redirection
+                    onClose(); // Close modal after initiating redirect
+                  }}
+                  style={{
+                    background: '#0070BA', // PayPal blue
+                    color: 'white',
+                    border: 'none',
+                    padding: '12px 25px',
+                    borderRadius: '8px',
+                    fontSize: '1rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px',
+                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                    transition: 'background-color 0.2s, transform 0.2s',
+                    width: 'fit-content', // Adjust width to content
+                    margin: '0 auto' // Center the button
+                  }}
+                >
+                  <img src="https://www.paypalobjects.com/paypal-ui/logos/svg/paypal-mark-color.svg" alt="PayPal Icon" style={{ height: '20px', filter: 'brightness(0) invert(1)' }} />
+                  Continue to PayPal
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'rotate(0deg)' }}>
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </button>
+              </div>
+            )}
+
+            {/* Direct Transfer/Bank Transfer Details (visible if 'direct_transfer' is selected) */}
+            {selectedPaymentMethod === 'direct_transfer' && (
+              <div style={{
+                padding: '20px',
+                textAlign: 'center',
+                color: '#1e293b', // Dark text for light mode
+                background: '#f8fafc',
+                borderRadius: '12px',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                border: '1px solid #e2e8f0',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '20px'
+              }}>
+                <div style={{
+                  width: '60px',
+                  height: '60px',
+                  borderRadius: '50%',
+                  backgroundColor: '#e0f2fe', // Light blue background for icon
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  marginBottom: '10px'
+                }}>
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                  </svg>
+                </div>
+                <h3 style={{ fontSize: '1.5rem', fontWeight: '700', margin: '0' }}>Bank Transfer Details</h3>
+                <p style={{ fontSize: '0.9rem', color: '#64748b', margin: '0' }}>Secure wire transfer information</p>
+
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '15px',
+                  width: '100%',
+                  maxWidth: '500px',
+                  margin: '20px 0'
+                }}>
+                  <div style={{ background: '#ffffff', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0', textAlign: 'left' }}>
+                    <p style={{ margin: '0 0 5px 0', fontSize: '0.8rem', color: '#64748b' }}>Bank Name:</p>
+                    <strong style={{ fontSize: '1rem', color: '#1e293b' }}>TechXplorers Business Bank</strong>
+                  </div>
+                  <div style={{ background: '#ffffff', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0', textAlign: 'left' }}>
+                    <p style={{ margin: '0 0 5px 0', fontSize: '0.8rem', color: '#64748b' }}>Account Number:</p>
+                    <strong style={{ fontSize: '1rem', color: '#1e293b' }}>1234567890</strong>
+                  </div>
+                  <div style={{ background: '#ffffff', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0', textAlign: 'left' }}>
+                    <p style={{ margin: '0 0 5px 0', fontSize: '0.8rem', color: '#64748b' }}>Routing Number:</p>
+                    <strong style={{ fontSize: '1rem', color: '#1e293b' }}>021000021</strong>
+                  </div>
+                  <div style={{ background: '#ffffff', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0', textAlign: 'left' }}>
+                    <p style={{ margin: '0 0 5px 0', fontSize: '0.8rem', color: '#64748b' }}>Reference:</p>
+                    <strong style={{ fontSize: '1rem', color: '#047857' }}>INV-ADMIN-1752558009349</strong>
+                  </div>
+                </div>
+
+                <div style={{
+                  background: '#fffbe0', // Light yellow background
+                  border: '1px solid #ffe0b2', // Orange border
+                  borderRadius: '8px',
+                  padding: '15px',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '10px',
+                  width: '100%',
+                  maxWidth: '500px',
+                  textAlign: 'left'
+                }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                  </svg>
+                  <p style={{ margin: '0', fontSize: '0.9rem', color: '#78350f' }}>
+                    <strong style={{ color: '#f59e0b' }}>Important Instructions:</strong> Please include the reference number <strong style={{ color: '#f59e0b' }}>INV-ADMIN-1752558009349</strong> in your transfer description to ensure proper processing.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="payment-buttons">
+              <button className="cancel-button" onClick={onClose}>Cancel</button>
+              {/* The "Pay" button only makes sense for card or PayPal direct action.
+                  For bank transfer, the user has to manually transfer. */}
+              {selectedPaymentMethod === 'card' && (
+                <button className="pay-button" onClick={handlePayClick}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
+                    <path d="M12 1v22"></path>
+                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                  </svg>
+                  Pay {selectedPlanPrice}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Order Summary Section */}
+          <div className="order-summary-section">
+            <div className="payment-section-header">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 6v6l4 2"></path>
+              </svg>
+              Order Summary
+            </div>
+
+            <div className="summary-card">
+              <div className="summary-item-logo">
+                <img src="https://placehold.co/40x40/475569/ffffff?text=TX" alt="TechXplorers Logo" style={{ borderRadius: '8px' }} />
+                <div>
+                  <p className="summary-main-text">TechXplorers</p>
+                  <p className="summary-sub-text">Verified Merchant</p>
+                </div>
+              </div>
+              <div className="summary-rating">
+                <span className="star-icon">⭐</span>4.9/5 <span className="reviews-count">(2,847 reviews)</span>
+              </div>
+
+              <div className="summary-divider"></div>
+
+              <h5 className="summary-sub-heading">Bill To:</h5>
+              <div className="bill-to-details">
+                <p><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '5px' }}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg> John Smith</p>
+                <p><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '5px' }}><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg> john@example.com</p>
+                <p><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '5px' }}><path d="M22 16.92v3a2 2 0 0 1-2.18 2.003 16.92 16.92 0 0 1-13.82-13.82A2.003 2.003 0 0 1 3.08 2H6.1a2 2 0 0 1 1.95 1.54L9 8.23a2 2 0 0 1-1.1 2.13 11.05 11.05 0 0 0 5.85 5.85 2 2 0 0 1 2.13-1.1l4.69-1.95a2 2 0 0 1 1.54 1.95z"></path></svg> +91 1234567890</p>
+              </div>
+
+              <div className="summary-divider"></div>
+
+              <div className="summary-line-item">
+                <span>Invoice:</span>
+                <span>#INV-001</span>
+              </div>
+              <div className="summary-line-item">
+                <span>Service:</span>
+                <span>Executive and senior management team</span>
+              </div>
+              <div className="summary-line-item">
+                <span>Subtotal:</span>
+                <span>USD {selectedPlanPrice.replace('$', '')}</span>
+              </div>
+              <div className="summary-line-item">
+                <span>Processing Fee:</span>
+                <span className="included-text">Included</span>
+              </div>
+
+              <div className="summary-total">
+                <span>Total</span>
+                <span>USD {selectedPlanPrice.replace('$', '')}</span>
+              </div>
+            </div>
+
+            <div className="security-trust-info">
+              <h5 className="summary-sub-heading">Security & Trust</h5>
+              <p><span className="green-dot"></span> 256-bit SSL</p>
+              <p><span className="green-dot"></span> PCI Compliant</p>
+              <p><span className="green-dot"></span> Fraud Protection</p>
+              <p><span className="green-dot"></span> Encrypted</p>
+            </div>
+
+            <button className="back-to-dashboard-button" onClick={onClose}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
+                <path d="M10 12L6 8L10 4"></path>
+              </svg>
+              Back to Module
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
 // --- PaymentPlanModal Component ---
 const PaymentPlanModal = ({ selectedRadioPlan, handleRadioPlanChange, handleProceedToPayment, onClose }) => {
   const planOptions = {
@@ -891,7 +1220,7 @@ const PaymentPlanModal = ({ selectedRadioPlan, handleRadioPlanChange, handleProc
               ))}
             </ul>
             <button
-              onClick={handleProceedToPayment}
+              onClick={() => handleProceedToPayment(currentSelectedPlanDetails.name, currentSelectedPlanDetails.price)}
               style={paymentPlanSelectButtonStyle}
             >
               Proceed to Payment
@@ -2161,13 +2490,18 @@ const ClientDashboard = () => {
 
 
   // States from clientdashboard.txt
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false); // No longer used for hamburger menu
   const [showInterviewsModal, setShowInterviewsModal] = useState(false);
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showClientProfileModal, setShowClientProfileModal] = useState(false);
   const [showSubscriptionDetailsModal, setShowSubscriptionDetailsModal] = useState(false);
   const [selectedRadioPlan, setSelectedRadioPlan] = useState('glass-silver');
+
+  // New state for the PaymentOptionsModal
+  const [showPaymentOptionsModal, setShowPaymentOptionsModal] = useState(false);
+  const [planToPayFor, setPlanToPayFor] = useState({ name: '', price: '' });
+
 
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
@@ -2210,7 +2544,7 @@ const ClientDashboard = () => {
   const [tempEndDate, setTempEndDate] = useState(null);
 
   const [showJobDescriptionModal, setShowJobDescriptionModal] = useState(false);
-  const [currentJobDescription, setCurrentJobDescription] = useState('');
+  const [currentJobDescription, setCurrentJobDescription] = useState(''); // Initialize with empty string
 
   const [showFilterModal, setShowFilterModal] = useState(false); // Categorical filter modal
   const [tempSelectedWebsites, setTempSelectedWebsites] = useState([]);
@@ -2227,7 +2561,7 @@ const ClientDashboard = () => {
     document.documentElement.classList.toggle('dark-mode');
   };
 
-  const toggleMenu = () => setMenuOpen(!menuOpen);
+  const toggleMenu = () => setMenuOpen(!menuOpen); // This function is now effectively unused for the UI
   const toggleInterviewsModal = () => setShowInterviewsModal(!showInterviewsModal);
   const toggleResumeModal = () => setShowResumeModal(!showResumeModal);
   const togglePaymentModal = () => setShowPaymentModal(!showPaymentModal);
@@ -2460,13 +2794,11 @@ const ClientDashboard = () => {
     'glass-platinum': { name: 'Platinum', price: '$999', features: ['All Gold features', 'Dedicated account manager', 'Annual strategic planning session'] },
   };
 
-  // Handler for selecting a payment plan
-  const handleProceedToPayment = () => {
-    const currentPlan = planOptions[selectedRadioPlan];
-    if (currentPlan) {
-      console.log(`Proceeding with: ${currentPlan.name} plan for ${currentPlan.price}`);
-      togglePaymentModal();
-    }
+  // Handler for proceeding to payment options from PaymentPlanModal
+  const handleProceedToPayment = (planName, planPrice) => {
+    setPlanToPayFor({ name: planName, price: planPrice });
+    setShowPaymentModal(false); // Close the plan selection modal
+    setShowPaymentOptionsModal(true); // Open the new payment options modal
   };
 
   // Function to handle radio button change
@@ -2771,10 +3103,10 @@ const ClientDashboard = () => {
   const isOverlayVisible = useMemo(() => {
     return menuOpen || showInterviewsModal || showResumeModal || showPaymentModal ||
            showClientProfileModal || showSubscriptionDetailsModal ||
-           showNotificationsModal || showAttachmentModal || showDateRangeModal || showJobDescriptionModal || showFilterModal;
+           showNotificationsModal || showAttachmentModal || showDateRangeModal || showJobDescriptionModal || showFilterModal || showPaymentOptionsModal;
   }, [menuOpen, showInterviewsModal, showResumeModal, showPaymentModal,
       showClientProfileModal, showSubscriptionDetailsModal,
-      showNotificationsModal, showAttachmentModal, showDateRangeModal, showJobDescriptionModal, showFilterModal]);
+      showNotificationsModal, showAttachmentModal, showDateRangeModal, showJobDescriptionModal, showFilterModal, showPaymentOptionsModal]);
 
 
   return (
@@ -3462,6 +3794,539 @@ const ClientDashboard = () => {
             font-size: 1.3rem;
           }
         }
+
+        /* Payment Options Modal Styles (New/Updated) */
+        .payment-modal-content-wrapper {
+            position: relative;
+            background: #f8fafc; /* Light background for the overall modal */
+            border-radius: 16px;
+            box-shadow: 0 20px 25px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 1200px; /* Wider to accommodate two columns */
+            max-height: 90vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column; /* Stack sections on small screens */
+            padding: 20px; /* Overall padding */
+        }
+        @media (min-width: 1024px) {
+            .payment-modal-content-wrapper {
+                padding: 0; /* Remove overall padding if grid handles it */
+            }
+        }
+
+        html.dark-mode .payment-modal-content-wrapper {
+            background: #1a202c;
+            box-shadow: 0 20px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .payment-modal-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr; /* Payment Info takes 2/3, Order Summary 1/3 */
+            gap: 20px;
+            padding: 20px; /* Padding inside the grid */
+        }
+        @media (max-width: 1024px) {
+            .payment-modal-grid {
+                grid-template-columns: 1fr; /* Stack columns on smaller screens */
+            }
+        }
+
+        .payment-info-section, .order-summary-section {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+        }
+        html.dark-mode .payment-info-section, html.dark-mode .order-summary-section {
+            background: #2d3748;
+            border: 1px solid #4a5568;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .payment-section-header {
+            display: flex;
+            align-items: center;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        html.dark-mode .payment-section-header {
+            color: #e2e8f0;
+            border-bottom: 1px solid #4a5568;
+        }
+        .ssl-badge {
+            background: #d4edda;
+            color: #155724;
+            padding: 4px 8px;
+            border-radius: 5px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: auto;
+        }
+        html.dark-mode .ssl-badge {
+            background: #4a5568;
+            color: #9ae6b4;
+        }
+
+        .payment-sub-heading {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 15px;
+        }
+        html.dark-mode .payment-sub-heading {
+            color: #cbd5e1;
+        }
+
+        .payment-method-options {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap; /* Allow wrapping */
+            justify-content: center; /* Center items when wrapped */
+        }
+
+        .payment-method-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            width: 120px; /* Fixed width for method cards */
+            text-align: center;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #475569;
+            transition: all 0.2s ease;
+        }
+        html.dark-mode .payment-method-card {
+            background: #4a5568;
+            border: 1px solid #64748B;
+            color: #cbd5e1;
+        }
+
+        .payment-method-card.selected {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px #3b82f6;
+            background: #e0f2fe; /* Light blue for selected */
+            color: #1e293b;
+        }
+        html.dark-mode .payment-method-card.selected {
+            background: #3182ce;
+            color: #e2e8f0;
+        }
+
+        .payment-method-card svg {
+            color: #64748b;
+        }
+        .payment-method-card.selected svg {
+            color: #3b82f6;
+        }
+        html.dark-mode .payment-method-card svg {
+            color: #a0aec0;
+        }
+        html.dark-mode .payment-method-card.selected svg {
+            color: #90cdf4;
+        }
+
+
+        .all-methods-secured {
+            text-align: center;
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-bottom: 25px;
+        }
+        html.dark-mode .all-methods-secured {
+            color: #a0aec0;
+        }
+
+        .card-form label {
+            display: block;
+            font-size: 0.875rem;
+            color: #475569;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        html.dark-mode .card-form label {
+            color: #cbd5e1;
+        }
+
+        .card-form input[type="email"],
+        .card-form input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.95rem;
+            background: #f8fafc;
+            color: #1e293b;
+        }
+        html.dark-mode .card-form input {
+            background: #4a5568;
+            border: 1px solid #64748B;
+            color: #e2e8f0;
+        }
+        html.dark-mode .card-form input::placeholder {
+            color: #a0aec0;
+        }
+
+        .card-form .form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .card-form .form-row > div {
+            flex: 1;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .checkbox-group input[type="checkbox"] {
+            margin-right: 10px;
+            width: 18px;
+            height: 18px;
+            accent-color: #3b82f6; /* Modern way to style checkbox */
+        }
+        .checkbox-group label {
+            margin-bottom: 0;
+            font-size: 0.9rem;
+            color: #475569;
+            font-weight: 400;
+        }
+        html.dark-mode .checkbox-group label {
+            color: #cbd5e1;
+        }
+
+        .payment-buttons {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            margin-top: auto; /* Push buttons to the bottom */
+            padding-top: 20px; /* Space from form fields */
+            border-top: 1px solid #e2e8f0;
+        }
+        html.dark-mode .payment-buttons {
+            border-top: 1px solid #4a5568;
+        }
+
+        .cancel-button {
+            background: #e2e8f0;
+            color: #475569;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            flex: 1;
+        }
+        .cancel-button:hover {
+            background-color: #cbd5e1;
+        }
+        html.dark-mode .cancel-button {
+            background: #4a5568;
+            color: #cbd5e1;
+        }
+        html.dark-mode .cancel-button:hover {
+            background-color: #64748B;
+        }
+
+        .pay-button {
+            background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+        }
+        .pay-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+            background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+        }
+
+        .order-summary-section {
+            background: #f8fafc; /* Lighter background for summary */
+            border: 1px solid #e2e8f0;
+            padding: 30px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+        }
+        html.dark-mode .order-summary-section {
+            background: #2d3748;
+            border: 1px solid #4a5568;
+        }
+
+        .summary-card {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            border: 1px solid #e2e8f0;
+        }
+        html.dark-mode .summary-card {
+            background: #4a5568;
+            border: 1px solid #64748B;
+        }
+
+        .summary-item-logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .summary-main-text {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin: 0;
+        }
+        html.dark-mode .summary-main-text {
+            color: #e2e8f0;
+        }
+        .summary-sub-text {
+            font-size: 0.85rem;
+            color: #64748b;
+            margin: 0;
+        }
+        html.dark-mode .summary-sub-text {
+            color: #a0aec0;
+        }
+
+        .summary-rating {
+            display: flex;
+            align-items: center;
+            font-size: 0.9rem;
+            color: #475569;
+        }
+        html.dark-mode .summary-rating {
+            color: #cbd5e1;
+        }
+        .star-icon {
+            margin-right: 5px;
+            font-size: 1.1rem;
+        }
+        .reviews-count {
+            margin-left: 10px;
+            color: #94a3b8;
+        }
+        html.dark-mode .reviews-count {
+            color: #a0aec0;
+        }
+
+        .summary-divider {
+            border-top: 1px dashed #e2e8f0;
+            margin: 15px 0;
+        }
+        html.dark-mode .summary-divider {
+            border-top: 1px dashed #64748B;
+        }
+
+        .bill-to-details p {
+            display: flex;
+            align-items: center;
+            font-size: 0.9rem;
+            color: #475569;
+            margin-bottom: 8px;
+        }
+        html.dark-mode .bill-to-details p {
+            color: #cbd5e1;
+        }
+
+        .summary-line-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.95rem;
+            color: #475569;
+            margin-bottom: 10px;
+        }
+        html.dark-mode .summary-line-item {
+            color: #cbd5e1;
+        }
+        .summary-line-item span:first-child {
+            font-weight: 500;
+        }
+        .summary-line-item span:last-child {
+            font-weight: 600;
+            color: #1e293b;
+        }
+        html.dark-mode .summary-line-item span:last-child {
+            color: #e2e8f0;
+        }
+
+        .included-text {
+            color: #047857;
+            font-weight: 600;
+        }
+        html.dark-mode .included-text {
+            color: #9ae6b4;
+        }
+
+        .summary-total {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #e2e8f0;
+        }
+        html.dark-mode .summary-total {
+            color: #e2e8f0;
+            border-top: 1px solid #4a5568;
+        }
+
+        .security-trust-info {
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px dashed #e2e8f0;
+        }
+        html.dark-mode .security-trust-info {
+            border-top: 1px dashed #64748B;
+        }
+        .security-trust-info p {
+            display: flex;
+            align-items: center;
+            font-size: 0.9rem;
+            color: #475569;
+            margin-bottom: 8px;
+        }
+        html.dark-mode .security-trust-info p {
+            color: #cbd5e1;
+        }
+        .green-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background-color: #047857;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        html.dark-mode .green-dot {
+            background-color: #9ae6b4;
+        }
+
+        .back-to-dashboard-button {
+            background: none;
+            border: none;
+            color: #3b82f6;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            transition: background-color 0.2s;
+        }
+        .back-to-dashboard-button:hover {
+            background-color: #e0f2fe;
+        }
+        html.dark-mode .back-to-dashboard-button {
+            color: #90cdf4;
+        }
+        html.dark-mode .back-to-dashboard-button:hover {
+            background-color: #4a5568;
+        }
+
+        @media (max-width: 768px) {
+            .payment-info-section, .order-summary-section {
+                padding: 20px;
+            }
+            .payment-section-header {
+                font-size: 1rem;
+                margin-bottom: 20px;
+                padding-bottom: 10px;
+            }
+            .payment-sub-heading {
+                font-size: 0.9rem;
+                margin-bottom: 10px;
+            }
+            .payment-method-options {
+                gap: 10px;
+                margin-bottom: 20px;
+            }
+            .payment-method-card {
+                width: 100px;
+                padding: 10px;
+                font-size: 0.75rem;
+            }
+            .card-form input {
+                padding: 10px;
+                font-size: 0.85rem;
+                margin-bottom: 15px;
+            }
+            .card-form .form-row {
+                gap: 10px;
+                margin-bottom: 15px;
+            }
+            .checkbox-group label {
+                font-size: 0.8rem;
+            }
+            .payment-buttons {
+                flex-direction: column;
+                gap: 10px;
+                padding-top: 15px;
+            }
+            .cancel-button, .pay-button {
+                padding: 10px 15px;
+                font-size: 0.9rem;
+            }
+            .summary-card {
+                padding: 20px;
+                gap: 10px;
+            }
+            .summary-main-text {
+                font-size: 1rem;
+            }
+            .summary-sub-text {
+                font-size: 0.75rem;
+            }
+            .summary-rating {
+                font-size: 0.8rem;
+            }
+            .bill-to-details p, .summary-line-item, .security-trust-info p {
+                font-size: 0.85rem;
+            }
+            .summary-total {
+                font-size: 1rem;
+            }
+            .back-to-dashboard-button {
+                font-size: 0.85rem;
+            }
+        }
         `}
       </style>
 
@@ -3471,7 +4336,7 @@ const ClientDashboard = () => {
         clientInitials={clientInitials}
         isDarkMode={isDarkMode}
         toggleTheme={toggleTheme}
-        toggleSidebar={toggleMenu}
+        toggleSidebar={toggleMenu} // Still passed, but the hamburger button is removed
         isProfileDropdownOpen={isProfileDropdownOpen}
         setIsProfileDropdownOpen={setIsProfileDropdownOpen}
         profileDropdownRef={profileDropdownRef}
@@ -3486,7 +4351,7 @@ const ClientDashboard = () => {
       <DimmingOverlay
         isVisible={isOverlayVisible}
         onClick={() => {
-          if (menuOpen) setMenuOpen(false);
+          if (menuOpen) setMenuOpen(false); // This will no longer be triggered by hamburger menu
           if (showInterviewsModal) setShowInterviewsModal(false);
           if (showResumeModal) setShowResumeModal(false);
           if (showPaymentModal) setShowPaymentModal(false);
@@ -3497,6 +4362,7 @@ const ClientDashboard = () => {
           if (showDateRangeModal) setShowDateRangeModal(false);
           if (showJobDescriptionModal) setShowJobDescriptionModal(false);
           if (showFilterModal) setShowFilterModal(false);
+          if (showPaymentOptionsModal) setShowPaymentOptionsModal(false); // Close payment options modal
         }}
       />
 
@@ -3688,8 +4554,16 @@ const ClientDashboard = () => {
         <PaymentPlanModal
           selectedRadioPlan={selectedRadioPlan}
           handleRadioPlanChange={handleRadioPlanChange}
-          handleProceedToPayment={handleProceedToPayment}
+          handleProceedToPayment={handleProceedToPayment} // This now triggers the new modal
           onClose={togglePaymentModal}
+        />
+      )}
+
+      {showPaymentOptionsModal && (
+        <PaymentOptionsModal
+          onClose={() => setShowPaymentOptionsModal(false)}
+          selectedPlanName={planToPayFor.name}
+          selectedPlanPrice={planToPayFor.price}
         />
       )}
 
@@ -3724,11 +4598,11 @@ const ClientDashboard = () => {
         />
       )}
 
-      {/* Sidebar Menu */}
+      {/* Sidebar Menu (This is now permanently hidden as per request 1) */}
       <div className="sidebar-menu" style={{
         position: 'fixed',
         top: 0,
-        right: menuOpen ? 0 : '-280px',
+        right: '-280px', // Always off-screen
         height: '100%',
         width: '280px',
         background: '#ffffff',
@@ -4287,6 +5161,22 @@ const paymentPlanSelectButtonStyle = {
   marginTop: 'auto',
   width: '100%',
   boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+  transition: 'background-color 0.2s, transform 0.2s',
+};
+
+const paymentOptionButtonStyle = {
+  background: '#475569', // Darker background for payment options
+  color: 'white',
+  border: 'none',
+  padding: '15px 20px',
+  borderRadius: '8px',
+  fontSize: '1.1rem',
+  fontWeight: '600',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
   transition: 'background-color 0.2s, transform 0.2s',
 };
 
