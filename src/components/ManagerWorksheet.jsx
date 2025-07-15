@@ -20,6 +20,27 @@ const ManagerWorkSheet = () => {
   // Ref for the profile dropdown to detect clicks outside
   const profileDropdownRef = useRef(null);
 
+  // NEW STATE: For Notifications Modal
+  const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
+  // Dummy notifications data
+  const [notifications, setNotifications] = useState([
+    { id: 1, title: 'New Feature Alert', message: 'Discover our new analytics dashboard!', time: '2 hours ago' },
+    { id: 2, title: 'Payment Due Soon', message: 'Your subscription renews in 3 days.', time: '1 day ago' },
+    { id: 3, title: 'Profile Update', message: 'Your profile information has been updated.', time: '2 days ago' },
+  ]);
+
+  // NEW STATE: For User Profile Edit Modal
+  const [isUserProfileModalOpen, setIsUserProfileModalOpen] = useState(false);
+  const [userProfile, setUserProfile] = useState({
+    name: 'Sreenivasulu',
+    employeeId: 'MNG001',
+    email: 'sreenivasulu@techxplorers.com',
+    mobile: '+91 98765 43210',
+    lastLogin: '2025-07-15 10:30 AM',
+  });
+  // State to manage editable profile fields
+  const [editableProfile, setEditableProfile] = useState({});
+
 
   // State to control the visibility of the Unassigned Clients modal
   const [isUnassignedClientsModalOpen, setIsUnassignedClientsModalOpen] = useState(false);
@@ -69,65 +90,69 @@ const ManagerWorkSheet = () => {
   const [isReassignClientModalOpen, setIsReassignClientModalOpen] = useState(false);
   const [clientToReassign, setClientToReassign] = useState(null);
 
+  // NEW STATE: For Edit Client Modal (repurposing the preview modal)
+  const [isEditClientModalOpen, setIsEditClientModalOpen] = useState(false);
+  const [clientToEdit, setClientToEdit] = useState(null);
+
 
   // Initial dummy data for unassigned clients (7 clients)
   const initialUnassignedClientsData = [
     { id: 1, name: 'David Wilson', priority: 'high', skills: ['Python', 'Django', 'PostgreSQL'], experience: '6 years experience', remote: true, email: 'david.wilson@example.com', salary: '$100,000 - $120,000' },
-    { id: 2, name: 'Sarah J. Unassigned', priority: 'medium', skills: ['React', 'Node.js', 'MongoDB'], experience: '4 years experience', remote: false, email: 'sarah.j.unassigned@example.com', salary: '$80,000 - $100,000' },
-    { id: 3, name: 'Michael Brown', priority: 'low', skills: ['Java', 'Spring Boot'], experience: '3 years experience', remote: true, email: 'michael.b@example.com', salary: '$70,000 - $90,000' },
-    { id: 4, name: 'Emily White', priority: 'high', skills: ['Vue.js', 'Firebase', 'TypeScript'], experience: '5 years experience', remote: false, email: 'emily.w@example.com', salary: '$95,000 - $115,000' },
-    { id: 5, name: 'Daniel Green', priority: 'medium', skills: ['C#', '.NET', 'SQL Server'], experience: '7 years experience', remote: true, email: 'daniel.g@example.com', salary: '$110,000 - $130,000' },
-    { id: 6, name: 'Olivia Black', priority: 'low', skills: ['PHP', 'Laravel', 'MySQL'], experience: '2 years experience', remote: false, email: 'olivia.b@example.com', salary: '$60,000 - $80,000' },
-    { id: 7, name: 'James Blue', priority: 'high', skills: ['Go', 'Docker', 'Kubernetes'], experience: '8 years experience', remote: true, email: 'james.b@example.com', salary: '$120,000 - $140,000' },
+    // { id: 2, name: 'Sarah J. Unassigned', priority: 'medium', skills: ['React', 'Node.js', 'MongoDB'], experience: '4 years experience', remote: false, email: 'sarah.j.unassigned@example.com', salary: '$80,000 - $100,000' },
+    // { id: 3, name: 'Michael Brown', priority: 'low', skills: ['Java', 'Spring Boot'], experience: '3 years experience', remote: true, email: 'michael.b@example.com', salary: '$70,000 - $90,000' },
+    // { id: 4, name: 'Emily White', priority: 'high', skills: ['Vue.js', 'Firebase', 'TypeScript'], experience: '5 years experience', remote: false, email: 'emily.w@example.com', salary: '$95,000 - $115,000' },
+    // { id: 5, name: 'Daniel Green', priority: 'medium', skills: ['C#', '.NET', 'SQL Server'], experience: '7 years experience', remote: true, email: 'daniel.g@example.com', salary: '$110,000 - $130,000' },
+    // { id: 6, name: 'Olivia Black', priority: 'low', skills: ['PHP', 'Laravel', 'MySQL'], experience: '2 years experience', remote: false, email: 'olivia.b@example.com', salary: '$60,000 - $80,000' },
+    // { id: 7, name: 'James Blue', priority: 'high', skills: ['Go', 'Docker', 'Kubernetes'], experience: '8 years experience', remote: true, email: 'james.b@example.com', salary: '$120,000 - $140,000' },
     // NEW: Added full profiles for clients previously only in applications/interviews
     { id: 8, name: 'Sarah Mitchell', priority: 'medium', skills: ['UX Design', 'Figma', 'User Research'], experience: '5 years experience', remote: false, email: 'sarah.m@example.com', salary: '$90,000 - $110,000' },
-    { id: 9, name: 'Michael Chen', priority: 'high', skills: ['Data Analysis', 'SQL', 'Python (Pandas)'], experience: '4 years experience', remote: true, email: 'michael.chen.client@example.com', salary: '$85,000 - $105,000' },
+    { id: 9, name: 'Mohammed Sheikh', priority: 'high', skills: ['Data Analysis', 'SQL', 'Python (Pandas)'], experience: '4 years experience', remote: true, email: 'michael.chen.client@example.com', salary: '$85,000 - $105,000' },
     { id: 10, name: 'Jessica Williams', priority: 'medium', skills: ['Product Design', 'Sketch', 'Prototyping'], experience: '6 years experience', remote: false, email: 'jessica.w@example.com', salary: '$95,000 - $115,000' },
     { id: 11, name: 'David Kim', priority: 'low', skills: ['Backend Development', 'Java', 'Spring'], experience: '3 years experience', remote: true, email: 'david.k@example.com', salary: '$75,000 - $95,000' },
   ];
 
-  // Initial dummy data for assigned clients (5 clients, all for Sarah Johnson for testing)
+  // Initial dummy data for assigned clients (5 clients, all for Vyshnavi Vysh for testing)
   const initialAssignedClientsData = [
-    { id: 201, clientName: 'John Anderson', location: 'New York, NY', position: 'Senior Frontend Developer', salary: '$120,000 - $150,000', company: 'TechFlow Inc', assignedTo: 'Sarah Johnson', priority: 'high', status: 'interview', assignedDate: '2024-11-15' },
-    { id: 205, clientName: 'Alex Thompson', location: 'Boston, MA', position: 'Full Stack Developer', salary: '$110,000 - $140,000', company: 'StartupXYZ', assignedTo: 'Sarah Johnson', priority: 'medium', status: 'applied', assignedDate: '2024-11-20' },
-    { id: 208, clientName: 'Maria Rodriguez', location: 'Denver, CO', position: 'React Developer', salary: '$95,000 - $115,000', company: 'WebDev Inc', assignedTo: 'Sarah Johnson', priority: 'high', status: 'applied', assignedDate: '2024-11-28' },
-    { id: 209, clientName: 'Chris Evans', location: 'Miami, FL', position: 'DevOps Engineer', salary: '$130,000 - $150,000', company: 'CloudOps', assignedTo: 'Sarah Johnson', priority: 'high', status: 'interview', assignedDate: '2024-12-01' },
-    { id: 210, clientName: 'Anna Lee', location: 'Portland, OR', position: 'Data Scientist', salary: '$115,000 - $145,000', company: 'DataInsights', assignedTo: 'Sarah Johnson', priority: 'medium', status: 'applied', assignedDate: '2024-12-03' },
+    { id: 201, clientName: 'John Anderson', location: 'New York, NY', position: 'Senior Frontend Developer', salary: '$120,000 - $150,000', company: 'TechFlow Inc', assignedTo: 'Vyshnavi Vysh', priority: 'high', status: 'interview', assignedDate: '2024-11-15' },
+    { id: 205, clientName: 'Alex Thompson', location: 'Boston, MA', position: 'Full Stack Developer', salary: '$110,000 - $140,000', company: 'StartupXYZ', assignedTo: 'Krishna Kumar', priority: 'medium', status: 'applied', assignedDate: '2024-11-20' },
+    { id: 208, clientName: 'Maria Rodriguez', location: 'Denver, CO', position: 'React Developer', salary: '$95,000 - $115,000', company: 'WebDev Inc', assignedTo: 'Nagarjuna Sai', priority: 'high', status: 'applied', assignedDate: '2024-11-28' },
+    { id: 209, clientName: 'Chris Evans', location: 'Miami, FL', position: 'DevOps Engineer', salary: '$130,000 - $150,000', company: 'CloudOps', assignedTo: 'Vyshnavi Vysh', priority: 'high', status: 'interview', assignedDate: '2024-12-01' },
+    { id: 210, clientName: 'Anna Lee', location: 'Portland, OR', position: 'Data Scientist', salary: '$115,000 - $145,000', company: 'DataInsights', assignedTo: 'Mohammed Sheikh', priority: 'medium', status: 'applied', assignedDate: '2024-12-03' },
   ];
 
   // Initial dummy data for employees, reflecting assignedClients counts from initialAssignedClientsData
   const initialDummyEmployees = [
     {
       id: 101,
-      name: 'Sarah Johnson',
+      name: 'Vyshnavi Vysh',
       role: 'Senior Placement Specialist',
       assignedClients: 5, // Matches 5 clients assigned to her in initialAssignedClientsData
       successRate: 85,
-      avatar: 'SJ',
+      avatar: 'VV',
     },
     {
       id: 102,
-      name: 'Michael Chen',
+      name: 'Krishna Kumar',
       role: 'Placement Specialist',
       assignedClients: 0, // No clients assigned to him initially in this specific dummy data
       successRate: 78,
-      avatar: 'MC',
+      avatar: 'KK',
     },
     {
       id: 103,
-      name: 'Emily Rodriguez',
+      name: 'Nagarjuna Sai',
       role: 'Junior Placement Specialist',
       assignedClients: 0, // No clients assigned to her initially
       successRate: 72,
-      avatar: 'ER',
+      avatar: 'NS',
     },
     {
       id: 104,
-      name: 'Daniel Green',
+      name: 'Mohammed Sheikh',
       role: 'Placement Specialist',
       assignedClients: 0, // No clients assigned to him initially
       successRate: 65,
-      avatar: 'DG',
+      avatar: 'MS',
     },
   ];
 
@@ -135,56 +160,56 @@ const ManagerWorkSheet = () => {
   const initialApplicationData = [ // Renamed to initialApplicationData
     {
       id: 301,
-      employeeName: 'Sarah Johnson',
-      employeeAvatar: 'SJ',
+      employeeName: 'Vyshnavi Vysh',
+      employeeAvatar: 'VV',
       clientName: 'John Anderson',
       jobTitle: 'Senior Frontend Developer',
       company: 'TechFlow Inc',
     },
     {
       id: 302,
-      employeeName: 'Michael Chen',
-      employeeAvatar: 'MC',
+      employeeName: 'Mohammed Sheikh',
+      employeeAvatar: 'MS',
       clientName: 'Sarah Mitchell', // This client now has a full profile in unassignedClientsData
       jobTitle: 'UX Designer',
       company: 'DesignCorp',
     },
     {
       id: 303,
-      employeeName: 'Emily Rodriguez',
-      employeeAvatar: 'ER',
-      clientName: 'Michael Chen', // This client now has a full profile in unassignedClientsData
+      employeeName: 'Nagarjuna Sai',
+      employeeAvatar: 'NS',
+      clientName: 'Mohammed Sheikh', // This client now has a full profile in unassignedClientsData
       jobTitle: 'Data Analyst',
       company: 'DataTech Solutions',
     },
     {
       id: 304,
-      employeeName: 'Sarah Johnson',
-      employeeAvatar: 'SJ',
+      employeeName: 'Yamuna Yamu',
+      employeeAvatar: 'YY',
       clientName: 'Alex Thompson',
       jobTitle: 'Full Stack Developer',
       company: 'StartupXYZ',
     },
     {
       id: 305,
-      employeeName: 'Michael Chen',
-      employeeAvatar: 'MC',
+      employeeName: 'Mohammed Sheikh',
+      employeeAvatar: 'MS',
       clientName: 'Jessica Williams', // This client now has a full profile in unassignedClientsData
       jobTitle: 'Product Designer',
       company: 'Design Studio',
     },
     {
       id: 306,
-      employeeName: 'Emily Rodriguez',
-      employeeAvatar: 'ER',
+      employeeName: 'Nagarjuna Sai',
+      employeeAvatar: 'NS',
       clientName: 'David Kim', // This client now has a full profile in unassignedClientsData
       jobTitle: 'Backend Developer',
       company: 'TechCorp',
     },
     {
       id: 307,
-      employeeName: 'Sarah Johnson',
-      employeeAvatar: 'SJ',
+      employeeName: 'Krishna Kumar',
+      employeeAvatar: 'KK',
       clientName: 'Maria Rodriguez',
       jobTitle: 'React Developer',
       company: 'WebDev Inc',
@@ -193,11 +218,11 @@ const ManagerWorkSheet = () => {
 
   // NEW DUMMY DATA for the Interviews tab, including a 'status' field
   const initialInterviewData = [
-    { id: 401, employeeName: 'Sarah Johnson', employeeAvatar: 'SJ', clientName: 'John Anderson', jobTitle: 'Senior Frontend Developer', company: 'TechFlow Inc', round: '1st Round', date: '2025-07-08', status: 'Scheduled' },
-    { id: 402, employeeName: 'Sarah Johnson', employeeAvatar: 'SJ', clientName: 'Alex Thompson', jobTitle: 'Full Stack Developer', company: 'StartupXYZ', round: '2nd Round', date: '2025-07-06', status: 'Completed' },
-    { id: 403, employeeName: 'Michael Chen', employeeAvatar: 'MC', clientName: 'Jessica Williams', jobTitle: 'Product Designer', company: 'Design Studio', round: '3rd Round', date: '2025-07-10', status: 'Pending Review' },
-    { id: 404, employeeName: 'Emily Rodriguez', employeeAvatar: 'ER', clientName: 'David Kim', jobTitle: 'Backend Developer', company: 'TechCorp', round: '1st Round', date: '2025-07-09', status: 'Scheduled' },
-    { id: 405, employeeName: 'Sarah Johnson', employeeAvatar: 'SJ', clientName: 'Maria Rodriguez', jobTitle: 'React Developer', company: 'WebDev Inc', round: '2nd Round', date: '2025-07-11', status: 'Completed' },
+    { id: 401, employeeName: 'Vyshnavi Vysh', employeeAvatar: 'VV', clientName: 'John Anderson', jobTitle: 'Senior Frontend Developer', company: 'TechFlow Inc', round: '1st Round', date: '2025-07-08', status: 'Scheduled' },
+    { id: 402, employeeName: 'Vyshnavi Vysh', employeeAvatar: 'VV', clientName: 'Alex Thompson', jobTitle: 'Full Stack Developer', company: 'StartupXYZ', round: '2nd Round', date: '2025-07-06', status: 'Completed' },
+    { id: 403, employeeName: 'Mohammed Sheikh', employeeAvatar: 'MS', clientName: 'Jessica Williams', jobTitle: 'Product Designer', company: 'Design Studio', round: '3rd Round', date: '2025-07-10', status: 'Pending Review' },
+    { id: 404, employeeName: 'Nagarjuna Sai', employeeAvatar: 'NS', clientName: 'David Kim', jobTitle: 'Backend Developer', company: 'TechCorp', round: '1st Round', date: '2025-07-09', status: 'Scheduled' },
+    { id: 405, employeeName: 'Vyshnavi Vysh', employeeAvatar: 'VV', clientName: 'Maria Rodriguez', jobTitle: 'React Developer', company: 'WebDev Inc', round: '2nd Round', date: '2025-07-11', status: 'Completed' },
   ];
 
 
@@ -209,13 +234,385 @@ const ManagerWorkSheet = () => {
   const [applicationData, setApplicationData] = useState(initialApplicationData); // Now managed by state
 
   // NEW: Comprehensive dummy data for client details (from EmployeeData.txt structure)
-  const mockDetailedClientsData = [
+  // This data will be the source of truth for detailed client profiles
+  const [mockDetailedClientsData, setMockDetailedClientsData] = useState([
+   {
+      id: 1, // Corresponds to David Wilson in unassignedClientsData
+      name: 'David Wilson',
+      firstName: 'David',
+      middleName: '',
+      lastName: 'Wilson',
+      dob: '1990-01-01',
+      gender: 'Male',
+      ethnicity: 'Caucasian',
+      address: '123 Tech Lane, Austin, TX',
+      zipCode: '73301',
+      mobile: '555-111-2222',
+      email: 'david.wilson@example.com',
+      securityClearance: 'No',
+      clearanceLevel: '',
+      willingToRelocate: 'Yes',
+      workPreference: 'Remote',
+      restrictedCompanies: 'None',
+      jobsToApply: 'Python Developer, Backend Engineer',
+      technologySkills: 'Python, Django, PostgreSQL, AWS',
+      currentSalary: '$95,000',
+      expectedSalary: '$110,000',
+      visaStatus: 'US Citizen',
+      otherVisaStatus: '',
+      schoolName: 'University of Texas at Austin',
+      schoolAddress: 'Austin, TX',
+      schoolPhone: '512-555-1234',
+      courseOfStudy: 'Computer Science',
+      graduationDate: '2012-05-20',
+      currentCompany: 'Innovate Solutions',
+      currentDesignation: 'Software Engineer',
+      preferredInterviewTime: 'Morning',
+      earliestJoiningDate: '2025-08-01',
+      relievingDate: '2025-07-31',
+      referenceName: 'Alice Johnson',
+      referencePhone: '555-987-6543',
+      referenceAddress: '456 Elm St',
+      referenceEmail: 'alice.j@example.com',
+      referenceRole: 'Manager',
+      jobPortalAccountName: 'davidw_linkedin',
+      jobPortalCredentials: 'password123',
+      priority: 'high',
+      status: 'unassigned',
+      assignedTo: 'N/A',
+      assignedDate: 'N/A',
+      skills: ['Python', 'Django', 'PostgreSQL'],
+      experience: '6 years experience',
+      remote: true,
+      salary: '$100,000 - $120,000',
+      location: 'Austin, TX',
+      position: 'Python Developer',
+      company: 'Innovate Solutions',
+    },
+    {
+      id: 2, // Corresponds to Sarah J. Unassigned in unassignedClientsData
+      name: 'Sarah J. Unassigned',
+      firstName: 'Sarah',
+      middleName: 'Jane',
+      lastName: 'Unassigned',
+      dob: '1995-03-20',
+      gender: 'Female',
+      ethnicity: 'Caucasian',
+      address: '789 Oak Avenue, San Jose, CA',
+      zipCode: '95123',
+      mobile: '555-222-3333',
+      email: 'sarah.j.unassigned@example.com',
+      securityClearance: 'No',
+      clearanceLevel: '',
+      willingToRelocate: 'No',
+      workPreference: 'On-site',
+      restrictedCompanies: 'Apple Inc.',
+      jobsToApply: 'Frontend Developer, React Developer',
+      technologySkills: 'React, Node.js, MongoDB, JavaScript',
+      currentSalary: '$75,000',
+      expectedSalary: '$90,000',
+      visaStatus: 'US Citizen',
+      otherVisaStatus: '',
+      schoolName: 'San Jose State University',
+      schoolAddress: 'San Jose, CA',
+      schoolPhone: '408-555-5678',
+      courseOfStudy: 'Software Engineering',
+      graduationDate: '2017-05-18',
+      currentCompany: 'WebSolutions Co.',
+      currentDesignation: 'Junior Frontend Developer',
+      preferredInterviewTime: 'Afternoon',
+      earliestJoiningDate: '2025-09-01',
+      relievingDate: '2025-08-31',
+      referenceName: 'Bob Williams',
+      referencePhone: '555-123-9876',
+      referenceAddress: '101 Pine St',
+      referenceEmail: 'bob.w@example.com',
+      referenceRole: 'Team Lead',
+      jobPortalAccountName: 'sarahj_github',
+      jobPortalCredentials: 'securepass',
+      priority: 'medium',
+      status: 'unassigned',
+      assignedTo: 'N/A',
+      assignedDate: 'N/A',
+      skills: ['React', 'Node.js', 'MongoDB'],
+      experience: '4 years experience',
+      remote: false,
+      salary: '$80,000 - $100,000',
+      location: 'San Jose, CA',
+      position: 'Frontend Developer',
+      company: 'WebSolutions Co.',
+    },
+    {
+      id: 3, // Corresponds to Michael Brown in unassignedClientsData
+      name: 'Michael Brown',
+      firstName: 'Michael',
+      middleName: '',
+      lastName: 'Brown',
+      dob: '1998-07-10',
+      gender: 'Male',
+      ethnicity: 'African American',
+      address: '456 River Road, Seattle, WA',
+      zipCode: '98101',
+      mobile: '555-333-4444',
+      email: 'michael.b@example.com',
+      securityClearance: 'No',
+      clearanceLevel: '',
+      willingToRelocate: 'Yes',
+      workPreference: 'Hybrid',
+      restrictedCompanies: 'Microsoft',
+      jobsToApply: 'Java Developer, Backend Engineer',
+      technologySkills: 'Java, Spring Boot, MySQL',
+      currentSalary: '$65,000',
+      expectedSalary: '$80,000',
+      visaStatus: 'US Citizen',
+      otherVisaStatus: '',
+      schoolName: 'University of Washington',
+      schoolAddress: 'Seattle, WA',
+      schoolPhone: '206-555-4321',
+      courseOfStudy: 'Computer Science',
+      graduationDate: '2020-06-15',
+      currentCompany: 'Cloud Innovations',
+      currentDesignation: 'Software Developer',
+      preferredInterviewTime: 'Morning',
+      earliestJoiningDate: '2025-07-20',
+      relievingDate: '2025-07-15',
+      referenceName: 'Carol White',
+      referencePhone: '555-456-7890',
+      referenceAddress: '789 Maple Ave',
+      referenceEmail: 'carol.w@example.com',
+      referenceRole: 'Mentor',
+      jobPortalAccountName: 'michaelb_indeed',
+      jobPortalCredentials: 'javapass',
+      priority: 'low',
+      status: 'unassigned',
+      assignedTo: 'N/A',
+      assignedDate: 'N/A',
+      skills: ['Java', 'Spring Boot'],
+      experience: '3 years experience',
+      remote: true,
+      salary: '$70,000 - $90,000',
+      location: 'Seattle, WA',
+      position: 'Java Developer',
+      company: 'Cloud Innovations',
+    },
+    {
+      id: 4, // Corresponds to Emily White in unassignedClientsData
+      name: 'Emily White',
+      firstName: 'Emily',
+      middleName: '',
+      lastName: 'White',
+      dob: '1993-09-05',
+      gender: 'Female',
+      ethnicity: 'Asian',
+      address: '101 Ocean Drive, Los Angeles, CA',
+      zipCode: '90001',
+      mobile: '555-444-5555',
+      email: 'emily.w@example.com',
+      securityClearance: 'No',
+      clearanceLevel: '',
+      willingToRelocate: 'No',
+      workPreference: 'On-site',
+      restrictedCompanies: 'Netflix',
+      jobsToApply: 'Frontend Developer, Vue.js Specialist',
+      technologySkills: 'Vue.js, Firebase, TypeScript, HTML, CSS',
+      currentSalary: '$90,000',
+      expectedSalary: '$105,000',
+      visaStatus: 'Green Card',
+      otherVisaStatus: '',
+      schoolName: 'University of Southern California',
+      schoolAddress: 'Los Angeles, CA',
+      schoolPhone: '213-555-8765',
+      courseOfStudy: 'Web Design',
+      graduationDate: '2015-05-20',
+      currentCompany: 'Creative Digital',
+      currentDesignation: 'Frontend Developer',
+      preferredInterviewTime: 'Any',
+      earliestJoiningDate: '2025-08-10',
+      relievingDate: '2025-08-05',
+      referenceName: 'David Green',
+      referencePhone: '555-789-0123',
+      referenceAddress: '222 Hill St',
+      referenceEmail: 'david.g@example.com',
+      referenceRole: 'Colleague',
+      jobPortalAccountName: 'emilyw_behance',
+      jobPortalCredentials: 'designpass',
+      priority: 'high',
+      status: 'unassigned',
+      assignedTo: 'N/A',
+      assignedDate: 'N/A',
+      skills: ['Vue.js', 'Firebase', 'TypeScript'],
+      experience: '5 years experience',
+      remote: false,
+      salary: '$95,000 - $115,000',
+      location: 'Los Angeles, CA',
+      position: 'Frontend Developer',
+      company: 'Creative Digital',
+    },
+    {
+      id: 5, // Corresponds to Daniel Green in unassignedClientsData
+      name: 'Daniel Green',
+      firstName: 'Daniel',
+      middleName: '',
+      lastName: 'Green',
+      dob: '1989-11-12',
+      gender: 'Male',
+      ethnicity: 'Hispanic',
+      address: '202 Mountain View, Denver, CO',
+      zipCode: '80202',
+      mobile: '555-666-7777',
+      email: 'daniel.g@example.com',
+      securityClearance: 'Yes',
+      clearanceLevel: 'Secret',
+      willingToRelocate: 'Yes',
+      workPreference: 'Remote',
+      restrictedCompanies: 'Amazon',
+      jobsToApply: 'C# Developer, .NET Engineer',
+      technologySkills: 'C#, .NET, SQL Server, Azure',
+      currentSalary: '$100,000',
+      expectedSalary: '$120,000',
+      visaStatus: 'US Citizen',
+      otherVisaStatus: '',
+      schoolName: 'University of Colorado Denver',
+      schoolAddress: 'Denver, CO',
+      schoolPhone: '303-555-9876',
+      courseOfStudy: 'Software Engineering',
+      graduationDate: '2010-05-25',
+      currentCompany: 'Enterprise Solutions',
+      currentDesignation: 'Senior Software Engineer',
+      preferredInterviewTime: 'Morning',
+      earliestJoiningDate: '2025-07-01',
+      relievingDate: '2025-06-30',
+      referenceName: 'Frank Black',
+      referencePhone: '555-000-1111',
+      referenceAddress: '333 Valley Rd',
+      referenceEmail: 'frank.b@example.com',
+      referenceRole: 'CTO',
+      jobPortalAccountName: 'danielg_monster',
+      jobPortalCredentials: 'dotnetpass',
+      priority: 'medium',
+      status: 'unassigned',
+      assignedTo: 'N/A',
+      assignedDate: 'N/A',
+      skills: ['C#', '.NET', 'SQL Server'],
+      experience: '7 years experience',
+      remote: true,
+      salary: '$110,000 - $130,000',
+      location: 'Denver, CO',
+      position: 'C# Developer',
+      company: 'Enterprise Solutions',
+    },
+    {
+      id: 6, // Corresponds to Olivia Black in unassignedClientsData
+      name: 'Olivia Black',
+      firstName: 'Olivia',
+      middleName: '',
+      lastName: 'Black',
+      dob: '1999-02-18',
+      gender: 'Female',
+      ethnicity: 'Caucasian',
+      address: '303 Lake Shore, Chicago, IL',
+      zipCode: '60601',
+      mobile: '555-888-9999',
+      email: 'olivia.b@example.com',
+      securityClearance: 'No',
+      clearanceLevel: '',
+      willingToRelocate: 'No',
+      workPreference: 'On-site',
+      restrictedCompanies: 'IBM',
+      jobsToApply: 'PHP Developer, Web Developer',
+      technologySkills: 'PHP, Laravel, MySQL, JavaScript',
+      currentSalary: '$55,000',
+      expectedSalary: '$70,000',
+      visaStatus: 'US Citizen',
+      otherVisaStatus: '',
+      schoolName: 'DePaul University',
+      schoolAddress: 'Chicago, IL',
+      schoolPhone: '312-555-2222',
+      courseOfStudy: 'Web Development',
+      graduationDate: '2022-06-10',
+      currentCompany: 'Startup Hub',
+      currentDesignation: 'Junior Web Developer',
+      preferredInterviewTime: 'Afternoon',
+      earliestJoiningDate: '2025-09-15',
+      relievingDate: '2025-09-10',
+      referenceName: 'Grace Lee',
+      referencePhone: '555-333-4444',
+      referenceAddress: '444 Park Ave',
+      referenceEmail: 'grace.l@example.com',
+      referenceRole: 'Lead Developer',
+      jobPortalAccountName: 'oliviab_upwork',
+      jobPortalCredentials: 'phpdev',
+      priority: 'low',
+      status: 'unassigned',
+      assignedTo: 'N/A',
+      assignedDate: 'N/A',
+      skills: ['PHP', 'Laravel', 'MySQL'],
+      experience: '2 years experience',
+      remote: false,
+      salary: '$60,000 - $80,000',
+      location: 'Chicago, IL',
+      position: 'PHP Developer',
+      company: 'Startup Hub',
+    },
+    {
+      id: 7, // Corresponds to James Blue in unassignedClientsData
+      name: 'James Blue',
+      firstName: 'James',
+      middleName: '',
+      lastName: 'Blue',
+      dob: '1987-04-25',
+      gender: 'Male',
+      ethnicity: 'African American',
+      address: '404 Tech Park, San Francisco, CA',
+      zipCode: '94107',
+      mobile: '555-000-1111',
+      email: 'james.b@example.com',
+      securityClearance: 'Yes',
+      clearanceLevel: 'Top Secret',
+      willingToRelocate: 'Yes',
+      workPreference: 'Hybrid',
+      restrictedCompanies: 'Google',
+      jobsToApply: 'DevOps Engineer, Go Developer',
+      technologySkills: 'Go, Docker, Kubernetes, AWS, CI/CD',
+      currentSalary: '$115,000',
+      expectedSalary: '$135,000',
+      visaStatus: 'US Citizen',
+      otherVisaStatus: '',
+      schoolName: 'Stanford University',
+      schoolAddress: 'Stanford, CA',
+      schoolPhone: '650-555-5555',
+      courseOfStudy: 'Computer Engineering',
+      graduationDate: '2009-06-10',
+      currentCompany: 'Cloud Native Corp',
+      currentDesignation: 'DevOps Lead',
+      preferredInterviewTime: 'Morning',
+      earliestJoiningDate: '2025-08-01',
+      relievingDate: '2025-07-31',
+      referenceName: 'Henry Red',
+      referencePhone: '555-678-9012',
+      referenceAddress: '555 Tech Rd',
+      referenceEmail: 'henry.r@example.com',
+      referenceRole: 'Director of Engineering',
+      jobPortalAccountName: 'jamesb_stack',
+      jobPortalCredentials: 'godevops',
+      priority: 'high',
+      status: 'unassigned',
+      assignedTo: 'N/A',
+      assignedDate: 'N/A',
+      skills: ['Go', 'Docker', 'Kubernetes'],
+      experience: '8 years experience',
+      remote: true,
+      salary: '$120,000 - $140,000',
+      location: 'San Francisco, CA',
+      position: 'DevOps Engineer',
+      company: 'Cloud Native Corp',
+    },
     {
       id: 201, // Corresponds to John Anderson in assignedClients
       name: 'John Anderson',
       firstName: 'John',
       middleName: '',
-      lastName: 'Anderson',
+            lastName: 'Anderson',
       dob: '1990-05-15',
       gender: 'Male',
       ethnicity: 'Caucasian',
@@ -253,7 +650,7 @@ const ManagerWorkSheet = () => {
       jobPortalCredentials: 'encrypted_password_123',
       priority: 'high', // Added for consistency with other client data
       status: 'interview', // Added for consistency with other client data
-      assignedTo: 'Sarah Johnson', // Added for consistency with other client data
+      assignedTo: 'Vyshnavi Vysh', // Added for consistency with other client data
       assignedDate: '2024-11-15', // Added for consistency with other client data
       skills: ['React', 'JavaScript', 'HTML', 'CSS', 'Node.js'], // Added for consistency
       experience: '8 years experience', // Added for consistency
@@ -307,7 +704,7 @@ const ManagerWorkSheet = () => {
       jobPortalCredentials: 'another_encrypted_password',
       priority: 'medium',
       status: 'applied',
-      assignedTo: 'Michael Chen', // Example assignment
+      assignedTo: 'Mohammed Sheikh', // Example assignment
       assignedDate: '2024-12-10',
       skills: ['UX Design', 'Figma', 'User Research'],
       experience: '5 years experience',
@@ -318,8 +715,8 @@ const ManagerWorkSheet = () => {
       company: 'DesignCorp',
     },
     {
-      id: 9, // Corresponds to Michael Chen in initialUnassignedClientsData
-      name: 'Michael Chen',
+      id: 9, // Corresponds to Mohammed Sheikh in initialUnassignedClientsData
+      name: 'Mohammed Sheikh',
       firstName: 'Michael',
       middleName: '',
       lastName: 'Chen',
@@ -360,7 +757,7 @@ const ManagerWorkSheet = () => {
       jobPortalCredentials: 'another_strong_password',
       priority: 'high',
       status: 'applied',
-      assignedTo: 'Emily Rodriguez', // Example assignment
+      assignedTo: 'Nagarjuna Sai', // Example assignment
       assignedDate: '2024-12-15',
       skills: ['Data Analysis', 'SQL', 'Python (Pandas)'],
       experience: '4 years experience',
@@ -369,6 +766,166 @@ const ManagerWorkSheet = () => {
       location: 'New York, NY',
       jobTitle: 'Data Analyst',
       company: 'DataTech Solutions',
+    },
+    {
+      id: 10, // Corresponds to Jessica Williams in initialUnassignedClientsData
+      name: 'Jessica Williams',
+      firstName: 'Jessica',
+      middleName: '',
+      lastName: 'Williams',
+      dob: '1991-06-01',
+      gender: 'Female',
+      ethnicity: 'Caucasian',
+      address: '505 Creative Lane, San Francisco, CA',
+      zipCode: '94103',
+      mobile: '555-999-8888',
+      email: 'jessica.w@example.com',
+      securityClearance: 'No',
+      clearanceLevel: '',
+      willingToRelocate: 'No',
+      workPreference: 'Hybrid',
+      restrictedCompanies: 'Adobe',
+      jobsToApply: 'Product Designer, UX/UI Designer',
+      technologySkills: 'Sketch, Figma, Prototyping, User Testing',
+      currentSalary: '$90,000',
+      expectedSalary: '$110,000',
+      visaStatus: 'US Citizen',
+      otherVisaStatus: '',
+      schoolName: 'California College of the Arts',
+      schoolAddress: 'San Francisco, CA',
+      schoolPhone: '415-555-1111',
+      courseOfStudy: 'Interaction Design',
+      graduationDate: '2013-05-20',
+      currentCompany: 'Design Innovations',
+      currentDesignation: 'Product Designer',
+      preferredInterviewTime: 'Afternoon',
+      earliestJoiningDate: '2025-08-01',
+      relievingDate: '2025-07-31',
+      referenceName: 'Laura Brown',
+      referencePhone: '555-222-3333',
+      referenceAddress: '606 Art St',
+      referenceEmail: 'laura.b@example.com',
+      referenceRole: 'Creative Director',
+      jobPortalAccountName: 'jessicaw_dribbble',
+      jobPortalCredentials: 'designpass2',
+      priority: 'medium',
+      status: 'applied',
+      assignedTo: 'Mohammed Sheikh',
+      assignedDate: '2024-12-20',
+      skills: ['Product Design', 'Sketch', 'Prototyping'],
+      experience: '6 years experience',
+      remote: false,
+      salary: '$95,000 - $115,000',
+      location: 'San Francisco, CA',
+      jobTitle: 'Product Designer',
+      company: 'Design Studio',
+    },
+    {
+      id: 11, // Corresponds to David Kim in initialUnassignedClientsData
+      name: 'David Kim',
+      firstName: 'David',
+      middleName: '',
+      lastName: 'Kim',
+      dob: '1996-01-25',
+      gender: 'Male',
+      ethnicity: 'Asian',
+      address: '707 Backend Blvd, Boston, MA',
+      zipCode: '02110',
+      mobile: '555-777-6666',
+      email: 'david.k@example.com',
+      securityClearance: 'No',
+      clearanceLevel: '',
+      willingToRelocate: 'Yes',
+      workPreference: 'On-site',
+      restrictedCompanies: 'Oracle',
+      jobsToApply: 'Backend Developer, Java Developer',
+      technologySkills: 'Java, Spring, REST APIs, Microservices',
+      currentSalary: '$70,000',
+      expectedSalary: '$85,000',
+      visaStatus: 'H1B',
+      otherVisaStatus: '',
+      schoolName: 'Northeastern University',
+      schoolAddress: 'Boston, MA',
+      schoolPhone: '617-555-4444',
+      courseOfStudy: 'Computer Engineering',
+      graduationDate: '2019-05-15',
+      currentCompany: 'Software Solutions',
+      currentDesignation: 'Software Engineer',
+      preferredInterviewTime: 'Morning',
+      earliestJoiningDate: '2025-07-10',
+      relievingDate: '2025-07-05',
+      referenceName: 'Sam Wilson',
+      referencePhone: '555-555-6666',
+      referenceAddress: '808 Tech St',
+      referenceEmail: 'sam.w@example.com',
+      referenceRole: 'Team Lead',
+      jobPortalAccountName: 'davidk_java',
+      jobPortalCredentials: 'javadevpass',
+      priority: 'low',
+      status: 'applied',
+      assignedTo: 'Nagarjuna Sai',
+      assignedDate: '2024-12-25',
+      skills: ['Backend Development', 'Java', 'Spring'],
+      experience: '3 years experience',
+      remote: true,
+      salary: '$75,000 - $95,000',
+      location: 'Boston, MA',
+      jobTitle: 'Backend Developer',
+      company: 'TechCorp',
+    },
+    {
+      id: 201, // Corresponds to John Anderson in assignedClients
+      name: 'John Anderson',
+      firstName: 'John',
+      middleName: '',
+      lastName: 'Anderson',
+      dob: '1990-05-15',
+      gender: 'Male',
+      ethnicity: 'Caucasian',
+      address: '123 Main St, San Francisco, CA',
+      zipCode: '94105',
+      mobile: '123-456-7890',
+      email: 'john.anderson@example.com',
+      securityClearance: 'Yes',
+      clearanceLevel: 'Top Secret',
+      willingToRelocate: 'Yes',
+      workPreference: 'Hybrid',
+      restrictedCompanies: 'None',
+      jobsToApply: 'Frontend, Fullstack',
+      technologySkills: 'React, JavaScript, HTML, CSS, Node.js',
+      currentSalary: '$110,000',
+      expectedSalary: '$130,000',
+      visaStatus: 'H1B',
+      otherVisaStatus: '',
+      schoolName: 'University of California, Berkeley',
+      schoolAddress: 'Berkeley, CA',
+      schoolPhone: '555-123-4567',
+      courseOfStudy: 'Computer Science',
+      graduationDate: '2012-05-20',
+      currentCompany: 'WebTech Solutions',
+      currentDesignation: 'Senior Frontend Developer',
+      preferredInterviewTime: 'Morning',
+      earliestJoiningDate: '2025-08-01',
+      relievingDate: '2025-07-31',
+      referenceName: 'Jane Smith',
+      referencePhone: '555-987-6543',
+      referenceAddress: '456 Oak Ave',
+      referenceEmail: 'jane.smith@example.com',
+      referenceRole: 'Manager',
+      jobPortalAccountName: 'john.anderson.linkedin',
+      jobPortalCredentials: 'encrypted_password_123',
+      priority: 'high', // Added for consistency with other client data
+      status: 'interview', // Added for consistency with other client data
+      assignedTo: 'Vyshnavi Vysh', // Added for consistency with other client data
+      assignedDate: '2024-11-15', // Added for consistency with other client data
+      skills: ['React', 'JavaScript', 'HTML', 'CSS', 'Node.js'], // Added for consistency
+      experience: '8 years experience', // Added for consistency
+      location: 'San Francisco, CA', // Added for consistency
+      salary: '$120,000 - $150,000', // Added for consistency
+      position: 'Senior Frontend Developer', // Added for consistency
+      company: 'TechFlow Inc', // Added for consistency
+      round: '1st Round', // Example for interview data
+      date: '2025-07-08', // Example for interview data
     },
     {
       id: 205, // Corresponds to Alex Thompson in assignedClients
@@ -413,7 +970,7 @@ const ManagerWorkSheet = () => {
       jobPortalCredentials: 'password_abc',
       priority: 'medium',
       status: 'applied',
-      assignedTo: 'Sarah Johnson',
+      assignedTo: 'Vyshnavi Vysh',
       assignedDate: '2024-11-20',
       skills: ['Node.js', 'Express', 'PostgreSQL', 'React'],
       experience: '7 years experience',
@@ -468,7 +1025,7 @@ const ManagerWorkSheet = () => {
       jobPortalCredentials: 'secure_password',
       priority: 'high',
       status: 'applied',
-      assignedTo: 'Sarah Johnson',
+      assignedTo: 'Vyshnavi Vysh',
       assignedDate: '2024-11-28',
       skills: ['React', 'Redux', 'JavaScript', 'CSS'],
       experience: '6 years experience',
@@ -480,8 +1037,113 @@ const ManagerWorkSheet = () => {
       round: '2nd Round',
       date: '2025-07-11',
     },
-    // Add more detailed clients as needed, ensuring unique IDs and names
-  ];
+    {
+      id: 209, // Corresponds to Chris Evans in assignedClients
+      name: 'Chris Evans',
+      firstName: 'Chris',
+      middleName: '',
+      lastName: 'Evans',
+      dob: '1985-10-01',
+      gender: 'Male',
+      ethnicity: 'Caucasian',
+      address: '888 Beachfront, Miami, FL',
+      zipCode: '33101',
+      mobile: '555-123-0000',
+      email: 'chris.e@example.com',
+      securityClearance: 'Yes',
+      clearanceLevel: 'Secret',
+      willingToRelocate: 'No',
+      workPreference: 'Remote',
+      restrictedCompanies: 'None',
+      jobsToApply: 'DevOps, Cloud Engineer',
+      technologySkills: 'Docker, Kubernetes, AWS, Azure, CI/CD',
+      currentSalary: '$125,000',
+      expectedSalary: '$145,000',
+      visaStatus: 'US Citizen',
+      otherVisaStatus: '',
+      schoolName: 'University of Florida',
+      schoolAddress: 'Gainesville, FL',
+      schoolPhone: '352-555-1234',
+      courseOfStudy: 'Computer Engineering',
+      graduationDate: '2007-05-10',
+      currentCompany: 'CloudOps Solutions',
+      currentDesignation: 'DevOps Engineer',
+      preferredInterviewTime: 'Morning',
+      earliestJoiningDate: '2025-08-15',
+      relievingDate: '2025-08-10',
+      referenceName: 'Tony Stark',
+      referencePhone: '555-999-8888',
+      referenceAddress: '1000 Avengers Tower',
+      referenceEmail: 'tony.s@example.com',
+      referenceRole: 'CEO',
+      jobPortalAccountName: 'chrise_devops',
+      jobPortalCredentials: 'cloudpass',
+      priority: 'high',
+      status: 'interview',
+      assignedTo: 'Vyshnavi Vysh',
+      assignedDate: '2024-12-01',
+      skills: ['DevOps', 'Kubernetes', 'AWS'],
+      experience: '10 years experience',
+      remote: true,
+      salary: '$130,000 - $150,000',
+      location: 'Miami, FL',
+      jobTitle: 'DevOps Engineer',
+      company: 'CloudOps',
+    },
+    {
+      id: 210, // Corresponds to Anna Lee in assignedClients
+      name: 'Anna Lee',
+      firstName: 'Anna',
+      middleName: '',
+      lastName: 'Lee',
+      dob: '1994-07-07',
+      gender: 'Female',
+      ethnicity: 'Asian',
+      address: '999 Data Way, Portland, OR',
+      zipCode: '97201',
+      mobile: '555-333-1111',
+      email: 'anna.l@example.com',
+      securityClearance: 'No',
+      clearanceLevel: '',
+      willingToRelocate: 'Yes',
+      workPreference: 'Hybrid',
+      restrictedCompanies: 'None',
+      jobsToApply: 'Data Scientist, Machine Learning Engineer',
+      technologySkills: 'Python, R, SQL, Machine Learning, TensorFlow',
+      currentSalary: '$110,000',
+      expectedSalary: '$140,000',
+      visaStatus: 'US Citizen',
+      otherVisaStatus: '',
+      schoolName: 'Oregon State University',
+      schoolAddress: 'Corvallis, OR',
+      schoolPhone: '541-555-2222',
+      courseOfStudy: 'Data Science',
+      graduationDate: '2016-06-10',
+      currentCompany: 'Data Insights',
+      currentDesignation: 'Data Scientist',
+      preferredInterviewTime: 'Afternoon',
+      earliestJoiningDate: '2025-09-01',
+      relievingDate: '2025-08-31',
+      referenceName: 'Peter Jones',
+      referencePhone: '555-444-5555',
+      referenceAddress: '111 Analytics Ave',
+      referenceEmail: 'peter.j@example.com',
+      referenceRole: 'Lead Data Scientist',
+      jobPortalAccountName: 'annal_kaggle',
+      jobPortalCredentials: 'datapass',
+      priority: 'medium',
+      status: 'applied',
+      assignedTo: 'Vyshnavi Vysh',
+      assignedDate: '2024-12-03',
+      skills: ['Data Science', 'Python', 'Machine Learning'],
+      experience: '6 years experience',
+      remote: false,
+      salary: '$115,000 - $145,000',
+      location: 'Portland, OR',
+      jobTitle: 'Data Scientist',
+      company: 'DataInsights',
+    },
+  ]);
 
 
   // Effect to update userAvatarLetter when userName changes (if it were dynamic)
@@ -500,7 +1162,7 @@ const ManagerWorkSheet = () => {
 
   // Effect to freeze/unfreeze background scrolling based on any modal being open
   useEffect(() => {
-    if (isUnassignedClientsModalOpen || isAssignClientModalOpen || isTotalClientsModalOpen || isEmployeeClientsModalOpen || isClientPreviewModalOpen || isReassignClientModalOpen) {
+    if (isUnassignedClientsModalOpen || isAssignClientModalOpen || isTotalClientsModalOpen || isEmployeeClientsModalOpen || isClientPreviewModalOpen || isReassignClientModalOpen || isEditClientModalOpen || isNotificationsModalOpen || isUserProfileModalOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = ''; // Reset to default
@@ -509,7 +1171,7 @@ const ManagerWorkSheet = () => {
     return () => {
       document.body.style.overflow = '';
     };
-  }, [isUnassignedClientsModalOpen, isAssignClientModalOpen, isTotalClientsModalOpen, isEmployeeClientsModalOpen, isClientPreviewModalOpen, isReassignClientModalOpen]);
+  }, [isUnassignedClientsModalOpen, isAssignClientModalOpen, isTotalClientsModalOpen, isEmployeeClientsModalOpen, isClientPreviewModalOpen, isReassignClientModalOpen, isEditClientModalOpen, isNotificationsModalOpen, isUserProfileModalOpen]);
 
   // Effect to handle clicks outside the profile dropdown
   useEffect(() => {
@@ -785,82 +1447,61 @@ const ManagerWorkSheet = () => {
   });
 
 
-  // NEW: Function to open Client Preview Modal
-  const openClientPreviewModal = (clientName) => {
-    // First, try to find the client in the comprehensive detailed data
-    let client = mockDetailedClientsData.find(c => c.name === clientName || c.clientName === clientName);
-
-    // If not found in detailed data, try to find in assignedClients (which has some extended info)
-    if (!client) {
-      client = assignedClients.find(c => c.clientName === clientName);
-    }
-
-    // If still not found, try to find in initialUnassignedClientsData (which has skills, experience)
-    if (!client) {
-      client = initialUnassignedClientsData.find(c => c.name === clientName);
-    }
-
-    // Fallback: If still not found, construct a basic profile from applicationData or interviewData
-    if (!client) {
-      const appClient = initialApplicationData.find(c => c.clientName === clientName);
-      if (appClient) {
-        client = {
-          name: appClient.clientName,
-          clientName: appClient.clientName, // For consistency with assignedClients structure
-          jobTitle: appClient.jobTitle,
-          company: appClient.company,
-          priority: 'N/A', // Default if not found in detailed data
-          experience: 'N/A',
-          remote: 'N/A',
-          email: 'N/A',
-          salary: 'N/A',
-          location: 'N/A',
-          assignedTo: appClient.employeeName,
-          status: 'applied',
-          assignedDate: 'N/A',
-          skills: [],
-        };
-      }
-    }
-
-    if (!client) {
-      const interviewClient = initialInterviewData.find(c => c.clientName === clientName);
-      if (interviewClient) {
-        client = {
-          name: interviewClient.clientName,
-          clientName: interviewClient.clientName,
-          jobTitle: interviewClient.jobTitle,
-          company: interviewClient.company,
-          round: interviewClient.round,
-          date: interviewClient.date,
-          status: interviewClient.status,
-          priority: 'N/A',
-          experience: 'N/A',
-          remote: 'N/A',
-          email: 'N/A',
-          salary: 'N/A',
-          location: 'N/A',
-          assignedTo: interviewClient.employeeName,
-          assignedDate: 'N/A',
-          skills: [],
-        };
-      }
-    }
+  // NEW: Function to open Client Preview/Edit Modal
+  const openEditClientModal = (clientName) => {
+    // Find the comprehensive client data
+    const client = mockDetailedClientsData.find(c => c.name === clientName || c.clientName === clientName);
 
     if (client) {
-      setClientToPreview(client);
-      setIsClientPreviewModalOpen(true);
+      setClientToEdit({ ...client }); // Create a copy for editing
+      setIsEditClientModalOpen(true);
     } else {
-      console.warn(`Client with name "${clientName}" not found for preview.`);
-      // Optionally, show a user-friendly message if client is not found
-      alert(`Client details for "${clientName}" are not available.`);
+      console.warn(`Client with name "${clientName}" not found for editing.`);
+      alert(`Client details for "${clientName}" are not available for editing.`);
     }
   };
 
-  // NEW: Function to close Client Preview Modal
-  const closeClientPreviewModal = () => {
-    setIsClientPreviewModalOpen(false);
-    setClientToPreview(null);
+  // NEW: Function to close Client Preview/Edit Modal
+  const closeEditClientModal = () => {
+    setIsEditClientModalOpen(false);
+    setClientToEdit(null);
+  };
+
+  // NEW: Handle changes in the edit client form
+  const handleEditClientChange = (e) => {
+    const { name, value } = e.target;
+    setClientToEdit(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // NEW: Handle updating client details
+  const handleUpdateClient = () => {
+    if (clientToEdit) {
+      setMockDetailedClientsData(prevData =>
+        prevData.map(client =>
+          client.id === clientToEdit.id ? clientToEdit : client
+        )
+      );
+      // Also update assignedClients if this client is in it
+      setAssignedClients(prevAssigned =>
+        prevAssigned.map(client =>
+          client.id === clientToEdit.id ? {
+            ...client,
+            clientName: clientToEdit.name,
+            location: clientToEdit.address.split(',').pop().trim(), // Simple extraction
+            position: clientToEdit.currentDesignation || clientToEdit.jobsToApply.split(',')[0],
+            salary: clientToEdit.expectedSalary,
+            company: clientToEdit.currentCompany,
+            priority: clientToEdit.priority,
+            status: clientToEdit.status,
+          } : client
+        )
+      );
+      closeEditClientModal();
+      alert(`Client ${clientToEdit.name} details updated successfully!`);
+    }
   };
 
 
@@ -880,10 +1521,48 @@ const ManagerWorkSheet = () => {
     setIsProfileDropdownOpen(prevState => !prevState);
   };
 
+  // NEW: Function to open Notifications Modal
+  const openNotificationsModal = () => {
+    setIsNotificationsModalOpen(true);
+  };
+
+  // NEW: Function to close Notifications Modal
+  const closeNotificationsModal = () => {
+    setIsNotificationsModalOpen(false);
+  };
+
+  // NEW: Function to open User Profile Modal
+  const openUserProfileModal = () => {
+    setEditableProfile({ ...userProfile }); // Initialize editable profile with current user data
+    setIsUserProfileModalOpen(true);
+    setIsProfileDropdownOpen(false); // Close dropdown when modal opens
+  };
+
+  // NEW: Function to close User Profile Modal
+  const closeUserProfileModal = () => {
+    setIsUserProfileModalOpen(false);
+  };
+
+  // NEW: Handle changes in the editable profile form
+  const handleProfileChange = (e) => {
+    const { name, value } = e.target;
+    setEditableProfile(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // NEW: Handle saving profile changes
+  const handleSaveProfile = () => {
+    setUserProfile(editableProfile); // Update the main userProfile state
+    setUserName(editableProfile.name); // Update userName in parent state
+    closeUserProfileModal();
+    alert('Profile updated successfully!');
+  };
+
   const handleProfileClick = () => {
     console.log('View Profile clicked');
-    setIsProfileDropdownOpen(false);
-    // Add navigation to profile page or open profile modal
+    openUserProfileModal(); // Open the new user profile modal
   };
 
   const handleSettingsClick = () => {
@@ -1049,6 +1728,20 @@ const ManagerWorkSheet = () => {
           --client-preview-section-title-color: #007bff;
           --client-preview-detail-label-color: #6c757d;
           --client-preview-detail-value-color: #333;
+
+          /* Notification Modal Specific Styles */
+          --notification-item-border: #e9ecef;
+          --notification-item-time-color: #868e96;
+
+          /* User Profile Modal Specific Styles */
+          --profile-label-color: #6c757d;
+          --profile-value-color: #333;
+          --edit-button-bg: #007bff;
+          --edit-button-color: #ffffff;
+          --edit-button-hover-bg: #0056b3;
+          --close-button-bg: #e9ecef;
+          --close-button-color: #495057;
+          --close-button-hover-bg: #dee2e6;
         }
 
         [data-theme='dark'] {
@@ -1189,6 +1882,20 @@ const ManagerWorkSheet = () => {
           --client-preview-section-title-color: #66b3ff;
           --client-preview-detail-label-color: #bbbbbb;
           --client-preview-detail-value-color: #e0e0e0;
+
+          /* Notification Modal Specific Styles (Dark Theme) */
+          --notification-item-border: #4a4a4a;
+          --notification-item-time-color: #aaaaaa;
+
+          /* User Profile Modal Specific Styles (Dark Theme) */
+          --profile-label-color: #bbbbbb;
+          --profile-value-color: #e0e0e0;
+          --edit-button-bg: #0056b3;
+          --edit-button-color: #ffffff;
+          --edit-button-hover-bg: #007bff;
+          --close-button-bg: #4a4a4a;
+          --close-button-color: #e0e0e0;
+          --close-button-hover-bg: #5a5a5a;
         }
 
         body {
@@ -2331,7 +3038,11 @@ const ManagerWorkSheet = () => {
         }
 
         .assign-form-group select,
-        .assign-form-group textarea {
+        .assign-form-group textarea,
+        .assign-form-group input[type="text"],
+        .assign-form-group input[type="email"],
+        .assign-form-group input[type="tel"],
+        .assign-form-group input[type="date"] {
             width: 100%;
             padding: 10px 12px;
             border: 1px solid var(--form-input-border);
@@ -2347,7 +3058,11 @@ const ManagerWorkSheet = () => {
         }
 
         .assign-form-group select:focus,
-        .assign-form-group textarea:focus {
+        .assign-form-group textarea:focus,
+        .assign-form-group input[type="text"]:focus,
+        .assign-form-group input[type="email"]:focus,
+        .assign-form-group input[type="tel"]:focus,
+        .assign-form-group input[type="date"]:focus {
             outline: none;
             border-color: var(--form-input-focus-border);
             box-shadow: 0 0 0 0.2rem var(--form-input-focus-shadow);
@@ -2868,6 +3583,128 @@ const ManagerWorkSheet = () => {
                 width: 100%; /* Full width on small screens */
             }
         }
+
+        /* NEW: Notification Modal Styles */
+        .notification-modal-content {
+          max-width: 500px; /* Smaller modal for notifications */
+        }
+
+        .notification-list {
+          display: flex;
+          flex-direction: column;
+          gap: 15px;
+        }
+
+        .notification-item {
+          padding-bottom: 15px;
+          border-bottom: 1px solid var(--notification-item-border);
+          transition: border-color 0.3s ease;
+        }
+
+        .notification-item:last-child {
+          border-bottom: none;
+        }
+
+        .notification-item-title {
+          font-size: 16px;
+          font-weight: 600;
+          color: var(--text-color);
+          margin-bottom: 5px;
+        }
+
+        .notification-item-message {
+          font-size: 14px;
+          color: var(--subtitle-color);
+          margin-bottom: 8px;
+        }
+
+        .notification-item-time {
+          font-size: 12px;
+          color: var(--notification-item-time-color);
+          text-align: right;
+        }
+
+        /* NEW: User Profile Modal Styles */
+        .user-profile-modal-content {
+          max-width: 500px;
+        }
+
+        .profile-detail-item {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          margin-bottom: 15px;
+        }
+
+        .profile-detail-label {
+          font-size: 14px;
+          font-weight: 500;
+          color: var(--profile-label-color);
+        }
+
+        .profile-detail-value {
+          font-size: 16px;
+          color: var(--profile-value-color);
+          font-weight: 600;
+        }
+
+        .profile-detail-item input[type="text"],
+        .profile-detail-item input[type="email"],
+        .profile-detail-item input[type="tel"] {
+          width: 100%;
+          padding: 10px 12px;
+          border: 1px solid var(--form-input-border);
+          border-radius: 8px;
+          background-color: var(--form-input-bg);
+          color: var(--form-input-text);
+          font-size: 14px;
+          transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .profile-detail-item input[type="text"]:focus,
+        .profile-detail-item input[type="email"]:focus,
+        .profile-detail-item input[type="tel"]:focus {
+          outline: none;
+          border-color: var(--form-input-focus-border);
+          box-shadow: 0 0 0 0.2rem var(--form-input-focus-shadow);
+        }
+
+        .profile-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+          margin-top: 20px;
+        }
+
+        .profile-actions .edit-button {
+          background-color: var(--edit-button-bg);
+          color: var(--edit-button-color);
+          padding: 10px 20px;
+          border-radius: 8px;
+          border: none;
+          cursor: pointer;
+          font-size: 15px;
+          font-weight: 500;
+          transition: background-color 0.2s ease;
+        }
+        .profile-actions .edit-button:hover {
+          background-color: var(--edit-button-hover-bg);
+        }
+
+        .profile-actions .close-button {
+          background-color: var(--close-button-bg);
+          color: var(--close-button-color);
+          padding: 10px 20px;
+          border-radius: 8px;
+          border: 1px solid var(--form-input-border);
+          cursor: pointer;
+          font-size: 15px;
+          font-weight: 500;
+          transition: background-color 0.2s ease, border-color 0.2s ease, color 0.3s ease;
+        }
+        .profile-actions .close-button:hover {
+          background-color: var(--close-button-hover-bg);
+        }
         `}
       </style>
 
@@ -2878,9 +3715,9 @@ const ManagerWorkSheet = () => {
         </h1>
         <div className="header-actions">
           {/* Notification button */}
-          <button className="header-button">
+          <button className="header-button" onClick={openNotificationsModal}>
             <i className="fas fa-bell"></i>
-            <span className="notification-badge">3</span>
+            <span className="notification-badge">{notifications.length}</span>
           </button>
           {/* Theme toggle button - moved next to notification */}
           {/* <button className="header-button" onClick={toggleTheme}>
@@ -2985,7 +3822,7 @@ const ManagerWorkSheet = () => {
               {/* Total Clients Card (formerly Assigned) - now clickable to open new modal */}
               <div className="assignment-card assigned" onClick={openTotalClientsModal}>
                 <div className="assignment-card-value">{totalClientsCount}</div>
-                <div className="assignment-card-title">Total Clients</div>
+                <div className="assignment-card-title">Total assigned Clients</div>
                 <div className="assignment-card-description">View all assigned clients</div>
               </div>
             </div>
@@ -3101,7 +3938,7 @@ const ManagerWorkSheet = () => {
                       <td>{app.jobTitle}</td>
                       <td>{app.company}</td>
                       <td className="action-buttons">
-                        <button className="action-button" onClick={() => openClientPreviewModal(app.clientName)}>
+                        <button className="action-button" onClick={() => openEditClientModal(app.clientName)}>
                           <i className="fas fa-eye"></i>
                         </button>
                       </td>
@@ -3184,7 +4021,7 @@ const ManagerWorkSheet = () => {
                         {interview.status} {/* Display the new status */}
                       </td>
                       <td className="action-buttons"> {/* This td now has flex properties from CSS */}
-                        <button className="action-button" onClick={() => openClientPreviewModal(interview.clientName)}>
+                        <button className="action-button" onClick={() => openEditClientModal(interview.clientName)}>
                           <i className="fas fa-eye"></i>
                         </button>
                       </td>
@@ -3286,7 +4123,7 @@ const ManagerWorkSheet = () => {
                     <button className="modal-assign-button" onClick={() => openAssignClientModal(client)}>
                       <i className="fas fa-user-plus"></i> Assign Employee
                     </button>
-                    <button className="modal-view-profile-button" onClick={() => openClientPreviewModal(client.name)}>
+                    <button className="modal-view-profile-button" onClick={() => openEditClientModal(client.name)}>
                       <i className="fas fa-eye"></i> View Profile
                     </button>
                   </div>    
@@ -3510,7 +4347,7 @@ const ManagerWorkSheet = () => {
                         <button className="modal-assign-button" onClick={() => openReassignClientModal(client)}>
                             <i className="fas fa-exchange-alt"></i> Change Employee
                         </button>
-                        <button className="modal-view-profile-button" onClick={() => openClientPreviewModal(client.clientName)}>
+                        <button className="modal-view-profile-button" onClick={() => openEditClientModal(client.clientName)}>
                             <i className="fas fa-eye"></i> View Profile
                         </button>
                     </div>
@@ -3606,287 +4443,342 @@ const ManagerWorkSheet = () => {
       )}
 
 
-      {/* NEW: Client Preview Modal */}
-      {isClientPreviewModalOpen && clientToPreview && (
+      {/* NEW: Client Edit Modal (repurposing the preview modal for editing) */}
+      {isEditClientModalOpen && clientToEdit && (
         <div className="modal-overlay">
-          <div className="assign-modal-content">
+          <div className="assign-modal-content"> {/* Reusing assign-modal-content for its wider layout */}
             <div className="assign-modal-header">
-              <h3 className="assign-modal-title">Client Details: {clientToPreview.name || clientToPreview.clientName}</h3>
-              <button className="assign-modal-close-button" onClick={closeClientPreviewModal}>
+              <h3 className="assign-modal-title">Edit Client Details: {clientToEdit.name || clientToEdit.clientName}</h3>
+              <button className="assign-modal-close-button" onClick={closeEditClientModal}>
                 <i className="fas fa-times"></i>
               </button>
             </div>
 
-            {/* Comprehensive Client Details Grid */}
+            {/* Comprehensive Client Details Grid - now with input fields */}
             <div className="client-preview-grid-container">
               {/* Personal Information */}
               <div className="client-preview-section">
                 <h4 className="client-preview-section-title">Personal Information</h4>
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">First Name</span>
-                  <span className="client-preview-detail-value">{clientToPreview.firstName || '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="firstName">First Name</label>
+                  <input type="text" id="firstName" name="firstName" value={clientToEdit.firstName || ''} onChange={handleEditClientChange} />
                 </div>
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">Middle Name</span>
-                  <span className="client-preview-detail-value">{clientToPreview.middleName || '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="middleName">Middle Name</label>
+                  <input type="text" id="middleName" name="middleName" value={clientToEdit.middleName || ''} onChange={handleEditClientChange} />
                 </div>
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">Last Name</span>
-                  <span className="client-preview-detail-value">{clientToPreview.lastName || '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="lastName">Last Name</label>
+                  <input type="text" id="lastName" name="lastName" value={clientToEdit.lastName || ''} onChange={handleEditClientChange} />
                 </div>
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">Date of Birth</span>
-                  <span className="client-preview-detail-value">{clientToPreview.dob || '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="dob">Date of Birth</label>
+                  <input type="date" id="dob" name="dob" value={clientToEdit.dob || ''} onChange={handleEditClientChange} />
                 </div>
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">Gender</span>
-                  <span className="client-preview-detail-value">{clientToPreview.gender || '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="gender">Gender</label>
+                  <input type="text" id="gender" name="gender" value={clientToEdit.gender || ''} onChange={handleEditClientChange} />
                 </div>
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">Ethnicity</span>
-                  <span className="client-preview-detail-value">{clientToPreview.ethnicity || '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="ethnicity">Ethnicity</label>
+                  <input type="text" id="ethnicity" name="ethnicity" value={clientToEdit.ethnicity || ''} onChange={handleEditClientChange} />
                 </div>
               </div>
 
               {/* Contact Information */}
               <div className="client-preview-section">
                 <h4 className="client-preview-section-title">Contact Information</h4>
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">Address</span>
-                  <span className="client-preview-detail-value">{clientToPreview.address || '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="address">Address</label>
+                  <textarea id="address" name="address" value={clientToEdit.address || ''} onChange={handleEditClientChange}></textarea>
                 </div>
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">Zip Code</span>
-                  <span className="client-preview-detail-value">{clientToPreview.zipCode || '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="zipCode">Zip Code</label>
+                  <input type="text" id="zipCode" name="zipCode" value={clientToEdit.zipCode || ''} onChange={handleEditClientChange} />
                 </div>
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">Mobile</span>
-                  <span className="client-preview-detail-value">{clientToPreview.mobile || '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="mobile">Mobile</label>
+                  <input type="tel" id="mobile" name="mobile" value={clientToEdit.mobile || ''} onChange={handleEditClientChange} />
                 </div>
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">Email</span>
-                  <span className="client-preview-detail-value">{clientToPreview.email || '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="email">Email</label>
+                  <input type="email" id="email" name="email" value={clientToEdit.email || ''} onChange={handleEditClientChange} />
                 </div>
               </div>
 
               {/* Job Preferences & Status */}
               <div className="client-preview-section">
                 <h4 className="client-preview-section-title">Job Preferences & Status</h4>
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">Security Clearance</span>
-                  <span className="client-preview-detail-value">{clientToPreview.securityClearance || '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="securityClearance">Security Clearance</label>
+                  <select id="securityClearance" name="securityClearance" value={clientToEdit.securityClearance || 'No'} onChange={handleEditClientChange}>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
                 </div>
-                {clientToPreview.clearanceLevel && (
-                  <div className="client-preview-detail-item">
-                    <span className="client-preview-detail-label">Clearance Level</span>
-                    <span className="client-preview-detail-value">{clientToPreview.clearanceLevel}</span>
+                {clientToEdit.securityClearance === 'Yes' && (
+                  <div className="assign-form-group">
+                    <label htmlFor="clearanceLevel">Clearance Level</label>
+                    <input type="text" id="clearanceLevel" name="clearanceLevel" value={clientToEdit.clearanceLevel || ''} onChange={handleEditClientChange} />
                   </div>
                 )}
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">Willing to Relocate</span>
-                  <span className="client-preview-detail-value">{clientToPreview.willingToRelocate || '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="willingToRelocate">Willing to Relocate</label>
+                  <select id="willingToRelocate" name="willingToRelocate" value={clientToEdit.willingToRelocate || 'No'} onChange={handleEditClientChange}>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
                 </div>
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">Work Preference</span>
-                  <span className="client-preview-detail-value">{clientToPreview.workPreference || '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="workPreference">Work Preference</label>
+                  <input type="text" id="workPreference" name="workPreference" value={clientToEdit.workPreference || ''} onChange={handleEditClientChange} />
                 </div>
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">Restricted Companies</span>
-                  <span className="client-preview-detail-value">{clientToPreview.restrictedCompanies || '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="restrictedCompanies">Restricted Companies</label>
+                  <input type="text" id="restrictedCompanies" name="restrictedCompanies" value={clientToEdit.restrictedCompanies || ''} onChange={handleEditClientChange} />
                 </div>
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">Jobs to Apply</span>
-                  <span className="client-preview-detail-value">{clientToPreview.jobsToApply || '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="jobsToApply">Jobs to Apply</label>
+                  <input type="text" id="jobsToApply" name="jobsToApply" value={clientToEdit.jobsToApply || ''} onChange={handleEditClientChange} />
                 </div>
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">Technology Skills</span>
-                  <span className="client-preview-detail-value">{clientToPreview.technologySkills || '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="technologySkills">Technology Skills</label>
+                  <textarea id="technologySkills" name="technologySkills" value={clientToEdit.technologySkills || ''} onChange={handleEditClientChange}></textarea>
                 </div>
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">Current Salary</span>
-                  <span className="client-preview-detail-value">{clientToPreview.currentSalary || '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="currentSalary">Current Salary</label>
+                  <input type="text" id="currentSalary" name="currentSalary" value={clientToEdit.currentSalary || ''} onChange={handleEditClientChange} />
                 </div>
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">Expected Salary</span>
-                  <span className="client-preview-detail-value">{clientToPreview.expectedSalary || '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="expectedSalary">Expected Salary</label>
+                  <input type="text" id="expectedSalary" name="expectedSalary" value={clientToEdit.expectedSalary || ''} onChange={handleEditClientChange} />
                 </div>
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">Visa Status</span>
-                  <span className="client-preview-detail-value">{clientToPreview.visaStatus || '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="visaStatus">Visa Status</label>
+                  <input type="text" id="visaStatus" name="visaStatus" value={clientToEdit.visaStatus || ''} onChange={handleEditClientChange} />
                 </div>
-                {clientToPreview.otherVisaStatus && (
-                  <div className="client-preview-detail-item">
-                    <span className="client-preview-detail-label">Other Visa Status</span>
-                    <span className="client-preview-detail-value">{clientToPreview.otherVisaStatus}</span>
+                {clientToEdit.visaStatus === 'Other' && (
+                  <div className="assign-form-group">
+                    <label htmlFor="otherVisaStatus">Other Visa Status</label>
+                    <input type="text" id="otherVisaStatus" name="otherVisaStatus" value={clientToEdit.otherVisaStatus || ''} onChange={handleEditClientChange} />
                   </div>
                 )}
+                <div className="assign-form-group">
+                  <label htmlFor="priority">Priority</label>
+                  <select id="priority" name="priority" value={clientToEdit.priority || 'medium'} onChange={handleEditClientChange}>
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                  </select>
+                </div>
+                <div className="assign-form-group">
+                  <label htmlFor="status">Status</label>
+                  <input type="text" id="status" name="status" value={clientToEdit.status || ''} onChange={handleEditClientChange} />
+                </div>
               </div>
 
               {/* Education Details */}
               <div className="client-preview-section">
                 <h4 className="client-preview-section-title">Education Details</h4>
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">School Name</span>
-                  <span className="client-preview-detail-value">{clientToPreview.schoolName || '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="schoolName">School Name</label>
+                  <input type="text" id="schoolName" name="schoolName" value={clientToEdit.schoolName || ''} onChange={handleEditClientChange} />
                 </div>
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">School Address</span>
-                  <span className="client-preview-detail-value">{clientToPreview.schoolAddress || '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="schoolAddress">School Address</label>
+                  <textarea id="schoolAddress" name="schoolAddress" value={clientToEdit.schoolAddress || ''} onChange={handleEditClientChange}></textarea>
                 </div>
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">School Phone</span>
-                  <span className="client-preview-detail-value">{clientToPreview.schoolPhone || '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="schoolPhone">School Phone</label>
+                  <input type="tel" id="schoolPhone" name="schoolPhone" value={clientToEdit.schoolPhone || ''} onChange={handleEditClientChange} />
                 </div>
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">Course of Study</span>
-                  <span className="client-preview-detail-value">{clientToPreview.courseOfStudy || '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="courseOfStudy">Course of Study</label>
+                  <input type="text" id="courseOfStudy" name="courseOfStudy" value={clientToEdit.courseOfStudy || ''} onChange={handleEditClientChange} />
                 </div>
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">Graduation Date</span>
-                  <span className="client-preview-detail-value">{clientToPreview.graduationDate || '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="graduationDate">Graduation Date</label>
+                  <input type="date" id="graduationDate" name="graduationDate" value={clientToEdit.graduationDate || ''} onChange={handleEditClientChange} />
                 </div>
               </div>
 
               {/* Employment Details */}
               <div className="client-preview-section">
                 <h4 className="client-preview-section-title">Employment Details</h4>
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">Current Company</span>
-                  <span className="client-preview-detail-value">{clientToPreview.currentCompany || '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="currentCompany">Current Company</label>
+                  <input type="text" id="currentCompany" name="currentCompany" value={clientToEdit.currentCompany || ''} onChange={handleEditClientChange} />
                 </div>
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">Current Designation</span>
-                  <span className="client-preview-detail-value">{clientToPreview.currentDesignation || '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="currentDesignation">Current Designation</label>
+                  <input type="text" id="currentDesignation" name="currentDesignation" value={clientToEdit.currentDesignation || ''} onChange={handleEditClientChange} />
                 </div>
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">Preferred Interview Time</span>
-                  <span className="client-preview-detail-value">{clientToPreview.preferredInterviewTime || '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="preferredInterviewTime">Preferred Interview Time</label>
+                  <input type="text" id="preferredInterviewTime" name="preferredInterviewTime" value={clientToEdit.preferredInterviewTime || ''} onChange={handleEditClientChange} />
                 </div>
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">Earliest Joining Date</span>
-                  <span className="client-preview-detail-value">{clientToPreview.earliestJoiningDate || '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="earliestJoiningDate">Earliest Joining Date</label>
+                  <input type="date" id="earliestJoiningDate" name="earliestJoiningDate" value={clientToEdit.earliestJoiningDate || ''} onChange={handleEditClientChange} />
                 </div>
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">Relieving Date</span>
-                  <span className="client-preview-detail-value">{clientToPreview.relievingDate || '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="relievingDate">Relieving Date</label>
+                  <input type="date" id="relievingDate" name="relievingDate" value={clientToEdit.relievingDate || ''} onChange={handleEditClientChange} />
                 </div>
               </div>
 
               {/* References */}
               <div className="client-preview-section">
                 <h4 className="client-preview-section-title">References</h4>
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">Reference Name</span>
-                  <span className="client-preview-detail-value">{clientToPreview.referenceName || '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="referenceName">Reference Name</label>
+                  <input type="text" id="referenceName" name="referenceName" value={clientToEdit.referenceName || ''} onChange={handleEditClientChange} />
                 </div>
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">Reference Phone</span>
-                  <span className="client-preview-detail-value">{clientToPreview.referencePhone || '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="referencePhone">Reference Phone</label>
+                  <input type="tel" id="referencePhone" name="referencePhone" value={clientToEdit.referencePhone || ''} onChange={handleEditClientChange} />
                 </div>
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">Reference Address</span>
-                  <span className="client-preview-detail-value">{clientToPreview.referenceAddress || '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="referenceAddress">Reference Address</label>
+                  <textarea id="referenceAddress" name="referenceAddress" value={clientToEdit.referenceAddress || ''} onChange={handleEditClientChange}></textarea>
                 </div>
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">Reference Email</span>
-                  <span className="client-preview-detail-value">{clientToPreview.referenceEmail || '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="referenceEmail">Reference Email</label>
+                  <input type="email" id="referenceEmail" name="referenceEmail" value={clientToEdit.referenceEmail || ''} onChange={handleEditClientChange} />
                 </div>
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">Reference Role</span>
-                  <span className="client-preview-detail-value">{clientToPreview.referenceRole || '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="referenceRole">Reference Role</label>
+                  <input type="text" id="referenceRole" name="referenceRole" value={clientToEdit.referenceRole || ''} onChange={handleEditClientChange} />
                 </div>
               </div>
 
               {/* Job Portal Accounts */}
               <div className="client-preview-section">
                 <h4 className="client-preview-section-title">Job Portal Accounts</h4>
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">Account Name</span>
-                  <span className="client-preview-detail-value">{clientToPreview.jobPortalAccountName || '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="jobPortalAccountName">Account Name</label>
+                  <input type="text" id="jobPortalAccountName" name="jobPortalAccountName" value={clientToEdit.jobPortalAccountName || ''} onChange={handleEditClientChange} />
                 </div>
-                <div className="client-preview-detail-item">
-                  <span className="client-preview-detail-label">Credentials</span>
-                  <span className="client-preview-detail-value">{clientToPreview.jobPortalCredentials ? '********' : '-'}</span>
+                <div className="assign-form-group">
+                  <label htmlFor="jobPortalCredentials">Credentials</label>
+                  <input type="text" id="jobPortalCredentials" name="jobPortalCredentials" value={clientToEdit.jobPortalCredentials || ''} onChange={handleEditClientChange} />
                 </div>
               </div>
 
-              {/* Other relevant details that might come from application/interview data */}
-              {(clientToPreview.priority && clientToPreview.priority !== 'N/A') && (
-                <div className="client-preview-section">
-                  <h4 className="client-preview-section-title">General Details</h4>
-                  <div className="client-preview-detail-item">
-                      <span className="client-preview-detail-label">Priority</span>
-                      <span className={`modal-client-priority-badge ${clientToPreview.priority}`}>
-                          {clientToPreview.priority.charAt(0).toUpperCase() + clientToPreview.priority.slice(1)} Priority
-                      </span>
-                  </div>
-                  {(clientToPreview.experience && clientToPreview.experience !== 'N/A') && (
-                      <div className="client-preview-detail-item">
-                          <span className="client-preview-detail-label">Experience</span>
-                          <span className="client-preview-detail-value">{clientToPreview.experience}</span>
-                      </div>
-                  )}
-                  {(clientToPreview.remote !== undefined && clientToPreview.remote !== 'N/A') && (
-                      <div className="client-preview-detail-item">
-                          <span className="client-preview-detail-label">Remote Preference</span>
-                          <span className="client-preview-detail-value">{clientToPreview.remote ? 'Remote' : 'On-site'}</span>
-                      </div>
-                  )}
-                  {(clientToPreview.salary && clientToPreview.salary !== 'N/A') && (
-                      <div className="client-preview-detail-item">
-                          <span className="client-preview-detail-label">Salary Expectation</span>
-                          <span className="client-preview-detail-value">{clientToPreview.salary}</span>
-                      </div>
-                  )}
-                  {(clientToPreview.assignedTo && clientToPreview.assignedTo !== 'N/A') && (
-                      <div className="client-preview-detail-item">
-                          <span className="client-preview-detail-label">Assigned To</span>
-                          <span className="client-preview-detail-value">{clientToPreview.assignedTo}</span>
-                      </div>
-                  )}
-                  {(clientToPreview.status && clientToPreview.status !== 'N/A') && (
-                      <div className="client-preview-detail-item">
-                          <span className="client-preview-detail-label">Status</span>
-                          <span className={`status-badge status-${clientToPreview.status}`}>
-                              {clientToPreview.status.charAt(0).toUpperCase() + clientToPreview.status.slice(1)}
-                          </span>
-                      </div>
-                  )}
-                  {(clientToPreview.assignedDate && clientToPreview.assignedDate !== 'N/A') && (
-                      <div className="client-preview-detail-item">
-                          <span className="client-preview-detail-label">Assigned Date</span>
-                          <span className="client-preview-detail-value">{clientToPreview.assignedDate}</span>
-                      </div>
-                  )}
-                  {(clientToPreview.round && clientToPreview.round !== 'N/A') && (
-                      <div className="client-preview-detail-item">
-                          <span className="client-preview-detail-label">Interview Round</span>
-                          <span className="client-preview-detail-value">{clientToPreview.round}</span>
-                      </div>
-                  )}
-                  {(clientToPreview.date && clientToPreview.date !== 'N/A') && (
-                      <div className="client-preview-detail-item">
-                          <span className="client-preview-detail-label">Interview Date</span>
-                          <span className="client-preview-detail-value">{clientToPreview.date}</span>
-                      </div>
-                  )}
-                </div>
-              )}
-
             </div>
 
-            {/* Render skills section only if skills exist and are not empty */}
-            {clientToPreview.skills && clientToPreview.skills.length > 0 && (
-                <div className="client-preview-skills-section">
-                    <h4 className="assign-modal-title" style={{marginBottom: '10px', fontSize: '18px'}}>Skills</h4>
-                    <div className="modal-client-skills">
-                        {clientToPreview.skills.map((skill, index) => (
-                            <span key={index} className="modal-client-skill-tag">{skill}</span>
-                        ))}
-                    </div>
+            {/* Skills section for editing */}
+            {clientToEdit.skills && (
+              <div className="client-preview-skills-section">
+                <h4 className="assign-modal-title" style={{marginBottom: '10px', fontSize: '18px'}}>Skills (Comma Separated)</h4>
+                <div className="assign-form-group">
+                  <textarea
+                    id="skills"
+                    name="skills"
+                    value={Array.isArray(clientToEdit.skills) ? clientToEdit.skills.join(', ') : clientToEdit.skills || ''}
+                    onChange={(e) => setClientToEdit(prev => ({ ...prev, skills: e.target.value.split(',').map(s => s.trim()) }))}
+                  ></textarea>
                 </div>
+              </div>
             )}
 
+            <div className="assign-form-actions">
+              <button className="assign-form-button cancel" onClick={closeEditClientModal}>
+                Cancel
+              </button>
+              <button className="assign-form-button assign" onClick={handleUpdateClient}>
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* NEW: Notifications Modal */}
+      {isNotificationsModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content notification-modal-content">
+            <div className="modal-header">
+              <h3 className="modal-title">Notifications</h3>
+              <button className="modal-close-button" onClick={closeNotificationsModal}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            <div className="notification-list">
+              {notifications.length > 0 ? (
+                notifications.map(notification => (
+                  <div key={notification.id} className="notification-item">
+                    <div className="notification-item-title">{notification.title}</div>
+                    <div className="notification-item-message">{notification.message}</div>
+                    <div className="notification-item-time">{notification.time}</div>
+                  </div>
+                ))
+              ) : (
+                <p style={{ textAlign: 'center', color: 'var(--subtitle-color)' }}>No new notifications.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* NEW: User Profile Modal */}
+      {isUserProfileModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content user-profile-modal-content">
+            <div className="modal-header">
+              <h3 className="modal-title">Employee Profile</h3>
+              <button className="modal-close-button" onClick={closeUserProfileModal}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            <div className="profile-details-grid">
+              <div className="profile-detail-item">
+                <label className="profile-detail-label" htmlFor="profileName">Name:</label>
+                <input
+                  type="text"
+                  id="profileName"
+                  name="name"
+                  value={editableProfile.name || ''}
+                  onChange={handleProfileChange}
+                />
+              </div>
+              <div className="profile-detail-item">
+                <label className="profile-detail-label">Manager ID:</label>
+                <span className="profile-detail-value">{userProfile.employeeId}</span>
+              </div>
+              <div className="profile-detail-item">
+                <label className="profile-detail-label" htmlFor="profileEmail">Email:</label>
+                <input
+                  type="email"
+                  id="profileEmail"
+                  name="email"
+                  value={editableProfile.email || ''}
+                  onChange={handleProfileChange}
+                />
+              </div>
+              <div className="profile-detail-item">
+                <label className="profile-detail-label" htmlFor="profileMobile">Mobile No.:</label>
+                <input
+                  type="tel"
+                  id="profileMobile"
+                  name="mobile"
+                  value={editableProfile.mobile || ''}
+                  onChange={handleProfileChange}
+                />
+              </div>
+              <div className="profile-detail-item">
+                <label className="profile-detail-label">Last Login:</label>
+                <span className="profile-detail-value">{userProfile.lastLogin}</span>
+              </div>
+            </div>
+            <div className="profile-actions">
+              <button className="edit-button" onClick={handleSaveProfile}>
+                Edit Profile
+              </button>
+              <button className="close-button" onClick={closeUserProfileModal}>
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

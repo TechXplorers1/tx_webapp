@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef  } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Modal } from 'react-bootstrap'; // Using react-bootstrap Modal
@@ -366,18 +367,6 @@ const AdminHeader = ({
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 const EmployeeData = () => {
   const navigate = useNavigate();
 
@@ -525,7 +514,7 @@ const EmployeeData = () => {
       ],
       files: [
         { id: 1001, clientId: 1, name: 'john_anderson_resume_2025.pdf', size: '245 KB', type: 'resume', status: 'Uploaded', uploadDate: '2025-06-15', notes: '' },
-        { id: 1002, clientId: 1, name: 'techflow_interview_screenshot.png', size: '1.2 MB', type: 'interview screenshot', status: 'Uploaded', uploadDate: '2025-06-21', notes: 'Interview invitation for Senior Frontend Developer position' },
+        { id: 1002, clientId: 1, name: 'techflow_interview_screenshot.png', size: '1.2 MB', type: 'interview screenshot', status: 'Uploaded', uploadDate: '2025-06-21', notes: 'Interview invitation for Senior Frontend Developer position', imageUrl: 'https://placehold.co/600x400/FF0000/FFFFFF?text=Interview+Screenshot' }, // Placeholder image
         { id: 1003, clientId: 1, name: 'john_cover_letter.pdf', size: '98 KB', type: 'cover letter', status: 'Uploaded', uploadDate: '2025-06-16', notes: '' },
       ],
       // NEW: Extended client data fields
@@ -1533,8 +1522,8 @@ const EmployeeData = () => {
                         <div style={clientCardHeaderStyle}>
                           <div style={initialsCircleStyle}>{selectedClient.initials}</div>
                           <div style={{ flexGrow: 1 }}>
-                            <p style={clientNameStyle}>{selectedClient.name}</p>
-                            <p style={clientCodeStyle}>{selectedClient.code}</p>
+                            <p style={clientNameStyle}>{selectedClient.name} <span style={{ ...priorityBadgeStyle, backgroundColor: selectedClient.priority === 'high' ? '#fee2e2' : selectedClient.priority === 'medium' ? '#fef3c7' : '#e0f2fe', color: selectedClient.priority === 'high' ? '#dc2626' : selectedClient.priority === 'medium' ? '#d97706' : '#2563eb' }}>{selectedClient.priority}</span></p>
+                            <p style={clientCodeStyle}>{selectedClient.role} - {selectedClient.location}</p>
                           </div>
                           <div style={{ ...statusBadgeStyle, backgroundColor: selectedClient.status === 'active' ? '#dcfce7' : '#fef2f2', color: selectedClient.status === 'active' ? '#16a34a' : '#ef4444' }}>
                             {selectedClient.status}
@@ -2726,21 +2715,30 @@ const EmployeeData = () => {
         minHeight: '300px',
         justifyContent: 'center'
       }}>
-        {/* File preview content - simplified to just show file info */}
-        <div style={{ 
-          width: '100%', 
-          textAlign: 'center',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '15px'
-        }}>
+        {/* Conditional rendering for image vs. generic file icon */}
+        {viewedFile.type === 'interview screenshot' && viewedFile.imageUrl ? (
+          <img 
+            src={viewedFile.imageUrl} 
+            alt={viewedFile.name} 
+            style={{ 
+              maxWidth: '100%', 
+              maxHeight: '400px', 
+              objectFit: 'contain', 
+              borderRadius: '8px',
+              boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
+            }} 
+            onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/600x400/FF0000/FFFFFF?text=Image+Load+Error'; }} // Fallback image on error
+          />
+        ) : (
           <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">
             <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
             <polyline points="13 2 13 9 20 9"></polyline>
           </svg>
-          <p style={{ color: '#64748b' }}>File preview not available in demo</p>
-          <button 
+        )}
+        <p style={{ color: '#64748b' }}>
+          {viewedFile.type === 'interview screenshot' ? 'Image preview' : 'File preview'} not available in demo
+        </p>
+        <button 
             style={{
               background: '#3b82f6',
               color: 'white',
@@ -2754,7 +2752,6 @@ const EmployeeData = () => {
           >
             Download File (Demo)
           </button>
-        </div>
       </div>
       
       <div style={{ 
@@ -3873,7 +3870,7 @@ const clientDataSectionStyle = {
   borderRadius: '10px',
   padding: '20px',
   boxShadow: '0 2px 4px rgba(0,0,0,0.03)',
-  border: '1px solid #e2e8f0',
+  border: '1px solid #0864dcff',
 };
 
 const clientDataSectionTitleStyle = {
