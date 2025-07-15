@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useRef  } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Modal } from 'react-bootstrap'; // Using react-bootstrap Modal
 
@@ -14,7 +13,12 @@ const AdminHeader = ({
   toggleSidebar,
   isProfileDropdownOpen,
   setIsProfileDropdownOpen,
-  profileDropdownRef
+  profileDropdownRef,
+  // New props for profile modal
+  showProfileModal,
+  setShowProfileModal,
+  // New prop for notification click
+  onNotificationClick
 }) => {
 
   // Effect to close profile dropdown when clicking outside
@@ -258,7 +262,7 @@ const AdminHeader = ({
         .ad-initials-text {
           color: var(--admin-avatar-text);
           font-size: 0.875rem;
-          font-weight: 600;
+          fontWeight: 600;
         }
 
         /* Admin Tag in Header */
@@ -308,8 +312,8 @@ const AdminHeader = ({
         <div className="ad-header-right">
           <div className="ad-notification-icon">
             {/* Bell Icon */}
-            <svg className="ad-icon-btn" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1.125rem', height: '1.125rem' }}>
-              <path d="M224 0c-17.7 0-32 14.3-32 32V51.2C119 66 64 130.6 64 208v25.4c0 45.4-15.5 89.2-43.8 124.9L5.7 377.9c-2.7 4.4-3.4 9.7-1.7 14.6s4.6 8.5 9.8 10.1l39.5 12.8c10.6 3.4 21.8 3.9 32.7 1.4S120.3 400 128 392h192c7.7 8 17.5 13.6 28.3 16.3s22.1 1.9 32.7-1.4l39.5-12.8c5.2-1.7 8.2-6.1 9.8-10.1s1-10.2-1.7-14.6l-20.5-33.7C399.5 322.6 384 278.8 384 233.4V208c0-77.4-55-142-128-156.8V32c0-17.7-14.3-32-32-32zm0 96c61.9 0 112 50.1 112 112v25.4c0 47.9 13.9 94.6 39.7 134.6H184.3c25.8-40 39.7-86.7 39.7-134.6V208c0-61.9 50.1-112 112-112zm0 352a48 48 0 1 0 0-96 48 48 0 1 0 0 96z"/>
+            <svg className="ad-icon-btn" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1.125rem', height: '1.125rem' }} onClick={onNotificationClick}>
+              <path d="M224 0c-17.7 0-32 14.3-32 32V51.2C119 66 64 130.6 64 208v25.4c0 45.4-15.5 89.2-43.8 124.9L5.7 377.9c-2.7 4.4-3.4 9.7-1.7 14.6s4.6 8.5 9.8 10.1l39.5 12.8c10.6 3.4 21.8 3.9 32.7 1.4S120.3 400 128 392h192c7.7 8 17.5 13.6 28.3 16.3s22.1 1.9 32.7-1.4l39.5-12.8c5.2-1.7 8.2-6.1 9.8-10.1s1-10.2-1.7-14.6l-20.5-33.7C399.5 322.6 384 278.8 384 233.4V208c0-77.4-55-142-128-156.8V32c0-17.7-14.3-32-32-32zm0 96c61.9 0 112 50.1 112 112v25.4c0 47.9 13.9 94.6 39.7 134.6H184.3c25.8-40 39.7-86.7 39.7-134.6V208c0-61.9 50.1-112 112-112zm0 352a48 48 0 1 0 0-96 48 48 0 1 0 0 96z" />
             </svg>
             <span className="ad-notification-badge">3</span>
           </div>
@@ -320,7 +324,7 @@ const AdminHeader = ({
                 <span className="ad-admin-tag">
                   {/* User Icon */}
                   <svg className="ad-icon-btn" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ fontSize: '0.65rem', width: '0.65rem', height: '0.65rem' }}>
-                    <path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"/>
+                    <path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z" />
                   </svg>
                   Employee
                 </span>
@@ -332,10 +336,13 @@ const AdminHeader = ({
             {isProfileDropdownOpen && (
               <ul className="profile-dropdown-menu open">
                 <li className="profile-dropdown-item header">My Account</li>
-                <li className="profile-dropdown-item">
+                <li className="profile-dropdown-item" onClick={() => {
+                  setIsProfileDropdownOpen(false); // Close dropdown
+                  setShowProfileModal(true); // Open profile modal
+                }}>
                   {/* User Icon */}
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1rem', height: '1rem' }}>
-                    <path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"/>
+                    <path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z" />
                   </svg>
                   Profile
                 </li>
@@ -357,13 +364,25 @@ const AdminHeader = ({
         >
           {/* Hamburger Icon */}
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1.125rem', height: '1.125rem' }}>
-            <path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/>
+            <path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z" />
           </svg>
         </button>
       </header>
     </>
   );
 };
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -378,6 +397,66 @@ const EmployeeData = () => {
 
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const profileDropdownRef = useRef(null);
+
+  // NEW: State for controlling the visibility of the Employee Profile Modal
+  const [showEmployeeProfileModal, setShowEmployeeProfileModal] = useState(false);
+  // NEW: State for controlling edit mode of employee profile
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  // NEW: State for employee details (now mutable)
+  const [employeeDetails, setEmployeeDetails] = useState({
+    name: "Employee User",
+    employeeId: "EMP001",
+    mobile: "+1 (555) 123-4567",
+    email: "employee.user@techxplorers.com", // Added email
+    lastLogin: "2025-07-15 10:30 AM"
+  });
+  // NEW: Temporary state for editing profile
+  const [editedEmployeeDetails, setEditedEmployeeDetails] = useState({});
+
+  // NEW: State for notifications (toast messages)
+  const [notificationMessage, setNotificationMessage] = useState('');
+  const [showNotification, setShowNotification] = useState(false);
+
+  // NEW: State for the notification modal (from screenshot)
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
+
+  // Mock notifications for the modal
+  const [notifications, setNotifications] = useState([
+    { id: 1, title: 'New Feature Alert', description: 'Discover our new analytics dashboard!', timeAgo: '2 hours ago' },
+    { id: 2, title: 'Payment Due Soon', description: 'Your subscription renews in 3 days.', timeAgo: '1 day ago' },
+    { id: 3, title: 'Profile Update', description: 'Your profile information has been updated.', timeAgo: '2 days ago' },
+  ]);
+
+
+  // Function to show a notification (toast)
+  const triggerNotification = (message) => {
+    setNotificationMessage(message);
+    setShowNotification(true);
+    setTimeout(() => {
+      setShowNotification(false);
+      setNotificationMessage('');
+    }, 3000); // Notification disappears after 3 seconds
+  };
+
+  // Function to handle notification icon click (now opens the modal)
+  const handleNotificationIconClick = () => {
+    setShowNotificationModal(true);
+  };
+
+
+  // Function to derive initials from name
+  const getInitials = (name) => {
+    if (!name) return '';
+    const parts = name.split(' ');
+    if (parts.length === 1) {
+      return parts[0].substring(0, 2).toUpperCase();
+    }
+    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+  };
+
+  // Dynamically calculate adminInitials
+  const adminInitials = getInitials(employeeDetails.name);
+
 
   useEffect(() => {
     document.documentElement.className = theme + '-mode';
@@ -397,6 +476,32 @@ const EmployeeData = () => {
     console.log("Toggle sidebar functionality goes here.");
   };
 
+  // NEW: Handle opening profile modal and initializing edit state
+  const handleOpenProfileModal = () => {
+    setEditedEmployeeDetails({ ...employeeDetails }); // Copy current details for editing
+    setIsEditingProfile(false); // Start in view mode
+    setShowEmployeeProfileModal(true);
+  };
+
+  // NEW: Handle changes in edit profile form
+  const handleProfileFormChange = (e) => {
+    const { name, value } = e.target;
+    setEditedEmployeeDetails(prev => ({ ...prev, [name]: value }));
+  };
+
+  // NEW: Handle saving edited profile
+  const handleSaveProfileChanges = () => {
+    setEmployeeDetails(editedEmployeeDetails); // Update main employee details
+    setIsEditingProfile(false); // Exit edit mode
+    triggerNotification("Profile updated successfully!"); // Trigger notification
+    // setShowEmployeeProfileModal(false); // Optionally close modal after saving
+  };
+
+  // NEW: Handle canceling edit profile
+  const handleCancelEditProfile = () => {
+    setIsEditingProfile(false); // Exit edit mode
+    setEditedEmployeeDetails({ ...employeeDetails }); // Revert changes
+  };
 
 
   // Initial active tab is now 'New Clients'
@@ -416,7 +521,7 @@ const EmployeeData = () => {
   // States for Modals (Applications Tab)
   const [showAddApplicationModal, setShowAddApplicationModal] = useState(false);
   const [newApplicationFormData, setNewApplicationFormData] = useState({
-    jobTitle: '', company: '', platform: '', jobUrl: '', salaryRange: '', location: '', notes: ''
+    jobTitle: '', company: '', platform: '', jobUrl: '', salaryRange: '', location: '', notes: '', jobId: '' // Added jobId
   });
   const [selectedClientForApplication, setSelectedClientForApplication] = useState(null);
 
@@ -455,7 +560,7 @@ const EmployeeData = () => {
       priority: 'high', // Default priority for new clients
       role: 'Software Engineer', // Default role for new clients
       location: 'New York, NY', // Default location for new clients
-      salaryRange: '$90,000 - $120,000', // Default salary range for new clients
+      salaryRange: '$90,000 - $120,000',
       lastActivity: 'N/A',
       applicationsCount: 0,
       filesCount: 0,
@@ -508,9 +613,9 @@ const EmployeeData = () => {
         { date: '2025-06-10', type: 'Resume', status: 'Draft 2 Sent', details: 'Revised for client feedback' },
       ],
       jobApplications: [
-        { id: 101, clientId: 1, jobTitle: 'Full Stack Developer', company: 'WebTech Solutions', platform: 'LinkedIn', status: 'Applied', appliedDate: '2025-06-21', jobUrl: 'https://example.com/job1', salaryRange: '$90,000 - $110,000', location: 'San Francisco, CA', notes: 'Initial application sent.' },
-        { id: 102, clientId: 1, jobTitle: 'Senior Frontend Developer', company: 'TechFlow Inc', platform: 'LinkedIn', status: 'Interview', appliedDate: '2025-06-20', jobUrl: 'https://example.com/job2', salaryRange: '$100,000 - $120,000', location: 'Remote', notes: 'Interview scheduled for next week.' },
-        { id: 103, clientId: 1, jobTitle: 'React Developer', company: 'StartupXYZ', platform: 'Indeed', status: 'Applied', appliedDate: '2025-06-19', jobUrl: 'https://example.com/job3', salaryRange: '$80,000 - $100,000', location: 'New York, NY', notes: 'Followed up via email.' },
+        { id: 101, clientId: 1, jobTitle: 'Full Stack Developer', company: 'WebTech Solutions', platform: 'LinkedIn', status: 'Applied', appliedDate: '2025-06-21', jobUrl: 'https://example.com/job1', salaryRange: '$90,000 - $110,000', location: 'San Francisco, CA', notes: 'Initial application sent.', jobId: 'WEBFS101' },
+        { id: 102, clientId: 1, jobTitle: 'Senior Frontend Developer', company: 'TechFlow Inc', platform: 'LinkedIn', status: 'Interview', appliedDate: '2025-06-20', jobUrl: 'https://example.com/job2', salaryRange: '$100,000 - $120,000', location: 'Remote', notes: 'Interview scheduled for next week.', jobId: 'TFSE202' },
+        { id: 103, clientId: 1, jobTitle: 'React Developer', company: 'StartupXYZ', platform: 'Indeed', status: 'Applied', appliedDate: '2025-06-19', jobUrl: 'https://example.com/job3', salaryRange: '$80,000 - $100,000', location: 'New York, NY', notes: 'Followed up via email.', jobId: 'SXYZRD303' },
       ],
       files: [
         { id: 1001, clientId: 1, name: 'john_anderson_resume_2025.pdf', size: '245 KB', type: 'resume', status: 'Uploaded', uploadDate: '2025-06-15', notes: '' },
@@ -575,9 +680,9 @@ const EmployeeData = () => {
         { date: '2025-06-18', type: 'Glassdoor Profile', status: 'Created', details: 'New profile setup' },
       ],
       jobApplications: [
-        { id: 201, clientId: 2, jobTitle: 'Product Designer', company: 'DesignCo', platform: 'Behance', status: 'Applied', appliedDate: '2025-06-18', jobUrl: 'https://example.com/job4', salaryRange: '$75,000 - $90,000', location: 'Remote', notes: 'Portfolio reviewed.' },
-        { id: 202, clientId: 2, jobTitle: 'UI/UX Lead', company: 'InnovateCorp', platform: 'LinkedIn', status: 'Rejected', appliedDate: '2025-06-15', jobUrl: 'https://example.com/job5', salaryRange: '$80,000 - $95,000', location: 'Austin, TX', notes: 'Received rejection email.' },
-        { id: 203, clientId: 2, jobTitle: 'Junior UX Designer', company: 'CreativeLabs', platform: 'AngelList', status: 'Interview', appliedDate: '2025-06-10', jobUrl: 'https://example.com/job6', salaryRange: '$60,000 - $75,000', location: 'San Diego, CA', notes: 'First round interview completed.' },
+        { id: 201, clientId: 2, jobTitle: 'Product Designer', company: 'DesignCo', platform: 'Behance', status: 'Applied', appliedDate: '2025-06-18', jobUrl: 'https://example.com/job4', salaryRange: '$75,000 - $90,000', location: 'Remote', notes: 'Portfolio reviewed.', jobId: 'DCPROD201' },
+        { id: 202, clientId: 2, jobTitle: 'UI/UX Lead', company: 'InnovateCorp', platform: 'LinkedIn', status: 'Rejected', appliedDate: '2025-06-15', jobUrl: 'https://example.com/job5', salaryRange: '$80,000 - $95,000', location: 'Austin, TX', notes: 'Received rejection email.', jobId: 'ICUIUX202' },
+        { id: 203, clientId: 2, jobTitle: 'Junior UX Designer', company: 'CreativeLabs', platform: 'AngelList', status: 'Interview', appliedDate: '2025-06-10', jobUrl: 'https://example.com/job6', salaryRange: '$60,000 - $75,000', location: 'San Diego, CA', notes: 'First round interview completed.', jobId: 'CLJUX303' },
       ],
       files: [
         { id: 2001, clientId: 2, name: 'sarah_portfolio.pdf', size: '3.5 MB', type: 'portfolio', status: 'Uploaded', uploadDate: '2025-06-18', notes: '' },
@@ -641,8 +746,8 @@ const EmployeeData = () => {
         { date: '2025-06-17', type: 'Resume', status: 'Draft 1 Sent', details: 'Initial draft sent' },
       ],
       jobApplications: [
-        { id: 301, clientId: 3, jobTitle: 'Data Scientist', company: 'Data Insights', platform: 'Indeed', status: 'Applied', appliedDate: '2025-06-19', jobUrl: 'https://example.com/job7', salaryRange: '$85,000 - $105,000', location: 'New York, NY', notes: 'Awaiting response.' },
-        { id: 302, clientId: 3, jobTitle: 'Business Intelligence Analyst', company: 'Analytics Pros', platform: 'Glassdoor', status: 'Interview', appliedDate: '2025-06-17', jobUrl: 'https://example.com/job8', salaryRange: '$70,000 - $90,000', location: 'Chicago, IL', notes: 'Technical interview next week.' },
+        { id: 301, clientId: 3, jobTitle: 'Data Scientist', company: 'Data Insights', platform: 'Indeed', status: 'Applied', appliedDate: '2025-06-19', jobUrl: 'https://example.com/job7', salaryRange: '$85,000 - $105,000', location: 'New York, NY', notes: 'Awaiting response.', jobId: 'DI_DS_NY_007' },
+        { id: 302, clientId: 3, jobTitle: 'Business Intelligence Analyst', company: 'Analytics Pros', platform: 'Glassdoor', status: 'Interview', appliedDate: '2025-06-17', jobUrl: 'https://example.com/job8', salaryRange: '$70,000 - $90,000', location: 'Chicago, IL', notes: 'Technical interview next week.', jobId: 'AP_BI_CHI_008' },
       ],
       files: [
         { id: 3001, clientId: 3, name: 'michael_resume.pdf', size: '280 KB', type: 'resume', status: 'Uploaded', uploadDate: '2025-06-19', notes: '' },
@@ -824,11 +929,25 @@ const EmployeeData = () => {
     setActivityTypeFilter('All Activities');
   };
 
+  // Function to check if any filters are active
+  const areFiltersActive = () => {
+    return (
+      filterDateRange.startDate !== '' ||
+      filterDateRange.endDate !== '' ||
+      sortOrder !== 'Newest First' ||
+      quickFilter !== '' ||
+      searchTerm !== '' ||
+      statusFilter !== 'All Statuses' ||
+      fileTypeFilter !== 'All File Types' ||
+      activityTypeFilter !== 'All Activities'
+    );
+  };
+
   // --- Applications Tab Functions ---
   const handleOpenAddApplicationModal = (client) => {
     setSelectedClientForApplication(client);
     setNewApplicationFormData({
-      jobTitle: '', company: '', platform: '', jobUrl: '', salaryRange: '', location: '', notes: ''
+      jobTitle: '', company: '', platform: '', jobUrl: '', salaryRange: '', location: '', notes: '', jobId: ''
     });
     setShowAddApplicationModal(true);
   };
@@ -841,38 +960,38 @@ const EmployeeData = () => {
   const handleSaveNewApplication = () => {
     if (!selectedClientForApplication) return;
 
-  // Process attachments if any
-  const attachments = newApplicationFormData.attachments?.map(file => ({
-    id: Date.now() + Math.random(), // Unique ID for each file
-    clientId: selectedClientForApplication.id,
-    name: file.name,
-    size: `${(file.size / 1024).toFixed(1)} KB`,
-    type: 'application attachment', // Special type for application attachments
-    status: 'Uploaded',
-    uploadDate: new Date().toISOString().split('T')[0],
-    notes: `Attached to ${newApplicationFormData.jobTitle} application`,
-    file: file // Keep the file object for download/view
-  })) || [];
+    // Process attachments if any
+    const attachments = newApplicationFormData.attachments?.map(file => ({
+      id: Date.now() + Math.random(), // Unique ID for each file
+      clientId: selectedClientForApplication.id,
+      name: file.name,
+      size: `${(file.size / 1024).toFixed(1)} KB`,
+      type: 'application attachment', // Special type for application attachments
+      status: 'Uploaded',
+      uploadDate: new Date().toISOString().split('T')[0],
+      notes: `Attached to ${newApplicationFormData.jobTitle} application`,
+      file: file // Keep the file object for download/view
+    })) || [];
 
 
-      const newApp = {
-    id: Date.now(),
-    clientId: selectedClientForApplication.id,
-    ...newApplicationFormData,
-    status: 'Applied',
-    appliedDate: new Date().toISOString().split('T')[0],
-    attachments: attachments
-  };
+    const newApp = {
+      id: Date.now(),
+      clientId: selectedClientForApplication.id,
+      ...newApplicationFormData,
+      status: 'Applied',
+      appliedDate: new Date().toISOString().split('T')[0],
+      attachments: attachments
+    };
 
     setAssignedClients(prevClients => {
       const updatedClients = prevClients.map(client =>
         client.id === selectedClientForApplication.id
           ? {
-              ...client,
-              jobApplications: [newApp, ...client.jobApplications], // Prepend new application
-              // Add the attachments to the client's files as well
+            ...client,
+            jobApplications: [newApp, ...client.jobApplications], // Prepend new application
+            // Add the attachments to the client's files as well
             files: [...attachments, ...client.files]
-            }
+          }
           : client
       );
       // Update selectedClient to reference the newly updated client object
@@ -881,8 +1000,9 @@ const EmployeeData = () => {
     });
     setShowAddApplicationModal(false);
     setNewApplicationFormData({
-      jobTitle: '', company: '', platform: '', jobUrl: '', salaryRange: '', location: '', notes: '', attachments: []
+      jobTitle: '', company: '', platform: '', jobUrl: '', salaryRange: '', location: '', notes: '', attachments: [], jobId: ''
     });
+    triggerNotification("Application added successfully!"); // Trigger notification
   };
 
   const handleViewApplication = (application) => {
@@ -910,19 +1030,19 @@ const EmployeeData = () => {
       const updatedClients = prevClients.map(client =>
         client.id === selectedClientForApplication.id
           ? {
-              ...client,
-              jobApplications: client.jobApplications.map(app =>
-                app.id === editedApplicationFormData.id ?{
-              ...editedApplicationFormData,
-              attachments: editedApplicationFormData.attachments.map(file => ({
-                name: file.name,
-                size: file.size,
-                type: file.type,
-                uploadDate: file.uploadDate
-              }))
-            } : app
-              ),
-            }
+            ...client,
+            jobApplications: client.jobApplications.map(app =>
+              app.id === editedApplicationFormData.id ? {
+                ...editedApplicationFormData,
+                attachments: editedApplicationFormData.attachments.map(file => ({
+                  name: file.name,
+                  size: file.size,
+                  type: file.type,
+                  uploadDate: file.uploadDate
+                }))
+              } : app
+            ),
+          }
           : client
       );
       // Update selectedClient to reference the newly updated client object
@@ -932,6 +1052,7 @@ const EmployeeData = () => {
     setShowEditApplicationModal(false);
     setEditedApplicationFormData(null);
     setSelectedClientForApplication(null); // Clear selected client after saving
+    triggerNotification("Application updated successfully!"); // Trigger notification
   };
 
 
@@ -940,15 +1061,16 @@ const EmployeeData = () => {
       const updatedClients = prevClients.map(client =>
         client.id === clientId
           ? {
-              ...client,
-              jobApplications: client.jobApplications.filter(app => app.id !== appId),
-            }
+            ...client,
+            jobApplications: client.jobApplications.filter(app => app.id !== appId),
+          }
           : client
       );
       // Update selectedClient to reference the newly updated client object
       setSelectedClient(updatedClients.find(c => c.id === clientId));
       return updatedClients;
     });
+    triggerNotification("Application deleted successfully!"); // Trigger notification
   };
 
   // Function to filter and sort job applications
@@ -964,8 +1086,8 @@ const EmployeeData = () => {
       // Search term filter
       const matchesSearch = searchTerm
         ? Object.values(app).some(val =>
-            String(val).toLowerCase().includes(searchTerm.toLowerCase())
-          )
+          String(val).toLowerCase().includes(searchTerm.toLowerCase())
+        )
         : true;
 
       // Status filter
@@ -1042,9 +1164,9 @@ const EmployeeData = () => {
       const updatedClients = prevClients.map(client =>
         client.id === selectedClientForFile.id
           ? {
-              ...client,
-              files: [newFile, ...client.files], // Prepend new file
-            }
+            ...client,
+            files: [newFile, ...client.files], // Prepend new file
+          }
           : client
       );
       // Update selectedClient to reference the newly updated client object
@@ -1054,6 +1176,7 @@ const EmployeeData = () => {
     setShowUploadFileModal(false);
     setNewFileFormData({ clientId: '', fileType: '', fileName: '', notes: '' });
     setSelectedClientForFile(null);
+    triggerNotification("File uploaded successfully!"); // Trigger notification
   };
 
   const handleViewFile = (file) => {
@@ -1081,11 +1204,11 @@ const EmployeeData = () => {
       const updatedClients = prevClients.map(client =>
         client.id === selectedClientForFile.id
           ? {
-              ...client,
-              files: client.files.map(file =>
-                file.id === editedFileFormData.id ? editedFileFormData : file
-              ),
-            }
+            ...client,
+            files: client.files.map(file =>
+              file.id === editedFileFormData.id ? editedFileFormData : file
+            ),
+          }
           : client
       );
       // Update selectedClient to reference the newly updated client object
@@ -1095,6 +1218,7 @@ const EmployeeData = () => {
     setShowEditFileModal(false);
     setEditedFileFormData(null);
     setSelectedClientForFile(null);
+    triggerNotification("File updated successfully!"); // Trigger notification
   };
 
 
@@ -1103,15 +1227,16 @@ const EmployeeData = () => {
       const updatedClients = prevClients.map(client =>
         client.id === clientId
           ? {
-              ...client,
-              files: client.files.filter(file => file.id !== fileId),
-            }
+            ...client,
+            files: client.files.filter(file => file.id !== fileId),
+          }
           : client
       );
       // Update selectedClient to reference the newly updated client object
       setSelectedClient(updatedClients.find(c => c.id === clientId));
       return updatedClients;
     });
+    triggerNotification("File deleted successfully!"); // Trigger notification
   };
 
   const getFilteredAndSortedFiles = (files) => {
@@ -1125,8 +1250,8 @@ const EmployeeData = () => {
     filtered = filtered.filter(file => {
       const matchesSearch = searchTerm
         ? Object.values(file).some(val =>
-            String(val).toLowerCase().includes(searchTerm.toLowerCase())
-          )
+          String(val).toLowerCase().includes(searchTerm.toLowerCase())
+        )
         : true;
 
       const matchesFileType = fileTypeFilter === 'All File Types' || file.type === fileTypeFilter;
@@ -1175,8 +1300,8 @@ const EmployeeData = () => {
     filtered = filtered.filter(activity => {
       const matchesSearch = searchTerm
         ? Object.values(activity).some(val =>
-            String(val).toLowerCase().includes(searchTerm.toLowerCase())
-          )
+          String(val).toLowerCase().includes(searchTerm.toLowerCase())
+        )
         : true;
 
       const matchesActivityType = activityTypeFilter === 'All Activities' || activity.type === activityTypeFilter;
@@ -1217,8 +1342,9 @@ const EmployeeData = () => {
         const updatedAssignedClients = [...assignedClients, { ...acceptedClient, status: 'active' }];
         setAssignedClients(updatedAssignedClients);
         setSelectedClient(updatedAssignedClients.find(c => c.id === acceptedClient.id)); // Select the newly accepted client
-        setActiveTab('Client Names'); // Switch to Client Names tab
+        setActiveTab('Ongoing Clients'); // Switch to Ongoing Clients tab
         setActiveSubTab('Applications'); // Set default sub-tab
+        triggerNotification(`Client ${acceptedClient.name} accepted!`); // Trigger notification
         return prevNewClients.filter(client => client.id !== clientId);
       }
       return prevNewClients;
@@ -1228,20 +1354,24 @@ const EmployeeData = () => {
   // NEW: Handle declining a new client
   const handleDeclineClient = (clientId) => {
     setNewClients(prevNewClients => prevNewClients.filter(client => client.id !== clientId));
+    triggerNotification("Client declined."); // Trigger notification
   };
 
 
   return (
     <div style={containerStyle}>
       <AdminHeader
-        adminUserName="Employee User" // Placeholder name for employee
-        adminInitials="EU" // Placeholder initials
+        adminUserName={employeeDetails.name} // Pass dynamic name
+        adminInitials={adminInitials} // Pass dynamic initials
         isDarkMode={theme === 'dark'}
         toggleTheme={toggleTheme}
         toggleSidebar={toggleSidebar} // Pass the dummy toggleSidebar
         isProfileDropdownOpen={isProfileDropdownOpen}
         setIsProfileDropdownOpen={setIsProfileDropdownOpen}
         profileDropdownRef={profileDropdownRef}
+        showProfileModal={showEmployeeProfileModal} // Pass the state
+        setShowProfileModal={handleOpenProfileModal} // Pass the function to open profile modal
+        onNotificationClick={handleNotificationIconClick} // Pass notification click handler
       />
       {/* Centralized CSS styles for hover effects and animations */}
       <style>
@@ -1314,11 +1444,120 @@ const EmployeeData = () => {
         .activity-button:hover {
           background-color: #e2e8f0;
         }
+
+        /* Notification Toast Styles */
+        .notification-toast {
+          position: fixed;
+          top: 20px; /* Adjust as needed */
+          right: 20px; /* Adjust as needed */
+          background-color: #333;
+          color: white;
+          padding: 15px 20px;
+          border-radius: 8px;
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+          z-index: 1000; /* Ensure it's on top */
+          opacity: 0;
+          transform: translateY(-20px);
+          transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+        }
+
+        .notification-toast.show {
+          opacity: 1;
+          transform: translateY(0);
+        }
+
+        /* Notification Modal Styles */
+        .notification-modal .modal-content {
+          border-radius: 12px;
+          border: none;
+          box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+          background-color: #ffffff;
+          overflow: hidden; /* Ensures rounded corners are respected */
+        }
+
+        .notification-modal .modal-header {
+          border-bottom: 1px solid #e2e8f0;
+          padding: 20px 25px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .notification-modal .modal-title {
+          font-size: 1.5rem;
+          font-weight: 600;
+          color: #1e293b;
+          margin: 0;
+        }
+
+        .notification-modal .btn-close-custom { /* Custom class for our SVG close button */
+          background: none;
+          border: none;
+          font-size: 1.5rem;
+          color: #64748b;
+          cursor: pointer;
+          opacity: 1;
+          transition: color 0.2s ease-out;
+          padding: 0; /* Remove padding to make SVG size control easier */
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 24px; /* Explicit size for the button area */
+          height: 24px;
+        }
+
+        .notification-modal .btn-close-custom:hover {
+          color: #1e293b;
+        }
+
+        .notification-modal .modal-body {
+          padding: 0; /* Remove default padding as items have their own */
+        }
+
+        .notification-item {
+          padding: 15px 25px;
+          border-bottom: 1px solid #f1f5f9;
+          cursor: pointer;
+          transition: background-color 0.2s ease-out;
+        }
+
+        .notification-item:last-child {
+          border-bottom: none; /* No border for the last item */
+        }
+
+        .notification-item:hover {
+          background-color: #f8fafc;
+        }
+
+        .notification-item-title {
+          font-size: 1rem;
+          font-weight: 600;
+          color: #1e293b;
+          margin-bottom: 5px;
+        }
+
+        .notification-item-description {
+          font-size: 0.9rem;
+          color: #475569;
+          margin-bottom: 5px;
+        }
+
+        .notification-item-time {
+          font-size: 0.8rem;
+          color: #94a3b8;
+        }
         `}
       </style>
 
+      {/* Notification Toast */}
+      {showNotification && (
+        <div className="notification-toast show">
+          {notificationMessage}
+        </div>
+      )}
+
       {/* Header */}
-      <header style={headerStyle}>
+      <header style={headerContentStyle}> {/* Adjusted style here */}
         <div style={headerTitleStyle}>
           <h1 style={{ fontSize: '1.875rem', fontWeight: '700', color: '#1e293b', margin: 0 }}>
             Employee WorkSheet
@@ -1329,7 +1568,7 @@ const EmployeeData = () => {
         </div>
         <div style={tabsContainerStyle}>
           {/* Only top-level tabs here */}
-          {['New Clients', 'Client Names'].map(tab => (
+          {['New Clients', 'Ongoing Clients'].map(tab => (
             <button
               key={tab}
               style={{
@@ -1339,8 +1578,8 @@ const EmployeeData = () => {
               className="tab-button"
               onClick={() => {
                 setActiveTab(tab);
-                // When switching top-level tabs, reset sub-tab if not 'Client Names'
-                if (tab !== 'Client Names') {
+                // When switching top-level tabs, reset sub-tab if not 'Ongoing Clients'
+                if (tab !== 'Ongoing Clients') {
                   setActiveSubTab('Applications'); // Or any other default if needed
                 }
               }}
@@ -1370,7 +1609,7 @@ const EmployeeData = () => {
                       <p style={newClientNameStyle}>{client.name}</p>
                       <p style={newClientDetailStyle}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={clientDetailIconStyle}>
-                          <path d="M22 16.92v3a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-3"></path>
+                          <path d="M22 16.92v3a2 0 0 1-2 2H4a2 0 0 1-2-2v-3"></path>
                           <polyline points="16 16 12 20 8 16"></polyline>
                           <line x1="12" y1="20" x2="12" y2="10"></line>
                         </svg>
@@ -1391,7 +1630,6 @@ const EmployeeData = () => {
                   <p style={newClientDetailStyle}><strong>Visa Status:</strong> {client.visaStatus}</p>
                   <div style={newClientCardActionsStyle}>
                     <button onClick={() => handleAcceptClient(client.id)} style={acceptButtonStyle}>Accept</button>
-                    <button onClick={() => handleDeclineClient(client.id)} style={declineButtonStyle}>Decline</button>
                   </div>
                 </div>
               ))}
@@ -1400,20 +1638,20 @@ const EmployeeData = () => {
         </div>
       )}
 
-      {/* NEW: Client Names Tab Content */}
-      {activeTab === 'Client Names' && (
+      {/* NEW: Ongoing Clients Tab Content */}
+      {activeTab === 'Ongoing Clients' && (
         <div style={applicationsSectionStyle}>
           <h2 style={sectionTitleStyle}>Select Client</h2>
           <p style={subLabelStyle}>Choose a client to view their specific data across other tabs.</p>
           <div style={clientSelectContainerStyle}>
-            <label style={filterLabelStyle}>Client Name:</label>
+            <label style={filterLabelStyle}>Select Client:</label>
             <select
               value={selectedClient ? selectedClient.id : ''}
               onChange={(e) => {
                 setSelectedClient(assignedClients.find(c => c.id === parseInt(e.target.value)));
                 setActiveSubTab('Applications'); // Reset sub-tab when a new client is selected
               }}
-              style={selectFilterStyle}
+              style={selectClientDropdownStyle} /* Updated style here */
             >
               <option value="">Select a Client</option>
               {assignedClients.map(client => (
@@ -1457,10 +1695,10 @@ const EmployeeData = () => {
                     <div style={cardStyle}>
                       <div style={cardIconContainerStyle}>
                         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#3b82f6' }}>
-                          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                          <path d="M17 21v-2a4 0 0 0-4-4H5a4 0 0 0-4 4v2"></path>
                           <circle cx="9" cy="7" r="4"></circle>
-                          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                          <path d="M23 21v-2a4 0 0 0-3-3.87"></path>
+                          <path d="M16 3.13a4 0 0 1 0 7.75"></path>
                         </svg>
                       </div>
                       <p style={cardLabelStyle}>Assigned Clients</p>
@@ -1472,7 +1710,7 @@ const EmployeeData = () => {
                       <div style={cardIconContainerStyle}>
                         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#10b981' }}>
                           <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                          <path d="M7 11V7a5 0 0 1 10 0v4"></path>
                         </svg>
                       </div>
                       <p style={cardLabelStyle}>Job Applications</p>
@@ -1499,7 +1737,7 @@ const EmployeeData = () => {
                     <div style={cardStyle}>
                       <div style={cardIconContainerStyle}>
                         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#8b5cf6' }}>
-                          <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                          <path d="M13 2H6a2 0 0 0-2 2v16a2 0 0 0 2 2h12a2 0 0 0 2-2V9z"></path>
                           <polyline points="13 2 13 9 20 9"></polyline>
                         </svg>
                       </div>
@@ -1542,7 +1780,7 @@ const EmployeeData = () => {
                         </p>
                         <p style={clientDetailStyle}>
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={clientDetailIconStyle}>
-                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 0 0 1 18 0z"></path>
                             <circle cx="12" cy="10" r="3"></circle>
                           </svg>
                           {selectedClient.location}
@@ -1615,7 +1853,7 @@ const EmployeeData = () => {
               {/* Applications Tab Content */}
               {activeSubTab === 'Applications' && (
                 <div style={{ ...applicationsSectionStyle, marginTop: '24px' }}>
-                  <h2 style={sectionTitleStyle}>Advanced Filters</h2>
+                  <h2 style={{ ...sectionTitleStyle, textAlign: 'center' }}>Advanced Filters</h2> {/* Centered title */}
                   <div style={filterContainerStyle}>
                     <div style={filterGroupStyle}>
                       <label style={filterLabelStyle}>Date Range</label>
@@ -1638,7 +1876,7 @@ const EmployeeData = () => {
                       </div>
                     </div>
 
-                    <div style={filterGroupStyle}>
+                    <div style={{ ...filterGroupStyle, marginLeft: 'auto' }}> {/* Moved Sort Order to the right */}
                       <label style={filterLabelStyle}>Sort Order</label>
                       <select
                         value={sortOrder}
@@ -1676,20 +1914,22 @@ const EmployeeData = () => {
                       </div>
                     </div>
 
-                    <div style={filterGroupStyle}>
-                      <label style={filterLabelStyle}>Actions</label>
-                      <button
-                        onClick={handleClearFilters}
-                        style={clearFiltersButtonStyle}
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M21 4H8l-7 16 7 16h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
-                          <line x1="18" y1="9" x2="12" y2="15"></line>
-                          <line x1="12" y1="9" x2="18" y2="15"></line>
-                        </svg>
-                        Clear Filters
-                      </button>
-                    </div>
+                    {areFiltersActive() && ( // Conditionally render Clear Filters button
+                      <div style={clearFiltersButtonContainerStyle}> {/* New container for positioning */}
+                        <label style={filterLabelStyle}>Actions</label>
+                        <button
+                          onClick={handleClearFilters}
+                          style={clearFiltersButtonStyle}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 4H8l-7 16 7 16h13a2 0 0 0 2-2V6a2 0 0 0-2-2z"></path>
+                            <line x1="18" y1="9" x2="12" y2="15"></line>
+                            <line x1="12" y1="9" x2="18" y2="15"></line>
+                          </svg>
+                          Clear Filters
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <h2 style={sectionTitleStyle}>Client Job Applications</h2>
@@ -1749,7 +1989,8 @@ const EmployeeData = () => {
                             <th style={applicationTableHeaderCellStyle}>Job Title</th>
                             <th style={applicationTableHeaderCellStyle}>Company</th>
                             <th style={applicationTableHeaderCellStyle}>Platform</th>
-                            <th style={applicationTableHeaderCellStyle}>Link</th> {/* New Link Header */}
+                            <th style={applicationTableHeaderCellStyle}>Job ID</th> {/* New Job ID Header */}
+                            <th style={applicationTableHeaderCellStyle}>Link</th>
                             <th style={applicationTableHeaderCellStyle}>Applied Date</th>
                             <th style={applicationTableHeaderCellStyle}>Attachments</th>
                             <th style={applicationTableHeaderCellStyle}>Actions</th>
@@ -1758,7 +1999,7 @@ const EmployeeData = () => {
                         <tbody>
                           {getFilteredAndSortedApplications(selectedClient.jobApplications).length === 0 ? (
                             <tr>
-                              <td colSpan="8" style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>
+                              <td colSpan="9" style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>
                                 No applications found for this client.
                               </td>
                             </tr>
@@ -1771,35 +2012,36 @@ const EmployeeData = () => {
                                 <td style={applicationTableDataCellStyle}>{app.jobTitle}</td>
                                 <td style={applicationTableDataCellStyle}>{app.company}</td>
                                 <td style={applicationTableDataCellStyle}>{app.platform}</td>
+                                <td style={applicationTableDataCellStyle}>{app.jobId || '-'}</td> {/* Display Job ID */}
                                 <td style={applicationTableDataCellStyle}>
                                   {app.jobUrl && (
                                     <a href={app.jobUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>
                                       Link
                                     </a>
                                   )}
-                                </td> {/* New Link Column */}
-                            
+                                </td>
+
                                 <td style={applicationTableDataCellStyle}>{app.appliedDate}</td>
 
-                                  <td style={applicationTableDataCellStyle}>
-        {app.attachments && app.attachments.length > 0 ? (
-          <button 
-            onClick={() => {
-              setViewedApplication(app);
-              setShowViewApplicationModal(true);
-            }}
-            style={{ 
-              background: 'none', 
-              border: 'none', 
-              color: '#3b82f6', 
-              textDecoration: 'underline',
-              cursor: 'pointer'
-            }}
-          >
-            View ({app.attachments.length})
-          </button>
-        ) : 'N/A'}
-      </td>
+                                <td style={applicationTableDataCellStyle}>
+                                  {app.attachments && app.attachments.length > 0 ? (
+                                    <button
+                                      onClick={() => {
+                                        setViewedApplication(app);
+                                        setShowViewApplicationModal(true);
+                                      }}
+                                      style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        color: '#3b82f6',
+                                        textDecoration: 'underline',
+                                        cursor: 'pointer'
+                                      }}
+                                    >
+                                      View ({app.attachments.length})
+                                    </button>
+                                  ) : 'N/A'}
+                                </td>
 
 
                                 <td style={applicationTableDataCellStyle}>
@@ -1810,14 +2052,16 @@ const EmployeeData = () => {
                                     </svg>
                                   </button>
                                   <button onClick={() => handleEditApplication(app)} style={actionButtonAppStyle}>
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                      <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                      <path d="M12 20h9"></path>
+                                      <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
                                     </svg>
                                   </button>
                                   <button onClick={() => handleDeleteApplication(selectedClient.id, app.id)} style={deleteButtonAppStyle}>
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                       <polyline points="3 6 5 6 21 6"></polyline>
-                                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                      <path d="M19 6v14a2 0 0 1-2 2H7a2 0 0 1-2-2V6m3 0V4a2 0 0 1 2-2h4a2 0 0 1 2 2v2"></path>
                                       <line x1="10" y1="11" x2="10" y2="17"></line>
                                       <line x1="14" y1="11" x2="14" y2="17"></line>
                                     </svg>
@@ -1836,7 +2080,7 @@ const EmployeeData = () => {
               {/* Files Tab Content */}
               {activeSubTab === 'Files' && (
                 <div style={{ ...applicationsSectionStyle, marginTop: '24px' }}> {/* Reusing applicationsSectionStyle for consistent padding/shadow */}
-                  <h2 style={sectionTitleStyle}>Advanced Filters</h2>
+                  <h2 style={{ ...sectionTitleStyle, textAlign: 'center' }}>Advanced Filters</h2>
                   <div style={filterContainerStyle}>
                     <div style={filterGroupStyle}>
                       <label style={filterLabelStyle}>Date Range</label>
@@ -1859,7 +2103,7 @@ const EmployeeData = () => {
                       </div>
                     </div>
 
-                    <div style={filterGroupStyle}>
+                    <div style={{ ...filterGroupStyle, marginLeft: 'auto' }}>
                       <label style={filterLabelStyle}>Sort Order</label>
                       <select
                         value={sortOrder}
@@ -1896,22 +2140,24 @@ const EmployeeData = () => {
                           All Time
                         </button>
                       </div>
-                    </div>
+                    </div> {/* Added missing closing div here */}
 
-                    <div style={filterGroupStyle}>
-                      <label style={filterLabelStyle}>Actions</label>
-                      <button
-                        onClick={handleClearFilters}
-                        style={clearFiltersButtonStyle}
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M21 4H8l-7 16 7 16h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
-                          <line x1="18" y1="9" x2="12" y2="15"></line>
-                          <line x1="12" y1="9" x2="18" y2="15"></line>
-                        </svg>
-                        Clear Filters
-                      </button>
-                    </div>
+                    {areFiltersActive() && ( // Conditionally render Clear Filters button
+                      <div style={clearFiltersButtonContainerStyle}> {/* New container for positioning */}
+                        <label style={filterLabelStyle}>Actions</label>
+                        <button
+                          onClick={handleClearFilters}
+                          style={clearFiltersButtonStyle}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 4H8l-7 16 7 16h13a2 0 0 0 2-2V6a2 0 0 0-2-2z"></path>
+                            <line x1="18" y1="9" x2="12" y2="15"></line>
+                            <line x1="12" y1="9" x2="18" y2="15"></line>
+                          </svg>
+                          Clear Filters
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <h2 style={sectionTitleStyle}>Client File Management</h2>
@@ -1935,7 +2181,7 @@ const EmployeeData = () => {
                         onClick={() => handleOpenUploadFileModal(selectedClient)}
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                          <path d="M21 15v4a2 0 0 1-2 2H5a2 0 0 1-2-2v-4"></path>
                           <polyline points="17 8 12 3 7 8"></polyline>
                           <line x1="12" y1="3" x2="12" y2="15"></line>
                         </svg>
@@ -1976,7 +2222,7 @@ const EmployeeData = () => {
                           <div key={file.id} style={fileCardStyle}>
                             <div style={fileCardHeaderStyle}>
                               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={fileIconStyle}>
-                                <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                                <path d="M13 2H6a2 0 0 0-2 2v16a2 0 0 0 2 2h12a2 0 0 0 2-2V9z"></path>
                                 <polyline points="13 2 13 9 20 9"></polyline>
                               </svg>
                               <div style={{ flexGrow: 1 }}>
@@ -2002,14 +2248,16 @@ const EmployeeData = () => {
                                 </svg>
                               </button>
                               <button onClick={() => handleEditFile(file)} style={actionButtonAppStyle}>
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                  stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M12 20h9"></path>
+                                  <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
                                 </svg>
                               </button>
                               <button onClick={() => handleDeleteFile(selectedClient.id, file.id)} style={deleteButtonAppStyle}>
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                   <polyline points="3 6 5 6 21 6"></polyline>
-                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                  <path d="M19 6v14a2 0 0 1-2 2H7a2 0 0 1-2-2V6m3 0V4a2 0 0 1 2-2h4a2 0 0 1 2 2v2"></path>
                                   <line x1="10" y1="11" x2="10" y2="17"></line>
                                   <line x1="14" y1="11" x2="14" y2="17"></line>
                                 </svg>
@@ -2027,7 +2275,7 @@ const EmployeeData = () => {
               {/* Activity Tab Content */}
               {activeSubTab === 'Activity' && (
                 <div style={{ ...applicationsSectionStyle, marginTop: '24px' }}>
-                  <h2 style={sectionTitleStyle}>Advanced Filters</h2>
+                  <h2 style={{ ...sectionTitleStyle, textAlign: 'center' }}>Advanced Filters</h2>
                   <div style={filterContainerStyle}>
                     <div style={filterGroupStyle}>
                       <label style={filterLabelStyle}>Date Range</label>
@@ -2050,7 +2298,7 @@ const EmployeeData = () => {
                       </div>
                     </div>
 
-                    <div style={filterGroupStyle}>
+                    <div style={{ ...filterGroupStyle, marginLeft: 'auto' }}>
                       <label style={filterLabelStyle}>Sort Order</label>
                       <select
                         value={sortOrder}
@@ -2087,20 +2335,22 @@ const EmployeeData = () => {
                       </div>
                     </div>
 
-                    <div style={filterGroupStyle}>
-                      <label style={filterLabelStyle}>Actions</label>
-                      <button
-                        onClick={handleClearFilters}
-                        style={clearFiltersButtonStyle}
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M21 4H8l-7 16 7 16h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
-                          <line x1="18" y1="9" x2="12" y2="15"></line>
-                          <line x1="12" y1="9" x2="18" y2="15"></line>
-                        </svg>
-                        Clear Filters
-                      </button>
-                    </div>
+                    {areFiltersActive() && ( // Conditionally render Clear Filters button
+                      <div style={clearFiltersButtonContainerStyle}> {/* New container for positioning */}
+                        <label style={filterLabelStyle}>Actions</label>
+                        <button
+                          onClick={handleClearFilters}
+                          style={clearFiltersButtonStyle}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 4H8l-7 16 7 16h13a2 0 0 0 2-2V6a2 0 0 0-2-2z"></path>
+                            <line x1="18" y1="9" x2="12" y2="15"></line>
+                            <line x1="12" y1="9" x2="18" y2="15"></line>
+                          </svg>
+                          Clear Filters
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <h2 style={sectionTitleStyle}>
@@ -2157,22 +2407,12 @@ const EmployeeData = () => {
               {/* NEW: Client Data Tab Content */}
               {activeSubTab === 'Client data' && (
                 <div style={{ ...applicationsSectionStyle, marginTop: '24px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-      <div>
-        <h2 style={sectionTitleStyle}>Full Client Details for {selectedClient.name}</h2>
-        <p style={subLabelStyle}>Comprehensive information about the selected client.</p>
-      </div>
-      <button
-        style={addApplicationButtonStyle}
-        onClick={() => handleOpenAddApplicationModal(selectedClient)}
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19"></line>
-          <line x1="5" y1="12" x2="19" y2="12"></line>
-        </svg>
-        Add Application
-      </button>
-    </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <div>
+                      <h2 style={sectionTitleStyle}>Full details of {selectedClient.name}</h2>
+                      <p style={subLabelStyle}>Comprehensive information about the selected client.</p>
+                    </div>
+                  </div>
 
                   <div style={clientDataGridStyle}>
                     <div style={clientDataSectionStyle}>
@@ -2330,6 +2570,17 @@ const EmployeeData = () => {
                   placeholder="e.g., San Francisco, CA"
                 />
               </div>
+              <div style={modalFormFieldGroupStyle}> {/* New Job ID field */}
+                <label style={modalLabelStyle}>Job ID</label>
+                <input
+                  type="text"
+                  name="jobId"
+                  value={newApplicationFormData.jobId}
+                  onChange={handleNewApplicationFormChange}
+                  style={modalInputStyle}
+                  placeholder="e.g., ABC-12345"
+                />
+              </div>
               <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
                 <label style={modalLabelStyle}>Notes</label>
                 <textarea
@@ -2370,55 +2621,56 @@ const EmployeeData = () => {
               <p style={modalViewDetailItemStyle}><strong>Job Title:</strong> {viewedApplication.jobTitle}</p>
               <p style={modalViewDetailItemStyle}><strong>Company:</strong> {viewedApplication.company}</p>
               <p style={modalViewDetailItemStyle}><strong>Platform:</strong> {viewedApplication.platform}</p>
-              <p style={modalViewDetailItemStyle}><strong>Job URL:</strong> <a href={viewedApplication.jobUrl} target="_blank" rel="noopener noreferrer" style={{color: '#3b82f6'}}>{viewedApplication.jobUrl}</a></p>
+              <p style={modalViewDetailItemStyle}><strong>Job ID:</strong> {viewedApplication.jobId || '-'}</p> {/* Display Job ID */}
+              <p style={modalViewDetailItemStyle}><strong>Job URL:</strong> <a href={viewedApplication.jobUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6' }}>{viewedApplication.jobUrl}</a></p>
               <p style={modalViewDetailItemStyle}><strong>Salary Range:</strong> {viewedApplication.salaryRange || '-'}</p>
               <p style={modalViewDetailItemStyle}><strong>Location:</strong> {viewedApplication.location || '-'}</p>
               <p style={modalViewDetailItemStyle}><strong>Status:</strong> <span style={{ ...applicationStatusBadgeStyle, ...getApplicationStatusStyle(viewedApplication.status) }}>{viewedApplication.status}</span></p>
-         <div style={{ ...modalViewDetailItemStyle, gridColumn: '1 / -1' }}>
-      <strong>Attachments:</strong>
-      {viewedApplication.attachments && viewedApplication.attachments.length > 0 ? (
-        <div style={{ marginTop: '10px' }}>
-          {viewedApplication.attachments.map((file, index) => (
-            <div key={index} style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              padding: '8px', 
-              background: '#f8fafc', 
-              borderRadius: '6px',
-              marginBottom: '8px'
-            }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ marginRight: '10px' }}>
-                <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
-                <polyline points="13 2 13 9 20 9"></polyline>
-              </svg>
-              <div style={{ flexGrow: 1 }}>
-                <div>{file.name}</div>
-                <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                  {file.size} • {file.uploadDate}
-                </div>
+              <div style={{ ...modalViewDetailItemStyle, gridColumn: '1 / -1' }}>
+                <strong>Attachments:</strong>
+                {viewedApplication.attachments && viewedApplication.attachments.length > 0 ? (
+                  <div style={{ marginTop: '10px' }}>
+                    {viewedApplication.attachments.map((file, index) => (
+                      <div key={index} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '8px',
+                        background: '#f8fafc',
+                        borderRadius: '6px',
+                        marginBottom: '8px'
+                      }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ marginRight: '10px' }}>
+                          <path d="M13 2H6a2 0 0 0-2 2v16a2 0 0 0 2 2h12a2 0 0 0 2-2V9z"></path>
+                          <polyline points="13 2 13 9 20 9"></polyline>
+                        </svg>
+                        <div style={{ flexGrow: 1 }}>
+                          <div>{file.name}</div>
+                          <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                            {file.size} • {file.uploadDate}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setViewedFile(file);
+                            setShowViewApplicationModal(false);
+                            setShowViewFileModal(true);
+                          }}
+                          style={{
+                            background: '#3b82f6',
+                            color: 'white',
+                            border: 'none',
+                            padding: '5px 10px',
+                            borderRadius: '4px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          View
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : 'N/A'}
               </div>
-              <button 
-                onClick={() => {
-                  setViewedFile(file);
-                  setShowViewApplicationModal(false);
-                  setShowViewFileModal(true);
-                }}
-                style={{
-                  background: '#3b82f6',
-                  color: 'white',
-                  border: 'none',
-                  padding: '5px 10px',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-              >
-                View
-              </button>
-            </div>
-          ))}
-        </div>
-      ) : 'N/A'}
-    </div>
               <p style={modalViewDetailItemStyle}><strong>Applied Date:</strong> {viewedApplication.appliedDate}</p>
               <p style={{ ...modalViewDetailItemStyle, gridColumn: '1 / -1' }}><strong>Notes:</strong> {viewedApplication.notes || '-'}</p>
             </div>
@@ -2506,6 +2758,17 @@ const EmployeeData = () => {
                 />
               </div>
               <div style={modalFormFieldGroupStyle}>
+                <label style={modalLabelStyle}>Job ID</label> {/* Edit Job ID field */}
+                <input
+                  type="text"
+                  name="jobId"
+                  value={editedApplicationFormData.jobId}
+                  onChange={handleEditedApplicationFormChange}
+                  style={modalInputStyle}
+                  placeholder="e.g., ABC-12345"
+                />
+              </div>
+              <div style={modalFormFieldGroupStyle}>
                 <label style={modalLabelStyle}>Status <span style={{ color: 'red' }}>*</span></label>
                 <select
                   name="status"
@@ -2521,63 +2784,63 @@ const EmployeeData = () => {
                 </select>
               </div>
 
-        {/* Add this new field for attachments */}
-        <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
-          <label style={modalLabelStyle}>Attachments</label>
-          <input
-            type="file"
-            multiple
-            onChange={(e) => {
-              const newFiles = Array.from(e.target.files).map(file => ({
-                name: file.name,
-                size: `${(file.size / 1024).toFixed(1)} KB`,
-                type: file.type,
-                uploadDate: new Date().toLocaleString(),
-                file: file
-              }));
-              setEditedApplicationFormData(prev => ({ 
-                ...prev, 
-                attachments: [...prev.attachments, ...newFiles] 
-              }));
-            }}
-            style={modalInputStyle}
-          />
-          {editedApplicationFormData.attachments.length > 0 && (
-            <div style={{ marginTop: '10px' }}>
-              <p style={{ fontSize: '0.9rem', marginBottom: '5px' }}>Attached files:</p>
-              <ul style={{ listStyle: 'none', padding: 0 }}>
-                {editedApplicationFormData.attachments.map((file, index) => (
-                  <li key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ marginRight: '8px' }}>
-                      <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
-                      <polyline points="13 2 13 9 20 9"></polyline>
-                    </svg>
-                    <span style={{ fontSize: '0.85rem' }}>{file.name} ({file.size})</span>
-                    <button 
-                      onClick={() => {
-                        const updatedAttachments = [...editedApplicationFormData.attachments];
-                        updatedAttachments.splice(index, 1);
-                        setEditedApplicationFormData(prev => ({ ...prev, attachments: updatedAttachments }));
-                      }}
-                      style={{ 
-                        background: 'none', 
-                        border: 'none', 
-                        color: '#ef4444', 
-                        marginLeft: '10px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                      </svg>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
+              {/* Add this new field for attachments */}
+              <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
+                <label style={modalLabelStyle}>Attachments</label>
+                <input
+                  type="file"
+                  multiple
+                  onChange={(e) => {
+                    const newFiles = Array.from(e.target.files).map(file => ({
+                      name: file.name,
+                      size: `${(file.size / 1024).toFixed(1)} KB`,
+                      type: file.type,
+                      uploadDate: new Date().toLocaleString(),
+                      file: file
+                    }));
+                    setEditedApplicationFormData(prev => ({
+                      ...prev,
+                      attachments: [...prev.attachments, ...newFiles]
+                    }));
+                  }}
+                  style={modalInputStyle}
+                />
+                {editedApplicationFormData.attachments.length > 0 && (
+                  <div style={{ marginTop: '10px' }}>
+                    <p style={{ fontSize: '0.9rem', marginBottom: '5px' }}>Attached files:</p>
+                    <ul style={{ listStyle: 'none', padding: 0 }}>
+                      {editedApplicationFormData.attachments.map((file, index) => (
+                        <li key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ marginRight: '8px' }}>
+                            <path d="M13 2H6a2 0 0 0-2 2v16a2 0 0 0 2 2h12a2 0 0 0 2-2V9z"></path>
+                            <polyline points="13 2 13 9 20 9"></polyline>
+                          </svg>
+                          <span style={{ fontSize: '0.85rem' }}>{file.name} ({file.size})</span>
+                          <button
+                            onClick={() => {
+                              const updatedAttachments = [...editedApplicationFormData.attachments];
+                              updatedAttachments.splice(index, 1);
+                              setEditedApplicationFormData(prev => ({ ...prev, attachments: updatedAttachments }));
+                            }}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: '#ef4444',
+                              marginLeft: '10px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                              <line x1="18" y1="6" x2="6" y2="18"></line>
+                              <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
 
 
               <div style={modalFormFieldGroupStyle}>
@@ -2701,100 +2964,92 @@ const EmployeeData = () => {
         </Modal>
       )}
 
-{viewedFile && (
-  <Modal show={showViewFileModal} onHide={() => setShowViewFileModal(false)} size="lg" centered>
-    <Modal.Header closeButton style={modalHeaderStyle}>
-      <Modal.Title style={modalTitleStyle}>File Viewer: {viewedFile.name}</Modal.Title>
-    </Modal.Header>
-    <Modal.Body style={modalBodyStyle}>
-      <div style={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        alignItems: 'center', 
-        gap: '20px',
-        minHeight: '300px',
-        justifyContent: 'center'
-      }}>
-        {/* Conditional rendering for image vs. generic file icon */}
-        {viewedFile.type === 'interview screenshot' && viewedFile.imageUrl ? (
-          <img 
-            src={viewedFile.imageUrl} 
-            alt={viewedFile.name} 
-            style={{ 
-              maxWidth: '100%', 
-              maxHeight: '400px', 
-              objectFit: 'contain', 
-              borderRadius: '8px',
-              boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
-            }} 
-            onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/600x400/FF0000/FFFFFF?text=Image+Load+Error'; }} // Fallback image on error
-          />
-        ) : (
-          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">
-            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
-            <polyline points="13 2 13 9 20 9"></polyline>
-          </svg>
-        )}
-        <p style={{ color: '#64748b' }}>
-          {viewedFile.type === 'interview screenshot' ? 'Image preview' : 'File preview'} not available in demo
-        </p>
-        <button 
-            style={{
-              background: '#3b82f6',
-              color: 'white',
-              padding: '10px 20px',
-              borderRadius: '8px',
-              textDecoration: 'none',
-              border: 'none',
-              cursor: 'pointer'
-            }}
-            onClick={() => alert(`Downloading ${viewedFile.name}... (Demo mode)`)}
-          >
-            Download File (Demo)
-          </button>
-      </div>
-      
-      <div style={{ 
-        marginTop: '20px',
-        padding: '15px',
-        background: '#f8fafc',
-        borderRadius: '8px'
-      }}>
-        <p style={{ marginBottom: '10px' }}><strong>File Details:</strong></p>
-        <div style={modalViewDetailsGridStyle}>
-          <p style={modalViewDetailItemStyle}><strong>File Name:</strong> {viewedFile.name}</p>
-          <p style={modalViewDetailItemStyle}><strong>File Type:</strong> {viewedFile.type}</p>
-          <p style={modalViewDetailItemStyle}><strong>File Size:</strong> {viewedFile.size}</p>
-          <p style={modalViewDetailItemStyle}><strong>Upload Date:</strong> {viewedFile.uploadDate}</p>
-          {viewedFile.notes && (
-            <p style={{ ...modalViewDetailItemStyle, gridColumn: '1 / -1' }}>
-              <strong>Notes:</strong> {viewedFile.notes}
-            </p>
-          )}
-        </div>
-      </div>
-    </Modal.Body>
-    <Modal.Footer style={modalFooterStyle}>
-      <button
-        onClick={() => {
-          setShowViewFileModal(false);
-          if (viewedApplication) {
-            setShowViewApplicationModal(true);
-          }
-        }}
-        style={modalCancelButtonStyle}
-      >
-        Back to Application
-      </button>
-      <button
-        onClick={() => setShowViewFileModal(false)}
-        style={modalCancelButtonStyle}
-      >
-        Close
-      </button>
-    </Modal.Footer>
-  </Modal>
-)}
+      {viewedFile && (
+        <Modal show={showViewFileModal} onHide={() => setShowViewFileModal(false)} size="lg" centered>
+          <Modal.Header closeButton style={modalHeaderStyle}>
+            <Modal.Title style={modalTitleStyle}>File Viewer: {viewedFile.name}</Modal.Title>
+          </Modal.Header>
+          <Modal.Body style={modalBodyStyle}>
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '20px',
+              minHeight: '300px',
+              justifyContent: 'center'
+            }}>
+              {/* File preview content - simplified to just show file info */}
+              <div style={{
+                width: '100%',
+                textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '15px'
+              }}>
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">
+                  <path d="M13 2H6a2 2 0 0 0-2 2v16a2 0 0 0 2 2h12a2 0 0 0 2-2V9z"></path>
+                  <polyline points="13 2 13 9 20 9"></polyline>
+                </svg>
+                <p style={{ color: '#64748b' }}>File preview not available in demo</p>
+                <button
+                  style={{
+                    background: '#3b82f6',
+                    color: 'white',
+                    padding: '10px 20px',
+                    borderRadius: '8px',
+                    textDecoration: 'none',
+                    border: 'none',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => alert(`Downloading ${viewedFile.name}... (Demo mode)`)}
+                >
+                  Download File (Demo)
+                </button>
+              </div>
+            </div>
+
+            <div style={{
+              marginTop: '20px',
+              padding: '15px',
+              background: '#f8fafc',
+              borderRadius: '8px'
+            }}>
+              <p style={{ marginBottom: '10px' }}><strong>File Details:</strong></p>
+              <div style={modalViewDetailsGridStyle}>
+                <p style={modalViewDetailItemStyle}><strong>File Name:</strong> {viewedFile.name}</p>
+                <p style={modalViewDetailItemStyle}><strong>File Type:</strong> {viewedFile.type}</p>
+                <p style={modalViewDetailItemStyle}><strong>File Size:</strong> {viewedFile.size}</p>
+                <p style={modalViewDetailItemStyle}><strong>Upload Date:</strong> {viewedFile.uploadDate}</p>
+                {viewedFile.notes && (
+                  <p style={{ ...modalViewDetailItemStyle, gridColumn: '1 / -1' }}>
+                    <strong>Notes:</strong> {viewedFile.notes}
+                  </p>
+                )}
+              </div>
+            </div>
+          </Modal.Body>
+          <Modal.Footer style={modalFooterStyle}>
+            <button
+              onClick={() => {
+                setShowViewFileModal(false);
+                if (viewedApplication) {
+                  setShowViewApplicationModal(true);
+                }
+              }}
+              style={modalCancelButtonStyle}
+            >
+              Back to Application
+            </button>
+            <button
+              onClick={() => setShowViewFileModal(false)}
+              style={modalCancelButtonStyle}
+            >
+              Close
+            </button>
+          </Modal.Footer>
+        </Modal>
+      )}
 
       {/* Edit File Details Modal */}
       {editedFileFormData && (
@@ -2891,6 +3146,150 @@ const EmployeeData = () => {
         </Modal>
       )}
 
+      {/* Employee Profile Details Modal */}
+      <Modal show={showEmployeeProfileModal} onHide={() => setShowEmployeeProfileModal(false)} size="md" centered>
+        <Modal.Header closeButton style={modalHeaderStyle}>
+          <Modal.Title style={modalTitleStyle}>Employee Profile</Modal.Title>
+        </Modal.Header>
+        <Modal.Body style={modalBodyStyle}>
+          {isEditingProfile ? (
+            // Edit Mode
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}> {/* Changed to flex column for one-by-one */}
+              <div style={modalFormFieldGroupStyle}>
+                <label style={modalLabelStyle}>Name <span style={{ color: 'red' }}>*</span></label>
+                <input
+                  type="text"
+                  name="name"
+                  value={editedEmployeeDetails.name}
+                  onChange={handleProfileFormChange}
+                  style={modalInputStyle}
+                  required
+                />
+              </div>
+              <div style={modalFormFieldGroupStyle}>
+                <label style={modalLabelStyle}>Employee ID</label>
+                <input
+                  type="text"
+                  name="employeeId"
+                  value={editedEmployeeDetails.employeeId}
+                  style={modalInputStyle}
+                  disabled // Employee ID is not editable
+                />
+              </div>
+              <div style={modalFormFieldGroupStyle}>
+                <label style={modalLabelStyle}>Email <span style={{ color: 'red' }}>*</span></label>
+                <input
+                  type="email"
+                  name="email"
+                  value={editedEmployeeDetails.email}
+                  onChange={handleProfileFormChange}
+                  style={modalInputStyle}
+                  required
+                />
+              </div>
+              <div style={modalFormFieldGroupStyle}>
+                <label style={modalLabelStyle}>Mobile No. <span style={{ color: 'red' }}>*</span></label>
+                <input
+                  type="text"
+                  name="mobile"
+                  value={editedEmployeeDetails.mobile}
+                  onChange={handleProfileFormChange}
+                  style={modalInputStyle}
+                  required
+                />
+              </div>
+              <div style={modalFormFieldGroupStyle}>
+                <label style={modalLabelStyle}>Last Login</label>
+                <input
+                  type="text"
+                  name="lastLogin"
+                  value={editedEmployeeDetails.lastLogin}
+                  style={modalInputStyle}
+                  disabled // Last Login is not editable
+                />
+              </div>
+            </div>
+          ) : (
+            // View Mode
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}> {/* Changed to flex column for one-by-one */}
+              <p style={modalViewDetailItemStyle}><strong>Name:</strong> {employeeDetails.name}</p>
+              <p style={modalViewDetailItemStyle}><strong>Employee ID:</strong> {employeeDetails.employeeId}</p>
+              <p style={modalViewDetailItemStyle}><strong>Email:</strong> {employeeDetails.email}</p>
+              <p style={modalViewDetailItemStyle}><strong>Mobile No.:</strong> {employeeDetails.mobile}</p>
+              <p style={modalViewDetailItemStyle}><strong>Last Login:</strong> {employeeDetails.lastLogin}</p>
+            </div>
+          )}
+        </Modal.Body>
+        <Modal.Footer style={modalFooterStyle}>
+          {isEditingProfile ? (
+            <>
+              <button
+                onClick={handleCancelEditProfile}
+                style={modalCancelButtonStyle}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveProfileChanges}
+                style={modalAddButtonPrimaryStyle}
+              >
+                Save Changes
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => setIsEditingProfile(true)}
+                style={modalAddButtonPrimaryStyle} // Reusing primary style for edit button
+              >
+                Edit Profile
+              </button>
+              <button
+                onClick={() => setShowEmployeeProfileModal(false)}
+                style={modalCancelButtonStyle}
+              >
+                Close
+              </button>
+            </>
+          )}
+        </Modal.Footer>
+      </Modal>
+
+      {/* Notification Modal (New from screenshot) */}
+      <Modal show={showNotificationModal} onHide={() => setShowNotificationModal(false)} centered className="notification-modal">
+        <Modal.Header>
+          <Modal.Title>Notifications</Modal.Title>
+          <button
+            type="button"
+            className="btn-close-custom"
+            aria-label="Close"
+            onClick={() => setShowNotificationModal(false)}
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </Modal.Header>
+        <Modal.Body>
+          {notifications.length === 0 ? (
+            <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
+              No new notifications.
+            </div>
+          ) : (
+            <div>
+              {notifications.map(notification => (
+                <div key={notification.id} className="notification-item">
+                  <p className="notification-item-title">{notification.title}</p>
+                  <p className="notification-item-description">{notification.description}</p>
+                  <p className="notification-item-time">{notification.timeAgo}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </Modal.Body>
+      </Modal>
+
     </div>
   );
 };
@@ -2901,22 +3300,23 @@ const containerStyle = {
   background: '#f8fafc',
   color: '#1e293b',
   minHeight: '100vh',
-  padding: '0',
+  padding: '0', // Removed padding-top here
 };
 
-const headerStyle = {
+const headerContentStyle = { // New style for the content under AdminHeader
   marginBottom: '32px',
   display: 'flex',
-  flexDirection: 'column', // Stack children vertically
-  alignItems: 'flex-start', // Align children (including tabs) to the left
+  flexDirection: 'column',
+  alignItems: 'flex-start',
   gap: '20px',
-  width: '100%', // Ensure the header takes full width to allow centering of its child
+  width: '100%',
+  paddingTop: '32px', // Added padding-top here to move content down
 };
 
 const headerTitleStyle = {
-  width: '100%', // Make the title container take full width
-  textAlign: 'center', // Center the text content within this container
-  marginBottom: '10px', // Add some space below the title
+  width: '100%',
+  textAlign: 'center',
+  marginBottom: '10px',
 };
 
 const tabsContainerStyle = {
@@ -2927,12 +3327,13 @@ const tabsContainerStyle = {
   padding: '6px',
   boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
   border: '1px solid #e2e8f0',
-  flexWrap: 'wrap', // Allow tabs to wrap on smaller screens
-  justifyContent: 'center', // Center tabs if they wrap
+  flexWrap: 'wrap',
+  justifyContent: 'flex-start',
+  marginLeft: '20px', // Move tabs slightly to the right
 };
 
 const tabButtonStyle = {
-  backgroundColor: 'transparent', // Changed from 'background: none' to fix the warning
+  backgroundColor: 'transparent',
   border: 'none',
   padding: '10px 18px',
   borderRadius: '6px',
@@ -3004,6 +3405,7 @@ const sectionTitleStyle = {
   fontWeight: '600',
   color: '#1e293b',
   marginBottom: '24px',
+  // textAlign: 'center', // Added for centering the title
 };
 
 const clientsGridStyle = {
@@ -3172,6 +3574,7 @@ const filterContainerStyle = {
   marginBottom: '32px',
   paddingBottom: '24px',
   borderBottom: '1px solid #f1f5f9',
+  alignItems: 'flex-end', // Align items to the bottom
 };
 
 const filterGroupStyle = {
@@ -3209,10 +3612,28 @@ const selectFilterStyle = {
   color: '#1e293b',
   backgroundColor: '#ffffff',
   appearance: 'none', // Remove default arrow
-  backgroundImage: `url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20512%22%3E%3Cpath%20fill%3D%22%23475569%22%20d%3D%22M192%20256L64%20128v256l128-128z%22%2F%3E%3C%2Fsvg%3E')`,
+  // Updated SVG for down arrow
+  backgroundImage: `url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20320%20512%22%3E%3Cpath%20fill%3D%22%23475569%22%20d%3D%22M143%20352.3L7.7%20199.7c-4.7-4.7-12.3-4.7-17%200l-19.4%2019.4c-4.7%204.7-4.7%2012.3%200%2017L159%20448.3c9.4%209.4%2024.6%209.4%2033.9%200l151.3-151.3c4.7-4.7%204.7-12.3%200-17l-19.4-19.4c-4.7-4.7-12.3-4.7-17%200L160%20352.3c-9.4%209.4-24.6%209.4-33.9%200z%22%2F%3E%3C%2Fsvg%3E')`,
   backgroundRepeat: 'no-repeat',
   backgroundPosition: 'right 12px center',
   backgroundSize: '10px',
+  width: '100%', // Ensure it takes full width of its grid column
+  maxWidth: '250px', // Increased max-width for dropdowns
+};
+
+const selectClientDropdownStyle = { // New style for the specific client dropdown
+  padding: '8px 25px',
+  border: '1px solid #cbd5e1',
+  borderRadius: '6px',
+  fontSize: '0.9rem',
+  color: '#1e293b',
+  backgroundColor: '#ffffff',
+  appearance: 'none', // Remove default arrow
+  backgroundImage: `url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20320%20512%22%3E%3Cpath%20fill%3D%22%23475569%22%20d%3D%22M143%20352.3L7.7%20199.7c-4.7-4.7-12.3-4.7-17%200l-19.4%2019.4c-4.7%204.7-4.7%2012.3%200%2017L159%20448.3c9.4%209.4%2024.6%209.4%2033.9%200l151.3-151.3c4.7-4.7%204.7-12.3%200-17l-19.4-19.4c-4.7-4.7-12.3-4.7-17%200L160%20352.3c-9.4%209.4-24.6%209.4-33.9%200z%22%2F%3E%3C%2Fsvg%3E')`,
+  backgroundRepeat: 'no-repeat',
+  backgroundPosition: 'right 12px center',
+  backgroundSize: '10px',
+  width: '250px', // Increased width for this specific dropdown
 };
 
 const quickFilterButtonsStyle = {
@@ -3238,6 +3659,15 @@ const quickFilterButtonActiveStyle = {
   color: '#ffffff',
 };
 
+const clearFiltersButtonContainerStyle = { // New style for positioning
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '8px',
+  marginLeft: 'auto', // Push to the right
+  gridColumn: 'span 1', // Ensure it takes its own grid column
+  justifySelf: 'end', // Align to the end of its grid area
+};
+
 const clearFiltersButtonStyle = {
   background: '#fef2f2',
   color: '#ef4444',
@@ -3251,6 +3681,9 @@ const clearFiltersButtonStyle = {
   display: 'flex',
   alignItems: 'center',
   gap: '8px',
+  whiteSpace: 'nowrap', // Prevent text wrapping
+  justifyContent: 'center',
+  minWidth: '150px',
 };
 
 const clientApplicationsContainerStyle = {
@@ -3326,7 +3759,8 @@ const statusFilterSelectStyle = {
   color: '#1e293b',
   backgroundColor: '#ffffff',
   appearance: 'none',
-  backgroundImage: `url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20512%22%3E%3Cpath%20fill%3D%22%23475569%22%20d%3D%22M192%20256L64%20128v256l128-128z%22%2F%3E%3C%2Fsvg%3E')`,
+  // Updated SVG for down arrow
+  backgroundImage: `url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20320%20512%22%3E%3Cpath%20fill%3D%22%23475569%22%20d%3D%22M143%20352.3L7.7%20199.7c-4.7-4.7-12.3-4.7-17%200l-19.4%2019.4c-4.7%204.7-4.7%2012.3%200%2017L159%20448.3c9.4%209.4%2024.6%209.4%2033.9%200l151.3-151.3c4.7-4.7%204.7-12.3%200-17l-19.4-19.4c-4.7-4.7-12.3-4.7-17%200L160%20352.3c-9.4%209.4-24.6%209.4-33.9%200z%22%2F%3E%3C%2Fsvg%3E')`,
   backgroundRepeat: 'no-repeat',
   backgroundPosition: 'right 12px center',
   backgroundSize: '10px',
@@ -3393,7 +3827,7 @@ const actionButtonAppStyle = {
   padding: '6px',
   borderRadius: '4px',
   cursor: 'pointer',
-  color: '#64748b',
+  color: '#1e293b',
   marginRight: '4px',
   transition: 'color 0.2s, background-color 0.2s',
 };
@@ -3436,7 +3870,8 @@ const editableSelectStyle = {
   fontSize: '0.9rem',
   backgroundColor: '#ffffff',
   appearance: 'none',
-  backgroundImage: `url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20512%22%3E%3Cpath%20fill%3D%22%23475569%22%20d%3D%22M192%20256L64%20128v256l128-128z%22%2F%3E%3C%2Fsvg%3E')`,
+  // Updated SVG for down arrow
+  backgroundImage: `url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20320%20512%22%3E%3Cpath%20fill%3D%22%23475569%22%20d%3D%22M143%20352.3L7.7%20199.7c-4.7-4.7-12.3-4.7-17%200l-19.4%2019.4c-4.7%204.7-4.7%2012.3%200%2017L159%20448.3c9.4%209.4%2024.6%209.4%2033.9%200l151.3-151.3c4.7-4.7%204.7-12.3%200-17l-19.4-19.4c-4.7-4.7-12.3-4.7-17%200L160%20352.3c-9.4%209.4-24.6%209.4-33.9%200z%22%2F%3E%3C%2Fsvg%3E')`,
   backgroundRepeat: 'no-repeat',
   backgroundPosition: 'right 8px center',
   backgroundSize: '8px',
@@ -3554,7 +3989,8 @@ const editableSelectSmallStyle = {
   fontSize: '0.75rem',
   backgroundColor: '#ffffff',
   appearance: 'none',
-  backgroundImage: `url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20512%22%3E%3Cpath%20fill%3D%22%23475569%22%20d%3D%22M192%20256L64%20128v256l128-128z%22%2F%3E%3C%2Fsvg%3E')`,
+  // Updated SVG for down arrow
+  backgroundImage: `url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20320%20512%22%3E%3Cpath%20fill%3D%22%23475569%22%20d%3D%22M143%20352.3L7.7%20199.7c-4.7-4.7-12.3-4.7-17%200l-19.4%2019.4c-4.7%204.7-4.7%2012.3%200%2017L159%20448.3c9.4%209.4%2024.6%209.4%2033.9%200l151.3-151.3c4.7-4.7%204.7-12.3%200-17l-19.4-19.4c-4.7-4.7-12.3-4.7-17%200L160%20352.3c-9.4%209.4-24.6%209.4-33.9%200z%22%2F%3E%3C%2Fsvg%3E')`,
   backgroundRepeat: 'no-repeat',
   backgroundPosition: 'right 4px center',
   backgroundSize: '6px',
@@ -3714,11 +4150,10 @@ const modalInputStyle = {
 };
 
 const modalSelectStyle = {
-  // Fix for "modalSelectStyle is not defined" error: This was already correctly defined here.
-  // The previous error might have been due to a partial code generation or a browser caching issue.
   ...modalInputStyle,
   appearance: 'none',
-  backgroundImage: `url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20512%22%3E%3Cpath%20fill%3D%22%23475569%22%20d%3D%22M192%20256L64%20128v256l128-128z%22%2F%3E%3C%2Fsvg%3E')`,
+  // Updated SVG for down arrow
+  backgroundImage: `url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20320%20512%22%3E%3Cpath%20fill%3D%22%23475569%22%20d%3D%22M143%20352.3L7.7%20199.7c-4.7-4.7-12.3-4.7-17%200l-19.4%2019.4c-4.7%204.7-4.7%2012.3%200%2017L159%20448.3c9.4%209.4%2024.6%209.4%2033.9%200l151.3-151.3c4.7-4.7%204.7-12.3%200-17l-19.4-19.4c-4.7-4.7-12.3-4.7-17%200L160%20352.3c-9.4%209.4-24.6%209.4-33.9%200z%22%2F%3E%3C%2Fsvg%3E')`,
   backgroundRepeat: 'no-repeat',
   backgroundPosition: 'right 12px center',
   backgroundSize: '10px',
@@ -3763,8 +4198,9 @@ const modalAddButtonPrimaryStyle = {
 };
 
 const modalViewDetailsGridStyle = {
-  display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
+  // Removed grid properties to make items stack one by one
+  // display: 'grid',
+  // gridTemplateColumns: '1fr 1fr',
   gap: '10px 20px',
   fontSize: '0.95rem',
   color: '#333',
@@ -3855,6 +4291,7 @@ const clientSelectContainerStyle = {
   gap: '10px',
   marginBottom: '20px',
   flexWrap: 'wrap',
+  marginLeft: '20px', // Move client select slightly to the right
 };
 
 // --- NEW STYLES FOR CLIENT DATA TAB ---
