@@ -208,6 +208,281 @@ const ManagerWorkSheet = () => {
   const [interviewData, setInterviewData] = useState(initialInterviewData);
   const [applicationData, setApplicationData] = useState(initialApplicationData); // Now managed by state
 
+  // NEW: Comprehensive dummy data for client details (from EmployeeData.txt structure)
+  const mockDetailedClientsData = [
+    {
+      id: 201, // Corresponds to John Anderson in assignedClients
+      name: 'John Anderson',
+      firstName: 'John',
+      middleName: '',
+      lastName: 'Anderson',
+      dob: '1990-05-15',
+      gender: 'Male',
+      ethnicity: 'Caucasian',
+      address: '123 Main St, San Francisco, CA',
+      zipCode: '94105',
+      mobile: '123-456-7890',
+      email: 'john.anderson@example.com',
+      securityClearance: 'Yes',
+      clearanceLevel: 'Top Secret',
+      willingToRelocate: 'Yes',
+      workPreference: 'Hybrid',
+      restrictedCompanies: 'None',
+      jobsToApply: 'Frontend, Fullstack',
+      technologySkills: 'React, JavaScript, HTML, CSS, Node.js',
+      currentSalary: '$110,000',
+      expectedSalary: '$130,000',
+      visaStatus: 'H1B',
+      otherVisaStatus: '',
+      schoolName: 'University of California, Berkeley',
+      schoolAddress: 'Berkeley, CA',
+      schoolPhone: '555-123-4567',
+      courseOfStudy: 'Computer Science',
+      graduationDate: '2012-05-20',
+      currentCompany: 'WebTech Solutions',
+      currentDesignation: 'Senior Frontend Developer',
+      preferredInterviewTime: 'Morning',
+      earliestJoiningDate: '2025-08-01',
+      relievingDate: '2025-07-31',
+      referenceName: 'Jane Smith',
+      referencePhone: '555-987-6543',
+      referenceAddress: '456 Oak Ave',
+      referenceEmail: 'jane.smith@example.com',
+      referenceRole: 'Manager',
+      jobPortalAccountName: 'john.anderson.linkedin',
+      jobPortalCredentials: 'encrypted_password_123',
+      priority: 'high', // Added for consistency with other client data
+      status: 'interview', // Added for consistency with other client data
+      assignedTo: 'Sarah Johnson', // Added for consistency with other client data
+      assignedDate: '2024-11-15', // Added for consistency with other client data
+      skills: ['React', 'JavaScript', 'HTML', 'CSS', 'Node.js'], // Added for consistency
+      experience: '8 years experience', // Added for consistency
+      location: 'San Francisco, CA', // Added for consistency
+      salary: '$120,000 - $150,000', // Added for consistency
+      position: 'Senior Frontend Developer', // Added for consistency
+      company: 'TechFlow Inc', // Added for consistency
+      round: '1st Round', // Example for interview data
+      date: '2025-07-08', // Example for interview data
+    },
+    {
+      id: 8, // Corresponds to Sarah Mitchell in initialUnassignedClientsData
+      name: 'Sarah Mitchell',
+      firstName: 'Sarah',
+      middleName: 'Jane',
+      lastName: 'Mitchell',
+      dob: '1992-11-22',
+      gender: 'Female',
+      ethnicity: 'Asian',
+      address: '789 Pine St, Remote',
+      zipCode: '00000',
+      mobile: '987-654-3210',
+      email: 'sarah.m@example.com',
+      securityClearance: 'No',
+      clearanceLevel: '',
+      willingToRelocate: 'No',
+      workPreference: 'Remote',
+      restrictedCompanies: 'Acme Corp',
+      jobsToApply: 'UX, Product Design',
+      technologySkills: 'Figma, Sketch, Adobe XD, User Research',
+      currentSalary: '$85,000',
+      expectedSalary: '$100,000',
+      visaStatus: 'Green Card',
+      otherVisaStatus: '',
+      schoolName: 'ArtCenter College of Design',
+      schoolAddress: 'Pasadna, CA',
+      schoolPhone: '555-999-8888',
+      courseOfStudy: 'Product Design',
+      graduationDate: '2014-06-01',
+      currentCompany: 'DesignCo',
+      currentDesignation: 'Product Designer',
+      preferredInterviewTime: 'Afternoon',
+      earliestJoiningDate: '2025-09-01',
+      relievingDate: '2025-08-31',
+      referenceName: 'David Lee',
+      referencePhone: '555-111-2222',
+      referenceAddress: '101 Elm St',
+      referenceEmail: 'david.lee@example.com',
+      referenceRole: 'Colleague',
+      jobPortalAccountName: 'sarah.behance',
+      jobPortalCredentials: 'another_encrypted_password',
+      priority: 'medium',
+      status: 'applied',
+      assignedTo: 'Michael Chen', // Example assignment
+      assignedDate: '2024-12-10',
+      skills: ['UX Design', 'Figma', 'User Research'],
+      experience: '5 years experience',
+      remote: false,
+      salary: '$90,000 - $110,000',
+      location: 'Remote',
+      jobTitle: 'UX Designer',
+      company: 'DesignCorp',
+    },
+    {
+      id: 9, // Corresponds to Michael Chen in initialUnassignedClientsData
+      name: 'Michael Chen',
+      firstName: 'Michael',
+      middleName: '',
+      lastName: 'Chen',
+      dob: '1988-03-10',
+      gender: 'Male',
+      ethnicity: 'Asian',
+      address: '456 Elm St, New York, NY',
+      zipCode: '10001',
+      mobile: '111-222-3333',
+      email: 'michael.c@example.com',
+      securityClearance: 'No',
+      clearanceLevel: '',
+      willingToRelocate: 'Yes',
+      workPreference: 'On-site',
+      restrictedCompanies: '',
+      jobsToApply: 'Data Analyst, BI Developer',
+      technologySkills: 'Python, SQL, Tableau, Excel',
+      currentSalary: '$95,000',
+      expectedSalary: '$110,000',
+      visaStatus: 'H1B',
+      otherVisaStatus: '',
+      schoolName: 'New York University',
+      schoolAddress: 'New York, NY',
+      schoolPhone: '555-444-5555',
+      courseOfStudy: 'Data Science',
+      graduationDate: '2010-05-25',
+      currentCompany: 'Data Insights',
+      currentDesignation: 'Data Analyst',
+      preferredInterviewTime: 'Any',
+      earliestJoiningDate: '2025-07-15',
+      relievingDate: '2025-07-10',
+      referenceName: 'Chris Green',
+      referencePhone: '555-777-8888',
+      referenceAddress: '789 Maple St',
+      referenceEmail: 'chris.g@example.com',
+      referenceRole: 'Colleague',
+      jobPortalAccountName: 'michael.indeed',
+      jobPortalCredentials: 'another_strong_password',
+      priority: 'high',
+      status: 'applied',
+      assignedTo: 'Emily Rodriguez', // Example assignment
+      assignedDate: '2024-12-15',
+      skills: ['Data Analysis', 'SQL', 'Python (Pandas)'],
+      experience: '4 years experience',
+      remote: true,
+      salary: '$85,000 - $105,000',
+      location: 'New York, NY',
+      jobTitle: 'Data Analyst',
+      company: 'DataTech Solutions',
+    },
+    {
+      id: 205, // Corresponds to Alex Thompson in assignedClients
+      name: 'Alex Thompson',
+      firstName: 'Alex',
+      middleName: '',
+      lastName: 'Thompson',
+      dob: '1991-08-20',
+      gender: 'Male',
+      ethnicity: 'Caucasian',
+      address: '456 Elm St, Boston, MA',
+      zipCode: '02108',
+      mobile: '555-123-4567',
+      email: 'alex.t@example.com',
+      securityClearance: 'No',
+      clearanceLevel: '',
+      willingToRelocate: 'Yes',
+      workPreference: 'Hybrid',
+      restrictedCompanies: '',
+      jobsToApply: 'Full Stack, Backend',
+      technologySkills: 'Node.js, Express, PostgreSQL, React',
+      currentSalary: '$105,000',
+      expectedSalary: '$130,000',
+      visaStatus: 'US Citizen',
+      otherVisaStatus: '',
+      schoolName: 'MIT',
+      schoolAddress: 'Cambridge, MA',
+      schoolPhone: '555-987-6543',
+      courseOfStudy: 'Computer Science',
+      graduationDate: '2013-05-30',
+      currentCompany: 'StartupXYZ',
+      currentDesignation: 'Full Stack Developer',
+      preferredInterviewTime: 'Any',
+      earliestJoiningDate: '2025-08-15',
+      relievingDate: '2025-08-10',
+      referenceName: 'Mark Johnson',
+      referencePhone: '555-333-2222',
+      referenceAddress: '123 Pine St',
+      referenceEmail: 'mark.j@example.com',
+      referenceRole: 'Colleague',
+      jobPortalAccountName: 'alex.linkedin',
+      jobPortalCredentials: 'password_abc',
+      priority: 'medium',
+      status: 'applied',
+      assignedTo: 'Sarah Johnson',
+      assignedDate: '2024-11-20',
+      skills: ['Node.js', 'Express', 'PostgreSQL', 'React'],
+      experience: '7 years experience',
+      remote: false,
+      salary: '$110,000 - $140,000',
+      location: 'Boston, MA',
+      jobTitle: 'Full Stack Developer',
+      company: 'StartupXYZ',
+      round: '2nd Round',
+      date: '2025-07-06',
+    },
+    {
+      id: 208, // Corresponds to Maria Rodriguez in assignedClients
+      name: 'Maria Rodriguez',
+      firstName: 'Maria',
+      middleName: '',
+      lastName: 'Rodriguez',
+      dob: '1993-02-28',
+      gender: 'Female',
+      ethnicity: 'Hispanic',
+      address: '789 Oak Ave, Denver, CO',
+      zipCode: '80202',
+      mobile: '777-888-9999',
+      email: 'maria.r@example.com',
+      securityClearance: 'No',
+      clearanceLevel: '',
+      willingToRelocate: 'No',
+      workPreference: 'On-site',
+      restrictedCompanies: 'Google',
+      jobsToApply: 'Frontend, UI Developer',
+      technologySkills: 'React, Redux, JavaScript, CSS',
+      currentSalary: '$90,000',
+      expectedSalary: '$110,000',
+      visaStatus: 'Green Card',
+      otherVisaStatus: '',
+      schoolName: 'University of Colorado Denver',
+      schoolAddress: 'Denver, CO',
+      schoolPhone: '555-666-7777',
+      courseOfStudy: 'Web Development',
+      graduationDate: '2015-05-15',
+      currentCompany: 'WebDev Inc',
+      currentDesignation: 'React Developer',
+      preferredInterviewTime: 'Morning',
+      earliestJoiningDate: '2025-09-01',
+      relievingDate: '2025-08-31',
+      referenceName: 'Carlos Sanchez',
+      referencePhone: '555-111-0000',
+      referenceAddress: '321 Cedar St',
+      referenceEmail: 'carlos.s@example.com',
+      referenceRole: 'Team Lead',
+      jobPortalAccountName: 'maria.webdev',
+      jobPortalCredentials: 'secure_password',
+      priority: 'high',
+      status: 'applied',
+      assignedTo: 'Sarah Johnson',
+      assignedDate: '2024-11-28',
+      skills: ['React', 'Redux', 'JavaScript', 'CSS'],
+      experience: '6 years experience',
+      remote: false,
+      salary: '$95,000 - $115,000',
+      location: 'Denver, CO',
+      jobTitle: 'React Developer',
+      company: 'WebDev Inc',
+      round: '2nd Round',
+      date: '2025-07-11',
+    },
+    // Add more detailed clients as needed, ensuring unique IDs and names
+  ];
+
 
   // Effect to update userAvatarLetter when userName changes (if it were dynamic)
   useEffect(() => {
@@ -512,13 +787,20 @@ const ManagerWorkSheet = () => {
 
   // NEW: Function to open Client Preview Modal
   const openClientPreviewModal = (clientName) => {
-    // Prioritize searching in assignedClients and unassignedClients for full profiles
-    let client = assignedClients.find(c => c.clientName === clientName);
+    // First, try to find the client in the comprehensive detailed data
+    let client = mockDetailedClientsData.find(c => c.name === clientName || c.clientName === clientName);
+
+    // If not found in detailed data, try to find in assignedClients (which has some extended info)
     if (!client) {
-      client = unassignedClients.find(c => c.name === clientName);
+      client = assignedClients.find(c => c.clientName === clientName);
     }
 
-    // If still not found, check applicationData or interviewData and construct a basic profile
+    // If still not found, try to find in initialUnassignedClientsData (which has skills, experience)
+    if (!client) {
+      client = initialUnassignedClientsData.find(c => c.name === clientName);
+    }
+
+    // Fallback: If still not found, construct a basic profile from applicationData or interviewData
     if (!client) {
       const appClient = initialApplicationData.find(c => c.clientName === clientName);
       if (appClient) {
@@ -527,17 +809,16 @@ const ManagerWorkSheet = () => {
           clientName: appClient.clientName, // For consistency with assignedClients structure
           jobTitle: appClient.jobTitle,
           company: appClient.company,
-          // Add default or N/A for other fields if they don't exist in appClient
-          priority: 'N/A',
+          priority: 'N/A', // Default if not found in detailed data
           experience: 'N/A',
           remote: 'N/A',
           email: 'N/A',
           salary: 'N/A',
           location: 'N/A',
-          assignedTo: appClient.employeeName, // Assuming the employee who applied is the 'assigned to'
-          status: 'applied', // Default status for application clients
+          assignedTo: appClient.employeeName,
+          status: 'applied',
           assignedDate: 'N/A',
-          skills: [], // No skills in application data
+          skills: [],
         };
       }
     }
@@ -547,32 +828,32 @@ const ManagerWorkSheet = () => {
       if (interviewClient) {
         client = {
           name: interviewClient.clientName,
-          clientName: interviewClient.clientName, // For consistency with assignedClients structure
+          clientName: interviewClient.clientName,
           jobTitle: interviewClient.jobTitle,
           company: interviewClient.company,
           round: interviewClient.round,
           date: interviewClient.date,
           status: interviewClient.status,
-          // Add default or N/A for other fields
           priority: 'N/A',
           experience: 'N/A',
           remote: 'N/A',
           email: 'N/A',
           salary: 'N/A',
           location: 'N/A',
-          assignedTo: interviewClient.employeeName, // Assuming the employee who set up interview is 'assigned to'
+          assignedTo: interviewClient.employeeName,
           assignedDate: 'N/A',
-          skills: [], // No skills in interview data
+          skills: [],
         };
       }
     }
-
 
     if (client) {
       setClientToPreview(client);
       setIsClientPreviewModalOpen(true);
     } else {
       console.warn(`Client with name "${clientName}" not found for preview.`);
+      // Optionally, show a user-friendly message if client is not found
+      alert(`Client details for "${clientName}" are not available.`);
     }
   };
 
@@ -760,6 +1041,14 @@ const ManagerWorkSheet = () => {
           --form-button-assign-bg: #007bff;
           --form-button-assign-color: #ffffff;
           --form-button-assign-hover-bg: #0056b3;
+
+          /* Client Preview Modal New Styles */
+          --client-preview-grid-gap: 20px;
+          --client-preview-section-bg: #f8f9fa;
+          --client-preview-section-border: #e0e0e0;
+          --client-preview-section-title-color: #007bff;
+          --client-preview-detail-label-color: #6c757d;
+          --client-preview-detail-value-color: #333;
         }
 
         [data-theme='dark'] {
@@ -893,6 +1182,13 @@ const ManagerWorkSheet = () => {
           --form-button-assign-bg: #0056b3;
           --form-button-assign-color: #ffffff;
           --form-button-assign-hover-bg: #007bff;
+
+          /* Client Preview Modal New Styles (Dark Theme) */
+          --client-preview-section-bg: #3a3a3a;
+          --client-preview-section-border: #555555;
+          --client-preview-section-title-color: #66b3ff;
+          --client-preview-detail-label-color: #bbbbbb;
+          --client-preview-detail-value-color: #e0e0e0;
         }
 
         body {
@@ -1978,7 +2274,7 @@ const ManagerWorkSheet = () => {
             border-radius: 12px;
             box-shadow: 0 8px 20px var(--card-shadow);
             width: 90%;
-            max-width: 500px; /* Adjusted max-width for this modal */
+            max-width: 1200px; /* Adjusted max-width for this modal */
             position: relative;
             display: flex;
             flex-direction: column;
@@ -2302,67 +2598,54 @@ const ManagerWorkSheet = () => {
             gap: 5px;
         }
 
+
         /* NEW: Client Preview Modal Specific Styles */
-        /* These styles are now largely handled by .modal-content and .modal-header */
-        /* .client-preview-modal-content {
-            background-color: var(--modal-bg);
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 8px 20px var(--card-shadow);
-            width: 90%;
-            max-width: 600px;
-            position: relative;
+        .client-preview-grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--client-preview-grid-gap);
+        }
+
+        .client-preview-section {
+            background-color: var(--client-preview-section-bg);
+            border: 1px solid var(--client-preview-section-border);
+            border-radius: 8px;
+            padding: 15px;
             display: flex;
             flex-direction: column;
-            gap: 20px;
-            border: 1px solid var(--modal-border-color);
-            transition: background-color 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
-            max-height: 90vh;
-            overflow-y: auto;
+            gap: 10px;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
         }
 
-        .client-preview-modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-bottom: 15px;
-            border-bottom: 1px solid var(--header-border-color);
-        }
-
-        .client-preview-modal-title {
-            font-size: 20px;
+        .client-preview-section-title {
+            font-size: 16px;
             font-weight: 600;
-            color: var(--modal-header-color);
-        } */
-
-        .client-preview-details-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 15px;
-        }
-
-        @media (min-width: 480px) {
-            .client-preview-details-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
+            color: var(--client-preview-section-title-color);
+            margin-bottom: 5px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--client-preview-section-border);
+            transition: color 0.3s ease, border-color 0.3s ease;
         }
 
         .client-preview-detail-item {
             display: flex;
             flex-direction: column;
-            gap: 5px;
+            gap: 2px;
         }
 
         .client-preview-detail-label {
             font-size: 13px;
-            color: var(--subtitle-color);
+            color: var(--client-preview-detail-label-color);
             font-weight: 500;
+            transition: color 0.3s ease;
         }
 
         .client-preview-detail-value {
             font-size: 15px;
-            color: var(--text-color);
+            color: var(--client-preview-detail-value-color);
             font-weight: 600;
+            word-break: break-word; /* Ensure long values wrap */
+            transition: color 0.3s ease;
         }
 
         .client-preview-skills-section {
@@ -2432,6 +2715,10 @@ const ManagerWorkSheet = () => {
             }
             .total-clients-table {
                 min-width: 600px; /* Still need some min-width for all columns */
+            }
+
+            .client-preview-grid-container {
+                grid-template-columns: 1fr; /* Single column on small screens */
             }
         }
 
@@ -2596,9 +2883,9 @@ const ManagerWorkSheet = () => {
             <span className="notification-badge">3</span>
           </button>
           {/* Theme toggle button - moved next to notification */}
-          <button className="header-button" onClick={toggleTheme}>
+          {/* <button className="header-button" onClick={toggleTheme}>
             <i className={theme === 'light' ? 'fas fa-moon' : 'fas fa-sun'}></i>
-          </button>
+          </button> */}
           {/* User Profile with Dropdown */}
           <div className="user-profile" onClick={toggleProfileDropdown} ref={profileDropdownRef}>
             <div className='user-info'>
@@ -3322,101 +3609,276 @@ const ManagerWorkSheet = () => {
       {/* NEW: Client Preview Modal */}
       {isClientPreviewModalOpen && clientToPreview && (
         <div className="modal-overlay">
-          <div className="assign-modal-content"> {/* Changed to assign-modal-content for consistent styling */}
-            <div className="assign-modal-header"> {/* Changed to assign-modal-header for consistent styling */}
-              <h3 className="assign-modal-title">Client Details: {clientToPreview.name || clientToPreview.clientName}</h3> {/* Changed to assign-modal-title */}
+          <div className="assign-modal-content">
+            <div className="assign-modal-header">
+              <h3 className="assign-modal-title">Client Details: {clientToPreview.name || clientToPreview.clientName}</h3>
               <button className="assign-modal-close-button" onClick={closeClientPreviewModal}>
                 <i className="fas fa-times"></i>
               </button>
             </div>
 
-            <div className="client-preview-details-grid">
+            {/* Comprehensive Client Details Grid */}
+            <div className="client-preview-grid-container">
+              {/* Personal Information */}
+              <div className="client-preview-section">
+                <h4 className="client-preview-section-title">Personal Information</h4>
                 <div className="client-preview-detail-item">
-                    <span className="client-preview-detail-label">Name</span>
-                    <span className="client-preview-detail-value">{clientToPreview.name || clientToPreview.clientName}</span>
+                  <span className="client-preview-detail-label">First Name</span>
+                  <span className="client-preview-detail-value">{clientToPreview.firstName || '-'}</span>
                 </div>
-                {clientToPreview.priority && (
-                    <div className="client-preview-detail-item">
-                        <span className="client-preview-detail-label">Priority</span>
-                        <span className={`modal-client-priority-badge ${clientToPreview.priority}`}>
-                            {clientToPreview.priority.charAt(0).toUpperCase() + clientToPreview.priority.slice(1)} Priority
-                        </span>
-                    </div>
+                <div className="client-preview-detail-item">
+                  <span className="client-preview-detail-label">Middle Name</span>
+                  <span className="client-preview-detail-value">{clientToPreview.middleName || '-'}</span>
+                </div>
+                <div className="client-preview-detail-item">
+                  <span className="client-preview-detail-label">Last Name</span>
+                  <span className="client-preview-detail-value">{clientToPreview.lastName || '-'}</span>
+                </div>
+                <div className="client-preview-detail-item">
+                  <span className="client-preview-detail-label">Date of Birth</span>
+                  <span className="client-preview-detail-value">{clientToPreview.dob || '-'}</span>
+                </div>
+                <div className="client-preview-detail-item">
+                  <span className="client-preview-detail-label">Gender</span>
+                  <span className="client-preview-detail-value">{clientToPreview.gender || '-'}</span>
+                </div>
+                <div className="client-preview-detail-item">
+                  <span className="client-preview-detail-label">Ethnicity</span>
+                  <span className="client-preview-detail-value">{clientToPreview.ethnicity || '-'}</span>
+                </div>
+              </div>
+
+              {/* Contact Information */}
+              <div className="client-preview-section">
+                <h4 className="client-preview-section-title">Contact Information</h4>
+                <div className="client-preview-detail-item">
+                  <span className="client-preview-detail-label">Address</span>
+                  <span className="client-preview-detail-value">{clientToPreview.address || '-'}</span>
+                </div>
+                <div className="client-preview-detail-item">
+                  <span className="client-preview-detail-label">Zip Code</span>
+                  <span className="client-preview-detail-value">{clientToPreview.zipCode || '-'}</span>
+                </div>
+                <div className="client-preview-detail-item">
+                  <span className="client-preview-detail-label">Mobile</span>
+                  <span className="client-preview-detail-value">{clientToPreview.mobile || '-'}</span>
+                </div>
+                <div className="client-preview-detail-item">
+                  <span className="client-preview-detail-label">Email</span>
+                  <span className="client-preview-detail-value">{clientToPreview.email || '-'}</span>
+                </div>
+              </div>
+
+              {/* Job Preferences & Status */}
+              <div className="client-preview-section">
+                <h4 className="client-preview-section-title">Job Preferences & Status</h4>
+                <div className="client-preview-detail-item">
+                  <span className="client-preview-detail-label">Security Clearance</span>
+                  <span className="client-preview-detail-value">{clientToPreview.securityClearance || '-'}</span>
+                </div>
+                {clientToPreview.clearanceLevel && (
+                  <div className="client-preview-detail-item">
+                    <span className="client-preview-detail-label">Clearance Level</span>
+                    <span className="client-preview-detail-value">{clientToPreview.clearanceLevel}</span>
+                  </div>
                 )}
-                {(clientToPreview.experience || clientToPreview.position || clientToPreview.jobTitle) && (
-                    <div className="client-preview-detail-item">
-                        <span className="client-preview-detail-label">
-                            {clientToPreview.experience ? 'Experience' : clientToPreview.position ? 'Position' : 'Job Title'}
-                        </span>
-                        <span className="client-preview-detail-value">
-                            {clientToPreview.experience || clientToPreview.position || clientToPreview.jobTitle}
-                        </span>
-                    </div>
+                <div className="client-preview-detail-item">
+                  <span className="client-preview-detail-label">Willing to Relocate</span>
+                  <span className="client-preview-detail-value">{clientToPreview.willingToRelocate || '-'}</span>
+                </div>
+                <div className="client-preview-detail-item">
+                  <span className="client-preview-detail-label">Work Preference</span>
+                  <span className="client-preview-detail-value">{clientToPreview.workPreference || '-'}</span>
+                </div>
+                <div className="client-preview-detail-item">
+                  <span className="client-preview-detail-label">Restricted Companies</span>
+                  <span className="client-preview-detail-value">{clientToPreview.restrictedCompanies || '-'}</span>
+                </div>
+                <div className="client-preview-detail-item">
+                  <span className="client-preview-detail-label">Jobs to Apply</span>
+                  <span className="client-preview-detail-value">{clientToPreview.jobsToApply || '-'}</span>
+                </div>
+                <div className="client-preview-detail-item">
+                  <span className="client-preview-detail-label">Technology Skills</span>
+                  <span className="client-preview-detail-value">{clientToPreview.technologySkills || '-'}</span>
+                </div>
+                <div className="client-preview-detail-item">
+                  <span className="client-preview-detail-label">Current Salary</span>
+                  <span className="client-preview-detail-value">{clientToPreview.currentSalary || '-'}</span>
+                </div>
+                <div className="client-preview-detail-item">
+                  <span className="client-preview-detail-label">Expected Salary</span>
+                  <span className="client-preview-detail-value">{clientToPreview.expectedSalary || '-'}</span>
+                </div>
+                <div className="client-preview-detail-item">
+                  <span className="client-preview-detail-label">Visa Status</span>
+                  <span className="client-preview-detail-value">{clientToPreview.visaStatus || '-'}</span>
+                </div>
+                {clientToPreview.otherVisaStatus && (
+                  <div className="client-preview-detail-item">
+                    <span className="client-preview-detail-label">Other Visa Status</span>
+                    <span className="client-preview-detail-value">{clientToPreview.otherVisaStatus}</span>
+                  </div>
                 )}
-                {(clientToPreview.remote !== undefined || clientToPreview.location) && (
-                    <div className="client-preview-detail-item">
-                        <span className="client-preview-detail-label">Location</span>
-                        <span className="client-preview-detail-value">
-                            {clientToPreview.remote ? 'Remote' : clientToPreview.location || 'N/A'}
-                        </span>
-                    </div>
-                )}
-                {clientToPreview.email && (
-                    <div className="client-preview-detail-item">
-                        <span className="client-preview-detail-label">Email</span>
-                        <span className="client-preview-detail-value">{clientToPreview.email}</span>
-                    </div>
-                )}
-                {clientToPreview.salary && (
-                    <div className="client-preview-detail-item">
-                        <span className="client-preview-detail-label">Salary Expectation</span>
-                        <span className="client-preview-detail-value">{clientToPreview.salary}</span>
-                    </div>
-                )}
-                {clientToPreview.company && (
-                    <div className="client-preview-detail-item">
-                        <span className="client-preview-detail-label">Company</span>
-                        <span className="client-preview-detail-value">{clientToPreview.company}</span>
-                    </div>
-                )}
-                {clientToPreview.assignedTo && (
-                    <div className="client-preview-detail-item">
-                        <span className="client-preview-detail-label">Assigned To</span>
-                        <span className="client-preview-detail-value">{clientToPreview.assignedTo}</span>
-                    </div>
-                )}
-                {clientToPreview.status && (
-                    <div className="client-preview-detail-item">
-                        <span className="client-preview-detail-label">Status</span>
-                        <span className={`status-badge status-${clientToPreview.status}`}>
-                            {clientToPreview.status.charAt(0).toUpperCase() + clientToPreview.status.slice(1)}
-                        </span>
-                    </div>
-                )}
-                {clientToPreview.assignedDate && (
-                    <div className="client-preview-detail-item">
-                        <span className="client-preview-detail-label">Assigned Date</span>
-                        <span className="client-preview-detail-value">{clientToPreview.assignedDate}</span>
-                    </div>
-                )}
-                {clientToPreview.round && (
-                    <div className="client-preview-detail-item">
-                        <span className="client-preview-detail-label">Interview Round</span>
-                        <span className="client-preview-detail-value">{clientToPreview.round}</span>
-                    </div>
-                )}
-                {clientToPreview.date && (
-                    <div className="client-preview-detail-item">
-                        <span className="client-preview-detail-label">Interview Date</span>
-                        <span className="client-preview-detail-value">{clientToPreview.date}</span>
-                    </div>
-                )}
+              </div>
+
+              {/* Education Details */}
+              <div className="client-preview-section">
+                <h4 className="client-preview-section-title">Education Details</h4>
+                <div className="client-preview-detail-item">
+                  <span className="client-preview-detail-label">School Name</span>
+                  <span className="client-preview-detail-value">{clientToPreview.schoolName || '-'}</span>
+                </div>
+                <div className="client-preview-detail-item">
+                  <span className="client-preview-detail-label">School Address</span>
+                  <span className="client-preview-detail-value">{clientToPreview.schoolAddress || '-'}</span>
+                </div>
+                <div className="client-preview-detail-item">
+                  <span className="client-preview-detail-label">School Phone</span>
+                  <span className="client-preview-detail-value">{clientToPreview.schoolPhone || '-'}</span>
+                </div>
+                <div className="client-preview-detail-item">
+                  <span className="client-preview-detail-label">Course of Study</span>
+                  <span className="client-preview-detail-value">{clientToPreview.courseOfStudy || '-'}</span>
+                </div>
+                <div className="client-preview-detail-item">
+                  <span className="client-preview-detail-label">Graduation Date</span>
+                  <span className="client-preview-detail-value">{clientToPreview.graduationDate || '-'}</span>
+                </div>
+              </div>
+
+              {/* Employment Details */}
+              <div className="client-preview-section">
+                <h4 className="client-preview-section-title">Employment Details</h4>
+                <div className="client-preview-detail-item">
+                  <span className="client-preview-detail-label">Current Company</span>
+                  <span className="client-preview-detail-value">{clientToPreview.currentCompany || '-'}</span>
+                </div>
+                <div className="client-preview-detail-item">
+                  <span className="client-preview-detail-label">Current Designation</span>
+                  <span className="client-preview-detail-value">{clientToPreview.currentDesignation || '-'}</span>
+                </div>
+                <div className="client-preview-detail-item">
+                  <span className="client-preview-detail-label">Preferred Interview Time</span>
+                  <span className="client-preview-detail-value">{clientToPreview.preferredInterviewTime || '-'}</span>
+                </div>
+                <div className="client-preview-detail-item">
+                  <span className="client-preview-detail-label">Earliest Joining Date</span>
+                  <span className="client-preview-detail-value">{clientToPreview.earliestJoiningDate || '-'}</span>
+                </div>
+                <div className="client-preview-detail-item">
+                  <span className="client-preview-detail-label">Relieving Date</span>
+                  <span className="client-preview-detail-value">{clientToPreview.relievingDate || '-'}</span>
+                </div>
+              </div>
+
+              {/* References */}
+              <div className="client-preview-section">
+                <h4 className="client-preview-section-title">References</h4>
+                <div className="client-preview-detail-item">
+                  <span className="client-preview-detail-label">Reference Name</span>
+                  <span className="client-preview-detail-value">{clientToPreview.referenceName || '-'}</span>
+                </div>
+                <div className="client-preview-detail-item">
+                  <span className="client-preview-detail-label">Reference Phone</span>
+                  <span className="client-preview-detail-value">{clientToPreview.referencePhone || '-'}</span>
+                </div>
+                <div className="client-preview-detail-item">
+                  <span className="client-preview-detail-label">Reference Address</span>
+                  <span className="client-preview-detail-value">{clientToPreview.referenceAddress || '-'}</span>
+                </div>
+                <div className="client-preview-detail-item">
+                  <span className="client-preview-detail-label">Reference Email</span>
+                  <span className="client-preview-detail-value">{clientToPreview.referenceEmail || '-'}</span>
+                </div>
+                <div className="client-preview-detail-item">
+                  <span className="client-preview-detail-label">Reference Role</span>
+                  <span className="client-preview-detail-value">{clientToPreview.referenceRole || '-'}</span>
+                </div>
+              </div>
+
+              {/* Job Portal Accounts */}
+              <div className="client-preview-section">
+                <h4 className="client-preview-section-title">Job Portal Accounts</h4>
+                <div className="client-preview-detail-item">
+                  <span className="client-preview-detail-label">Account Name</span>
+                  <span className="client-preview-detail-value">{clientToPreview.jobPortalAccountName || '-'}</span>
+                </div>
+                <div className="client-preview-detail-item">
+                  <span className="client-preview-detail-label">Credentials</span>
+                  <span className="client-preview-detail-value">{clientToPreview.jobPortalCredentials ? '********' : '-'}</span>
+                </div>
+              </div>
+
+              {/* Other relevant details that might come from application/interview data */}
+              {(clientToPreview.priority && clientToPreview.priority !== 'N/A') && (
+                <div className="client-preview-section">
+                  <h4 className="client-preview-section-title">General Details</h4>
+                  <div className="client-preview-detail-item">
+                      <span className="client-preview-detail-label">Priority</span>
+                      <span className={`modal-client-priority-badge ${clientToPreview.priority}`}>
+                          {clientToPreview.priority.charAt(0).toUpperCase() + clientToPreview.priority.slice(1)} Priority
+                      </span>
+                  </div>
+                  {(clientToPreview.experience && clientToPreview.experience !== 'N/A') && (
+                      <div className="client-preview-detail-item">
+                          <span className="client-preview-detail-label">Experience</span>
+                          <span className="client-preview-detail-value">{clientToPreview.experience}</span>
+                      </div>
+                  )}
+                  {(clientToPreview.remote !== undefined && clientToPreview.remote !== 'N/A') && (
+                      <div className="client-preview-detail-item">
+                          <span className="client-preview-detail-label">Remote Preference</span>
+                          <span className="client-preview-detail-value">{clientToPreview.remote ? 'Remote' : 'On-site'}</span>
+                      </div>
+                  )}
+                  {(clientToPreview.salary && clientToPreview.salary !== 'N/A') && (
+                      <div className="client-preview-detail-item">
+                          <span className="client-preview-detail-label">Salary Expectation</span>
+                          <span className="client-preview-detail-value">{clientToPreview.salary}</span>
+                      </div>
+                  )}
+                  {(clientToPreview.assignedTo && clientToPreview.assignedTo !== 'N/A') && (
+                      <div className="client-preview-detail-item">
+                          <span className="client-preview-detail-label">Assigned To</span>
+                          <span className="client-preview-detail-value">{clientToPreview.assignedTo}</span>
+                      </div>
+                  )}
+                  {(clientToPreview.status && clientToPreview.status !== 'N/A') && (
+                      <div className="client-preview-detail-item">
+                          <span className="client-preview-detail-label">Status</span>
+                          <span className={`status-badge status-${clientToPreview.status}`}>
+                              {clientToPreview.status.charAt(0).toUpperCase() + clientToPreview.status.slice(1)}
+                          </span>
+                      </div>
+                  )}
+                  {(clientToPreview.assignedDate && clientToPreview.assignedDate !== 'N/A') && (
+                      <div className="client-preview-detail-item">
+                          <span className="client-preview-detail-label">Assigned Date</span>
+                          <span className="client-preview-detail-value">{clientToPreview.assignedDate}</span>
+                      </div>
+                  )}
+                  {(clientToPreview.round && clientToPreview.round !== 'N/A') && (
+                      <div className="client-preview-detail-item">
+                          <span className="client-preview-detail-label">Interview Round</span>
+                          <span className="client-preview-detail-value">{clientToPreview.round}</span>
+                      </div>
+                  )}
+                  {(clientToPreview.date && clientToPreview.date !== 'N/A') && (
+                      <div className="client-preview-detail-item">
+                          <span className="client-preview-detail-label">Interview Date</span>
+                          <span className="client-preview-detail-value">{clientToPreview.date}</span>
+                      </div>
+                  )}
+                </div>
+              )}
+
             </div>
 
             {/* Render skills section only if skills exist and are not empty */}
             {clientToPreview.skills && clientToPreview.skills.length > 0 && (
                 <div className="client-preview-skills-section">
-                    <h4 className="assign-modal-title" style={{marginBottom: '10px', fontSize: '18px'}}>Skills</h4> {/* Changed to assign-modal-title */}
+                    <h4 className="assign-modal-title" style={{marginBottom: '10px', fontSize: '18px'}}>Skills</h4>
                     <div className="modal-client-skills">
                         {clientToPreview.skills.map((skill, index) => (
                             <span key={index} className="modal-client-skill-tag">{skill}</span>
