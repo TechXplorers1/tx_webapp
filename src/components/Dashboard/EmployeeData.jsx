@@ -305,10 +305,6 @@ const AdminHeader = ({
         </div>
 
         <div className="ad-header-right">
-          {/* Search Icon */}
-          <svg className="ad-icon-btn" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" style={{ width: '1.125rem', height: '1.125rem' }}>
-            <path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.1-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z"/>
-          </svg>
           <div className="ad-notification-icon">
             {/* Bell Icon */}
             <svg className="ad-icon-btn" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1.125rem', height: '1.125rem' }}>
@@ -316,32 +312,6 @@ const AdminHeader = ({
             </svg>
             <span className="ad-notification-badge">3</span>
           </div>
-          {/* Dark/Light Mode Toggle Button */}
-          <button
-            onClick={toggleTheme}
-            className="ad-icon-btn"
-            aria-label={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-          >
-            {isDarkMode ? (
-              // Sun Icon (FiSun equivalent)
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: '1.125rem', height: '1.125rem' }}>
-                <circle cx="12" cy="12" r="5"></circle>
-                <line x1="12" y1="1" x2="12" y2="3"></line>
-                <line x1="12" y1="21" x2="12" y2="23"></line>
-                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-                <line x1="1" y1="12" x2="3" y2="12"></line>
-                <line x1="21" y1="12" x2="23" y2="12"></line>
-                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-              </svg>
-            ) : (
-              // Moon Icon (FiMoon equivalent)
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: '1.125rem', height: '1.125rem' }}>
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-              </svg>
-            )}
-          </button>
           <div className="profile-dropdown-container" ref={profileDropdownRef}>
             <div className="ad-user-info" onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}>
               <div className="ad-user-info-text">
@@ -351,7 +321,7 @@ const AdminHeader = ({
                   <svg className="ad-icon-btn" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ fontSize: '0.65rem', width: '0.65rem', height: '0.65rem' }}>
                     <path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"/>
                   </svg>
-                  Admin
+                  Employee
                 </span>
               </div>
               <div className="ad-initials-avatar">
@@ -367,13 +337,6 @@ const AdminHeader = ({
                     <path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"/>
                   </svg>
                   Profile
-                </li>
-                <li className="profile-dropdown-item">
-                  {/* Settings Icon (Gear icon from screenshot) */}
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1rem', height: '1rem' }}>
-                    <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM13.07 4.11C16.96 4.41 20 7.71 20 12C20 16.3 16.96 19.59 13.07 19.89L13.07 4.11ZM10.93 4.11L10.93 19.89C7.04 19.59 4 16.3 4 12C4 7.71 7.04 4.41 10.93 4.11Z" />
-                  </svg>
-                  Settings
                 </li>
                 <li className="profile-dropdown-item logout" onClick={() => window.location.href = '/'}>
                   {/* Log Out Icon (Door with arrow from screenshot) */}
@@ -2941,7 +2904,7 @@ const containerStyle = {
   background: '#f8fafc',
   color: '#1e293b',
   minHeight: '100vh',
-  padding: '24px 32px',
+  padding: '0',
 };
 
 const headerStyle = {
