@@ -1382,41 +1382,41 @@ const generateDateRange = (startDate) => {
 // --- SAMPLE APPLICATIONS DATA ---
 const applicationsData = {
   [formatDate(new Date())]: [ // Today's date
-    { id: 1, website: 'LinkedIn', position: 'Frontend Developer', company: 'Tech Corp', link: '#', dateAdded: formatDate(new Date()), jobDescription: 'Develop and maintain web applications using React.js, proficient in HTML, CSS, JavaScript, and modern front-end build tools.' },
-    { id: 10, website: 'Company Site', position: 'Fullstack Engineer', company: 'Innovate Solutions', link: '#', dateAdded: formatDate(new Date()), jobDescription: 'Design, develop, and deploy full-stack applications with expertise in Node.js, Python, and database management (SQL/NoSQL).' },
-    { id: 11, website: 'Indeed', position: 'DevOps Specialist', company: 'CloudWorks', link: '#', dateAdded: formatDate(new Date()), jobDescription: 'Implement and manage CI/CD pipelines, automate infrastructure using tools like Docker, Kubernetes, and Ansible. Cloud platform experience (AWS/Azure/GCP) is a plus.' },
-    { id: 12, website: 'Glassdoor', position: 'QA Engineer', company: 'Quality First', link: '#', dateAdded: formatDate(new Date()), jobDescription: 'Execute test plans, identify and document software defects, and contribute to the overall quality assurance process for web and mobile applications.' },
-    { id: 13, website: 'LinkedIn', position: 'Product Designer', company: 'Creative Minds', link: '#', dateAdded: formatDate(new Date()), jobDescription: 'Create intuitive and engaging user experiences through wireframes, prototypes, and user flows. Proficient in Figma, Sketch, or Adobe XD.' },
+    { id: 1, jobId:'Tx101', website: 'LinkedIn', position: 'Frontend Developer', company: 'Tech Corp', link: '#', dateAdded: formatDate(new Date()), jobDescription: 'Develop and maintain web applications using React.js, proficient in HTML, CSS, JavaScript, and modern front-end build tools.' },
+    { id: 10, jobId:'Tx110', website: 'Company Site', position: 'Fullstack Engineer', company: 'Innovate Solutions', link: '#', dateAdded: formatDate(new Date()), jobDescription: 'Design, develop, and deploy full-stack applications with expertise in Node.js, Python, and database management (SQL/NoSQL).' },
+    { id: 11, jobId:'Tx111', website: 'Indeed', position: 'DevOps Specialist', company: 'CloudWorks', link: '#', dateAdded: formatDate(new Date()), jobDescription: 'Implement and manage CI/CD pipelines, automate infrastructure using tools like Docker, Kubernetes, and Ansible. Cloud platform experience (AWS/Azure/GCP) is a plus.' },
+    { id: 12, jobId:'Tx112', website: 'Glassdoor', position: 'QA Engineer', company: 'Quality First', link: '#', dateAdded: formatDate(new Date()), jobDescription: 'Execute test plans, identify and document software defects, and contribute to the overall quality assurance process for web and mobile applications.' },
+    { id: 13, jobId:'Tx113', website: 'LinkedIn', position: 'Product Designer', company: 'Creative Minds', link: '#', dateAdded: formatDate(new Date()), jobDescription: 'Create intuitive and engaging user experiences through wireframes, prototypes, and user flows. Proficient in Figma, Sketch, or Adobe XD.' },
   ],
   [formatDate(new Date(new Date().setDate(new Date().getDate() - 1)))]: [ // Yesterday
-    { id: 2, website: 'Indeed', position: 'Backend Engineer', company: 'Data Systems', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 1))), jobDescription: 'Develop robust server-side logic and APIs using Java Spring Boot. Experience with RESTful services and microservices architecture is required.' },
-    { id: 14, website: 'Company Site', position: 'Data Scientist', company: 'Analytics Inc.', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 1))), jobDescription: 'Analyze large datasets to extract actionable insights. Build predictive models using machine learning techniques and Python/R.' },
+    { id: 2, jobId:'Tx102', website: 'Indeed', position: 'Backend Engineer', company: 'Data Systems', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 1))), jobDescription: 'Develop robust server-side logic and APIs using Java Spring Boot. Experience with RESTful services and microservices architecture is required.' },
+    { id: 14, jobId:'Tx114', website: 'Company Site', position: 'Data Scientist', company: 'Analytics Inc.', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 1))), jobDescription: 'Analyze large datasets to extract actionable insights. Build predictive models using machine learning techniques and Python/R.' },
   ],
   [formatDate(new Date(new Date().setDate(new Date().getDate() - 2)))]: [ // Two days ago
-    { id: 3, website: 'Glassdoor', position: 'Product Manager', company: 'Innovate Inc', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 2))), jobDescription: 'Define product vision, strategy, and roadmap. Collaborate with engineering, design, and marketing teams to deliver successful products.' },
-    { id: 4, website: 'AngelList', position: 'Startup Engineer', company: 'New Ventures', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 2))), jobDescription: 'Work across the stack in a fast-paced startup environment. Opportunity to contribute to all phases of product development.' },
-    { id: 15, website: 'LinkedIn', position: 'Mobile Developer', company: 'AppGenius', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 2))), jobDescription: 'Develop native iOS or Android applications. Strong knowledge of Swift/Kotlin and mobile UI/UX principles.' },
+    { id: 3, jobId:'Tx103', website: 'Glassdoor', position: 'Product Manager', company: 'Innovate Inc', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 2))), jobDescription: 'Define product vision, strategy, and roadmap. Collaborate with engineering, design, and marketing teams to deliver successful products.' },
+    { id: 4, jobId:'Tx104', website: 'AngelList', position: 'Startup Engineer', company: 'New Ventures', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 2))), jobDescription: 'Work across the stack in a fast-paced startup environment. Opportunity to contribute to all phases of product development.' },
+    { id: 15, jobId:'Tx115', website: 'LinkedIn', position: 'Mobile Developer', company: 'AppGenius', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 2))), jobDescription: 'Develop native iOS or Android applications. Strong knowledge of Swift/Kotlin and mobile UI/UX principles.' },
   ],
   [formatDate(new Date(new Date().setDate(new Date().getDate() - 3)))]: [ // Three days ago
-    { id: 16, website: 'Indeed', position: 'Network Administrator', company: 'SecureNet', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 3))), jobDescription: 'Manage and maintain network infrastructure, troubleshoot connectivity issues, and ensure network security and performance.' },
+    { id: 16, jobId:'Tx116', website: 'Indeed', position: 'Network Administrator', company: 'SecureNet', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 3))), jobDescription: 'Manage and maintain network infrastructure, troubleshoot connectivity issues, and ensure network security and performance.' },
   ],
   [formatDate(new Date(new Date().setDate(new Date().getDate() - 4)))]: [ // Four days ago
-    { id: 17, website: 'Company Site', position: 'Cybersecurity Analyst', company: 'Guardian Systems', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 4))), jobDescription: 'Monitor security systems, respond to incidents, and implement security measures to protect organizational data and systems.' },
-    { id: 18, website: 'LinkedIn', position: 'Technical Writer', company: 'DocuWrite', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 4))), jobDescription: 'Produce clear, concise, and comprehensive technical documentation for software products, including user manuals and API documentation.' },
+    { id: 17, jobId:'Tx117', website: 'Company Site', position: 'Cybersecurity Analyst', company: 'Guardian Systems', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 4))), jobDescription: 'Monitor security systems, respond to incidents, and implement security measures to protect organizational data and systems.' },
+    { id: 18, jobId:'Tx118', website: 'LinkedIn', position: 'Technical Writer', company: 'DocuWrite', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 4))), jobDescription: 'Produce clear, concise, and comprehensive technical documentation for software products, including user manuals and API documentation.' },
   ],
   [formatDate(new Date(new Date().setDate(new Date().getDate() - 5)))]: [ // Five days ago
-    { id: 19, website: 'Glassdoor', position: 'Scrum Master', company: 'Agile Teams', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 5))), jobDescription: 'Facilitate agile ceremonies, remove impediments, and coach development teams in Scrum principles and practices to maximize delivery.' },
+    { id: 19, jobId:'Tx119', website: 'Glassdoor', position: 'Scrum Master', company: 'Agile Teams', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 5))), jobDescription: 'Facilitate agile ceremonies, remove impediments, and coach development teams in Scrum principles and practices to maximize delivery.' },
   ],
   [formatDate(new Date(new Date().setDate(new Date().getDate() - 6)))]: [ // Six days ago
-    { id: 20, website: 'CloudComputing', position: 'Cloud Engineer', company: 'Sky Computing', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 6))), jobDescription: 'Design, deploy, and manage cloud-based solutions on AWS, Azure, or GCP. Experience with cloud automation and cost optimization.' },
-    { id: 21, website: 'Other', position: 'Marketing Specialist', company: 'Brand Boost', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 6))), jobDescription: 'Develop and execute digital marketing campaigns, analyze market trends, and manage social media presence to enhance brand visibility.' },
+    { id: 20, jobId:'Tx120', website: 'CloudComputing', position: 'Cloud Engineer', company: 'Sky Computing', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 6))), jobDescription: 'Design, deploy, and manage cloud-based solutions on AWS, Azure, or GCP. Experience with cloud automation and cost optimization.' },
+    { id: 21, jobId:'Tx121', website: 'Other', position: 'Marketing Specialist', company: 'Brand Boost', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 6))), jobDescription: 'Develop and execute digital marketing campaigns, analyze market trends, and manage social media presence to enhance brand visibility.' },
   ],
   // Add more applications for dates in the future or past as needed for testing scrolling
   [formatDate(new Date(new Date().setDate(new Date().getDate() + 1)))]: [ // Tomorrow
-    { id: 22, website: 'LinkedIn', position: 'Senior Software Architect', company: 'Innovate Tomorrow', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() + 1))), jobDescription: 'Lead the architectural design and development of complex software systems, ensuring scalability, reliability, and performance.' }
+    { id: 22, jobId:'Tx122', website: 'LinkedIn', position: 'Senior Software Architect', company: 'Innovate Tomorrow', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() + 1))), jobDescription: 'Lead the architectural design and development of complex software systems, ensuring scalability, reliability, and performance.' }
   ],
   [formatDate(new Date(new Date().setDate(new Date().getDate() + 2)))]: [ // Day after tomorrow
-    { id: 23, website: 'Indeed', position: 'Lead Data Scientist', company: 'Future AI', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() + 2))), jobDescription: 'Lead a team of data scientists to develop and deploy advanced analytical solutions and machine learning models.' }
+    { id: 23, jobId:'Tx123', website: 'Indeed', position: 'Lead Data Scientist', company: 'Future AI', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() + 2))), jobDescription: 'Lead a team of data scientists to develop and deploy advanced analytical solutions and machine learning models.' }
   ],
 };
 
@@ -1698,8 +1698,9 @@ const Applications = ({
               <thead>
                 <tr style={{ backgroundColor: '#007bff', color: 'white' }}>
                   <th style={{ padding: '12px', textAlign: 'center' }}>S.No</th>
-                  <th style={{ padding: '12px', textAlign: 'center' }}>Applied Date</th> {/* New Header */}
+                  <th style={{ padding: '12px', textAlign: 'center' }}>Applied Date</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Platform</th>
+                  <th style={{ padding: '12px', textAlign: 'center' }}>Job ID</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Job Title</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Company</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Link</th>
@@ -1719,6 +1720,7 @@ const Applications = ({
                     <td style={{ padding: '12px' }}>{app.dateAdded}</td> {/* Display Applied Date */}
                     <td style={{ padding: '12px' }}>{app.website}</td>
                     <td style={{ padding: '12px' }}>{app.position}</td>
+                    <td style={{ padding: '12px' }}>{app.jobId}</td>
                     <td style={{ padding: '12px' }}>{app.company}</td>
                     <td style={{ padding: '12px' }}>
                       <a href={app.link} target="_blank" rel="noopener noreferrer" style={{ color: '#007bff', textDecoration: 'none' }}>
@@ -2752,14 +2754,14 @@ const ClientDashboard = () => {
 
   // Mock data for Scheduled Interviews (UPDATED with attachment field)
   const scheduledInterviews = [
-    { id: 1, date: '2025-06-15', time: '10:00 AM', company: 'Innovate Solutions', role: 'Software Developer', recruiterMailId: 'alice.j@innovate.com', round: 'Round 1', attachments: ['https://placehold.co/200x150/FFD700/000000?text=Screenshot+1'] },
-    { id: 2, date: '2025-06-18', time: '02:30 PM', company: 'Global Tech Corp', role: 'UX Designer', recruiterMailId: 'bob.w@globaltech.com', round: 'Round 2', attachments: ['https://placehold.co/200x150/ADD8E6/000000?text=Design+Brief', 'https://placehold.co/200x150/90EE90/000000?text=Wireframes'] },
-    { id: 3, date: '2025-06-20', time: '11:00 AM', company: 'Data Insights Ltd.', role: 'Data Analyst', recruiterMailId: 'charlie.b@datainsights.com', round: 'Final Round', attachments: [] },
-    { id: 4, date: '2025-06-22', time: '09:00 AM', company: 'FutureTech Inc.', role: 'Project Manager', recruiterMailId: 'david.l@futuretech.net', round: 'Round 1', attachments: ['https://placehold.co/200x150/FFC0CB/000000?text=Project+Spec'] },
-    { id: 5, date: '2025-06-25', time: '01:00 PM', company: 'Digital Innovators', role: 'DevOps Engineer', recruiterMailId: 'eve.d@digitalinnov.io', round: 'Round 3', attachments: [] },
-    { id: 6, date: '2025-06-28', time: '03:45 PM', company: 'Quant Computing', role: 'Machine Learning Scientist', recruiterMailId: 'frank.w@quantcomp.ai', round: 'Round 2', attachments: ['https://placehold.co/200x150/DDA0DD/000000?text=Algorithm+Flow'] },
-    { id: 7, date: '2025-07-01', time: '10:30 AM', company: 'CyberSec Solutions', role: 'Cybersecurity Analyst', recruiterMailId: 'grace.k@cybersec.com', round: 'Round 1', attachments: ['https://placehold.co/200x150/F08080/000000?text=Security+Report'] },
-    { id: 8, date: '2025-07-03', time: '04:00 PM', company: 'HealthTech Connect', role: 'Mobile App Developer', recruiterMailId: 'henry.g@healthtech.org', round: 'Final Round', attachments: [] },
+    { id: 1, date: '2025-06-15', jobId:'TX101', time: '10:00 AM', company: 'Innovate Solutions', role: 'Software Developer', recruiterMailId: 'alice.j@innovate.com', round: 'Round 1', attachments: ['https://placehold.co/200x150/FFD700/000000?text=Screenshot+1'] },
+    { id: 2, date: '2025-06-18', jobId:'TX102',  time: '02:30 PM', company: 'Global Tech Corp', role: 'UX Designer', recruiterMailId: 'bob.w@globaltech.com', round: 'Round 2', attachments: ['https://placehold.co/200x150/ADD8E6/000000?text=Design+Brief', 'https://placehold.co/200x150/90EE90/000000?text=Wireframes'] },
+    { id: 3, date: '2025-06-20', jobId:'TX103',  time: '11:00 AM', company: 'Data Insights Ltd.', role: 'Data Analyst', recruiterMailId: 'charlie.b@datainsights.com', round: 'Final Round', attachments: [] },
+    { id: 4, date: '2025-06-22', jobId:'TX104',  time: '09:00 AM', company: 'FutureTech Inc.', role: 'Project Manager', recruiterMailId: 'david.l@futuretech.net', round: 'Round 1', attachments: ['https://placehold.co/200x150/FFC0CB/000000?text=Project+Spec'] },
+    { id: 5, date: '2025-06-25', jobId:'TX105',  time: '01:00 PM', company: 'Digital Innovators', role: 'DevOps Engineer', recruiterMailId: 'eve.d@digitalinnov.io', round: 'Round 3', attachments: [] },
+    { id: 6, date: '2025-06-28', jobId:'TX106',  time: '03:45 PM', company: 'Quant Computing', role: 'Machine Learning Scientist', recruiterMailId: 'frank.w@quantcomp.ai', round: 'Round 2', attachments: ['https://placehold.co/200x150/DDA0DD/000000?text=Algorithm+Flow'] },
+    { id: 7, date: '2025-07-01', jobId:'TX107',  time: '10:30 AM', company: 'CyberSec Solutions', role: 'Cybersecurity Analyst', recruiterMailId: 'grace.k@cybersec.com', round: 'Round 1', attachments: ['https://placehold.co/200x150/F08080/000000?text=Security+Report'] },
+    { id: 8, date: '2025-07-03', jobId:'TX108',  time: '04:00 PM', company: 'HealthTech Connect', role: 'Mobile App Developer', recruiterMailId: 'henry.g@healthtech.org', round: 'Final Round', attachments: [] },
   ];
 
   // Mock data for Resume & Job Portal Updates
@@ -4390,6 +4392,7 @@ const ClientDashboard = () => {
                   <tr>
                     <th className="modal-table-header">Date</th>
                     <th className="modal-table-header">Time</th>
+                    <th className="modal-table-header">Job ID</th>
                     <th className="modal-table-header">Company</th>
                     <th className="modal-table-header">Role</th>
                     <th className="modal-table-header">Recruiter Mail ID</th>
@@ -4404,6 +4407,7 @@ const ClientDashboard = () => {
                         <div style={{ fontWeight: '500' }}>{interview.date}</div>
                       </td>
                       <td className="modal-table-cell">{interview.time}</td>
+                      <td className="modal-table-cell">{interview.jobId}</td>
                       <td style={{fontWeight: '600'}} className="modal-table-cell">{interview.company}</td>
                       <td className="modal-table-cell">{interview.role}</td>
                       <td className="modal-table-cell">{interview.recruiterMailId}</td>
