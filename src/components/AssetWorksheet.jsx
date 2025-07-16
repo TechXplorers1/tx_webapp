@@ -2,404 +2,528 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Bell, User, ChevronDown, Plus, Search, Info, X, Tag, Calendar, MapPin, Hash, Edit, Trash2, LogOut, Settings } from 'lucide-react';
 
 const AssetWorksheet = () => {
-    // State variables for managing UI and data
-    const [activeTab, setActiveTab] = useState('Assets');
-    const [showAssignAssetModal, setShowAssignAssetModal] = useState(false);
-    const [showAddAssetModal, setShowAddAssetModal] = useState(false);
-    const [showEditAssetModal, setShowEditAssetModal] = useState(false);
-    const [assetToEdit, setAssetToEdit] = useState(null);
-    const [showDeleteConfirmationModal, setShowDeleteConfirmationModal] = useState(false);
-    const [assetIdToDelete, setAssetIdToDelete] = useState(null);
-    const [filterStatus, setFilterStatus] = useState('All Statuses');
-    const [searchTerm, setSearchTerm] = useState('');
-    const [showProfileDropdown, setShowProfileDropdown] = useState(false);
-    const [showNotifications, setShowNotifications] = useState(false); // New state for notification panel
-    const [notifications, setNotifications] = useState([ // Sample notifications
-        { id: 1, message: 'Welcome to Asset Management Dashboard!', timestamp: new Date(Date.now() - 3600000) },
-        { id: 2, message: 'New update available for system assets.', timestamp: new Date(Date.now() - 7200000) },
-    ]);
+  // State variables for managing UI and data
+  const [activeTab, setActiveTab] = useState('Assets');
+  const [showAssignAssetModal, setShowAssignAssetModal] = useState(false);
+  const [showAddAssetModal, setShowAddAssetModal] = useState(false);
+  const [showEditAssetModal, setShowEditAssetModal] = useState(false);
+  const [assetToEdit, setAssetToEdit] = useState(null);
+  const [showDeleteConfirmationModal, setShowDeleteConfirmationModal] = useState(false);
+  const [assetIdToDelete, setAssetIdToDelete] = useState(null);
+  const [filterStatus, setFilterStatus] = useState('All Statuses');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false); // New state for notification panel
+  const [notifications, setNotifications] = useState([ // Sample notifications
+    { id: 1, message: 'Welcome to Asset Management Dashboard!', timestamp: new Date(Date.now() - 3600000) },
+    { id: 2, message: 'New update available for system assets.', timestamp: new Date(Date.now() - 7200000) },
+  ]);  
 
-    // Refs for dropdowns to handle clicks outside
-    const profileDropdownRef = useRef(null);
-    const notificationsRef = useRef(null); // Ref for notification panel
+  // Refs for dropdowns to handle clicks outside
+  const profileDropdownRef = useRef(null);
+  const notificationsRef = useRef(null); // Ref for notification panel
 
-    // Sample data for the asset table (using useState to allow modification)
-    const [assets, setAssets] = useState([
-        { id: 'TXP-OTHER-261', name: 'apple pen', type: 'Other', status: 'available', assignedTo: 'Unassigned', location: 'straight opposite', value: '$300,000', brand: 'Apple', purchaseDate: '01/01/2024', serialNumber: 'AP-001-2024' },
-        { id: 'TXP-LT-001', name: 'Dell Latitude 5520', type: 'Laptop', status: 'available', assignedTo: 'Unassigned', location: 'Office Floor 1', value: '$1,200', brand: 'Dell', purchaseDate: '15/03/2023', serialNumber: 'DLT-001-2023' },
-        { id: 'TXP-LT-002', name: 'MacBook Pro 14"', type: 'Laptop', status: 'available', assignedTo: 'Unassigned', location: 'Asset Storage', value: '$2,500', brand: 'Apple', purchaseDate: '20/06/2023', serialNumber: 'MBP-002-2023' },
-        { id: 'TXP-MON-001', name: 'Dell Ultrasharp U2720Q', type: 'Monitor', status: 'available', assignedTo: 'Unassigned', location: 'Office Floor 1', value: '$400', brand: 'Dell', purchaseDate: '10/02/2024', serialNumber: 'DMON-001-2024' },
-        { id: 'TXP-DT-001', name: 'HP EliteDesk 800 G9', type: 'Desktop', status: 'assigned', assignedTo: 'John Doe', location: 'Office Floor 2', value: '$800', brand: 'HP', purchaseDate: '05/09/2022', serialNumber: 'HPDT-001-2022' },
-        { id: 'TXP-MB-001', name: 'iPhone 15 Pro', type: 'Mobile', status: 'in maintenance', assignedTo: 'Unassigned', location: 'Repair Shop', value: '$1,000', brand: 'Apple', purchaseDate: '12/11/2023', serialNumber: 'IP-001-2023' },
-    ]);
+  // Sample data for the asset table (using useState to allow modification)
+  const [assets, setAssets] = useState([
+    { id: 'TXP-OTHER-261', name: 'apple pen', type: 'Other', status: 'available', assignedTo: 'Unassigned', location: 'straight opposite', value: '$300,000', brand: 'Apple', purchaseDate: '01/01/2024', serialNumber: 'AP-001-2024' },
+    { id: 'TXP-LT-001', name: 'Dell Latitude 5520', type: 'Laptop', status: 'available', assignedTo: 'Unassigned', location: 'Office Floor 1', value: '$1,200', brand: 'Dell', purchaseDate: '15/03/2023', serialNumber: 'DLT-001-2023' },
+    { id: 'TXP-LT-002', name: 'MacBook Pro 14"', type: 'Laptop', status: 'available', assignedTo: 'Unassigned', location: 'Asset Storage', value: '$2,500', brand: 'Apple', purchaseDate: '20/06/2023', serialNumber: 'MBP-002-2023' },
+    { id: 'TXP-MON-001', name: 'Dell Ultrasharp U2720Q', type: 'Monitor', status: 'available', assignedTo: 'Unassigned', location: 'Office Floor 1', value: '$400', brand: 'Dell', purchaseDate: '10/02/2024', serialNumber: 'DMON-001-2024' },
+    { id: 'TXP-DT-001', name: 'HP EliteDesk 800 G9', type: 'Desktop', status: 'assigned', assignedTo: 'John Doe', location: 'Office Floor 2', value: '$800', brand: 'HP', purchaseDate: '05/09/2022', serialNumber: 'HPDT-001-2022' },
+    { id: 'TXP-MB-001', name: 'iPhone 15 Pro', type: 'Mobile', status: 'in maintenance', assignedTo: 'Unassigned', location: 'Repair Shop', value: '$1,000', brand: 'Apple', purchaseDate: '12/11/2023', serialNumber: 'IP-001-2023' },
+  ]);
 
-    // Filtered assets based on selected status and search term
-    const filteredAssets = assets.filter(asset => {
-        const matchesStatus = filterStatus === 'All Statuses' || asset.status.toLowerCase() === filterStatus.toLowerCase();
-        const matchesSearch = asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            asset.id.toLowerCase().includes(searchTerm.toLowerCase());
-        return matchesStatus && matchesSearch;
-    });
+  // Sample users for assignment dropdown
+  const users = ['John Doe', 'Jane Smith', 'Michael Brown', 'Emily White', 'Unassigned'];
 
-    // Utility to format timestamp for notifications
-    const formatTimestamp = (date) => {
-        const now = new Date();
-        const diffSeconds = Math.floor((now - date) / 1000);
-        const diffMinutes = Math.floor(diffSeconds / 60);
-        const diffHours = Math.floor(diffMinutes / 60);
-        const diffDays = Math.floor(diffHours / 24);
+  // Filtered assets based on selected status and search term
+  const filteredAssets = assets.filter(asset => {
+    const matchesStatus = filterStatus === 'All Statuses' || asset.status.toLowerCase() === filterStatus.toLowerCase();
+    const matchesSearch = asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          asset.id.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesStatus && matchesSearch;
+  });
 
-        if (diffMinutes < 1) return 'just now';
-        if (diffHours < 1) return `${diffMinutes} min ago`;
-        if (diffDays < 1) return `${diffHours} hr ago`;
-        return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+  // Utility to format timestamp for notifications
+  const formatTimestamp = (date) => {
+    const now = new Date();
+    const diffSeconds = Math.floor((now - date) / 1000);
+    const diffMinutes = Math.floor(diffSeconds / 60);
+    const diffHours = Math.floor(diffMinutes / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMinutes < 1) return 'just now';
+    if (diffHours < 1) return `${diffMinutes} min ago`;
+    if (diffDays < 1) return `${diffHours} hr ago`;
+    return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+  };
+
+  // Handles click for quick action buttons (Assign Assets, Add New Asset)
+  const handleQuickActionClick = (action) => {
+    if (action === 'assign') {
+      setShowAssignAssetModal(true);
+    } else if (action === 'add') {
+      setShowAddAssetModal(true);
+    }
+  };
+
+  // Handles click for the Edit icon in the asset table
+  const handleEditAssetClick = (asset) => {
+    setAssetToEdit(asset); // Set the asset to be edited
+    setShowEditAssetModal(true); // Open the edit modal
+  };
+
+  // Handles updating an asset from the Edit Asset modal
+  const handleUpdateAsset = (updatedAsset) => {
+    // Find the original asset to compare changes
+    const originalAsset = assets.find(asset => asset.id === updatedAsset.id);
+
+    setAssets(prevAssets =>
+      prevAssets.map(asset =>
+        asset.id === updatedAsset.id ? updatedAsset : asset // Replace the old asset with the updated one
+      )
+    );
+    setShowEditAssetModal(false); // Close the edit modal
+    setAssetToEdit(null); // Clear the asset to edit
+
+    // Add notification if assignedTo changes
+    if (originalAsset && originalAsset.assignedTo !== updatedAsset.assignedTo && updatedAsset.assignedTo !== 'Unassigned') {
+      setNotifications(prev => [{
+        id: Date.now(),
+        message: `Asset "${updatedAsset.name}" assigned to ${updatedAsset.assignedTo}.`,
+        timestamp: new Date()
+      }, ...prev]);
+    } else if (originalAsset && originalAsset.status !== updatedAsset.status) {
+      setNotifications(prev => [{
+        id: Date.now(),
+        message: `Status of "${updatedAsset.name}" changed to ${updatedAsset.status}.`,
+        timestamp: new Date()
+      }, ...prev]);
+    }
+  };
+
+  // Handles click for the Delete icon in the asset table
+  const handleDeleteAssetClick = (assetId) => {
+    setAssetIdToDelete(assetId); // Set the ID of the asset to delete
+    setShowDeleteConfirmationModal(true); // Show the delete confirmation modal
+  };
+
+  // Confirms and performs asset deletion
+  const handleDeleteAssetConfirm = () => {
+    console.log('Deleting asset:', assetIdToDelete);
+    const deletedAsset = assets.find(asset => asset.id === assetIdToDelete);
+    setAssets(prevAssets => prevAssets.filter(asset => asset.id !== assetIdToDelete)); // Remove the asset from the list
+    setShowDeleteConfirmationModal(false); // Close the modal
+    setAssetIdToDelete(null); // Clear the asset ID
+
+    if (deletedAsset) {
+      setNotifications(prev => [{
+        id: Date.now(),
+        message: `Asset "${deletedAsset.name}" (${deletedAsset.id}) was deleted.`,
+        timestamp: new Date()
+      }, ...prev]);
+    }
+  };
+
+  // Cancels asset deletion
+  const handleDeleteAssetCancel = () => {
+    setShowDeleteConfirmationModal(false); // Close the modal
+    setAssetIdToDelete(null); // Clear the asset ID
+  };
+
+  // Toggles the profile dropdown visibility
+  const toggleProfileDropdown = () => {
+    setShowProfileDropdown(prev => !prev);
+    setShowNotifications(false); // Close notifications if opening profile dropdown
+  };
+
+  // Toggles the notification panel visibility
+  const toggleNotifications = () => {
+    setShowNotifications(prev => !prev);
+    setShowProfileDropdown(false); // Close profile dropdown if opening notifications
+  };
+
+  // Handles logout action (redirects to clientdashboard page)
+  const handleLogout = () => {
+    console.log('Logging out...'); // Log to check if the function is called
+    // Attempt to redirect the parent window first
+    if (window.parent && window.parent.location) {
+      window.parent.location.href = '/clientdashboard';
+    } else {
+      // Fallback for environments where window.parent might not be accessible
+      window.location.href = '/clientdashboard';
+    }
+  };
+
+  // Handles assigning an asset from the Assign Asset modal
+  const handleAssignAsset = (assignedAssetId, assignedUser, assignmentReason) => {
+    setAssets(prevAssets =>
+      prevAssets.map(asset =>
+        asset.id === assignedAssetId
+          ? { ...asset, status: 'assigned', assignedTo: assignedUser }
+          : asset
+      )
+    );
+    setShowAssignAssetModal(false); // Close the modal
+    setNotifications(prev => [{
+      id: Date.now(),
+      message: `Asset "${assignedAssetId}" assigned to ${assignedUser} for: ${assignmentReason}.`,
+      timestamp: new Date()
+    }, ...prev]);
+  };
+
+  // Close dropdowns if clicked outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
+        setShowProfileDropdown(false);
+      }
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
     };
 
-    // Handles click for quick action buttons (Assign Assets, Add New Asset)
-    const handleQuickActionClick = (action) => {
-        if (action === 'assign') {
-            setShowAssignAssetModal(true);
-        } else if (action === 'add') {
-            setShowAddAssetModal(true);
-        }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
     };
+  }, [profileDropdownRef, notificationsRef]);
 
-    // Handles click for the Edit icon in the asset table
-    const handleEditAssetClick = (asset) => {
-        setAssetToEdit(asset); // Set the asset to be edited
-        setShowEditAssetModal(true); // Open the edit modal
-    };
 
-    // Handles updating an asset from the Edit Asset modal
-    const handleUpdateAsset = (updatedAsset) => {
-        // Find the original asset to compare changes
-        const originalAsset = assets.find(asset => asset.id === updatedAsset.id);
+  // Component for the Edit Asset Modal
+  const EditAssetModal = ({ show, onClose, asset, onUpdate }) => {
+    // Local state for form data, initialized with the asset prop
+    const [formData, setFormData] = useState(asset);
 
-        setAssets(prevAssets =>
-            prevAssets.map(asset =>
-                asset.id === updatedAsset.id ? updatedAsset : asset // Replace the old asset with the updated one
-            )
-        );
-        setShowEditAssetModal(false); // Close the edit modal
-        setAssetToEdit(null); // Clear the asset to edit
-
-        // Add notification if assignedTo changes
-        if (originalAsset && originalAsset.assignedTo !== updatedAsset.assignedTo && updatedAsset.assignedTo !== 'Unassigned') {
-            setNotifications(prev => [{
-                id: Date.now(),
-                message: `Asset "${updatedAsset.name}" assigned to ${updatedAsset.assignedTo}.`,
-                timestamp: new Date()
-            }, ...prev]);
-        } else if (originalAsset && originalAsset.status !== updatedAsset.status) {
-            setNotifications(prev => [{
-                id: Date.now(),
-                message: `Status of "${updatedAsset.name}" changed to ${updatedAsset.status}.`,
-                timestamp: new Date()
-            }, ...prev]);
-        }
-    };
-
-    // Handles click for the Delete icon in the asset table
-    const handleDeleteAssetClick = (assetId) => {
-        setAssetIdToDelete(assetId); // Set the ID of the asset to delete
-        setShowDeleteConfirmationModal(true); // Show the delete confirmation modal
-    };
-
-    // Confirms and performs asset deletion
-    const handleDeleteAssetConfirm = () => {
-        console.log('Deleting asset:', assetIdToDelete);
-        const deletedAsset = assets.find(asset => asset.id === assetIdToDelete);
-        setAssets(prevAssets => prevAssets.filter(asset => asset.id !== assetIdToDelete)); // Remove the asset from the list
-        setShowDeleteConfirmationModal(false); // Close the modal
-        setAssetIdToDelete(null); // Clear the asset ID
-
-        if (deletedAsset) {
-            setNotifications(prev => [{
-                id: Date.now(),
-                message: `Asset "${deletedAsset.name}" (${deletedAsset.id}) was deleted.`,
-                timestamp: new Date()
-            }, ...prev]);
-        }
-    };
-
-    // Cancels asset deletion
-    const handleDeleteAssetCancel = () => {
-        setShowDeleteConfirmationModal(false); // Close the modal
-        setAssetIdToDelete(null); // Clear the asset ID
-    };
-
-    // Toggles the profile dropdown visibility
-    const toggleProfileDropdown = () => {
-        setShowProfileDropdown(prev => !prev);
-        setShowNotifications(false); // Close notifications if opening profile dropdown
-    };
-
-    // Toggles the notification panel visibility
-    const toggleNotifications = () => {
-        setShowNotifications(prev => !prev);
-        setShowProfileDropdown(false); // Close profile dropdown if opening notifications
-    };
-
-    // Close dropdowns if clicked outside
+    // Effect to update form data if the 'asset' prop changes (e.g., editing a different asset)
     useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
-                setShowProfileDropdown(false);
-            }
-            if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
-                setShowNotifications(false);
-            }
-        };
+      setFormData(asset);
+    }, [asset]);
 
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, [profileDropdownRef, notificationsRef]);
-
-
-    // Component for the Edit Asset Modal
-    const EditAssetModal = ({ show, onClose, asset, onUpdate }) => {
-        // Local state for form data, initialized with the asset prop
-        const [formData, setFormData] = useState(asset);
-
-        // Effect to update form data if the 'asset' prop changes (e.g., editing a different asset)
-        useEffect(() => {
-            setFormData(asset);
-        }, [asset]);
-
-        // Handles changes in form input fields
-        const handleChange = (e) => {
-            const { name, value } = e.target;
-            setFormData(prevData => ({
-                ...prevData,
-                [name]: value
-            }));
-        };
-
-        // Handles form submission
-        const handleSubmit = (e) => {
-            e.preventDefault();
-            onUpdate(formData); // Call the onUpdate prop with the current form data
-        };
-
-        // If 'show' is false, don't render the modal
-        if (!show) return null;
-
-        return (
-            <div className="modal-overlay edit-asset-modal">
-                <div className="modal-content">
-                    <div className="modal-header">
-                        <h3 className="modal-title">Edit Asset</h3>
-                        <button className="modal-close-button" onClick={onClose}>
-                            <X size={20} />
-                        </button>
-                    </div>
-                    <p className="modal-description">
-                        Modify the details of the asset.
-                    </p>
-                    <form onSubmit={handleSubmit}>
-                        {/* Grid layout for two fields per row */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-                            <div className="form-group">
-                                <label className="form-label">Asset Name *</label>
-                                <input type="text" name="name" placeholder="e.g., MacBook Pro 16" className="form-input" value={formData.name} onChange={handleChange} required />
-                            </div>
-                            <div className="form-group">
-                                <label className="form-label">Type *</label>
-                                <div className="form-input-icon-wrapper">
-                                    <select name="type" className="form-select" style={{ paddingLeft: '12px' }} value={formData.type} onChange={handleChange} required>
-                                        <option value="">Select type</option>
-                                        <option>Laptop</option>
-                                        <option>Monitor</option>
-                                        <option>Desktop</option>
-                                        <option>Mobile</option>
-                                        <option>Other</option>
-                                    </select>
-                                    <ChevronDown size={18} className="form-input-icon" style={{ left: 'auto', right: '12px', transform: 'translateY(-50%)' }} />
-                                </div>
-                            </div>
-                            <div className="form-group">
-                                <label className="form-label">Vendor/Brand</label>
-                                <input type="text" name="brand" placeholder="e.g., Apple, Dell, HP" className="form-input" value={formData.brand || ''} onChange={handleChange} />
-                            </div>
-                            <div className="form-group">
-                                <label className="form-label">Purchase Price</label>
-                                <input type="text" name="value" placeholder="e.g., $2499" className="form-input" value={formData.value} onChange={handleChange} />
-                            </div>
-                            <div className="form-group">
-                                <label className="form-label">Purchase Date</label>
-                                <div className="form-input-icon-wrapper">
-                                    <Calendar size={18} className="form-input-icon" />
-                                    <input type="text" name="purchaseDate" placeholder="dd/mm/yyyy" className="form-input form-input-with-icon" value={formData.purchaseDate || ''} onChange={handleChange} />
-                                </div>
-                            </div>
-                            <div className="form-group">
-                                <label className="form-label">Location</label>
-                                <div className="form-input-icon-wrapper">
-                                    <MapPin size={18} className="form-input-icon" />
-                                    <input type="text" name="location" placeholder="e.g., Asset Storage, Floor 1" className="form-input form-input-with-icon" value={formData.location} onChange={handleChange} />
-                                </div>
-                            </div>
-                            <div className="form-group" style={{ gridColumn: 'span 2' }}> {/* Span full width */}
-                                <label className="form-label">Serial Number</label>
-                                <div className="form-input-icon-wrapper">
-                                    <Hash size={18} className="form-input-icon" />
-                                    <input type="text" name="serialNumber" placeholder="e.g., MBP-001-2024" className="form-input form-input-with-icon" value={formData.serialNumber || ''} onChange={handleChange} />
-                                </div>
-                            </div>
-                            <div className="form-group" style={{ gridColumn: 'span 2' }}> {/* Span full width */}
-                                <label className="form-label">Status *</label>
-                                <div className="form-input-icon-wrapper">
-                                    <select name="status" className="form-select" style={{ paddingLeft: '12px' }} value={formData.status} onChange={handleChange} required>
-                                        <option>available</option>
-                                        <option>assigned</option>
-                                        <option>in maintenance</option>
-                                    </select>
-                                    <ChevronDown size={18} className="form-input-icon" style={{ left: 'auto', right: '12px', transform: 'translateY(-50%)' }} />
-                                </div>
-                            </div>
-                            <div className="form-group" style={{ gridColumn: 'span 2' }}> {/* Span full width */}
-                                <label className="form-label">Assigned To</label>
-                                <input type="text" name="assignedTo" placeholder="e.g., John Doe" className="form-input" value={formData.assignedTo} onChange={handleChange} />
-                            </div>
-                        </div>
-                        <div className="modal-footer">
-                            <button type="button" className="modal-button cancel" onClick={onClose}>Cancel</button>
-                            <button type="submit" className="modal-button primary">Save Changes</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        );
+    // Handles changes in form input fields
+    const handleChange = (e) => {
+      const { name, value } = e.target;
+      setFormData(prevData => ({
+        ...prevData,
+        [name]: value
+      }));
     };
 
-    // Component for the Add New Asset Modal
-    const AddAssetModal = ({ show, onClose, onAdd }) => {
-        const [formData, setFormData] = useState({
-            name: '',
-            type: '',
-            brand: '',
-            value: '',
-            purchaseDate: '',
-            location: '',
-            serialNumber: '',
-        });
-
-        const handleChange = (e) => {
-            const { name, value } = e.target;
-            setFormData(prevData => ({
-                ...prevData,
-                [name]: value
-            }));
-        };
-
-        const handleSubmit = (e) => {
-            e.preventDefault();
-            // Generate a simple ID for new assets
-            const newAsset = {
-                id: `TXP-${formData.type.substring(0, 2).toUpperCase()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
-                status: 'available', // New assets are always available initially
-                assignedTo: 'Unassigned',
-                ...formData
-            };
-            onAdd(newAsset);
-            setFormData({ // Reset form after submission
-                name: '', type: '', brand: '', value: '', purchaseDate: '', location: '', serialNumber: ''
-            });
-        };
-
-        if (!show) return null;
-
-        return (
-            <div className="modal-overlay">
-                <div className="modal-content">
-                    <div className="modal-header">
-                        <h3 className="modal-title">Add New Asset</h3>
-                        <button className="modal-close-button" onClick={onClose}>
-                            <X size={20} />
-                        </button>
-                    </div>
-                    <p className="modal-description">
-                        Create a new asset record in the system
-                    </p>
-                    <form onSubmit={handleSubmit}>
-                        {/* Grid layout for two fields per row */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-                            <div className="form-group">
-                                <label className="form-label">Asset Name *</label>
-                                <input type="text" name="name" placeholder="e.g., MacBook Pro 16" className="form-input" value={formData.name} onChange={handleChange} required />
-                            </div>
-                            <div className="form-group">
-                                <label className="form-label">Type *</label>
-                                <div className="form-input-icon-wrapper">
-                                    <select name="type" className="form-select" style={{ paddingLeft: '12px' }} value={formData.type} onChange={handleChange} required>
-                                        <option value="">Select type</option>
-                                        <option>Laptop</option>
-                                        <option>Monitor</option>
-                                        <option>Desktop</option>
-                                        <option>Mobile</option>
-                                        <option>Other</option>
-                                    </select>
-                                    <ChevronDown size={18} className="form-input-icon" style={{ left: 'auto', right: '12px', transform: 'translateY(-50%)' }} />
-                                </div>
-                            </div>
-                            <div className="form-group">
-                                <label className="form-label">Vendor/Brand</label>
-                                <input type="text" name="brand" placeholder="e.g., Apple, Dell, HP" className="form-input" value={formData.brand} onChange={handleChange} />
-                            </div>
-                            <div className="form-group">
-                                <label className="form-label">Purchase Price</label>
-                                <input type="text" name="value" placeholder="e.g., 2499" className="form-input" value={formData.value} onChange={handleChange} />
-                            </div>
-                            <div className="form-group">
-                                <label className="form-label">Purchase Date</label>
-                                <div className="form-input-icon-wrapper">
-                                    <Calendar size={18} className="form-input-icon" />
-                                    <input type="text" name="purchaseDate" placeholder="dd/mm/yyyy" className="form-input form-input-with-icon" value={formData.purchaseDate} onChange={handleChange} />
-                                </div>
-                            </div>
-                            <div className="form-group">
-                                <label className="form-label">Location</label>
-                                <div className="form-input-icon-wrapper">
-                                    <MapPin size={18} className="form-input-icon" />
-                                    <input type="text" name="location" placeholder="e.g., Asset Storage, Floor 1" className="form-input form-input-with-icon" value={formData.location} onChange={handleChange} />
-                                </div>
-                            </div>
-                            <div className="form-group" style={{ gridColumn: 'span 2' }}> {/* Span full width */}
-                                <label className="form-label">Serial Number</label>
-                                <div className="form-input-icon-wrapper">
-                                    <Hash size={18} className="form-input-icon" />
-                                    <input type="text" name="serialNumber" placeholder="e.g., MBP-001-2024 (Optional - will be auto-generated)" className="form-input form-input-with-icon" value={formData.serialNumber} onChange={handleChange} />
-                                </div>
-                            </div>
-                        </div>
-                        <div className="modal-footer">
-                            <button type="button" className="modal-button cancel" onClick={onClose}>Cancel</button>
-                            <button type="submit" className="modal-button primary">Add Asset</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        );
+    // Handles form submission
+    const handleSubmit = (e) => {
+      e.preventDefault();
+      onUpdate(formData); // Call the onUpdate prop with the current form data
     };
 
-    // Function to handle adding a new asset from the Add Asset modal
-    const handleAddAsset = (newAsset) => {
-        setAssets(prevAssets => [...prevAssets, newAsset]);
-        setShowAddAssetModal(false);
-        setNotifications(prev => [{
-            id: Date.now(),
-            message: `Added new asset: "${newAsset.name}" (${newAsset.id}).`,
-            timestamp: new Date()
-        }, ...prev]);
-    };
-
+    // If 'show' is false, don't render the modal
+    if (!show) return null;
 
     return (
-        <>
-            {/* Embedded CSS for the component */}
-            <style jsx>{`
+      <div className="modal-overlay edit-asset-modal">
+        <div className="modal-content">
+          <div className="modal-header">
+            <h3 className="modal-title">Edit Asset</h3>
+            <button className="modal-close-button" onClick={onClose}>
+              <X size={20} />
+            </button>
+          </div>
+          <p className="modal-description">
+            Modify the details of the asset.
+          </p>
+          <form onSubmit={handleSubmit}>
+            {/* Grid layout for two fields per row */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+              <div className="form-group">
+                <label className="form-label">Asset Name *</label>
+                <input type="text" name="name" placeholder="e.g., MacBook Pro 16" className="form-input" value={formData.name} onChange={handleChange} required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Type *</label>
+                <div className="form-input-icon-wrapper">
+                  <select name="type" className="form-select" style={{ paddingLeft: '12px' }} value={formData.type} onChange={handleChange} required>
+                    <option value="">Select type</option>
+                    <option>Laptop</option>
+                    <option>Monitor</option>
+                    <option>Desktop</option>
+                    <option>Mobile</option>
+                    <option>Other</option>
+                  </select>
+                  <ChevronDown size={18} className="form-input-icon" style={{ left: 'auto', right: '12px', transform: 'translateY(-50%)' }} />
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Vendor/Brand</label>
+                <input type="text" name="brand" placeholder="e.g., Apple, Dell, HP" className="form-input" value={formData.brand || ''} onChange={handleChange} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Purchase Price</label>
+                <input type="text" name="value" placeholder="e.g., $2499" className="form-input" value={formData.value} onChange={handleChange} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Purchase Date</label>
+                <div className="form-input-icon-wrapper">
+                  <Calendar size={18} className="form-input-icon" />
+                  <input type="text" name="purchaseDate" placeholder="dd/mm/yyyy" className="form-input form-input-with-icon" value={formData.purchaseDate || ''} onChange={handleChange} />
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Location</label>
+                <div className="form-input-icon-wrapper">
+                  <MapPin size={18} className="form-input-icon" />
+                  <input type="text" name="location" placeholder="e.g., Asset Storage, Floor 1" className="form-input form-input-with-icon" value={formData.location} onChange={handleChange} />
+              </div>
+              </div>
+              <div className="form-group" style={{ gridColumn: 'span 2' }}> {/* Span full width */}
+                <label className="form-label">Serial Number</label>
+                <div className="form-input-icon-wrapper">
+                  <Hash size={18} className="form-input-icon" />
+                  <input type="text" name="serialNumber" placeholder="e.g., MBP-001-2024" className="form-input form-input-with-icon" value={formData.serialNumber || ''} onChange={handleChange} />
+                </div>
+              </div>
+              <div className="form-group" style={{ gridColumn: 'span 2' }}> {/* Span full width */}
+                <label className="form-label">Status *</label>
+                <div className="form-input-icon-wrapper">
+                  <select name="status" className="form-select" style={{ paddingLeft: '12px' }} value={formData.status} onChange={handleChange} required>
+                    <option>available</option>
+                    <option>assigned</option>
+                    <option>in maintenance</option>
+                  </select>
+                  <ChevronDown size={18} className="form-input-icon" style={{ left: 'auto', right: '12px', transform: 'translateY(-50%)' }} />
+                </div>
+              </div>
+              <div className="form-group" style={{ gridColumn: 'span 2' }}> {/* Span full width */}
+                <label className="form-label">Assigned To</label>
+                <input type="text" name="assignedTo" placeholder="e.g., John Doe" className="form-input" value={formData.assignedTo} onChange={handleChange} />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button type="button" className="modal-button cancel" onClick={onClose}>Cancel</button>
+              <button type="submit" className="modal-button primary">Save Changes</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  };
+
+  // Component for the Add New Asset Modal
+  const AddAssetModal = ({ show, onClose, onAdd }) => {
+    const [formData, setFormData] = useState({
+      name: '',
+      type: '',
+      brand: '',
+      value: '',
+      purchaseDate: '',
+      location: '',
+      serialNumber: '',
+    });
+
+    const handleChange = (e) => {
+      const { name, value } = e.target;
+      setFormData(prevData => ({
+        ...prevData,
+        [name]: value
+      }));
+    };
+
+    const handleSubmit = (e) => {
+      e.preventDefault();
+      // Generate a simple ID for new assets
+      const newAsset = {
+        id: `TXP-${formData.type.substring(0, 2).toUpperCase()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
+        status: 'available', // New assets are always available initially
+        assignedTo: 'Unassigned',
+        ...formData
+      };
+      onAdd(newAsset);
+      setFormData({ // Reset form after submission
+        name: '', type: '', brand: '', value: '', purchaseDate: '', location: '', serialNumber: ''
+      });
+    };
+
+    if (!show) return null;
+
+    return (
+      <div className="modal-overlay">
+        <div className="modal-content">
+          <div className="modal-header">
+            <h3 className="modal-title">Add New Asset</h3>
+            <button className="modal-close-button" onClick={onClose}>
+              <X size={20} />
+            </button>
+          </div>
+          <p className="modal-description">
+            Create a new asset record in the system
+          </p>
+          <form onSubmit={handleSubmit}>
+            {/* Grid layout for two fields per row */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+              <div className="form-group">
+                <label className="form-label">Asset Name *</label>
+                <input type="text" name="name" placeholder="e.g., MacBook Pro 16" className="form-input" value={formData.name} onChange={handleChange} required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Type *</label>
+                <div className="form-input-icon-wrapper">
+                  <select name="type" className="form-select" style={{ paddingLeft: '12px' }} value={formData.type} onChange={handleChange} required>
+                    <option value="">Select type</option>
+                    <option>Laptop</option>
+                    <option>Monitor</option>
+                    <option>Desktop</option>
+                    <option>Mobile</option>
+                    <option>Other</option>
+                  </select>
+                  <ChevronDown size={18} className="form-input-icon" style={{ left: 'auto', right: '12px', transform: 'translateY(-50%)' }} />
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Vendor/Brand</label>
+                <input type="text" name="brand" placeholder="e.g., Apple, Dell, HP" className="form-input" value={formData.brand} onChange={handleChange} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Purchase Price</label>
+                <input type="text" name="value" placeholder="e.g., 2499" className="form-input" value={formData.value} onChange={handleChange} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Purchase Date</label>
+                <div className="form-input-icon-wrapper">
+                  <Calendar size={18} className="form-input-icon" />
+                  <input type="text" name="purchaseDate" placeholder="dd/mm/yyyy" className="form-input form-input-with-icon" value={formData.purchaseDate} onChange={handleChange} />
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Location</label>
+                <div className="form-input-icon-wrapper">
+                  <MapPin size={18} className="form-input-icon" />
+                  <input type="text" name="location" placeholder="e.g., Asset Storage, Floor 1" className="form-input form-input-with-icon" value={formData.location} onChange={handleChange} />
+                </div>
+              </div>
+              <div className="form-group" style={{ gridColumn: 'span 2' }}> {/* Span full width */}
+                <label className="form-label">Serial Number</label>
+                <div className="form-input-icon-wrapper">
+                  <Hash size={18} className="form-input-icon" />
+                  <input type="text" name="serialNumber" placeholder="e.g., MBP-001-2024 (Optional - will be auto-generated)" className="form-input form-input-with-icon" value={formData.serialNumber} onChange={handleChange} />
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button type="button" className="modal-button cancel" onClick={onClose}>Cancel</button>
+              <button type="submit" className="modal-button primary">Add Asset</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  };
+
+  // Function to handle adding a new asset from the Add Asset modal
+  const handleAddAsset = (newAsset) => {
+    setAssets(prevAssets => [...prevAssets, newAsset]);
+    setShowAddAssetModal(false);
+    setNotifications(prev => [{
+      id: Date.now(),
+      message: `Added new asset: "${newAsset.name}" (${newAsset.id}).`,
+      timestamp: new Date()
+    }, ...prev]);
+  };
+
+  // Component for the Assign Asset Modal
+  const AssignAssetModal = ({ show, onClose, onAssign, availableAssets, users }) => { // Added users prop
+    const [selectedAssetId, setSelectedAssetId] = useState('');
+    const [assignedUser, setAssignedUser] = useState('');
+    const [assignmentReason, setAssignmentReason] = useState('');
+
+    const handleSubmit = (e) => {
+      e.preventDefault();
+      if (selectedAssetId && assignedUser && assignmentReason) {
+        onAssign(selectedAssetId, assignedUser, assignmentReason);
+        setSelectedAssetId('');
+        setAssignedUser('');
+        setAssignmentReason('');
+      } else {
+        // Basic validation feedback
+        // Replaced alert with console.error for better UX in Canvas
+        console.error('Please fill in all required fields for assignment.');
+      }
+    };
+
+    if (!show) return null;
+
+    return (
+      <div className="modal-overlay">
+        <div className="modal-content">
+          <div className="modal-header">
+            <h3 className="modal-title">Assign Asset to User</h3>
+            <button className="modal-close-button" onClick={onClose}>
+              <X size={20} />
+            </button>
+          </div>
+          <p className="modal-description">
+            Select an available asset and assign it to a user with a reason for the assignment.
+          </p>
+          <form onSubmit={handleSubmit}> {/* Added form tag */}
+            <div className="form-group">
+              <label className="form-label">Select Asset *</label>
+              <div className="form-input-icon-wrapper">
+                <select
+                  className="form-select"
+                  style={{ paddingLeft: '12px' }}
+                  value={selectedAssetId}
+                  onChange={(e) => setSelectedAssetId(e.target.value)}
+                  required
+                >
+                  <option value="">Choose an available asset</option>
+                  {availableAssets.map(a => (
+                    <option key={a.id} value={a.id}>{a.id} - {a.name}</option>
+                  ))}
+                </select>
+                <ChevronDown size={18} className="form-input-icon" style={{ left: 'auto', right: '12px', transform: 'translateY(-50%)' }} />
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Assign to User *</label>
+              <div className="form-input-icon-wrapper">
+                <select // Changed from input to select
+                  className="form-select"
+                  style={{ paddingLeft: '12px' }}
+                  value={assignedUser}
+                  onChange={(e) => setAssignedUser(e.target.value)}
+                  required
+                >
+                  <option value="">Choose a user</option>
+                  {users.map(userOption => (
+                    <option key={userOption} value={userOption}>{userOption}</option>
+                  ))}
+                </select>
+                <ChevronDown size={18} className="form-input-icon" style={{ left: 'auto', right: '12px', transform: 'translateY(-50%)' }} />
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Assignment Reason *</label>
+              <textarea
+                placeholder="Enter the reason for this assignment (e.g., New employee laptop setup, Project requirement, etc.)"
+                className="form-textarea"
+                rows="3"
+                value={assignmentReason}
+                onChange={(e) => setAssignmentReason(e.target.value)}
+                required
+              ></textarea>
+            </div>
+            <div className="modal-footer">
+              <button type="button" className="modal-button cancel" onClick={onClose}>Cancel</button>
+              <button type="submit" className="modal-button primary">Assign Asset</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  };
+
+
+  return (
+    <>
+      {/* Embedded CSS for the component */}
+      <style jsx>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap'); /* Added 800 for extra bold */
 
         body {
@@ -628,64 +752,7 @@ const AssetWorksheet = () => {
           display: none; /* Hide the old header */
         }
 
-        .quick-actions-section {
-          background-color: #ffffff; /* bg-white */
-          border-radius: 8px; /* rounded-lg */
-          box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
-          padding: 20px; /* p-5 */
-          margin-bottom: 24px; /* mb-6 */
-        }
-
-        .quick-actions-title {
-          font-size: 18px; /* text-lg */
-          font-weight: 500; /* font-medium */
-          color: #1f2937; /* text-gray-800 */
-          margin-bottom: 16px; /* mb-4 */
-          display: flex;
-          align-items: center;
-        }
-
-        .quick-actions-icon {
-          height: 20px; /* h-5 */
-          width: 20px; /* w-5 */
-          margin-right: 8px; /* mr-2 */
-          color: #6b7280; /* text-gray-500 */
-        }
-
-        .quick-actions-buttons {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 16px; /* gap-4 */
-        }
-
-        .action-button {
-          display: flex;
-          align-items: center;
-          padding: 8px 16px; /* px-4 py-2 */
-          border-radius: 6px; /* rounded-md */
-          box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-md */
-          color: #ffffff; /* text-white */
-          transition: background-color 0.2s ease-in-out;
-          flex-grow: 1; /* flex-grow */
-          border: none; /* Removed button border */
-          background-color: #2563eb; /* All blue */
-        }
-
-        @media (min-width: 640px) { /* sm breakpoint */
-          .action-button {
-            flex-grow: 0; /* sm:flex-grow-0 */
-          }
-        }
-
-        .action-button:hover {
-          background-color: #1d4ed8; /* hover:bg-blue-700 */
-        }
-
-        .action-button-icon {
-          height: 20px; /* h-5 */
-          width: 20px; /* w-5 */
-          margin-right: 8px; /* mr-2 */
-        }
+        /* Removed .quick-actions-section styles */
 
         .main-content-area {
           background-color: #ffffff; /* bg-white */
@@ -1214,357 +1281,297 @@ const AssetWorksheet = () => {
         }
       `}</style>
 
-            {/* Main container for the entire dashboard */}
-            <div className="dashboard-container">
-                {/* NEW HEADER SECTION */}
-                <header className="new-header">
-                    {/* Logo Section */}
-                    <div className="logo-text">
-                        Tech<span className="logo-x">X</span>plorers
-                    </div>
+      {/* Main container for the entire dashboard */}
+      <div className="dashboard-container">
+        {/* NEW HEADER SECTION */}
+        <header className="new-header">
+          {/* Logo Section */}
+          <div className="logo-text">
+            Tech<span className="logo-x">X</span>plorers
+          </div>
 
-                    {/* User Profile Section */}
-                    <div className="user-profile">
-                        {/* Bell Icon with Notification Dot */}
-                        <div className="notification-dot-container" onClick={toggleNotifications}>
-                            {notifications.length > 0 && ( // Show ping and solid dot only if there are notifications
-                                <>
-                                    <span className="notification-dot-ping"></span>
-                                    <span className="notification-dot-solid"></span>
-                                </>
-                            )}
-                            <Bell className="icon-button" size={20} />
-                        </div>
-
-                        {/* Notification Panel (NEW) */}
-                        {showNotifications && (
-                            <div className="notification-panel" ref={notificationsRef}>
-                                <div className="notification-panel-header">
-                                    Notifications ({notifications.length})
-                                </div>
-                                {notifications.length > 0 ? (
-                                    notifications.map(notification => (
-                                        <div key={notification.id} className="notification-item">
-                                            <div className="notification-item-message">{notification.message}</div>
-                                            <div className="notification-item-timestamp">{formatTimestamp(notification.timestamp)}</div>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="notification-panel-empty">No new notifications.</div>
-                                )}
-                            </div>
-                        )}
-
-                        {/* User Info (Asset Manager & Asset Tag) */}
-                        <div className="user-info">
-                            <span className="user-name">Asset Manager</span>
-                            <span className="employee-tag">
-                                <User size={12} />
-                                Asset
-                            </span>
-                        </div>
-
-                        {/* User Avatar - Add onClick handler */}
-                        <div className="user-avatar" onClick={toggleProfileDropdown} ref={profileDropdownRef}> {/* Attach ref here */}
-                            AM
-                        </div>
-
-                        {/* Profile Dropdown */}
-                        {showProfileDropdown && (
-                            <div className="profile-dropdown">
-                                <div
-                                    className="profile-dropdown-item logout"
-                                    onClick={() => {
-                                        // Optional: Clear any local storage or auth tokens here
-                                        window.location.href = '/'; // Redirect to homepage
-                                    }}
-                                >
-                                    <LogOut size={16} />
-                                    Log out
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </header>
-                {/* END NEW HEADER SECTION */}
-
-                {/* Quick Actions Section */}
-                <section className="quick-actions-section">
-                    <h2 className="quick-actions-title">
-                        {/* Icon for Quick Actions */}
-                        <svg xmlns="http://www.w3.org/2000/svg" className="quick-actions-icon" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
-                        </svg>
-                        Quick Actions
-                    </h2>
-                    {/* Buttons for Quick Actions */}
-                    <div className="quick-actions-buttons">
-                        <button className="action-button" onClick={() => handleQuickActionClick('assign')}>
-                            <svg xmlns="http://www.w3.org/2000/svg" className="action-button-icon" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                            </svg>
-                            Assign Assets
-                        </button>
-                        <button className="action-button" onClick={() => handleQuickActionClick('add')}>
-                            <Plus size={20} className="action-button-icon" />
-                            Add New Asset
-                        </button>
-                    </div>
-                </section>
-
-                {/* Main Content Area with Tabs */}
-                <div className="main-content-area">
-                    {/* Navigation Tabs */}
-                    <nav className="nav-tabs">
-                        {['Assets', 'Notes'].map((tab) => (
-                            <button
-                                key={tab}
-                                className={`tab-button ${activeTab === tab ? 'active' : ''}`}
-                                onClick={() => setActiveTab(tab)}
-                            >
-                                {tab}
-                            </button>
-                        ))}
-                    </nav>
-
-                    {/* Content for the 'Assets' Tab */}
-                    {activeTab === 'Assets' && (
-                        <div className="asset-content">
-                            {/* Asset Inventory Header with Action Buttons */}
-                            <div className="asset-inventory-header">
-                                <h2 className="asset-inventory-title">
-                                    {/* Icon for Asset Inventory */}
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="asset-inventory-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 14v6m-3-3h6M6 10h2a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v2a2 2 0 002 2zm10 0h2a2 2 0 002-2V6a2 2 0 00-2-2h-2a2 2 0 00-2 2v2a2 2 0 002 2zM6 20h2a2 2 0 002-2v-2a2 2 0 00-2-2H6a2 2 0 00-2 2v2a2 2 0 002 2z" />
-                                    </svg>
-                                    Asset Inventory
-                                </h2>
-                                {/* Action buttons for Asset Inventory */}
-                                <div className="asset-action-buttons">
-                                    <button className="asset-action-button" onClick={() => setShowAssignAssetModal(true)}>
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="asset-action-button-icon" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                                        </svg>
-                                        Assign Assets
-                                    </button>
-                                    <button className="asset-action-button" onClick={() => setShowAddAssetModal(true)}>
-                                        <Plus size={16} className="asset-action-button-icon" />
-                                        Add Asset
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Search and Filter Bar */}
-                            <div className="search-filter-bar">
-                                {/* Search Input */}
-                                <div className="search-input-container">
-                                    <Search size={18} className="search-icon" />
-                                    <input
-                                        type="text"
-                                        placeholder="Search assets..."
-                                        className="search-input"
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                    />
-                                </div>
-                                {/* Status Filter Dropdown */}
-                                <div className="filter-dropdown-container">
-                                    <select
-                                        className="filter-dropdown"
-                                        onChange={(e) => setFilterStatus(e.target.value)}
-                                        value={filterStatus}
-                                    >
-                                        <option>All Statuses</option>
-                                        <option>available</option>
-                                        <option>assigned</option>
-                                        <option>in maintenance</option>
-                                    </select>
-                                    <ChevronDown size={16} className="dropdown-chevron" />
-                                </div>
-                            </div>
-
-                            {/* Asset Table */}
-                            <div className="asset-table-container">
-                                <table className="asset-table">
-                                    <thead>
-                                        <tr>
-                                            <th scope="col">
-                                                Asset
-                                            </th>
-                                            <th scope="col">
-                                                Type
-                                            </th>
-                                            <th scope="col">
-                                                Status
-                                            </th>
-                                            <th scope="col">
-                                                Assigned To
-                                            </th>
-                                            <th scope="col">
-                                                Location
-                                            </th>
-                                            <th scope="col">
-                                                Value
-                                            </th>
-                                            <th scope="col">
-                                                Actions
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {filteredAssets.map((asset) => (
-                                            <tr key={asset.id}>
-                                                <td className="asset-table-asset-cell">
-                                                    {/* Generic asset icon */}
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="asset-table-asset-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                                                    </svg>
-                                                    <div>
-                                                        <div className="asset-table-asset-id">{asset.id}</div>
-                                                        <div className="asset-table-asset-name">{asset.name}</div>
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <div className="text-sm text-gray-900">{asset.type}</div>
-                                                </td>
-                                                <td>
-                                                    {/* Status badge - dynamically apply class based on status */}
-                                                    <span className={`status-badge ${asset.status.replace(/\s+/g, '-')}`}>
-                                                        {asset.status}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    {asset.assignedTo}
-                                                </td>
-                                                <td>
-                                                    {asset.location}
-                                                </td>
-                                                <td>
-                                                    {asset.value}
-                                                </td>
-                                                <td className="actions-cell">
-                                                    {/* Edit icon with onClick handler */}
-                                                    <button className="action-icon-button" onClick={() => handleEditAssetClick(asset)}>
-                                                        <Edit size={18} />
-                                                    </button>
-                                                    <button className="action-icon-button delete" onClick={() => handleDeleteAssetClick(asset.id)}>
-                                                        <Trash2 size={18} />
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Content for the 'Notes' Tab */}
-                    {activeTab === 'Notes' && (
-                        <div className="asset-content">
-                            <h2 className="asset-inventory-title">Notes</h2>
-                            <p style={{ color: '#6b7280' }}>This section is for notes related to assets.</p>
-                        </div>
-                    )}
-                </div>
+          {/* User Profile Section */}
+          <div className="user-profile">
+            {/* Bell Icon with Notification Dot */}
+            <div className="notification-dot-container" onClick={toggleNotifications}>
+              {notifications.length > 0 && ( // Show ping and solid dot only if there are notifications
+                <>
+                  <span className="notification-dot-ping"></span>
+                  <span className="notification-dot-solid"></span>
+                </>
+              )}
+              <Bell className="icon-button" size={20} />
             </div>
 
-            {/* Assign Asset Modal */}
-            {showAssignAssetModal && (
-                <div className="modal-overlay">
-                    <div className="modal-content">
-                        <div className="modal-header">
-                            <h3 className="modal-title">Assign Asset to User</h3>
-                            <button className="modal-close-button" onClick={() => setShowAssignAssetModal(false)}>
-                                <X size={20} />
-                            </button>
-                        </div>
-                        <p className="modal-description">
-                            Select an available asset and assign it to a user with a reason for the assignment.
-                        </p>
-                        <div className="form-group">
-                            <label className="form-label">Search Available Assets</label>
-                            <div className="form-input-icon-wrapper">
-                                <Search size={18} className="form-input-icon" />
-                                <input type="text" placeholder="Search by asset tag, brand, or model..." className="form-input form-input-with-icon" />
-                            </div>
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label">Select Asset *</label>
-                            <div className="form-input-icon-wrapper">
-                                <select className="form-select" style={{ paddingLeft: '12px' }}>
-                                    <option>Choose an available asset</option>
-                                    {assets.filter(a => a.status === 'available').map(a => (
-                                        <option key={a.id} value={a.id}>{a.id} - {a.name}</option>
-                                    ))}
-                                </select>
-                                <ChevronDown size={18} className="form-input-icon" style={{ left: 'auto', right: '12px', transform: 'translateY(-50%)' }} />
-                            </div>
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label">Assign to User *</label>
-                            <div className="form-input-icon-wrapper">
-                                <select className="form-select" style={{ paddingLeft: '12px' }}>
-                                    <option>Choose a user</option>
-                                    <option>John Doe</option>
-                                    <option>Jane Smith</option>
-                                </select>
-                                <ChevronDown size={18} className="form-input-icon" style={{ left: 'auto', right: '12px', transform: 'translateY(-50%)' }} />
-                            </div>
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label">Assignment Reason *</label>
-                            <textarea placeholder="Enter the reason for this assignment (e.g., New employee laptop setup, Project requirement, etc.)" className="form-textarea" rows="3"></textarea>
-                        </div>
-                        <div className="modal-footer">
-                            <button className="modal-button cancel" onClick={() => setShowAssignAssetModal(false)}>Cancel</button>
-                            <button className="modal-button primary">Assign Asset</button>
-                        </div>
-                    </div>
+            {/* Notification Panel (NEW) */}
+            {showNotifications && (
+              <div className="notification-panel" ref={notificationsRef}>
+                <div className="notification-panel-header">
+                  Notifications ({notifications.length})
                 </div>
-            )}
-
-            {/* Add New Asset Modal */}
-            {showAddAssetModal && (
-                <AddAssetModal
-                    show={showAddAssetModal}
-                    onClose={() => setShowAddAssetModal(false)}
-                    onAdd={handleAddAsset}
-                />
-            )}
-
-            {/* Edit Asset Modal */}
-            {showEditAssetModal && assetToEdit && (
-                <EditAssetModal
-                    show={showEditAssetModal}
-                    onClose={() => setShowEditAssetModal(false)}
-                    asset={assetToEdit} // Pass the asset to be edited
-                    onUpdate={handleUpdateAsset} // Pass the update handler
-                />
-            )}
-
-            {/* Delete Confirmation Modal */}
-            {showDeleteConfirmationModal && (
-                <div className="modal-overlay delete-confirmation-modal">
-                    <div className="modal-content">
-                        <div className="modal-header">
-                            <h3 className="modal-title">Confirm Deletion</h3>
-                            <button className="modal-close-button" onClick={handleDeleteAssetCancel}>
-                                <X size={20} />
-                            </button>
-                        </div>
-                        <p className="modal-description">
-                            Are you sure you want to delete asset **{assetIdToDelete}**? This action cannot be undone.
-                        </p>
-                        <div className="modal-footer">
-                            <button className="modal-button cancel" onClick={handleDeleteAssetCancel}>Cancel</button>
-                            <button className="modal-button delete-confirm" onClick={handleDeleteAssetConfirm}>Delete</button>
-                        </div>
+                {notifications.length > 0 ? (
+                  notifications.map(notification => (
+                    <div key={notification.id} className="notification-item">
+                      <div className="notification-item-message">{notification.message}</div>
+                      <div className="notification-item-timestamp">{formatTimestamp(notification.timestamp)}</div>
                     </div>
-                </div>
+                  ))
+                ) : (
+                  <div className="notification-panel-empty">No new notifications.</div>
+                )}
+              </div>
             )}
-        </>
-    );
+
+            {/* User Info (Asset Manager & Asset Tag) */}
+            <div className="user-info">
+              <span className="user-name">Asset Manager</span>
+              <span className="employee-tag">
+                <User size={12} />
+                Asset
+              </span>
+            </div>
+
+            {/* User Avatar - Add onClick handler */}
+            <div className="user-avatar" onClick={toggleProfileDropdown} ref={profileDropdownRef}> {/* Attach ref here */}
+              AM
+            </div>
+
+            {/* Profile Dropdown */}
+            {showProfileDropdown && (
+              <div className="profile-dropdown">
+                <div className="profile-dropdown-item logout" onClick={handleLogout}>
+                  <LogOut size={16} />
+                  Log out
+                </div>
+              </div>
+            )}
+          </div>
+        </header>
+        {/* END NEW HEADER SECTION */}
+
+        {/* Removed Quick Actions Section */}
+        {/* <section className="quick-actions-section">
+          <h2 className="quick-actions-title">
+            <svg xmlns="http://www.w3.org/2000/svg" className="quick-actions-icon" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
+            </svg>
+            Quick Actions
+          </h2>
+          <div className="quick-actions-buttons">
+            <button className="action-button" onClick={() => handleQuickActionClick('assign')}>
+              <svg xmlns="http://www.w3.org/2000/svg" className="action-button-icon" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+              </svg>
+              Assign Assets
+            </button>
+            <button className="action-button" onClick={() => handleQuickActionClick('add')}>
+              <Plus size={20} className="action-button-icon" />
+              Add New Asset
+            </button>
+          </div>
+        </section> */}
+
+        {/* Main Content Area with Tabs */}
+        <div className="main-content-area">
+          {/* Navigation Tabs */}
+          <nav className="nav-tabs">
+            {['Assets'].map((tab) => (
+              <button
+                key={tab}
+                className={`tab-button ${activeTab === tab ? 'active' : ''}`}
+                onClick={() => setActiveTab(tab)}
+              >
+                {tab}
+              </button>
+            ))}
+          </nav>
+
+          {/* Content for the 'Assets' Tab */}
+          {activeTab === 'Assets' && (
+            <div className="asset-content">
+              {/* Asset Inventory Header with Action Buttons */}
+              <div className="asset-inventory-header">
+                <h2 className="asset-inventory-title">
+                  {/* Icon for Asset Inventory */}
+                  <svg xmlns="http://www.w3.org/2000/svg" className="asset-inventory-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 14v6m-3-3h6M6 10h2a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v2a2 2 0 002 2zm10 0h2a2 2 0 002-2V6a2 2 0 00-2-2h-2a2 2 0 00-2 2v2a2 2 0 002 2zM6 20h2a2 2 0 002-2v-2a2 2 0 00-2-2H6a2 2 0 00-2 2v2a2 2 0 002 2z" />
+                  </svg>
+                  Asset Inventory
+                </h2>
+                {/* Action buttons for Asset Inventory */}
+                <div className="asset-action-buttons">
+                  <button className="asset-action-button" onClick={() => setShowAssignAssetModal(true)}>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="asset-action-button-icon" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                    </svg>
+                    Assign Assets
+                  </button>
+                  <button className="asset-action-button" onClick={() => setShowAddAssetModal(true)}>
+                    <Plus size={16} className="asset-action-button-icon" />
+                    Add Asset
+                  </button>
+                </div>
+              </div>
+
+              {/* Search and Filter Bar */}
+              <div className="search-filter-bar">
+                {/* Search Input */}
+                <div className="search-input-container">
+                  <Search size={18} className="search-icon" />
+                  <input
+                    type="text"
+                    placeholder="Search assets..."
+                    className="search-input"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                {/* Status Filter Dropdown */}
+                <div className="filter-dropdown-container">
+                  <select
+                    className="filter-dropdown"
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    value={filterStatus}
+                  >
+                    <option>All Statuses</option>
+                    <option>available</option>
+                    <option>assigned</option>
+                    <option>in maintenance</option>
+                  </select>
+                  <ChevronDown size={16} className="dropdown-chevron" />
+                </div>
+              </div>
+
+              {/* Asset Table */}
+              <div className="asset-table-container">
+                <table className="asset-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">
+                        Asset
+                      </th>
+                      <th scope="col">
+                        Type
+                      </th>
+                      <th scope="col">
+                        Status
+                      </th>
+                      <th scope="col">
+                        Assigned To
+                      </th>
+                      <th scope="col">
+                        Location
+                      </th>
+                      <th scope="col">
+                        Value
+                      </th>
+                      <th scope="col">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredAssets.map((asset) => (
+                      <tr key={asset.id}>
+                        <td className="asset-table-asset-cell">
+                          {/* Generic asset icon */}
+                          <svg xmlns="http://www.w3.org/2000/svg" className="asset-table-asset-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                          </svg>
+                          <div>
+                            <div className="asset-table-asset-id">{asset.id}</div>
+                            <div className="asset-table-asset-name">{asset.name}</div>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="text-sm text-gray-900">{asset.type}</div>
+                        </td>
+                        <td>
+                          {/* Status badge - dynamically apply class based on status */}
+                          <span className={`status-badge ${asset.status.replace(/\s+/g, '-')}`}>
+                            {asset.status}
+                          </span>
+                        </td>
+                        <td>
+                          {asset.assignedTo}
+                        </td>
+                        <td>
+                          {asset.location}
+                        </td>
+                        <td>
+                          {asset.value}
+                        </td>
+                        <td className="actions-cell">
+                          {/* Edit icon with onClick handler */}
+                          <button className="action-icon-button" onClick={() => handleEditAssetClick(asset)}>
+                            <Edit size={18} />
+                          </button>
+                          <button className="action-icon-button delete" onClick={() => handleDeleteAssetClick(asset.id)}>
+                            <Trash2 size={18} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Assign Asset Modal */}
+      {showAssignAssetModal && (
+        <AssignAssetModal
+          show={showAssignAssetModal}
+          onClose={() => setShowAssignAssetModal(false)}
+          onAssign={handleAssignAsset}
+          availableAssets={assets.filter(a => a.status === 'available')} // Pass only available assets
+          users={users} // Pass the users array to the modal
+        />
+      )}
+
+      {/* Add New Asset Modal */}
+      {showAddAssetModal && (
+        <AddAssetModal
+          show={showAddAssetModal}
+          onClose={() => setShowAddAssetModal(false)}
+          onAdd={handleAddAsset}
+        />
+      )}
+
+      {/* Edit Asset Modal */}
+      {showEditAssetModal && assetToEdit && (
+        <EditAssetModal
+          show={showEditAssetModal}
+          onClose={() => setShowEditAssetModal(false)}
+          asset={assetToEdit} // Pass the asset to be edited
+          onUpdate={handleUpdateAsset} // Pass the update handler
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirmationModal && (
+        <div className="modal-overlay delete-confirmation-modal">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3 className="modal-title">Confirm Deletion</h3>
+              <button className="modal-close-button" onClick={handleDeleteAssetCancel}>
+                <X size={20} />
+              </button>
+            </div>
+            <p className="modal-description">
+              Are you sure you want to delete asset **{assetIdToDelete}**? This action cannot be undone.
+            </p>
+            <div className="modal-footer">
+              <button className="modal-button cancel" onClick={handleDeleteAssetCancel}>Cancel</button>
+              <button className="modal-button delete-confirm" onClick={handleDeleteAssetConfirm}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
 };
 
 export default AssetWorksheet;
