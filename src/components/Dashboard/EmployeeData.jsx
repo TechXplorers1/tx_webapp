@@ -619,7 +619,7 @@ const EmployeeData = () => {
       ],
       files: [
         { id: 1001, clientId: 1, name: 'john_anderson_resume_2025.pdf', size: '245 KB', type: 'resume', status: 'Uploaded', uploadDate: '2025-06-15', notes: '' },
-        { id: 1002, clientId: 1, name: 'techflow_interview_screenshot.png', size: '1.2 MB', type: 'interview screenshot', status: 'Uploaded', uploadDate: '2025-06-21', notes: 'Interview invitation for Senior Frontend Developer position', imageUrl: 'https://placehold.co/600x400/FF0000/FFFFFF?text=Interview+Screenshot' }, // Placeholder image
+        { id: 1002, clientId: 1, name: 'techflow_interview_screenshot.png', size: '1.2 MB', type: 'interview screenshot', status: 'Uploaded', uploadDate: '2025-06-21', notes: 'Interview invitation for Senior Frontend Developer position' },
         { id: 1003, clientId: 1, name: 'john_cover_letter.pdf', size: '98 KB', type: 'cover letter', status: 'Uploaded', uploadDate: '2025-06-16', notes: '' },
       ],
       // NEW: Extended client data fields
@@ -2140,7 +2140,7 @@ const EmployeeData = () => {
                           All Time
                         </button>
                       </div>
-                    </div> {/* Added missing closing div here */}
+                    </div>
 
                     {areFiltersActive() && ( // Conditionally render Clear Filters button
                       <div style={clearFiltersButtonContainerStyle}> {/* New container for positioning */}
@@ -2412,6 +2412,17 @@ const EmployeeData = () => {
                       <h2 style={sectionTitleStyle}>Full details of {selectedClient.name}</h2>
                       <p style={subLabelStyle}>Comprehensive information about the selected client.</p>
                     </div>
+                    {/* Add Application Button for Client Data Tab */}
+                    <button
+                      style={addApplicationButtonStyle}
+                      onClick={() => handleOpenAddApplicationModal(selectedClient)}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                      </svg>
+                      Add Application
+                    </button>
                   </div>
 
                   <div style={clientDataGridStyle}>
@@ -2988,7 +2999,7 @@ const EmployeeData = () => {
                 gap: '15px'
               }}>
                 <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">
-                  <path d="M13 2H6a2 2 0 0 0-2 2v16a2 0 0 0 2 2h12a2 0 0 0 2-2V9z"></path>
+                  <path d="M13 2H6a2 0 0 0-2 2v16a2 0 0 0 2 2h12a2 0 0 0 2-2V9z"></path>
                   <polyline points="13 2 13 9 20 9"></polyline>
                 </svg>
                 <p style={{ color: '#64748b' }}>File preview not available in demo</p>
@@ -4307,7 +4318,7 @@ const clientDataSectionStyle = {
   borderRadius: '10px',
   padding: '20px',
   boxShadow: '0 2px 4px rgba(0,0,0,0.03)',
-  border: '1px solid #0864dcff',
+  border: '1px solid #e2e8f0',
 };
 
 const clientDataSectionTitleStyle = {
