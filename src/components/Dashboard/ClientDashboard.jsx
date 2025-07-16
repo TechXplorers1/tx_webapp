@@ -5169,7 +5169,7 @@ const paymentPlanSelectButtonStyle = {
 };
 
 const paymentOptionButtonStyle = {
-  background: '#475569', // Darker background for payment options
+  background: '#475569',
   color: 'white',
   border: 'none',
   padding: '15px 20px',

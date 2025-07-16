@@ -22,7 +22,7 @@ import TeamLeadData from './components/Dashboard/TeamLeadData';
 import EmployeeData from './components/Dashboard/EmployeeData';
 import Reports from './components/Reports';
 import WorkGroups from './components/workgroups';
-
+import AssetsWorksheet from './components/AssetWorksheet';
 import EmployeeRegistrationForm from './components/employeeRegistrationForm';
 import EmployeeOnboardingWorkSheet from './components/employeeOnboardingSheet';
 import ServiceFormComponent from './components/services/ServicesForm';
@@ -62,6 +62,7 @@ const App = () => {
         <Route path="/services/servicesForm" element={<ServiceFormComponent />} />
            {/* DashBoards */}
         <Route path="/admindashboard" element={<AdminDashboard />} />
+        <Route path="/assetworksheet" element={<AssetsWorksheet/>} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/managers" element={<ManagerData />} />
         <Route path="/teamleads" element={<TeamLeadData />} />

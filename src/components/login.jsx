@@ -80,6 +80,7 @@ export default function LoginPage() {
       if (email === 'admin@gmail.com') navigate('/adminworksheet');
       else if (email === 'client@gmail.com') navigate('/clientdashboard');
       else if (email === 'manager@gmail.com') navigate('/managerworksheet');
+      else if (email === 'assets@gmail.com') navigate('/assetworksheet');
       else if (email.includes('.tx')) navigate('/employees');
       else setLoginError("Invalid email or password.");
     } else {
