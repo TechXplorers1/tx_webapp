@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react'; // Import employeeef
 const AdminWorksheet = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [currentView, setCurrentView] = useState(' employeeManagement'); // Default view to employee Management
+  const [currentView, setCurrentView] = useState('clientManagement'); // Default view to employee Management
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false); // New state for profile dropdown
   const profileDropdownRef = useRef(null); // Ref for the profile dropdown area
 
@@ -87,6 +87,29 @@ const AdminWorksheet = () => {
     { id: 3, firstName: 'Emily', lastName: 'Davis' },
   ];
 
+ // Asset Management States
+  const [assets, setAssets] = useState([
+    { id: 1, tag: 'TXP-LT-001', name: 'Dell Latitude 5520', type: 'Laptop', status: 'assigned', assignedTo: 'John Smith', assignedDate: '2024-02-01' },
+    { id: 2, tag: 'TXP-MON-001', name: 'Dell UltraSharp U2720Q', type: 'Monitor', status: 'assigned', assignedTo: 'Sarah Johnson', assignedDate: '2024-01-10' },
+    { id: 3, tag: 'TXP-MB-001', name: 'iPhone 15 Pro', type: 'Mobile', status: 'assigned', assignedTo: 'Mike Chen', assignedDate: '2024-05-04' },
+    { id: 4, tag: 'TXP-LT-002', name: 'HP Spectre x360', type: 'Laptop', status: 'available', assignedTo: null, assignedDate: null },
+    { id: 5, tag: 'TXP-KB-001', name: 'Logitech MX Keys', type: 'Keyboard', status: 'available', assignedTo: null, assignedDate: null },
+  ]);
+  const [assetAssignments, setAssetAssignments] = useState([
+    { id: 1, assetId: 1, employeeId: 5, assignedDate: '2024-02-01', reason: 'New employee laptop setup' },
+    { id: 2, assetId: 2, employeeId: 2, assignedDate: '2024-01-10', reason: 'Manager workstation upgrade' },
+    { id: 3, assetId: 3, employeeId: 3, assignedDate: '2024-05-04', reason: 'Team lead mobile device' },
+  ]);
+  const [isAssignAssetModalOpen, setIsAssignAssetModalOpen] = useState(false);
+  const [newAssignment, setNewAssignment] = useState({
+    assetId: '',
+    employeeId: '',
+    reason: '',
+  });
+  const [assetSearchTermInModal, setAssetSearchTermInModal] = useState('');
+  const [employeeSearchTermInModal, setEmployeeSearchTermInModal] = useState('');
+
+
 
   const adminemployeeName = "Admin employee";
   const adminemployeeEmail = "administrator@company.com";
@@ -123,7 +146,7 @@ const AdminWorksheet = () => {
 
   // Effect to manage body scroll when any modal is open
   useEffect(() => {
-    if (isAddemployeeModalOpen || isEditemployeeModalOpen || isDeleteConfirmModalOpen || isEditDepartmentModalOpen || isDeleteDepartmentConfirmModalOpen || isCreateDepartmentModalOpen || isPaymentModalOpen) {
+    if (isAddemployeeModalOpen || isEditemployeeModalOpen || isDeleteConfirmModalOpen || isEditDepartmentModalOpen || isDeleteDepartmentConfirmModalOpen || isCreateDepartmentModalOpen || isPaymentModalOpen || isAssignAssetModalOpen) {
       document.body.classList.add('no-scroll');
     } else {
       document.body.classList.remove('no-scroll');
@@ -132,7 +155,7 @@ const AdminWorksheet = () => {
     return () => {
       document.body.classList.remove('no-scroll');
     };
-  }, [isAddemployeeModalOpen, isEditemployeeModalOpen, isDeleteConfirmModalOpen, isEditDepartmentModalOpen, isDeleteDepartmentConfirmModalOpen, isCreateDepartmentModalOpen, isPaymentModalOpen]);
+  }, [isAddemployeeModalOpen, isEditemployeeModalOpen, isDeleteConfirmModalOpen, isEditDepartmentModalOpen, isDeleteDepartmentConfirmModalOpen, isCreateDepartmentModalOpen, isPaymentModalOpen, isAssignAssetModalOpen]);
 
   // Effect to close profile dropdown when clicking outside
   useEffect(() => {
@@ -503,6 +526,7 @@ const AdminWorksheet = () => {
     { value: 'clientManagement', label: 'Client Management' }, // Keep the tab
     { value: 'departments', label: 'Departments' },
     { value: ' employeeManagement', label: 'Employee Management' },
+    { value: 'assetManagement', label: 'Asset Management' }, // New tab
   ];
 
   // Data for dropdowns
@@ -619,6 +643,80 @@ const AdminWorksheet = () => {
     }
   };
 
+  // Asset Management Handlers
+  const handleAssignAssetClick = () => {
+    setIsAssignAssetModalOpen(true);
+  };
+
+  const handleCloseAssignAssetModal = () => {
+    setIsAssignAssetModalOpen(false);
+    setNewAssignment({
+      assetId: '',
+      employeeId: '',
+      reason: '',
+    });
+    setAssetSearchTermInModal('');
+    setEmployeeSearchTermInModal('');
+  };
+
+  const handleNewAssignmentChange = (e) => {
+    const { name, value } = e.target;
+    setNewAssignment(prev => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleAssignAsset = (e) => {
+    e.preventDefault();
+    const { assetId, employeeId, reason } = newAssignment;
+
+    if (!assetId || !employeeId || !reason) {
+      alert('Please fill in all required fields.'); // Using alert for simplicity, replace with custom modal if needed
+      return;
+    }
+
+    const assignedAsset = assets.find(asset => asset.id === parseInt(assetId));
+    const assignedEmployee = employees.find(emp => emp.id === parseInt(employeeId));
+
+    if (assignedAsset && assignedEmployee) {
+      const newAssignmentEntry = {
+        id: assetAssignments.length > 0 ? Math.max(...assetAssignments.map(a => a.id)) + 1 : 1,
+        assetId: assignedAsset.id,
+        employeeId: assignedEmployee.id,
+        assignedDate: new Date().toISOString().slice(0, 10),
+        reason: reason,
+      };
+
+      setAssetAssignments(prev => [...prev, newAssignmentEntry]);
+
+      // Update asset status
+      setAssets(prevAssets => prevAssets.map(asset =>
+        asset.id === assignedAsset.id
+          ? { ...asset, status: 'assigned', assignedTo: assignedEmployee.name, assignedDate: newAssignmentEntry.assignedDate }
+          : asset
+      ));
+
+      handleCloseAssignAssetModal();
+    } else {
+      alert('Selected asset or employee not found.'); // Using alert for simplicity
+    }
+  };
+
+  const filteredAvailableAssets = assets.filter(asset =>
+    asset.status === 'available' &&
+    (asset.tag.toLowerCase().includes(assetSearchTermInModal.toLowerCase()) ||
+      asset.name.toLowerCase().includes(assetSearchTermInModal.toLowerCase()) ||
+      asset.type.toLowerCase().includes(assetSearchTermInModal.toLowerCase()))
+  );
+
+  const filteredEmployeesForAssignment = employees.filter(employee =>
+    employee.name.toLowerCase().includes(employeeSearchTermInModal.toLowerCase()) ||
+    employee.email.toLowerCase().includes(employeeSearchTermInModal.toLowerCase())
+  );
+
+
+
   // Helper to get role/status tag background color
   const getRoleTagBg = (role) => {
     switch (role.toLowerCase()) {
@@ -653,6 +751,9 @@ const AdminWorksheet = () => {
       case 'paid': return '#D9F5E6'; // Light Green
       case 'pending': return '#FFFDE7'; // Light Yellow
       case 'n/a': return '#E5E7EB'; // Light Grey
+            // Asset Status Tags
+      case 'assigned': return '#E0F2FE'; // Light Blue
+      case 'available': return '#D9F5E6'; // Light Green
       default: return 'var(--border-color)';
     }
   };
@@ -691,6 +792,9 @@ const AdminWorksheet = () => {
       case 'paid': return '#28A745'; // Green
       case 'pending': return '#B45309'; // Darker Yellow
       case 'n/a': return '#6B7280'; // Grey
+        // Asset Status Tags
+      case 'assigned': return '#2563EB'; // Blue
+      case 'available': return '#28A745'; // Green
       default: return 'var(--text-secondary)';
     }
   };
@@ -837,6 +941,58 @@ const AdminWorksheet = () => {
           --dept-table-text-secondary: #6b7280;
           --dept-active-tag-bg: #E8F5E9;
           --dept-active-tag-text: #4CAF50;
+          /* Client Management Specific Colors */
+          --client-filter-tab-bg-active-registered: #E6F0FF;
+          --client-filter-tab-text-active-registered: #3A60EE;
+          --client-filter-tab-badge-registered: #3A60EE;
+
+          --client-filter-tab-bg-active-unassigned: #FEF3C7;
+          --client-filter-tab-text-active-unassigned: #B45309;
+          --client-filter-tab-badge-unassigned: #B45309;
+
+          --client-filter-tab-bg-active-active: #D9F5E6;
+          --client-filter-tab-text-active-active: #28A745;
+          --client-filter-tab-badge-active: #28A745;
+
+          --client-filter-tab-bg-active-rejected: #FFEDEE;
+          --client-filter-tab-text-active-rejected: #DC3545;
+          --client-filter-tab-badge-rejected: #DC3545;
+
+          --client-filter-tab-bg-active-restored: #F0E6FF;
+          --client-filter-tab-text-active-restored: #6A40EE;
+          --client-filter-tab-badge-restored: #6A40EE;
+
+          /* Asset Management Specific Colors */
+          --asset-card-icon-bg-total: #E0F2FE;
+          --asset-card-icon-color-total: #2563EB;
+          --asset-card-icon-bg-available: #D9F5E6;
+          --asset-card-icon-color-available: #28A745;
+          --asset-card-icon-bg-assigned: #F3E5F5;
+          --asset-card-icon-color-assigned: #9C27B0;
+          --asset-card-icon-bg-pending: #FFF3E0;
+          --asset-card-icon-color-pending: #FF9800;
+          --assign-asset-btn-bg: #2563EB;
+          --assign-asset-btn-hover: #1D4ED8;
+          --assign-asset-btn-text: #ffffff;
+          --asset-section-title-color: #1f2937;
+          --asset-section-subtitle-color: #6b7280;
+          --asset-quick-assign-bg: #ffffff;
+          --asset-quick-assign-border: #e5e7eb;
+          --asset-quick-assign-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+          --asset-quick-assign-card-bg: #f9fafb;
+          --asset-quick-assign-card-border: #e5e7eb;
+          --asset-quick-assign-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+          --asset-quick-assign-card-title: #1f2937;
+          --asset-quick-assign-card-text: #6b7280;
+          --asset-quick-assign-btn-bg: #2563eb;
+          --asset-quick-assign-btn-hover: #1d4ed8;
+          --asset-quick-assign-btn-text: #ffffff;
+          --asset-activity-table-header-bg: #f9fafb;
+          --asset-activity-table-header-text: #6b7280;
+          --asset-activity-table-row-border: #e5e7eb;
+          --asset-activity-table-row-hover-bg: #f9fafb;
+          --asset-activity-text-primary: #1f2937;
+          --asset-activity-text-secondary: #6b7280;
         }
 
         html.dark-mode {
@@ -972,6 +1128,37 @@ const AdminWorksheet = () => {
           --dept-table-text-secondary: #a0aec0;
           --dept-active-tag-bg: #388E3C;
           --dept-active-tag-text: #ffffff;
+                    /* Asset Management Specific Dark Mode Colors */
+          --asset-card-icon-bg-total: #3182ce;
+          --asset-card-icon-color-total: #ffffff;
+          --asset-card-icon-bg-available: #388E3C;
+          --asset-card-icon-color-available: #ffffff;
+          --asset-card-icon-bg-assigned: #9C27B0;
+          --asset-card-icon-color-assigned: #ffffff;
+          --asset-card-icon-bg-pending: #FF9800;
+          --asset-card-icon-color-pending: #ffffff;
+          --assign-asset-btn-bg: #4299e1;
+          --assign-asset-btn-hover: #3182ce;
+          --assign-asset-btn-text: #ffffff;
+          --asset-section-title-color: #e2e8f0;
+          --asset-section-subtitle-color: #a0aec0;
+          --asset-quick-assign-bg: #2d3748;
+          --asset-quick-assign-border: #4a5568;
+          --asset-quick-assign-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+          --asset-quick-assign-card-bg: #4a5568;
+          --asset-quick-assign-card-border: #6b7280;
+          --asset-quick-assign-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+          --asset-quick-assign-card-title: #e2e8f0;
+          --asset-quick-assign-card-text: #a0aec0;
+          --asset-quick-assign-btn-bg: #4299e1;
+          --asset-quick-assign-btn-hover: #3182ce;
+          --asset-quick-assign-btn-text: #ffffff;
+          --asset-activity-table-header-bg: #4a5568;
+          --asset-activity-table-header-text: #cbd5e0;
+          --asset-activity-table-row-border: #4a5568;
+          --asset-activity-table-row-hover-bg: #4a5568;
+          --asset-activity-text-primary: #e2e8f0;
+          --asset-activity-text-secondary: #a0aec0;
         }
 
         /* Profile Dropdown Styles */
@@ -2122,20 +2309,20 @@ const AdminWorksheet = () => {
         }
 
         /* Specific colors for client filter tabs */
-        .client-filter-tab-item.registered input[type="radio"]:checked + .client-filter-tab-label { background-color: #E6F0FF; color: #3A60EE; }
-        .client-filter-tab-item.registered .badge { background-color: #3A60EE; }
+        .client-filter-tab-item.registered input[type="radio"]:checked + .client-filter-tab-label { background-color: var(--client-filter-tab-bg-active-registered); color: var(--client-filter-tab-text-active-registered); }
+        .client-filter-tab-item.registered .badge { background-color: var(--client-filter-tab-badge-registered); }
 
-        .client-filter-tab-item.unassigned input[type="radio"]:checked + .client-filter-tab-label { background-color: #FEF3C7; color: #B45309; }
-        .client-filter-tab-item.unassigned .badge { background-color: #B45309; }
+        .client-filter-tab-item.unassigned input[type="radio"]:checked + .client-filter-tab-label { background-color: var(--client-filter-tab-bg-active-unassigned); color: var(--client-filter-tab-text-active-unassigned); }
+        .client-filter-tab-item.unassigned .badge { background-color: var(--client-filter-tab-badge-unassigned); }
 
-        .client-filter-tab-item.active input[type="radio"]:checked + .client-filter-tab-label { background-color: #D9F5E6; color: #28A745; }
-        .client-filter-tab-item.active .badge { background-color: #28A745; }
+        .client-filter-tab-item.active input[type="radio"]:checked + .client-filter-tab-label { background-color: var(--client-filter-tab-bg-active-active); color: var(--client-filter-tab-text-active-active); }
+        .client-filter-tab-item.active .badge { background-color: var(--client-filter-tab-badge-active); }
 
-        .client-filter-tab-item.rejected input[type="radio"]:checked + .client-filter-tab-label { background-color: #FFEDEE; color: #DC3545; }
-        .client-filter-tab-item.rejected .badge { background-color: #DC3545; }
+        .client-filter-tab-item.rejected input[type="radio"]:checked + .client-filter-tab-label { background-color: var(--client-filter-tab-bg-active-rejected); color: var(--client-filter-tab-text-active-rejected); }
+        .client-filter-tab-item.rejected .badge { background-color: var(--client-filter-tab-badge-rejected); }
 
-        .client-filter-tab-item.restored input[type="radio"]:checked + .client-filter-tab-label { background-color: #F0E6FF; color: #6A40EE; }
-        .client-filter-tab-item.restored .badge { background-color: #6A40EE; }
+        .client-filter-tab-item.restored input[type="radio"]:checked + .client-filter-tab-label { background-color: var(--client-filter-tab-bg-active-restored); color: var(--client-filter-tab-text-active-restored); }
+        .client-filter-tab-item.restored .badge { background-color: var(--client-filter-tab-badge-restored); }
 
 
         .client-search-input-group {
@@ -2486,6 +2673,310 @@ const AdminWorksheet = () => {
         .generated-link-close-btn:hover {
             background-color: var(--confirm-modal-cancel-btn-hover);
         }
+
+
+        /* Asset Management Styles */
+        .asset-management-container {
+            padding: 0 1.5rem 1.5rem;
+        }
+
+        .asset-management-box {
+            background-color: var(--bg-card);
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px var(--shadow-color-1), 0 2px 4px -1px var(--shadow-color-3);
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .asset-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .asset-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--asset-section-title-color);
+        }
+
+        .asset-subtitle {
+            font-size: 0.875rem;
+            color: var(--asset-section-subtitle-color);
+            margin-top: 0.25rem;
+        }
+
+        .assign-asset-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 1rem;
+            background-color: var(--assign-asset-btn-bg);
+            color: var(--assign-asset-btn-text);
+            border-radius: 0.5rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+
+        .assign-asset-btn:hover {
+            background-color: var(--assign-asset-btn-hover);
+        }
+
+        .asset-stats-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (min-width: 640px) {
+            .asset-stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            }
+        }
+
+        .asset-stat-card {
+            background-color: var(--bg-card);
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            border: 1px solid var(--border-color);
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .asset-stat-card-value {
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .asset-stat-card-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .asset-stat-card-icon-wrapper {
+            border-radius: 9999px;
+            padding: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            margin-left: auto; /* Push icon to the right */
+        }
+
+        .asset-stat-card-icon-wrapper.total {
+            background-color: var(--asset-card-icon-bg-total);
+            color: var(--asset-card-icon-color-total);
+        }
+        .asset-stat-card-icon-wrapper.available {
+            background-color: var(--asset-card-icon-bg-available);
+            color: var(--asset-card-icon-color-available);
+        }
+        .asset-stat-card-icon-wrapper.assigned {
+            background-color: var(--asset-card-icon-bg-assigned);
+            color: var(--asset-card-icon-color-assigned);
+        }
+        .asset-stat-card-icon-wrapper.pending {
+            background-color: var(--asset-card-icon-bg-pending);
+            color: var(--asset-card-icon-color-pending);
+        }
+
+        .quick-assign-section {
+            margin-bottom: 1.5rem;
+            padding: 1.5rem;
+            background-color: var(--asset-quick-assign-bg);
+            border-radius: 0.75rem;
+            border: 1px solid var(--asset-quick-assign-border);
+            box-shadow: var(--asset-quick-assign-shadow);
+        }
+
+        .quick-assign-section h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--asset-section-title-color);
+            margin-bottom: 1rem;
+        }
+
+        .quick-assign-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .quick-assign-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .quick-assign-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        .quick-assign-card {
+            background-color: var(--asset-quick-assign-card-bg);
+            border-radius: 0.5rem;
+            border: 1px solid var(--asset-quick-assign-card-border);
+            box-shadow: var(--asset-quick-assign-card-shadow);
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .quick-assign-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .quick-assign-card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--asset-quick-assign-card-title);
+        }
+
+        .quick-assign-card-users {
+            background-color: var(--asset-card-icon-bg-assigned); /* Using assigned color for consistency */
+            color: var(--asset-card-icon-color-assigned);
+            padding: 0.25rem 0.6rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .quick-assign-card-info {
+            font-size: 0.875rem;
+            color: var(--asset-quick-assign-card-text);
+        }
+
+        .quick-assign-card-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.6rem 1rem;
+            background-color: var(--asset-quick-assign-btn-bg);
+            color: var(--asset-quick-assign-btn-text);
+            border-radius: 0.5rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .quick-assign-card-btn:hover {
+            background-color: var(--asset-quick-assign-btn-hover);
+        }
+
+        .recent-activity-section {
+            padding: 1.5rem;
+            background-color: var(--bg-card);
+            border-radius: 0.75rem;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-color-1);
+        }
+
+        .recent-activity-section h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--asset-section-title-color);
+            margin-bottom: 1rem;
+        }
+
+        .asset-activity-table-container {
+            overflow-x: auto;
+        }
+
+        .asset-activity-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .asset-activity-table th, .asset-activity-table td {
+            padding: 1rem;
+            text-align: left;
+            white-space: nowrap;
+            border-bottom: 1px solid var(--asset-activity-table-row-border);
+        }
+
+        .asset-activity-table thead {
+            background-color: var(--asset-activity-table-header-bg);
+        }
+
+        .asset-activity-table th {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--asset-activity-table-header-text);
+        }
+
+        .asset-activity-table tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        .asset-activity-table tbody tr:hover {
+            background-color: var(--asset-activity-table-row-hover-bg);
+        }
+
+        .asset-activity-table td {
+            font-size: 0.9rem;
+            color: var(--asset-activity-text-primary);
+        }
+
+        .asset-activity-table .asset-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .asset-activity-table .asset-icon-wrapper {
+            background-color: var(--asset-card-icon-bg-total); /* Reusing total asset icon bg */
+            color: var(--asset-card-icon-color-total);
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .asset-activity-table .asset-name {
+            font-weight: 500;
+        }
+
+        .asset-activity-table .asset-description {
+            font-size: 0.8rem;
+            color: var(--asset-activity-text-secondary);
+        }
+        .asset-activity-table .assigned-to-info {
+            font-size: 0.85rem;
+            color: var(--asset-activity-text-secondary);
+        }
+
+        .asset-activity-table .asset-status-tag {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+
         `}
       </style>
 
@@ -2872,11 +3363,11 @@ const AdminWorksheet = () => {
                 {/* Client Filter Tabs */}
                 <div className="client-filter-tabs">
                   {[
-                    { label: 'Registered Clients', value: 'registered', count: clients.filter(c => c.displayStatuses.includes('registered')).length, activeBg: '#E6F0FF', activeColor: '#3A60EE', badgeBg: '#3A60EE' },
-                    { label: 'Unassigned Clients', value: 'unassigned', count: clients.filter(c => c.displayStatuses.includes('unassigned')).length, activeBg: '#FEF3C7', activeColor: '#B45309', badgeBg: '#B45309' },
-                    { label: 'Active Clients', value: 'active', count: clients.filter(c => c.displayStatuses.includes('active')).length, activeBg: '#D9F5E6', activeColor: '#28A745', badgeBg: '#28A745' },
-                    { label: 'Rejected Clients', value: 'rejected', count: clients.filter(c => c.displayStatuses.includes('rejected')).length, activeBg: '#FFEDEE', activeColor: '#DC3545', badgeBg: '#DC3545' },
-                    { label: 'Restore Clients', value: 'restored', count: clients.filter(c => c.displayStatuses.includes('restored')).length, activeBg: '#F0E6FF', activeColor: '#6A40EE', badgeBg: '#6A40EE' },
+            { label: 'Registered Clients', value: 'registered', count: clients.filter(c => c.displayStatuses.includes('registered')).length, activeBg: 'var(--client-filter-tab-bg-active-registered)', activeColor: 'var(--client-filter-tab-text-active-registered)', badgeBg: 'var(--client-filter-tab-badge-registered)' },
+                    { label: 'Unassigned Clients', value: 'unassigned', count: clients.filter(c => c.displayStatuses.includes('unassigned')).length, activeBg: 'var(--client-filter-tab-bg-active-unassigned)', activeColor: 'var(--client-filter-tab-text-active-unassigned)', badgeBg: 'var(--client-filter-tab-badge-unassigned)' },
+                    { label: 'Active Clients', value: 'active', count: clients.filter(c => c.displayStatuses.includes('active')).length, activeBg: 'var(--client-filter-tab-bg-active-active)', activeColor: 'var(--client-filter-tab-text-active-active)', badgeBg: 'var(--client-filter-tab-badge-active)' },
+                    { label: 'Rejected Clients', value: 'rejected', count: clients.filter(c => c.displayStatuses.includes('rejected')).length, activeBg: 'var(--client-filter-tab-bg-active-rejected)', activeColor: 'var(--client-filter-tab-text-active-rejected)', badgeBg: 'var(--client-filter-tab-badge-rejected)' },
+                    { label: 'Restore Clients', value: 'restored', count: clients.filter(c => c.displayStatuses.includes('restored')).length, activeBg: 'var(--client-filter-tab-bg-active-restored)', activeColor: 'var(--client-filter-tab-text-active-restored)', badgeBg: 'var(--client-filter-tab-badge-restored)' },
                   ].map((option) => (
                     <label
                       key={option.value}
@@ -3101,6 +3592,160 @@ const AdminWorksheet = () => {
                       )}
                     </tbody>
                   </table>
+                </div>
+              </div>
+            </div>
+          )}
+          {currentView === 'assetManagement' && (
+            <div className="asset-management-container">
+              <div className="asset-management-box">
+                <div className="asset-header">
+                  <div>
+                    <h2 className="asset-title">Asset Management</h2>
+                    <p className="asset-subtitle">Assign and manage laptops, devices, and equipment for your team</p>
+                  </div>
+                  <button className="assign-asset-btn" onClick={handleAssignAssetClick}>
+                    {/* Person Plus Icon */}
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '0.9rem', height: '0.9rem' }}>
+                      <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2ZM12 5C13.6569 5 15 6.34315 15 8C15 9.65685 13.6569 11 12 11C10.3431 11 9 9.65685 9 8C9 6.34315 10.3431 5 12 5ZM12 19.25C9.03261 19.25 6.48033 17.6169 5 15.1672C5.00001 13.197 8.33333 12.1667 12 12.1667C15.6667 12.1667 19 13.197 19 15.1672C17.5197 17.6169 14.9674 19.25 12 19.25ZM19 12H22V14H19V17H17V14H14V12H17V9H19V12Z" />
+                    </svg>
+                    Assign Asset
+                  </button>
+                </div>
+
+                <div className="asset-stats-grid">
+                  {/* Total Assets Card */}
+                  <div className="asset-stat-card">
+                    <div className="asset-stat-card-icon-wrapper total">
+                      {/* Box Icon */}
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1.25rem', height: '1.25rem' }}>
+                        <path d="M20 4H4C3.44772 4 3 4.44772 3 5V19C3 19.5523 3.44772 20 4 20H20C20.5523 20 21 19.5523 21 19V5C21 4.44772 20.5523 4 20 4ZM5 7H19V9H5V7ZM5 11H17V13H5V11ZM5 15H13V17H5V15Z" />
+                      </svg>
+                    </div>
+                    <div className="asset-stat-card-value">{assets.length}</div>
+                    <div className="asset-stat-card-label">Total Assets</div>
+                  </div>
+
+                  {/* Available Assets Card */}
+                  <div className="asset-stat-card">
+                    <div className="asset-stat-card-icon-wrapper available">
+                      {/* Checkmark Circle Icon */}
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1.25rem', height: '1.25rem' }}>
+                        <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2ZM16.7071 9.29289C17.0976 8.90237 17.0976 8.26921 16.7071 7.87869C16.3166 7.48816 15.6834 7.48816 15.2929 7.87869L10.5 12.6716L8.70711 10.8787C8.31658 10.4882 7.68342 10.4882 7.29289 10.8787C6.90237 11.2692 6.90237 11.9024 7.29289 12.2929L9.87869 14.8787C10.2692 15.2692 10.9024 15.2692 11.2929 14.8787L16.7071 9.46447V9.29289Z" />
+                      </svg>
+                    </div>
+                    <div className="asset-stat-card-value">{assets.filter(a => a.status === 'available').length}</div>
+                    <div className="asset-stat-card-label">Available</div>
+                  </div>
+
+                  {/* Assigned Assets Card */}
+                  <div className="asset-stat-card">
+                    <div className="asset-stat-card-icon-wrapper assigned">
+                      {/* Person Icon */}
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1.25rem', height: '1.25rem' }}>
+                        <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2ZM12 5C13.6569 5 15 6.34315 15 8C15 9.65685 13.6569 11 12 11C10.3431 11 9 9.65685 9 8C9 6.34315 10.3431 5 12 5ZM12 19.25C9.03261 19.25 6.48033 17.6169 5 15.1672C5.00001 13.197 8.33333 12.1667 12 12.1667C15.6667 12.1667 19 13.197 19 15.1672C17.5197 17.6169 14.9674 19.25 12 19.25Z" />
+                      </svg>
+                    </div>
+                    <div className="asset-stat-card-value">{assets.filter(a => a.status === 'assigned').length}</div>
+                    <div className="asset-stat-card-label">Assigned</div>
+                  </div>
+
+                  {/* Pending Requests Card */}
+                  <div className="asset-stat-card">
+                    <div className="asset-stat-card-icon-wrapper pending">
+                      {/* Clock Icon */}
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1.25rem', height: '1.25rem' }}>
+                        <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2ZM12 4C16.4183 4 20 7.58172 20 12C20 16.4183 16.4183 20 12 20C7.58172 20 4 16.4183 4 12C4 7.58172 7.58172 4 12 4ZM12 6V12H18V10H14V6H12Z" />
+                      </svg>
+                    </div>
+                    <div className="asset-stat-card-value">0</div> {/* Mock value for now */}
+                    <div className="asset-stat-card-label">Pending Requests</div>
+                  </div>
+                </div>
+
+                <div className="quick-assign-section">
+                  <h3>Quick Asset Assignment by Role</h3>
+                  <div className="quick-assign-grid">
+                    {['Admin', 'Manager', 'Team Lead', 'Employee'].map(role => (
+                      <div className="quick-assign-card" key={role}>
+                        <div className="quick-assign-card-header">
+                          <div className="quick-assign-card-title">{role}</div>
+                          <div className="quick-assign-card-users">{employees.filter(emp => emp.roles.includes(role.toLowerCase())).length} users</div>
+                        </div>
+                        <div className="quick-assign-card-info">Assets Assigned: {assets.filter(a => a.assignedTo && employees.find(e => e.name === a.assignedTo)?.roles.includes(role.toLowerCase())).length}</div>
+                        <div className="quick-assign-card-info">Available Laptops: {assets.filter(a => a.status === 'available' && a.type === 'Laptop').length}</div>
+                        <button className="quick-assign-card-btn" onClick={handleAssignAssetClick}>
+                          {/* Person Plus Icon */}
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '0.9rem', height: '0.9rem' }}>
+                            <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2ZM12 5C13.6569 5 15 6.34315 15 8C15 9.65685 13.6569 11 12 11C10.3431 11 9 9.65685 9 8C9 6.34315 10.3431 5 12 5ZM12 19.25C9.03261 19.25 6.48033 17.6169 5 15.1672C5.00001 13.197 8.33333 12.1667 12 12.1667C15.6667 12.1667 19 13.197 19 15.1672C17.5197 17.6169 14.9674 19.25 12 19.25ZM19 12H22V14H19V17H17V14H14V12H17V9H19V12Z" />
+                          </svg>
+                          Assign to {role.toLowerCase()}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="recent-activity-section">
+                  <h3>Recent Asset Activity</h3>
+                  <div className="asset-activity-table-container">
+                    <table className="asset-activity-table">
+                      <thead>
+                        <tr>
+                          <th>Asset</th>
+                          <th>Assigned To</th>
+                          <th>Status</th>
+                          <th>Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {assetAssignments.length > 0 ? (
+                          assetAssignments.map(assignment => {
+                            const asset = assets.find(a => a.id === assignment.assetId);
+                            const employee = employees.find(e => e.id === assignment.employeeId);
+                            return (
+                              <tr key={assignment.id}>
+                                <td>
+                                  <div className="asset-info">
+                                    <div className="asset-icon-wrapper">
+                                      {/* Document/Laptop Icon */}
+                                      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1rem', height: '1rem' }}>
+                                        <path d="M14 2H6C5.44772 2 5 2.44772 5 3V21C5 21.5523 5.44772 22 6 22H18C18.5523 22 19 21.5523 19 21V8L14 2ZM13 4.5L17.5 9H13V4.5ZM7 11V13H17V11H7ZM7 15V17H17V15H7Z" />
+                                      </svg>
+                                    </div>
+                                    <div>
+                                      <div className="asset-name">{asset?.tag} - {asset?.name}</div>
+                                      <div className="asset-description">Assigned for {assignment.reason}</div>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td>
+                                  {employee?.name} ({employee?.roles.find(r => !['active', 'inactive', 'pending'].includes(r)) || 'N/A'})
+                                  <div className="assigned-to-info">{employee?.email}</div>
+                                </td>
+                                <td>
+                                  <span
+                                    className="asset-status-tag"
+                                    style={{
+                                      backgroundColor: getRoleTagBg(asset?.status || 'N/A'),
+                                      color: getRoleTagText(asset?.status || 'N/A'),
+                                    }}
+                                  >
+                                    {asset?.status || 'N/A'}
+                                  </span>
+                                </td>
+                                <td>{assignment.assignedDate}</td>
+                              </tr>
+                            );
+                          })
+                        ) : (
+                          <tr>
+                            <td colSpan="4" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>No recent asset activity.</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             </div>
@@ -3680,6 +4325,107 @@ const AdminWorksheet = () => {
                 <p className="payment-modal-option-item">
                   • <strong>Generate Link:</strong> Creates shareable payment link for client use
                 </p>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Assign Asset Modal */}
+      {isAssignAssetModalOpen && (
+        <div className="modal-overlay open">
+          <div className="modal-content">
+            <div className="modal-header">
+              <div>
+                <h3 className="modal-title">Assign Asset to User</h3>
+                <p className="modal-subtitle">Select an available asset and assign it to a user with a reason for the assignment.</p>
+              </div>
+              <button className="modal-close-btn" onClick={handleCloseAssignAssetModal}>&times;</button>
+            </div>
+            <form className="modal-form" onSubmit={handleAssignAsset}>
+              <div className="form-group modal-form-full-width">
+                <label htmlFor="searchAssets" className="form-label">Search Available Assets</label>
+                <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--modal-input-border)', borderRadius: '0.5rem', backgroundColor: 'var(--modal-input-bg)' }}>
+                  <span style={{ padding: '0.75rem 0.75rem 0.75rem 1rem', color: 'var(--search-icon)' }}>
+                    {/* Search Icon */}
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" style={{ width: '1rem', height: '1rem' }}>
+                      <path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.1-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z" />
+                    </svg>
+                  </span>
+                  <input
+                    type="text"
+                    id="searchAssets"
+                    className="form-input"
+                    placeholder="Search by asset tag, brand, or model..."
+                    value={assetSearchTermInModal}
+                    onChange={(e) => setAssetSearchTermInModal(e.target.value)}
+                    style={{ border: 'none', padding: '0.75rem 1rem', flexGrow: 1 }}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group modal-form-full-width">
+                <label htmlFor="assetId" className="form-label">Select Asset *</label>
+                <select
+                  id="assetId"
+                  name="assetId"
+                  className="form-select"
+                  value={newAssignment.assetId}
+                  onChange={handleNewAssignmentChange}
+                  required
+                >
+                  <option value="">Choose an available asset</option>
+                  {filteredAvailableAssets.map(asset => (
+                    <option key={asset.id} value={asset.id}>
+                      {asset.tag} - {asset.name} ({asset.type})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group modal-form-full-width">
+                <label htmlFor="employeeId" className="form-label">Assign to User *</label>
+                <select
+                  id="employeeId"
+                  name="employeeId"
+                  className="form-select"
+                  value={newAssignment.employeeId}
+                  onChange={handleNewAssignmentChange}
+                  required
+                >
+                  <option value="">Choose a user</option>
+                  {filteredEmployeesForAssignment.map(employee => (
+                    <option key={employee.id} value={employee.id}>
+                      {employee.name} ({employee.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group modal-form-full-width">
+                <label htmlFor="reason" className="form-label">Assignment Reason *</label>
+                <textarea
+                  id="reason"
+                  name="reason"
+                  className="form-input"
+                  placeholder="Enter the reason for this assignment (e.g., New employee laptop setup, Project requirement, etc.)"
+                  value={newAssignment.reason}
+                  onChange={handleNewAssignmentChange}
+                  rows="3"
+                  required
+                  style={{ resize: 'vertical' }}
+                ></textarea>
+              </div>
+
+              <div className="modal-footer modal-form-full-width" style={{ justifyContent: 'flex-end' }}>
+                <button type="button" className="confirm-cancel-btn" onClick={handleCloseAssignAssetModal}>Cancel</button>
+                <button type="submit" className="create-employee-btn">
+                  {/* Person Plus Icon */}
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '0.9rem', height: '0.9rem' }}>
+                    <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2ZM12 5C13.6569 5 15 6.34315 15 8C15 9.65685 13.6569 11 12 11C10.3431 11 9 9.65685 9 8C9 6.34315 10.3431 5 12 5ZM12 19.25C9.03261 19.25 6.48033 17.6169 5 15.1672C5.00001 13.197 8.33333 12.1667 12 12.1667C15.6667 12.1667 19 13.197 19 15.1672C17.5197 17.6169 14.9674 19.25 12 19.25ZM19 12H22V14H19V17H17V14H14V12H17V9H19V12Z" />
+                  </svg>
+                  Assign Asset
+                </button>
               </div>
             </form>
           </div>

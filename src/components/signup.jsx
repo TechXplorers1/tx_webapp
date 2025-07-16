@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react"; // Import useEffect
 import { useNavigate } from 'react-router-dom';
 import { FcGoogle } from "react-icons/fc";
 import { MdEmail } from "react-icons/md";
 import { RiLockPasswordFill } from "react-icons/ri";
 import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
 import JsNavbar from './JsNavbar';
-import { Card, Button, Form, InputGroup } from 'react-bootstrap';
+import { Card, Button, Form, InputGroup, Modal } from 'react-bootstrap';
 
 export default function SignupPage() {
   const navigate = useNavigate();
@@ -16,6 +16,7 @@ export default function SignupPage() {
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
+  const [showSuccessModal, setShowSuccessModal] = useState(false); // State for success modal
 
   const validatePassword = (value) => {
     if (value.length < 8) return 'Password must be at least 8 characters';
@@ -51,8 +52,19 @@ export default function SignupPage() {
 
     if (!hasError) {
       console.log("User Registered with Email:", email);
-      navigate('/login');
+      setShowSuccessModal(true);
+
+      // Automatically redirect after 3 seconds
+      setTimeout(() => {
+        handleCloseSuccessModal();
+      }, 3000); // 3000 milliseconds = 3 seconds
     }
+  };
+
+  // Function to close success modal and navigate
+  const handleCloseSuccessModal = () => {
+    setShowSuccessModal(false);
+    navigate('/login');
   };
 
   const formControlStyle = {
@@ -76,6 +88,12 @@ export default function SignupPage() {
     borderRadius: '0 12px 12px 0',
     borderLeft: 'none',
     cursor: 'pointer',
+  };
+
+  const successIconStyle = {
+    color: '#28a745', // Green color for success
+    fontSize: '3rem',
+    marginBottom: '1rem',
   };
 
   return (
@@ -176,7 +194,6 @@ export default function SignupPage() {
                   padding: "12px 0",
                   transition: "background-color 0.3s ease"
                 }}
-                onClick={() => navigate("/login")}
               >
                 Sign Up
               </Button>
@@ -195,6 +212,18 @@ export default function SignupPage() {
           </Card.Body>
         </Card>
       </div>
+
+      {/* Account Successfully Created Modal */}
+      <Modal show={showSuccessModal} onHide={handleCloseSuccessModal} centered>
+        <Modal.Body className="text-center p-4">
+                  <img
+                    src="https://cdn-icons-png.flaticon.com/512/845/845646.png"
+                    alt="Success"
+                    style={{ width: '80px' }}
+                  />
+                  <h5 className="mt-3 text-success">Account successfully created!</h5>
+                </Modal.Body>
+      </Modal>
     </div>
   );
 }
