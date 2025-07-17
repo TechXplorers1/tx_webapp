@@ -40,6 +40,8 @@ const ManagerWorkSheet = () => {
   });
   // State to manage editable profile fields
   const [editableProfile, setEditableProfile] = useState({});
+  // NEW: State to control if user profile fields are editable
+  const [isEditingUserProfile, setIsEditingUserProfile] = useState(false);
 
 
   // State to control the visibility of the Unassigned Clients modal
@@ -78,6 +80,12 @@ const ManagerWorkSheet = () => {
   const [applicationSearchQuery, setApplicationSearchQuery] = useState(''); // Added for Applications tab search
   // FIX: Corrected useState initialization for applicationFilterEmployee
   const [applicationFilterEmployee, setApplicationFilterEmployee] = useState(''); // Added for Applications tab filter
+  // NEW STATE: Filter by client for Applications tab
+  const [applicationFilterClient, setApplicationFilterClient] = useState(''); // New state for client filter
+  // NEW STATES: Date range filters for Applications tab
+  const [startDateFilter, setStartDateFilter] = useState('');
+  const [endDateFilter, setEndDateFilter] = useState('');
+
 
   // NEW STATE: Search query for Assigned tab employees
   const [assignedEmployeeSearchQuery, setAssignedEmployeeSearchQuery] = useState(''); // New state for employee search
@@ -93,6 +101,37 @@ const ManagerWorkSheet = () => {
   // NEW STATE: For Edit Client Modal (repurposing the preview modal)
   const [isEditClientModalOpen, setIsEditClientModalOpen] = useState(false);
   const [clientToEdit, setClientToEdit] = useState(null);
+  // NEW: State to control if user profile fields are editable
+  const [isEditingClient, setIsEditingClient] = useState(false);
+
+  // NEW: State for LLM response and loading status
+  const [llmResponse, setLlmResponse] = useState('');
+  const [isLoadingLLMResponse, setIsLoadingLLMResponse] = useState(false);
+
+  // Helper function to format date to DD/MM/YYYY
+  const formatDateToDDMMYYYY = (dateString) => {
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      // Check if the date is valid
+      if (isNaN(date.getTime())) {
+        // If it's not a valid date, try to parse it as DD/MM/YYYY if it already is
+        const parts = dateString.split('/');
+        if (parts.length === 3) {
+            const [day, month, year] = parts;
+            return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+        }
+        return dateString; // Return original if invalid and not DD/MM/YYYY
+      }
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    } catch (error) {
+      console.error("Error formatting date:", dateString, error);
+      return dateString; // Fallback to original string on error
+    }
+  };
 
 
   // Initial dummy data for unassigned clients (7 clients)
@@ -113,20 +152,20 @@ const ManagerWorkSheet = () => {
 
   // Initial dummy data for assigned clients (5 clients, all for Vyshnavi Vysh for testing)
   const initialAssignedClientsData = [
-    { id: 201, clientName: 'John Anderson', location: 'New York, NY', position: 'Senior Frontend Developer', salary: '$120,000 - $150,000', company: 'TechFlow Inc', assignedTo: 'Vyshnavi Vysh', priority: 'high', status: 'interview', assignedDate: '2024-11-15' },
-    { id: 205, clientName: 'Alex Thompson', location: 'Boston, MA', position: 'Full Stack Developer', salary: '$110,000 - $140,000', company: 'StartupXYZ', assignedTo: 'Krishna Kumar', priority: 'medium', status: 'applied', assignedDate: '2024-11-20' },
-    { id: 208, clientName: 'Maria Rodriguez', location: 'Denver, CO', position: 'React Developer', salary: '$95,000 - $115,000', company: 'WebDev Inc', assignedTo: 'Nagarjuna Sai', priority: 'high', status: 'applied', assignedDate: '2024-11-28' },
-    { id: 209, clientName: 'Chris Evans', location: 'Miami, FL', position: 'DevOps Engineer', salary: '$130,000 - $150,000', company: 'CloudOps', assignedTo: 'Vyshnavi Vysh', priority: 'high', status: 'interview', assignedDate: '2024-12-01' },
-    { id: 210, clientName: 'Anna Lee', location: 'Portland, OR', position: 'Data Scientist', salary: '$115,000 - $145,000', company: 'DataInsights', assignedTo: 'Mohammed Sheikh', priority: 'medium', status: 'applied', assignedDate: '2024-12-03' },
+    { id: 201, clientName: 'John Anderson', location: 'New York, NY', position: 'Senior Frontend Developer', salary: '$120,000 - $150,000', company: 'TechFlow Inc', assignedTo: 'Vyshnavi Vysh', priority: 'high', status: 'interview', assignedDate: '2024-11-15', platform: 'LinkedIn', jobId: 'LI-1001', appliedDate: '2024-11-10' },
+    { id: 205, clientName: 'Alex Thompson', location: 'Boston, MA', position: 'Full Stack Developer', salary: '$110,000 - $140,000', company: 'StartupXYZ', assignedTo: 'Krishna Kumar', priority: 'medium', status: 'applied', assignedDate: '2024-11-20', platform: 'Indeed', jobId: 'IND-2005', appliedDate: '2024-11-18' },
+    { id: 208, clientName: 'Maria Rodriguez', location: 'Denver, CO', position: 'React Developer', salary: '$95,000 - $115,000', company: 'WebDev Inc', assignedTo: 'Nagarjuna Sai', priority: 'high', status: 'applied', assignedDate: '2024-11-28', platform: 'Company Website', jobId: 'WEB-3008', appliedDate: '2024-11-25' },
+    { id: 209, clientName: 'Chris Evans', location: 'Miami, FL', position: 'DevOps Engineer', salary: '$130,000 - $150,000', company: 'CloudOps', assignedTo: 'Vyshnavi Vysh', priority: 'high', status: 'interview', assignedDate: '2024-12-01', platform: 'Glassdoor', jobId: 'GD-4009', appliedDate: '2024-11-29' },
+    { id: 210, clientName: 'Anna Lee', location: 'Portland, OR', position: 'Data Scientist', salary: '$115,000 - $145,000', company: 'DataInsights', assignedTo: 'Mohammed Sheikh', priority: 'medium', status: 'applied', assignedDate: '2024-12-03', platform: 'LinkedIn', jobId: 'LI-5010', appliedDate: '2024-12-01' },
   ];
 
   // Initial dummy data for employees, reflecting assignedClients counts from initialAssignedClientsData
-  const initialDummyEmployees = [
+  // This will be used as a base, and counts will be dynamically calculated.
+  const baseDummyEmployees = [
     {
       id: 101,
       name: 'Vyshnavi Vysh',
       role: 'Senior Placement Specialist',
-      assignedClients: 5, // Matches 5 clients assigned to her in initialAssignedClientsData
       successRate: 85,
       avatar: 'VV',
     },
@@ -134,7 +173,6 @@ const ManagerWorkSheet = () => {
       id: 102,
       name: 'Krishna Kumar',
       role: 'Placement Specialist',
-      assignedClients: 0, // No clients assigned to him initially in this specific dummy data
       successRate: 78,
       avatar: 'KK',
     },
@@ -142,7 +180,6 @@ const ManagerWorkSheet = () => {
       id: 103,
       name: 'Nagarjuna Sai',
       role: 'Junior Placement Specialist',
-      assignedClients: 0, // No clients assigned to her initially
       successRate: 72,
       avatar: 'NS',
     },
@@ -150,69 +187,15 @@ const ManagerWorkSheet = () => {
       id: 104,
       name: 'Mohammed Sheikh',
       role: 'Placement Specialist',
-      assignedClients: 0, // No clients assigned to him initially
       successRate: 65,
       avatar: 'MS',
     },
-  ];
-
-  // NEW DUMMY DATA for the Applications tab, matching the screenshot
-  const initialApplicationData = [ // Renamed to initialApplicationData
     {
-      id: 301,
-      employeeName: 'Vyshnavi Vysh',
-      employeeAvatar: 'VV',
-      clientName: 'John Anderson',
-      jobTitle: 'Senior Frontend Developer',
-      company: 'TechFlow Inc',
-    },
-    {
-      id: 302,
-      employeeName: 'Mohammed Sheikh',
-      employeeAvatar: 'MS',
-      clientName: 'Sarah Mitchell', // This client now has a full profile in unassignedClientsData
-      jobTitle: 'UX Designer',
-      company: 'DesignCorp',
-    },
-    {
-      id: 303,
-      employeeName: 'Nagarjuna Sai',
-      employeeAvatar: 'NS',
-      clientName: 'Mohammed Sheikh', // This client now has a full profile in unassignedClientsData
-      jobTitle: 'Data Analyst',
-      company: 'DataTech Solutions',
-    },
-    {
-      id: 304,
-      employeeName: 'Yamuna Yamu',
-      employeeAvatar: 'YY',
-      clientName: 'Alex Thompson',
-      jobTitle: 'Full Stack Developer',
-      company: 'StartupXYZ',
-    },
-    {
-      id: 305,
-      employeeName: 'Mohammed Sheikh',
-      employeeAvatar: 'MS',
-      clientName: 'Jessica Williams', // This client now has a full profile in unassignedClientsData
-      jobTitle: 'Product Designer',
-      company: 'Design Studio',
-    },
-    {
-      id: 306,
-      employeeName: 'Nagarjuna Sai',
-      employeeAvatar: 'NS',
-      clientName: 'David Kim', // This client now has a full profile in unassignedClientsData
-      jobTitle: 'Backend Developer',
-      company: 'TechCorp',
-    },
-    {
-      id: 307,
-      employeeName: 'Krishna Kumar',
-      employeeAvatar: 'KK',
-      clientName: 'Maria Rodriguez',
-      jobTitle: 'React Developer',
-      company: 'WebDev Inc',
+      id: 105,
+      name: 'Yamuna Yamu',
+      role: 'Placement Specialist',
+      successRate: 70,
+      avatar: 'YY',
     },
   ];
 
@@ -229,9 +212,12 @@ const ManagerWorkSheet = () => {
   // State variables for dynamic data
   const [unassignedClients, setUnassignedClients] = useState(initialUnassignedClientsData);
   const [assignedClients, setAssignedClients] = useState(initialAssignedClientsData);
-  const [employees, setEmployees] = useState(initialDummyEmployees);
+  const [employees, setEmployees] = useState(baseDummyEmployees); // Initialize with base, counts will be updated
   const [interviewData, setInterviewData] = useState(initialInterviewData);
-  const [applicationData, setApplicationData] = useState(initialApplicationData); // Now managed by state
+  const [applicationData, setApplicationData] = useState([]); // Initialize as empty, will be populated by useEffect
+
+  // State to store application counts per client
+  const [clientApplicationCounts, setClientApplicationCounts] = useState({});
 
   // NEW: Comprehensive dummy data for client details (from EmployeeData.txt structure)
   // This data will be the source of truth for detailed client profiles
@@ -288,6 +274,7 @@ const ManagerWorkSheet = () => {
       location: 'Austin, TX',
       position: 'Python Developer',
       company: 'Innovate Solutions',
+      resume: 'david_wilson_resume.pdf' // Added resume field
     },
     {
       id: 2, // Corresponds to Sarah J. Unassigned in unassignedClientsData
@@ -341,6 +328,7 @@ const ManagerWorkSheet = () => {
       location: 'San Jose, CA',
       position: 'Frontend Developer',
       company: 'WebSolutions Co.',
+      resume: 'sarah_unassigned_resume.docx' // Added resume field
     },
     {
       id: 3, // Corresponds to Michael Brown in unassignedClientsData
@@ -394,6 +382,7 @@ const ManagerWorkSheet = () => {
       location: 'Seattle, WA',
       position: 'Java Developer',
       company: 'Cloud Innovations',
+      resume: 'michael_brown_cv.pdf' // Added resume field
     },
     {
       id: 4, // Corresponds to Emily White in unassignedClientsData
@@ -447,6 +436,7 @@ const ManagerWorkSheet = () => {
       location: 'Los Angeles, CA',
       position: 'Frontend Developer',
       company: 'Creative Digital',
+      resume: 'emily_white_portfolio.pdf' // Added resume field
     },
     {
       id: 5, // Corresponds to Daniel Green in unassignedClientsData
@@ -500,6 +490,7 @@ const ManagerWorkSheet = () => {
       location: 'Denver, CO',
       position: 'C# Developer',
       company: 'Enterprise Solutions',
+      resume: 'daniel_green_resume.pdf' // Added resume field
     },
     {
       id: 6, // Corresponds to Olivia Black in unassignedClientsData
@@ -553,6 +544,7 @@ const ManagerWorkSheet = () => {
       location: 'Chicago, IL',
       position: 'PHP Developer',
       company: 'Startup Hub',
+      resume: 'olivia_black_webdev.pdf' // Added resume field
     },
     {
       id: 7, // Corresponds to James Blue in unassignedClientsData
@@ -606,6 +598,7 @@ const ManagerWorkSheet = () => {
       location: 'San Francisco, CA',
       position: 'DevOps Engineer',
       company: 'Cloud Native Corp',
+      resume: 'james_blue_devops.pdf' // Added resume field
     },
     {
       id: 201, // Corresponds to John Anderson in assignedClients
@@ -660,272 +653,7 @@ const ManagerWorkSheet = () => {
       company: 'TechFlow Inc', // Added for consistency
       round: '1st Round', // Example for interview data
       date: '2025-07-08', // Example for interview data
-    },
-    {
-      id: 8, // Corresponds to Sarah Mitchell in initialUnassignedClientsData
-      name: 'Sarah Mitchell',
-      firstName: 'Sarah',
-      middleName: 'Jane',
-      lastName: 'Mitchell',
-      dob: '1992-11-22',
-      gender: 'Female',
-      ethnicity: 'Asian',
-      address: '789 Pine St, Remote',
-      zipCode: '00000',
-      mobile: '987-654-3210',
-      email: 'sarah.m@example.com',
-      securityClearance: 'No',
-      clearanceLevel: '',
-      willingToRelocate: 'No',
-      workPreference: 'Remote',
-      restrictedCompanies: 'Acme Corp',
-      jobsToApply: 'UX, Product Design',
-      technologySkills: 'Figma, Sketch, Adobe XD, User Research',
-      currentSalary: '$85,000',
-      expectedSalary: '$100,000',
-      visaStatus: 'Green Card',
-      otherVisaStatus: '',
-      schoolName: 'ArtCenter College of Design',
-      schoolAddress: 'Pasadna, CA',
-      schoolPhone: '555-999-8888',
-      courseOfStudy: 'Product Design',
-      graduationDate: '2014-06-01',
-      currentCompany: 'DesignCo',
-      currentDesignation: 'Product Designer',
-      preferredInterviewTime: 'Afternoon',
-      earliestJoiningDate: '2025-09-01',
-      relievingDate: '2025-08-31',
-      referenceName: 'David Lee',
-      referencePhone: '555-111-2222',
-      referenceAddress: '101 Elm St',
-      referenceEmail: 'david.lee@example.com',
-      referenceRole: 'Colleague',
-      jobPortalAccountName: 'sarah.behance',
-      jobPortalCredentials: 'another_encrypted_password',
-      priority: 'medium',
-      status: 'applied',
-      assignedTo: 'Mohammed Sheikh', // Example assignment
-      assignedDate: '2024-12-10',
-      skills: ['UX Design', 'Figma', 'User Research'],
-      experience: '5 years experience',
-      remote: false,
-      salary: '$90,000 - $110,000',
-      location: 'Remote',
-      jobTitle: 'UX Designer',
-      company: 'DesignCorp',
-    },
-    {
-      id: 9, // Corresponds to Mohammed Sheikh in initialUnassignedClientsData
-      name: 'Mohammed Sheikh',
-      firstName: 'Michael',
-      middleName: '',
-      lastName: 'Chen',
-      dob: '1988-03-10',
-      gender: 'Male',
-      ethnicity: 'Asian',
-      address: '456 Elm St, New York, NY',
-      zipCode: '10001',
-      mobile: '111-222-3333',
-      email: 'michael.c@example.com',
-      securityClearance: 'No',
-      clearanceLevel: '',
-      willingToRelocate: 'Yes',
-      workPreference: 'On-site',
-      restrictedCompanies: '',
-      jobsToApply: 'Data Analyst, BI Developer',
-      technologySkills: 'Python, SQL, Tableau, Excel',
-      currentSalary: '$95,000',
-      expectedSalary: '$110,000',
-      visaStatus: 'H1B',
-      otherVisaStatus: '',
-      schoolName: 'New York University',
-      schoolAddress: 'New York, NY',
-      schoolPhone: '555-444-5555',
-      courseOfStudy: 'Data Science',
-      graduationDate: '2010-05-25',
-      currentCompany: 'Data Insights',
-      currentDesignation: 'Data Analyst',
-      preferredInterviewTime: 'Any',
-      earliestJoiningDate: '2025-07-15',
-      relievingDate: '2025-07-10',
-      referenceName: 'Chris Green',
-      referencePhone: '555-777-8888',
-      referenceAddress: '789 Maple St',
-      referenceEmail: 'chris.g@example.com',
-      referenceRole: 'Colleague',
-      jobPortalAccountName: 'michael.indeed',
-      jobPortalCredentials: 'another_strong_password',
-      priority: 'high',
-      status: 'applied',
-      assignedTo: 'Nagarjuna Sai', // Example assignment
-      assignedDate: '2024-12-15',
-      skills: ['Data Analysis', 'SQL', 'Python (Pandas)'],
-      experience: '4 years experience',
-      remote: true,
-      salary: '$85,000 - $105,000',
-      location: 'New York, NY',
-      jobTitle: 'Data Analyst',
-      company: 'DataTech Solutions',
-    },
-    {
-      id: 10, // Corresponds to Jessica Williams in initialUnassignedClientsData
-      name: 'Jessica Williams',
-      firstName: 'Jessica',
-      middleName: '',
-      lastName: 'Williams',
-      dob: '1991-06-01',
-      gender: 'Female',
-      ethnicity: 'Caucasian',
-      address: '505 Creative Lane, San Francisco, CA',
-      zipCode: '94103',
-      mobile: '555-999-8888',
-      email: 'jessica.w@example.com',
-      securityClearance: 'No',
-      clearanceLevel: '',
-      willingToRelocate: 'No',
-      workPreference: 'Hybrid',
-      restrictedCompanies: 'Adobe',
-      jobsToApply: 'Product Designer, UX/UI Designer',
-      technologySkills: 'Sketch, Figma, Prototyping, User Testing',
-      currentSalary: '$90,000',
-      expectedSalary: '$110,000',
-      visaStatus: 'US Citizen',
-      otherVisaStatus: '',
-      schoolName: 'California College of the Arts',
-      schoolAddress: 'San Francisco, CA',
-      schoolPhone: '415-555-1111',
-      courseOfStudy: 'Interaction Design',
-      graduationDate: '2013-05-20',
-      currentCompany: 'Design Innovations',
-      currentDesignation: 'Product Designer',
-      preferredInterviewTime: 'Afternoon',
-      earliestJoiningDate: '2025-08-01',
-      relievingDate: '2025-07-31',
-      referenceName: 'Laura Brown',
-      referencePhone: '555-222-3333',
-      referenceAddress: '606 Art St',
-      referenceEmail: 'laura.b@example.com',
-      referenceRole: 'Creative Director',
-      jobPortalAccountName: 'jessicaw_dribbble',
-      jobPortalCredentials: 'designpass2',
-      priority: 'medium',
-      status: 'applied',
-      assignedTo: 'Mohammed Sheikh',
-      assignedDate: '2024-12-20',
-      skills: ['Product Design', 'Sketch', 'Prototyping'],
-      experience: '6 years experience',
-      remote: false,
-      salary: '$95,000 - $115,000',
-      location: 'San Francisco, CA',
-      jobTitle: 'Product Designer',
-      company: 'Design Studio',
-    },
-    {
-      id: 11, // Corresponds to David Kim in initialUnassignedClientsData
-      name: 'David Kim',
-      firstName: 'David',
-      middleName: '',
-      lastName: 'Kim',
-      dob: '1996-01-25',
-      gender: 'Male',
-      ethnicity: 'Asian',
-      address: '707 Backend Blvd, Boston, MA',
-      zipCode: '02110',
-      mobile: '555-777-6666',
-      email: 'david.k@example.com',
-      securityClearance: 'No',
-      clearanceLevel: '',
-      willingToRelocate: 'Yes',
-      workPreference: 'On-site',
-      restrictedCompanies: 'Oracle',
-      jobsToApply: 'Backend Developer, Java Developer',
-      technologySkills: 'Java, Spring, REST APIs, Microservices',
-      currentSalary: '$70,000',
-      expectedSalary: '$85,000',
-      visaStatus: 'H1B',
-      otherVisaStatus: '',
-      schoolName: 'Northeastern University',
-      schoolAddress: 'Boston, MA',
-      schoolPhone: '617-555-4444',
-      courseOfStudy: 'Computer Engineering',
-      graduationDate: '2019-05-15',
-      currentCompany: 'Software Solutions',
-      currentDesignation: 'Software Engineer',
-      preferredInterviewTime: 'Morning',
-      earliestJoiningDate: '2025-07-10',
-      relievingDate: '2025-07-05',
-      referenceName: 'Sam Wilson',
-      referencePhone: '555-555-6666',
-      referenceAddress: '808 Tech St',
-      referenceEmail: 'sam.w@example.com',
-      referenceRole: 'Team Lead',
-      jobPortalAccountName: 'davidk_java',
-      jobPortalCredentials: 'javadevpass',
-      priority: 'low',
-      status: 'applied',
-      assignedTo: 'Nagarjuna Sai',
-      assignedDate: '2024-12-25',
-      skills: ['Backend Development', 'Java', 'Spring'],
-      experience: '3 years experience',
-      remote: true,
-      salary: '$75,000 - $95,000',
-      location: 'Boston, MA',
-      jobTitle: 'Backend Developer',
-      company: 'TechCorp',
-    },
-    {
-      id: 201, // Corresponds to John Anderson in assignedClients
-      name: 'John Anderson',
-      firstName: 'John',
-      middleName: '',
-      lastName: 'Anderson',
-      dob: '1990-05-15',
-      gender: 'Male',
-      ethnicity: 'Caucasian',
-      address: '123 Main St, San Francisco, CA',
-      zipCode: '94105',
-      mobile: '123-456-7890',
-      email: 'john.anderson@example.com',
-      securityClearance: 'Yes',
-      clearanceLevel: 'Top Secret',
-      willingToRelocate: 'Yes',
-      workPreference: 'Hybrid',
-      restrictedCompanies: 'None',
-      jobsToApply: 'Frontend, Fullstack',
-      technologySkills: 'React, JavaScript, HTML, CSS, Node.js',
-      currentSalary: '$110,000',
-      expectedSalary: '$130,000',
-      visaStatus: 'H1B',
-      otherVisaStatus: '',
-      schoolName: 'University of California, Berkeley',
-      schoolAddress: 'Berkeley, CA',
-      schoolPhone: '555-123-4567',
-      courseOfStudy: 'Computer Science',
-      graduationDate: '2012-05-20',
-      currentCompany: 'WebTech Solutions',
-      currentDesignation: 'Senior Frontend Developer',
-      preferredInterviewTime: 'Morning',
-      earliestJoiningDate: '2025-08-01',
-      relievingDate: '2025-07-31',
-      referenceName: 'Jane Smith',
-      referencePhone: '555-987-6543',
-      referenceAddress: '456 Oak Ave',
-      referenceEmail: 'jane.smith@example.com',
-      referenceRole: 'Manager',
-      jobPortalAccountName: 'john.anderson.linkedin',
-      jobPortalCredentials: 'encrypted_password_123',
-      priority: 'high', // Added for consistency with other client data
-      status: 'interview', // Added for consistency with other client data
-      assignedTo: 'Vyshnavi Vysh', // Added for consistency with other client data
-      assignedDate: '2024-11-15', // Added for consistency with other client data
-      skills: ['React', 'JavaScript', 'HTML', 'CSS', 'Node.js'], // Added for consistency
-      experience: '8 years experience', // Added for consistency
-      location: 'San Francisco, CA', // Added for consistency
-      salary: '$120,000 - $150,000', // Added for consistency
-      position: 'Senior Frontend Developer', // Added for consistency
-      company: 'TechFlow Inc', // Added for consistency
-      round: '1st Round', // Example for interview data
-      date: '2025-07-08', // Example for interview data
+      resume: 'john_anderson_resume.pdf' // Added resume field
     },
     {
       id: 205, // Corresponds to Alex Thompson in assignedClients
@@ -981,6 +709,7 @@ const ManagerWorkSheet = () => {
       company: 'StartupXYZ',
       round: '2nd Round',
       date: '2025-07-06',
+      resume: 'alex_thompson_resume.pdf' // Added resume field
     },
     {
       id: 208, // Corresponds to Maria Rodriguez in assignedClients
@@ -1036,6 +765,7 @@ const ManagerWorkSheet = () => {
       company: 'WebDev Inc',
       round: '2nd Round',
       date: '2025-07-11',
+      resume: 'maria_rodriguez_cv.pdf' // Added resume field
     },
     {
       id: 209, // Corresponds to Chris Evans in assignedClients
@@ -1089,6 +819,7 @@ const ManagerWorkSheet = () => {
       location: 'Miami, FL',
       jobTitle: 'DevOps Engineer',
       company: 'CloudOps',
+      resume: 'chris_evans_devops.pdf' // Added resume field
     },
     {
       id: 210, // Corresponds to Anna Lee in assignedClients
@@ -1142,6 +873,7 @@ const ManagerWorkSheet = () => {
       location: 'Portland, OR',
       jobTitle: 'Data Scientist',
       company: 'DataInsights',
+      resume: 'anna_lee_data_scientist.pdf' // Added resume field
     },
   ]);
 
@@ -1185,12 +917,60 @@ const ManagerWorkSheet = () => {
       document.addEventListener('mousedown', handleClickOutside);
     } else {
       document.removeEventListener('mousedown', handleClickOutside);
-    }
+    };
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isProfileDropdownOpen]);
+
+  // NEW: Effect to dynamically populate applicationData based on assignedClients
+  useEffect(() => {
+    const updatedApplicationData = assignedClients.map(client => {
+        // Find the employee to get their avatar initial
+        const employee = employees.find(emp => emp.name === client.assignedTo);
+        // Use employee.avatar if available, otherwise generate from name
+        const employeeAvatar = employee ? employee.avatar : (client.assignedTo ? client.assignedTo.split(' ').map(n => n[0]).join('').toUpperCase() : '');
+
+        return {
+            id: client.id,
+            employeeName: client.assignedTo,
+            employeeAvatar: employeeAvatar,
+            clientName: client.clientName,
+            jobTitle: client.position,
+            company: client.company,
+            platform: client.platform, // New field
+            jobId: client.jobId,       // New field
+            appliedDate: client.appliedDate, // New field
+        };
+    });
+    setApplicationData(updatedApplicationData);
+  }, [assignedClients, employees]); // Depend on assignedClients and employees
+
+  // Effect to calculate application counts per client
+  useEffect(() => {
+    const counts = {};
+    applicationData.forEach(app => {
+        counts[app.clientName] = (counts[app.clientName] || 0) + 1;
+    });
+    setClientApplicationCounts(counts);
+  }, [applicationData]);
+
+
+  // NEW: Effect to update employee assigned client counts whenever assignedClients changes
+  useEffect(() => {
+    setEmployees(prevEmployees => {
+      const newCounts = {};
+      assignedClients.forEach(client => {
+        newCounts[client.assignedTo] = (newCounts[client.assignedTo] || 0) + 1;
+      });
+
+      return prevEmployees.map(employee => ({
+        ...employee,
+        assignedClients: newCounts[employee.name] || 0
+      }));
+    });
+  }, [assignedClients]); // Recalculate when assignedClients changes
 
 
   // Function to toggle between light and dark themes
@@ -1296,7 +1076,7 @@ const ManagerWorkSheet = () => {
     if (isReassignment) {
       // Reassignment Logic
       const originalAssignedToName = clientToProcess.assignedTo;
-      const originalEmployee = employees.find(emp => emp.name === originalAssignedToName);
+      // No need to find originalEmployee here, as the useEffect will handle count updates.
 
       // 1. Update assignedClients state: change assignedTo, priority, notes
       setAssignedClients(prevAssigned => prevAssigned.map(client =>
@@ -1311,15 +1091,8 @@ const ManagerWorkSheet = () => {
           : client
       ));
 
-      // 2. Update employee assignedClients counts
-      setEmployees(prevEmployees => prevEmployees.map(emp => {
-        if (emp.id === newAssignedEmployee.id) {
-          return { ...emp, assignedClients: emp.assignedClients + 1 };
-        } else if (originalEmployee && emp.id === originalEmployee.id) {
-          return { ...emp, assignedClients: Math.max(0, emp.assignedClients - 1) }; // Ensure not negative
-        }
-        return emp;
-      }));
+      // The useEffect for `employees` state will handle the count update automatically
+      // based on the new `assignedClients` state.
 
       console.log('Reassigned Client:', clientToProcess.clientName);
       console.log('From Employee:', originalAssignedToName);
@@ -1346,15 +1119,14 @@ const ManagerWorkSheet = () => {
         status: 'applied', // Default status for new assignments
         assignedDate: new Date().toISOString().slice(0, 10), // Current date
         assignmentNotes: assignmentNotes, // Add assignmentNotes to new assigned client
+        platform: 'Manual Entry', // Default for new assignment
+        jobId: 'N/A', // Default for new assignment
+        appliedDate: new Date().toISOString().slice(0, 10), // Default for new assignment
       };
       setAssignedClients(prevAssigned => [...prevAssigned, newAssignedClient]);
 
-      // 3. Update the assignedClients count for the relevant employee in employees state
-      setEmployees(prevEmployees => prevEmployees.map(emp =>
-        emp.id === newAssignedEmployee.id
-          ? { ...emp, assignedClients: emp.assignedClients + 1 }
-          : emp
-      ));
+      // The useEffect for `employees` state will handle the count update automatically
+      // based on the new `assignedClients` state.
 
       console.log('Assigning Client:', clientToProcess.name);
       console.log('To Employee:', newAssignedEmployee.name);
@@ -1424,15 +1196,55 @@ const ManagerWorkSheet = () => {
     setApplicationFilterEmployee(event.target.value);
   };
 
-  // Filtered application data based on search and employee filter
-  const filteredApplicationData = initialApplicationData.filter(app => { // Use initialApplicationData here
+  // NEW: Handler for client filter change in Applications tab
+  const handleApplicationFilterClientChange = (event) => {
+    setApplicationFilterClient(event.target.value);
+  };
+
+  // NEW: Handlers for date range filters
+  const handleStartDateFilterChange = (event) => {
+    setStartDateFilter(event.target.value);
+  };
+
+  const handleEndDateFilterChange = (event) => {
+    setEndDateFilter(event.target.value);
+  };
+
+
+  // Filtered application data based on search, employee, client, and date range
+  const filteredApplicationData = applicationData.filter(app => {
+    const appDate = new Date(app.appliedDate);
+    const start = startDateFilter ? new Date(startDateFilter) : null;
+    const end = endDateFilter ? new Date(endDateFilter) : null;
+
     const matchesSearch = app.employeeName.toLowerCase().includes(applicationSearchQuery.toLowerCase()) ||
                           app.clientName.toLowerCase().includes(applicationSearchQuery.toLowerCase()) ||
                           app.jobTitle.toLowerCase().includes(applicationSearchQuery.toLowerCase()) ||
-                          app.company.toLowerCase().includes(applicationSearchQuery.toLowerCase());
+                          app.company.toLowerCase().includes(applicationSearchQuery.toLowerCase()) ||
+                          app.platform.toLowerCase().includes(applicationSearchQuery.toLowerCase()) ||
+                          app.jobId.toLowerCase().includes(applicationSearchQuery.toLowerCase()) ||
+                          app.appliedDate.toLowerCase().includes(applicationSearchQuery.toLowerCase());
     const matchesEmployee = applicationFilterEmployee === '' || app.employeeName === applicationFilterEmployee;
-    return matchesSearch && matchesEmployee;
+    const matchesClient = applicationFilterClient === '' || app.clientName === applicationFilterClient;
+    const matchesDateRange = (!start || appDate >= start) && (!end || appDate <= end);
+
+    return matchesSearch && matchesEmployee && matchesClient && matchesDateRange;
   });
+
+  // Get unique client names for the filter dropdown - NOW ONLY FROM ASSIGNED CLIENTS
+  const uniqueAssignedClientNames = [...new Set(assignedClients.map(client => client.clientName))];
+
+  // Determine if any filter is active for the "Applications" tab
+  const isApplicationFilterActive = applicationSearchQuery !== '' || applicationFilterEmployee !== '' || applicationFilterClient !== '' || startDateFilter !== '' || endDateFilter !== '';
+
+  // Function to clear all filters for the "Applications" tab
+  const handleClearApplicationFilters = () => {
+    setApplicationSearchQuery('');
+    setApplicationFilterEmployee('');
+    setApplicationFilterClient('');
+    setStartDateFilter('');
+    setEndDateFilter('');
+  };
 
   // Handler for Assigned Employees search bar
   const handleAssignedEmployeeSearchChange = (event) => {
@@ -1454,7 +1266,9 @@ const ManagerWorkSheet = () => {
 
     if (client) {
       setClientToEdit({ ...client }); // Create a copy for editing
+      setIsEditingClient(false); // Set to read-only initially
       setIsEditClientModalOpen(true);
+      setLlmResponse(''); // Clear previous LLM response
     } else {
       console.warn(`Client with name "${clientName}" not found for editing.`);
       alert(`Client details for "${clientName}" are not available for editing.`);
@@ -1465,6 +1279,8 @@ const ManagerWorkSheet = () => {
   const closeEditClientModal = () => {
     setIsEditClientModalOpen(false);
     setClientToEdit(null);
+    setIsEditingClient(false); // Reset edit mode on close
+    setLlmResponse(''); // Clear LLM response on close
   };
 
   // NEW: Handle changes in the edit client form
@@ -1496,11 +1312,84 @@ const ManagerWorkSheet = () => {
             company: clientToEdit.currentCompany,
             priority: clientToEdit.priority,
             status: clientToEdit.status,
+            platform: clientToEdit.platform, // Update platform
+            jobId: clientToEdit.jobId,       // Update Job ID
+            appliedDate: clientToEdit.appliedDate, // Update Applied Date
           } : client
         )
       );
-      closeEditClientModal();
+      setIsEditingClient(false); // Switch back to read-only after saving
+      console.log('Client details updated:', clientToEdit); // Log the updated client
       alert(`Client ${clientToEdit.name} details updated successfully!`);
+    }
+  };
+
+  // NEW: Function to handle resume download
+  const handleResumeDownload = (resumeFileName) => {
+    if (resumeFileName) {
+      alert(`Simulating download for: ${resumeFileName}\n(In a real application, this would trigger a file download.)`);
+      // In a real application, you would typically have a backend endpoint
+      // that serves the file, and you would trigger a download like this:
+      // window.open(`/api/download-resume/${resumeFileName}`, '_blank');
+      // Or if it's a direct URL to a static asset:
+      // window.open(`/assets/resumes/${resumeFileName}`, '_blank');
+    } else {
+      alert('No resume file available for this client.');
+    }
+  };
+
+  // NEW: Function to call LLM for client summary
+  const generateClientSummary = async () => {
+    if (!clientToEdit) return;
+
+    setIsLoadingLLMResponse(true);
+    setLlmResponse(''); // Clear previous response
+
+    const prompt = `Generate a concise summary for the following client profile, highlighting key skills, experience, job preferences, and any notable information relevant for a placement specialist. Focus on what makes this candidate suitable for a role.
+
+Client Name: ${clientToEdit.name || clientToEdit.clientName}
+Experience: ${clientToEdit.experience}
+Skills: ${Array.isArray(clientToEdit.skills) ? clientToEdit.skills.join(', ') : clientToEdit.skills}
+Jobs to Apply: ${clientToEdit.jobsToApply}
+Work Preference: ${clientToEdit.workPreference}
+Current Company: ${clientToEdit.currentCompany}
+Current Designation: ${clientToEdit.currentDesignation}
+Expected Salary: ${clientToEdit.expectedSalary}
+Visa Status: ${clientToEdit.visaStatus}
+Security Clearance: ${clientToEdit.securityClearance} ${clientToEdit.securityClearance === 'Yes' ? `(${clientToEdit.clearanceLevel})` : ''}
+Willing to Relocate: ${clientToEdit.willingToRelocate}
+Priority: ${clientToEdit.priority}
+
+Please provide a summary no longer than 150 words.`;
+
+    try {
+      let chatHistory = [];
+      chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+      const payload = { contents: chatHistory };
+      const apiKey = ""; // If you want to use models other than gemini-2.0-flash or imagen-3.0-generate-002, provide an API key here. Otherwise, leave this as-is.
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await response.json();
+      if (result.candidates && result.candidates.length > 0 &&
+          result.candidates[0].content && result.candidates[0].content.parts &&
+          result.candidates[0].content.parts.length > 0) {
+        const text = result.candidates[0].content.parts[0].text;
+        setLlmResponse(text);
+      } else {
+        setLlmResponse('Failed to generate summary. Please try again.');
+        console.error('Gemini API response was unexpected:', result);
+      }
+    } catch (error) {
+      console.error('Error calling Gemini API:', error);
+      setLlmResponse('Error generating summary. Please check your network or try again later.');
+    } finally {
+      setIsLoadingLLMResponse(false);
     }
   };
 
@@ -1514,7 +1403,8 @@ const ManagerWorkSheet = () => {
   const totalClientsCount = assignedClients.length;
 
   // Calculate total assigned clients from employees data for the "Assigned" tab header
-  const totalAssignedClientsByEmployee = employees.reduce((sum, emp) => sum + emp.assignedClients, 0);
+  const totalAssignedClientsByEmployee = employees.reduce((sum, emp) => sum + (emp.assignedClients || 0), 0); // Ensure it handles undefined assignedClients
+
 
   // Profile dropdown handlers
   const toggleProfileDropdown = () => {
@@ -1534,6 +1424,7 @@ const ManagerWorkSheet = () => {
   // NEW: Function to open User Profile Modal
   const openUserProfileModal = () => {
     setEditableProfile({ ...userProfile }); // Initialize editable profile with current user data
+    setIsEditingUserProfile(false); // Set to read-only initially
     setIsUserProfileModalOpen(true);
     setIsProfileDropdownOpen(false); // Close dropdown when modal opens
   };
@@ -1541,6 +1432,7 @@ const ManagerWorkSheet = () => {
   // NEW: Function to close User Profile Modal
   const closeUserProfileModal = () => {
     setIsUserProfileModalOpen(false);
+    setIsEditingUserProfile(false); // Reset edit mode on close
   };
 
   // NEW: Handle changes in the editable profile form
@@ -1556,7 +1448,8 @@ const ManagerWorkSheet = () => {
   const handleSaveProfile = () => {
     setUserProfile(editableProfile); // Update the main userProfile state
     setUserName(editableProfile.name); // Update userName in parent state
-    closeUserProfileModal();
+    setIsEditingUserProfile(false); // Switch back to read-only after saving
+    console.log('User profile updated:', editableProfile); // Log the updated profile
     alert('Profile updated successfully!');
   };
 
@@ -1742,6 +1635,12 @@ const ManagerWorkSheet = () => {
           --close-button-bg: #e9ecef;
           --close-button-color: #495057;
           --close-button-hover-bg: #dee2e6;
+
+          /* LLM Section */
+          --llm-section-bg: #e9f7ef; /* Light green for LLM section */
+          --llm-section-border: #d4edda;
+          --llm-text-color: #155724; /* Dark green text */
+          --llm-loading-color: #007bff;
         }
 
         [data-theme='dark'] {
@@ -1896,6 +1795,12 @@ const ManagerWorkSheet = () => {
           --close-button-bg: #4a4a4a;
           --close-button-color: #e0e0e0;
           --close-button-hover-bg: #5a5a5a;
+
+          /* LLM Section (Dark Theme) */
+          --llm-section-bg: #335544; /* Darker green for LLM section */
+          --llm-section-border: #446655;
+          --llm-text-color: #d4edda; /* Lighter green text */
+          --llm-loading-color: #66b3ff;
         }
 
         body {
@@ -2219,7 +2124,7 @@ const ManagerWorkSheet = () => {
         }
 
         .assignment-card {
-            background-color: var(--assignment-card-unassigned-bg);
+            background-color:rgba(68, 68, 68, 0.05);
             border-radius: 10px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
             padding: 20px;
@@ -2279,11 +2184,19 @@ const ManagerWorkSheet = () => {
 
         .applications-header {
             display: flex;
-            justify-content: space-between;
+            justify-content: space-between; /* Keep title left, actions right */
             align-items: center;
             margin-bottom: 20px;
             flex-wrap: wrap;
             gap: 10px;
+        }
+
+        /* New container for right-aligned actions in applications header */
+        .applications-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap; /* Allow wrapping on small screens */
         }
 
         .applications-title {
@@ -2308,7 +2221,7 @@ const ManagerWorkSheet = () => {
             gap: 15px;
             margin-bottom: 20px;
             flex-wrap: wrap;
-            align-items: center;
+            align-items: flex-end; /* Align items to the bottom, especially for date inputs with labels */
         }
 
         .search-input-wrapper {
@@ -2397,18 +2310,14 @@ const ManagerWorkSheet = () => {
             white-space: nowrap;
         }
 
-        /* Center the ACTIONS header for applications table */
-        .applications-table th:last-child {
+        /* Center the TOTAL APPLICATIONS column */
+        .applications-table th:nth-last-child(1),
+        .applications-table td:nth-last-child(1) {
             text-align: center;
         }
 
         .applications-table td {
             color: var(--text-color);
-        }
-
-        /* Center the content of the ACTIONS column for applications table */
-        .applications-table td:last-child {
-            text-align: center;
         }
 
         .applications-table tr:last-child td {
@@ -2514,9 +2423,9 @@ const ManagerWorkSheet = () => {
         }
 
         .employee-card {
-            background-color: var(--card-bg); /* Use card background for consistency */
+            background-color:rgba(68, 68, 68, 0.05);
             border-radius: 10px;
-            box-shadow: 0 4px 8px var(--card-shadow);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
             padding: 20px;
             display: flex;
             flex-direction: column;
@@ -2665,6 +2574,10 @@ const ManagerWorkSheet = () => {
             .filter-dropdown {
                 width: 100%;
                 min-width: unset;
+            }
+            .applications-header-actions {
+                width: 100%; /* Take full width on small screens */
+                justify-content: flex-start; /* Align left for better readability */
             }
         }
 
@@ -2893,22 +2806,6 @@ const ManagerWorkSheet = () => {
             color: var(--status-verified-color);
         }
 
-        .modal-client-skills {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .modal-client-skill-tag {
-            background-color: var(--modal-client-skill-bg);
-            color: var(--modal-client-skill-color);
-            padding: 5px 10px;
-            border-radius: 6px;
-            font-size: 13px;
-            white-space: nowrap;
-            transition: background-color 0.3s ease, color 0.3s ease;
-        }
-
         .modal-client-details {
             display: flex;
             flex-wrap: wrap;
@@ -3042,7 +2939,8 @@ const ManagerWorkSheet = () => {
         .assign-form-group input[type="text"],
         .assign-form-group input[type="email"],
         .assign-form-group input[type="tel"],
-        .assign-form-group input[type="date"] {
+        .assign-form-group input[type="date"],
+        .assign-form-group input[type="number"] { /* Added number type */
             width: 100%;
             padding: 10px 12px;
             border: 1px solid var(--form-input-border);
@@ -3062,7 +2960,8 @@ const ManagerWorkSheet = () => {
         .assign-form-group input[type="text"]:focus,
         .assign-form-group input[type="email"]:focus,
         .assign-form-group input[type="tel"]:focus,
-        .assign-form-group input[type="date"]:focus {
+        .assign-form-group input[type="date"]:focus,
+        .assign-form-group input[type="number"]:focus { /* Added number type */
             outline: none;
             border-color: var(--form-input-focus-border);
             box-shadow: 0 0 0 0.2rem var(--form-input-focus-shadow);
@@ -3462,18 +3361,18 @@ const ManagerWorkSheet = () => {
         }
 
         /* Specific rule for the 'ACTIONS' header to center align */
-        .interview-table th:last-child {
+        /* REMOVED: .interview-table th:last-child {
             text-align: center;
-        }
+        } */
 
         /* Specific rule for the 'ACTIONS' column data cells to center align */
-        .interview-table td:last-child {
+        /* REMOVED: .interview-table td:last-child {
             text-align: center;
             display: flex; /* Make the td a flex container */
             justify-content: center; /* Center content horizontally */
             align-items: center; /* Center content vertically */
             height: 100%; /* Ensure it takes full height of the row */
-        }
+        } */
 
         .interview-table tr:last-child td {
             border-bottom: none;
@@ -3705,6 +3604,74 @@ const ManagerWorkSheet = () => {
         .profile-actions .close-button:hover {
           background-color: var(--close-button-hover-bg);
         }
+
+        /* Styles for the Clear Filter button */
+        .clear-filter-button {
+            background-color: var(--modal-export-button-bg); /* Reusing a neutral button style */
+            color: var(--modal-export-button-color);
+            padding: 8px 15px;
+            border-radius: 8px;
+            border: 1px solid var(--modal-search-border);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .clear-filter-button:hover {
+            background-color: var(--modal-export-button-hover-bg);
+            border-color: var(--modal-export-button-hover-border);
+        }
+
+        /* LLM Summary Section */
+        .llm-summary-section {
+            background-color: var(--llm-section-bg);
+            border: 1px solid var(--llm-section-border);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            font-size: 14px;
+            color: var(--llm-text-color);
+            transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+        }
+
+        .llm-summary-section h4 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--llm-text-color);
+            margin-top: 0;
+            margin-bottom: 10px;
+            transition: color 0.3s ease;
+        }
+
+        .llm-summary-section p {
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        .llm-loading-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 15px;
+            font-size: 15px;
+            color: var(--llm-loading-color);
+            font-weight: 500;
+        }
+
+        .llm-loading-indicator i {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
         `}
       </style>
 
@@ -3763,7 +3730,7 @@ const ManagerWorkSheet = () => {
             checked={activeTab === 'Assignments'}
             onChange={handleRadioChange}
           />
-          <label htmlFor="assignmentsRadio">Assignments</label>
+          <label htmlFor="assignmentsRadio">Clients</label>
         </div>
         <div className="radio-option">
           <input
@@ -3774,7 +3741,7 @@ const ManagerWorkSheet = () => {
             checked={activeTab === 'Assigned'}
             onChange={handleRadioChange}
           />
-          <label htmlFor="assignedRadio">Assigned</label>
+          <label htmlFor="assignedRadio">Employees</label>
         </div>
         <div className="radio-option">
           <input
@@ -3830,10 +3797,10 @@ const ManagerWorkSheet = () => {
           <section className="assigned-employee-overview client-assignment-overview">
             <div className="client-assignment-header">
               {/* Changed title to "Assigned Clients" */}
-              <h2 className="client-assignment-title">Assigned Clients</h2>
+              <h2 className="client-assignment-title">All Employees</h2>
               {/* Display total assigned clients here, matching the screenshot */}
               <div className="clients-count-badge">
-                {totalAssignedClientsByEmployee} clients
+                Total {totalAssignedClientsByEmployee} clients
               </div>
               {/* Removed "Manage Employees" button */}
             </div>
@@ -3887,8 +3854,15 @@ const ManagerWorkSheet = () => {
           <section className="applications-management-section">
             <div className="applications-header">
               <h2 className="applications-title">Employee Applications Management</h2>
-              {/* Changed badge text as per screenshot */}
-              <span className="pending-review-badge">0 pending review</span>
+              {/* Container for right-aligned actions */}
+              <div className="applications-header-actions">
+                {isApplicationFilterActive && (
+                  <button className="clear-filter-button" onClick={handleClearApplicationFilters}>
+                    <i className="fas fa-times-circle"></i> Clear Filters
+                  </button>
+                )}
+                <span className="pending-review-badge">0 pending review</span>
+              </div>
             </div>
 
             <div className="applications-filters">
@@ -3913,20 +3887,60 @@ const ManagerWorkSheet = () => {
                 </select>
                 <i className="fas fa-chevron-down"></i>
               </div>
+              {/* Filter by Client dropdown - now only shows assigned clients */}
+              <div className="filter-dropdown">
+                <select
+                  value={applicationFilterClient}
+                  onChange={handleApplicationFilterClientChange}
+                >
+                  <option value="">Filter by client</option>
+                  {uniqueAssignedClientNames.map(clientName => (
+                    <option key={clientName} value={clientName}>{clientName}</option>
+                  ))}
+                </select>
+                <i className="fas fa-chevron-down"></i>
+              </div>
+              {/* NEW: Start Date Filter */}
+              <div className="assign-form-group" style={{flex: '1 1 150px', minWidth: '150px'}}>
+                <label htmlFor="startDateFilter" style={{fontSize: '14px', marginBottom: '4px', color: 'var(--form-label-color)'}}>Start Date</label>
+                <input
+                  type="date"
+                  id="startDateFilter"
+                  value={startDateFilter}
+                  onChange={handleStartDateFilterChange}
+                  style={{padding: '10px 12px', border: '1px solid var(--form-input-border)', borderRadius: '8px', backgroundColor: 'var(--form-input-bg)', color: 'var(--form-input-text)', fontSize: '14px'}}
+                />
+              </div>
+              {/* NEW: End Date Filter */}
+              <div className="assign-form-group" style={{flex: '1 1 150px', minWidth: '150px'}}>
+                <label htmlFor="endDateFilter" style={{fontSize: '14px', marginBottom: '4px', color: 'var(--form-label-color)'}}>End Date</label>
+                <input
+                  type="date"
+                  id="endDateFilter"
+                  value={endDateFilter}
+                  onChange={handleEndDateFilterChange}
+                  style={{padding: '10px 12px', border: '1px solid var(--form-input-border)', borderRadius: '8px', backgroundColor: 'var(--form-input-bg)', color: 'var(--form-input-text)', fontSize: '14px'}}
+                />
+              </div>
             </div>
 
             <div className="table-responsive">
               <table className="applications-table">
                 <thead><tr>
+                  <th>COUNT</th>
                   <th>EMPLOYEE</th>
                   <th>CLIENT</th>
                   <th>JOB TITLE</th>
                   <th>COMPANY</th>
-                  <th>ACTIONS</th>
+                  <th>PLATFORM</th>
+                  <th>JOB ID</th>
+                  <th>APPLIED DATE</th>
+                  <th>TOTAL APPLICATIONS</th> {/* NEW COLUMN HEADER */}
                 </tr></thead>
                 <tbody>
-                  {filteredApplicationData.map((app) => (
+                  {filteredApplicationData.map((app, index) => (
                     <tr key={app.id}>
+                      <td>{index + 1}</td>
                       <td className="employee-cell">
                         <div className="employee-avatar">{app.employeeAvatar}</div>
                         {app.employeeName}
@@ -3934,16 +3948,15 @@ const ManagerWorkSheet = () => {
                       <td>{app.clientName}</td>
                       <td>{app.jobTitle}</td>
                       <td>{app.company}</td>
-                      <td className="action-buttons">
-                        <button className="action-button" onClick={() => openEditClientModal(app.clientName)}>
-                          <i className="fas fa-eye"></i>
-                        </button>
-                      </td>
+                      <td>{app.platform}</td>
+                      <td>{app.jobId}</td>
+                      <td>{formatDateToDDMMYYYY(app.appliedDate)}</td>
+                      <td>{clientApplicationCounts[app.clientName] || 0}</td> {/* NEW COLUMN DATA */}
                     </tr>
                   ))}
                   {filteredApplicationData.length === 0 && (
                     <tr>
-                      <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-color)' }}>
+                      <td colSpan="9" style={{ textAlign: 'center', color: 'var(--text-color)' }}> {/* Adjusted colspan */}
                         No applications to display.
                       </td>
                     </tr>
@@ -3978,7 +3991,7 @@ const ManagerWorkSheet = () => {
                 >
                   <option value="All Rounds">All Rounds</option>
                   <option value="1st Round">1st Round</option>
-                  <option value="2nd Round">2st Round</option>
+                  <option value="2st Round">2st Round</option>
                   <option value="3rd Round">3rd Round</option>
                   {/* Add more rounds as needed based on your data */}
                 </select>
@@ -3996,7 +4009,7 @@ const ManagerWorkSheet = () => {
                   <th>ROUND</th>
                   <th>DATE</th>
                   <th>STATUS</th> {/* New column header for Status */}
-                  <th>ACTIONS</th>
+                  {/* REMOVED: <th>ACTIONS</th> */}
                 </tr></thead>
                 <tbody>
                   {filteredInterviewData.map((interview) => (
@@ -4012,21 +4025,23 @@ const ManagerWorkSheet = () => {
                         <span className="round-badge">{interview.round}</span>
                       </td>
                       <td className="date-cell">
-                         {interview.date}
+                         {formatDateToDDMMYYYY(interview.date)}
                       </td>
                       <td>
                         {interview.status} {/* Display the new status */}
                       </td>
-                      <td className="action-buttons"> {/* This td now has flex properties from CSS */}
+                      {/* REMOVED:
+                      <td className="action-buttons">
                         <button className="action-button" onClick={() => openEditClientModal(interview.clientName)}>
                           <i className="fas fa-eye"></i>
                         </button>
                       </td>
+                      */}
                     </tr>
                   ))}
                   {filteredInterviewData.length === 0 && (
                     <tr>
-                      <td colSpan="8" style={{ textAlign: 'center', color: 'var(--text-color)' }}> {/* Updated colspan */}
+                      <td colSpan="7" style={{ textAlign: 'center', color: 'var(--text-color)' }}> {/* Updated colspan */}
                         No interviews to display matching your criteria.
                       </td>
                     </tr>
@@ -4236,7 +4251,7 @@ const ManagerWorkSheet = () => {
                     <th>COMPANY</th>
                     <th>ASSIGNED TO</th>
                     <th>PRIORITY</th>
-                    <th>STATUS</th>
+                    {/* REMOVED: <th>STATUS</th> */}
                     <th>ASSIGNED DATE</th>
                   </tr>
                 </thead>
@@ -4274,21 +4289,23 @@ const ManagerWorkSheet = () => {
                           {client.priority.charAt(0).toUpperCase() + client.priority.slice(1)}
                         </span>
                       </td>
+                      {/* REMOVED:
                       <td>
                         <span className={`status-badge status-${client.status}`}>
                           {client.status.charAt(0).toUpperCase() + client.status.slice(1)}
                         </span>
                       </td>
+                      */}
                       <td>
                         <div className="employee-cell">
-                           <i className="fas fa-calendar-alt" style={{marginRight: '5px'}}></i>{client.assignedDate}
+                           <i className="fas fa-calendar-alt" style={{marginRight: '5px'}}></i>{formatDateToDDMMYYYY(client.assignedDate)}
                         </div>
                       </td>
                     </tr>
                   ))}
                   {assignedClients.length === 0 && (
                     <tr>
-                      <td colSpan="7" style={{ textAlign: 'center', color: 'var(--text-color)' }}>
+                      <td colSpan="6" style={{ textAlign: 'center', color: 'var(--text-color)' }}> {/* Adjusted colspan */}
                         No assigned clients to display.
                       </td>
                     </tr>
@@ -4334,7 +4351,7 @@ const ManagerWorkSheet = () => {
                         <i className="fas fa-map-marker-alt"></i> {client.location}
                       </span>
                       <span className="employee-client-details-item">
-                        <i className="fas fa-calendar-alt"></i> Assigned: {client.assignedDate}
+                        <i className="fas fa-calendar-alt"></i> Assigned: {formatDateToDDMMYYYY(client.assignedDate)}
                       </span>
                       <span className="employee-client-details-item">
                         <i className="fas fa-info-circle"></i> Status: {client.status.charAt(0).toUpperCase() + client.status.slice(1)}
@@ -4445,7 +4462,9 @@ const ManagerWorkSheet = () => {
         <div className="modal-overlay">
           <div className="assign-modal-content"> {/* Reusing assign-modal-content for its wider layout */}
             <div className="assign-modal-header">
-              <h3 className="assign-modal-title">Edit Client Details: {clientToEdit.name || clientToEdit.clientName}</h3>
+              <h3 className="assign-modal-title">
+                {isEditingClient ? 'Edit Client Details' : 'View Client Details'}: {clientToEdit.name || clientToEdit.clientName}
+              </h3>
               <button className="assign-modal-close-button" onClick={closeEditClientModal}>
                 <i className="fas fa-times"></i>
               </button>
@@ -4458,27 +4477,27 @@ const ManagerWorkSheet = () => {
                 <h4 className="client-preview-section-title">Personal Information</h4>
                 <div className="assign-form-group">
                   <label htmlFor="firstName">First Name</label>
-                  <input type="text" id="firstName" name="firstName" value={clientToEdit.firstName || ''} onChange={handleEditClientChange} />
+                  <input type="text" id="firstName" name="firstName" value={clientToEdit.firstName || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
                 <div className="assign-form-group">
                   <label htmlFor="middleName">Middle Name</label>
-                  <input type="text" id="middleName" name="middleName" value={clientToEdit.middleName || ''} onChange={handleEditClientChange} />
+                  <input type="text" id="middleName" name="middleName" value={clientToEdit.middleName || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
                 <div className="assign-form-group">
                   <label htmlFor="lastName">Last Name</label>
-                  <input type="text" id="lastName" name="lastName" value={clientToEdit.lastName || ''} onChange={handleEditClientChange} />
+                  <input type="text" id="lastName" name="lastName" value={clientToEdit.lastName || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
                 <div className="assign-form-group">
                   <label htmlFor="dob">Date of Birth</label>
-                  <input type="date" id="dob" name="dob" value={clientToEdit.dob || ''} onChange={handleEditClientChange} />
+                  <input type="date" id="dob" name="dob" value={clientToEdit.dob || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
                 <div className="assign-form-group">
                   <label htmlFor="gender">Gender</label>
-                  <input type="text" id="gender" name="gender" value={clientToEdit.gender || ''} onChange={handleEditClientChange} />
+                  <input type="text" id="gender" name="gender" value={clientToEdit.gender || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
                 <div className="assign-form-group">
                   <label htmlFor="ethnicity">Ethnicity</label>
-                  <input type="text" id="ethnicity" name="ethnicity" value={clientToEdit.ethnicity || ''} onChange={handleEditClientChange} />
+                  <input type="text" id="ethnicity" name="ethnicity" value={clientToEdit.ethnicity || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
               </div>
 
@@ -4487,19 +4506,19 @@ const ManagerWorkSheet = () => {
                 <h4 className="client-preview-section-title">Contact Information</h4>
                 <div className="assign-form-group">
                   <label htmlFor="address">Address</label>
-                  <textarea id="address" name="address" value={clientToEdit.address || ''} onChange={handleEditClientChange}></textarea>
+                  <textarea id="address" name="address" value={clientToEdit.address || ''} onChange={handleEditClientChange} readOnly={!isEditingClient}></textarea>
                 </div>
                 <div className="assign-form-group">
                   <label htmlFor="zipCode">Zip Code</label>
-                  <input type="text" id="zipCode" name="zipCode" value={clientToEdit.zipCode || ''} onChange={handleEditClientChange} />
+                  <input type="text" id="zipCode" name="zipCode" value={clientToEdit.zipCode || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
                 <div className="assign-form-group">
                   <label htmlFor="mobile">Mobile</label>
-                  <input type="tel" id="mobile" name="mobile" value={clientToEdit.mobile || ''} onChange={handleEditClientChange} />
+                  <input type="tel" id="mobile" name="mobile" value={clientToEdit.mobile || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
                 <div className="assign-form-group">
                   <label htmlFor="email">Email</label>
-                  <input type="email" id="email" name="email" value={clientToEdit.email || ''} onChange={handleEditClientChange} />
+                  <input type="email" id="email" name="email" value={clientToEdit.email || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
               </div>
 
@@ -4508,7 +4527,7 @@ const ManagerWorkSheet = () => {
                 <h4 className="client-preview-section-title">Job Preferences & Status</h4>
                 <div className="assign-form-group">
                   <label htmlFor="securityClearance">Security Clearance</label>
-                  <select id="securityClearance" name="securityClearance" value={clientToEdit.securityClearance || 'No'} onChange={handleEditClientChange}>
+                  <select id="securityClearance" name="securityClearance" value={clientToEdit.securityClearance || 'No'} onChange={handleEditClientChange} disabled={!isEditingClient}>
                     <option value="Yes">Yes</option>
                     <option value="No">No</option>
                   </select>
@@ -4516,53 +4535,53 @@ const ManagerWorkSheet = () => {
                 {clientToEdit.securityClearance === 'Yes' && (
                   <div className="assign-form-group">
                     <label htmlFor="clearanceLevel">Clearance Level</label>
-                    <input type="text" id="clearanceLevel" name="clearanceLevel" value={clientToEdit.clearanceLevel || ''} onChange={handleEditClientChange} />
+                    <input type="text" id="clearanceLevel" name="clearanceLevel" value={clientToEdit.clearanceLevel || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                   </div>
                 )}
                 <div className="assign-form-group">
                   <label htmlFor="willingToRelocate">Willing to Relocate</label>
-                  <select id="willingToRelocate" name="willingToRelocate" value={clientToEdit.willingToRelocate || 'No'} onChange={handleEditClientChange}>
+                  <select id="willingToRelocate" name="willingToRelocate" value={clientToEdit.willingToRelocate || 'No'} onChange={handleEditClientChange} disabled={!isEditingClient}>
                     <option value="Yes">Yes</option>
                     <option value="No">No</option>
                   </select>
                 </div>
                 <div className="assign-form-group">
                   <label htmlFor="workPreference">Work Preference</label>
-                  <input type="text" id="workPreference" name="workPreference" value={clientToEdit.workPreference || ''} onChange={handleEditClientChange} />
+                  <input type="text" id="workPreference" name="workPreference" value={clientToEdit.workPreference || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
                 <div className="assign-form-group">
                   <label htmlFor="restrictedCompanies">Restricted Companies</label>
-                  <input type="text" id="restrictedCompanies" name="restrictedCompanies" value={clientToEdit.restrictedCompanies || ''} onChange={handleEditClientChange} />
+                  <input type="text" id="restrictedCompanies" name="restrictedCompanies" value={clientToEdit.restrictedCompanies || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
                 <div className="assign-form-group">
                   <label htmlFor="jobsToApply">Jobs to Apply</label>
-                  <input type="text" id="jobsToApply" name="jobsToApply" value={clientToEdit.jobsToApply || ''} onChange={handleEditClientChange} />
+                  <input type="text" id="jobsToApply" name="jobsToApply" value={clientToEdit.jobsToApply || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
                 <div className="assign-form-group">
                   <label htmlFor="technologySkills">Technology Skills</label>
-                  <textarea id="technologySkills" name="technologySkills" value={clientToEdit.technologySkills || ''} onChange={handleEditClientChange}></textarea>
+                  <textarea id="technologySkills" name="technologySkills" value={clientToEdit.technologySkills || ''} onChange={handleEditClientChange} readOnly={!isEditingClient}></textarea>
                 </div>
                 <div className="assign-form-group">
                   <label htmlFor="currentSalary">Current Salary</label>
-                  <input type="text" id="currentSalary" name="currentSalary" value={clientToEdit.currentSalary || ''} onChange={handleEditClientChange} />
+                  <input type="text" id="currentSalary" name="currentSalary" value={clientToEdit.currentSalary || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
                 <div className="assign-form-group">
                   <label htmlFor="expectedSalary">Expected Salary</label>
-                  <input type="text" id="expectedSalary" name="expectedSalary" value={clientToEdit.expectedSalary || ''} onChange={handleEditClientChange} />
+                  <input type="text" id="expectedSalary" name="expectedSalary" value={clientToEdit.expectedSalary || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
                 <div className="assign-form-group">
                   <label htmlFor="visaStatus">Visa Status</label>
-                  <input type="text" id="visaStatus" name="visaStatus" value={clientToEdit.visaStatus || ''} onChange={handleEditClientChange} />
+                  <input type="text" id="visaStatus" name="visaStatus" value={clientToEdit.visaStatus || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
                 {clientToEdit.visaStatus === 'Other' && (
                   <div className="assign-form-group">
                     <label htmlFor="otherVisaStatus">Other Visa Status</label>
-                    <input type="text" id="otherVisaStatus" name="otherVisaStatus" value={clientToEdit.otherVisaStatus || ''} onChange={handleEditClientChange} />
+                    <input type="text" id="otherVisaStatus" name="otherVisaStatus" value={clientToEdit.otherVisaStatus || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                   </div>
                 )}
                 <div className="assign-form-group">
                   <label htmlFor="priority">Priority</label>
-                  <select id="priority" name="priority" value={clientToEdit.priority || 'medium'} onChange={handleEditClientChange}>
+                  <select id="priority" name="priority" value={clientToEdit.priority || 'medium'} onChange={handleEditClientChange} disabled={!isEditingClient}>
                     <option value="high">High</option>
                     <option value="medium">Medium</option>
                     <option value="low">Low</option>
@@ -4570,7 +4589,20 @@ const ManagerWorkSheet = () => {
                 </div>
                 <div className="assign-form-group">
                   <label htmlFor="status">Status</label>
-                  <input type="text" id="status" name="status" value={clientToEdit.status || ''} onChange={handleEditClientChange} />
+                  <input type="text" id="status" name="status" value={clientToEdit.status || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
+                </div>
+                {/* NEW: Platform, Job ID, Applied Date for editing */}
+                <div className="assign-form-group">
+                  <label htmlFor="platform">Platform</label>
+                  <input type="text" id="platform" name="platform" value={clientToEdit.platform || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
+                </div>
+                <div className="assign-form-group">
+                  <label htmlFor="jobId">Job ID</label>
+                  <input type="text" id="jobId" name="jobId" value={clientToEdit.jobId || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
+                </div>
+                <div className="assign-form-group">
+                  <label htmlFor="appliedDate">Applied Date</label>
+                  <input type="date" id="appliedDate" name="appliedDate" value={clientToEdit.appliedDate || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
               </div>
 
@@ -4579,23 +4611,23 @@ const ManagerWorkSheet = () => {
                 <h4 className="client-preview-section-title">Education Details</h4>
                 <div className="assign-form-group">
                   <label htmlFor="schoolName">School Name</label>
-                  <input type="text" id="schoolName" name="schoolName" value={clientToEdit.schoolName || ''} onChange={handleEditClientChange} />
+                  <input type="text" id="schoolName" name="schoolName" value={clientToEdit.schoolName || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
                 <div className="assign-form-group">
                   <label htmlFor="schoolAddress">School Address</label>
-                  <textarea id="schoolAddress" name="schoolAddress" value={clientToEdit.schoolAddress || ''} onChange={handleEditClientChange}></textarea>
+                  <textarea id="schoolAddress" name="schoolAddress" value={clientToEdit.schoolAddress || ''} onChange={handleEditClientChange} readOnly={!isEditingClient}></textarea>
                 </div>
                 <div className="assign-form-group">
                   <label htmlFor="schoolPhone">School Phone</label>
-                  <input type="tel" id="schoolPhone" name="schoolPhone" value={clientToEdit.schoolPhone || ''} onChange={handleEditClientChange} />
+                  <input type="tel" id="schoolPhone" name="schoolPhone" value={clientToEdit.schoolPhone || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
                 <div className="assign-form-group">
                   <label htmlFor="courseOfStudy">Course of Study</label>
-                  <input type="text" id="courseOfStudy" name="courseOfStudy" value={clientToEdit.courseOfStudy || ''} onChange={handleEditClientChange} />
+                  <input type="text" id="courseOfStudy" name="courseOfStudy" value={clientToEdit.courseOfStudy || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
                 <div className="assign-form-group">
                   <label htmlFor="graduationDate">Graduation Date</label>
-                  <input type="date" id="graduationDate" name="graduationDate" value={clientToEdit.graduationDate || ''} onChange={handleEditClientChange} />
+                  <input type="date" id="graduationDate" name="graduationDate" value={clientToEdit.graduationDate || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
               </div>
 
@@ -4604,23 +4636,23 @@ const ManagerWorkSheet = () => {
                 <h4 className="client-preview-section-title">Employment Details</h4>
                 <div className="assign-form-group">
                   <label htmlFor="currentCompany">Current Company</label>
-                  <input type="text" id="currentCompany" name="currentCompany" value={clientToEdit.currentCompany || ''} onChange={handleEditClientChange} />
+                  <input type="text" id="currentCompany" name="currentCompany" value={clientToEdit.currentCompany || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
                 <div className="assign-form-group">
                   <label htmlFor="currentDesignation">Current Designation</label>
-                  <input type="text" id="currentDesignation" name="currentDesignation" value={clientToEdit.currentDesignation || ''} onChange={handleEditClientChange} />
+                  <input type="text" id="currentDesignation" name="currentDesignation" value={clientToEdit.currentDesignation || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
                 <div className="assign-form-group">
                   <label htmlFor="preferredInterviewTime">Preferred Interview Time</label>
-                  <input type="text" id="preferredInterviewTime" name="preferredInterviewTime" value={clientToEdit.preferredInterviewTime || ''} onChange={handleEditClientChange} />
+                  <input type="text" id="preferredInterviewTime" name="preferredInterviewTime" value={clientToEdit.preferredInterviewTime || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
                 <div className="assign-form-group">
                   <label htmlFor="earliestJoiningDate">Earliest Joining Date</label>
-                  <input type="date" id="earliestJoiningDate" name="earliestJoiningDate" value={clientToEdit.earliestJoiningDate || ''} onChange={handleEditClientChange} />
+                  <input type="date" id="earliestJoiningDate" name="earliestJoiningDate" value={clientToEdit.earliestJoiningDate || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
                 <div className="assign-form-group">
                   <label htmlFor="relievingDate">Relieving Date</label>
-                  <input type="date" id="relievingDate" name="relievingDate" value={clientToEdit.relievingDate || ''} onChange={handleEditClientChange} />
+                  <input type="date" id="relievingDate" name="relievingDate" value={clientToEdit.relievingDate || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
               </div>
 
@@ -4629,23 +4661,23 @@ const ManagerWorkSheet = () => {
                 <h4 className="client-preview-section-title">References</h4>
                 <div className="assign-form-group">
                   <label htmlFor="referenceName">Reference Name</label>
-                  <input type="text" id="referenceName" name="referenceName" value={clientToEdit.referenceName || ''} onChange={handleEditClientChange} />
+                  <input type="text" id="referenceName" name="referenceName" value={clientToEdit.referenceName || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
                 <div className="assign-form-group">
                   <label htmlFor="referencePhone">Reference Phone</label>
-                  <input type="tel" id="referencePhone" name="referencePhone" value={clientToEdit.referencePhone || ''} onChange={handleEditClientChange} />
+                  <input type="tel" id="referencePhone" name="referencePhone" value={clientToEdit.referencePhone || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
                 <div className="assign-form-group">
                   <label htmlFor="referenceAddress">Reference Address</label>
-                  <textarea id="referenceAddress" name="referenceAddress" value={clientToEdit.referenceAddress || ''} onChange={handleEditClientChange}></textarea>
+                  <textarea id="referenceAddress" name="referenceAddress" value={clientToEdit.referenceAddress || ''} onChange={handleEditClientChange} readOnly={!isEditingClient}></textarea>
                 </div>
                 <div className="assign-form-group">
                   <label htmlFor="referenceEmail">Reference Email</label>
-                  <input type="email" id="referenceEmail" name="referenceEmail" value={clientToEdit.referenceEmail || ''} onChange={handleEditClientChange} />
+                  <input type="email" id="referenceEmail" name="referenceEmail" value={clientToEdit.referenceEmail || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
                 <div className="assign-form-group">
                   <label htmlFor="referenceRole">Reference Role</label>
-                  <input type="text" id="referenceRole" name="referenceRole" value={clientToEdit.referenceRole || ''} onChange={handleEditClientChange} />
+                  <input type="text" id="referenceRole" name="referenceRole" value={clientToEdit.referenceRole || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
               </div>
 
@@ -4654,12 +4686,36 @@ const ManagerWorkSheet = () => {
                 <h4 className="client-preview-section-title">Job Portal Accounts</h4>
                 <div className="assign-form-group">
                   <label htmlFor="jobPortalAccountName">Account Name</label>
-                  <input type="text" id="jobPortalAccountName" name="jobPortalAccountName" value={clientToEdit.jobPortalAccountName || ''} onChange={handleEditClientChange} />
+                  <input type="text" id="jobPortalAccountName" name="jobPortalAccountName" value={clientToEdit.jobPortalAccountName || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
                 <div className="assign-form-group">
                   <label htmlFor="jobPortalCredentials">Credentials</label>
-                  <input type="text" id="jobPortalCredentials" name="jobPortalCredentials" value={clientToEdit.jobPortalCredentials || ''} onChange={handleEditClientChange} />
+                  <input type="text" id="jobPortalCredentials" name="jobPortalCredentials" value={clientToEdit.jobPortalCredentials || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
+              </div>
+
+              {/* NEW: Resume Download Section */}
+              <div className="client-preview-section">
+                <h4 className="client-preview-section-title">Resume</h4>
+                <div className="assign-form-group">
+                  <label htmlFor="resumeFileName">Resume File:</label>
+                  <input
+                    type="text"
+                    id="resumeFileName"
+                    name="resume"
+                    value={clientToEdit.resume || 'N/A'}
+                    readOnly
+                    style={{ cursor: 'not-allowed' }}
+                  />
+                </div>
+                <button
+                  className="assign-form-button assign"
+                  onClick={() => handleResumeDownload(clientToEdit.resume)}
+                  disabled={!clientToEdit.resume}
+                  style={{ marginTop: '10px' }}
+                >
+                  <i className="fas fa-download"></i> Download Resume
+                </button>
               </div>
 
             </div>
@@ -4674,8 +4730,35 @@ const ManagerWorkSheet = () => {
                     name="skills"
                     value={Array.isArray(clientToEdit.skills) ? clientToEdit.skills.join(', ') : clientToEdit.skills || ''}
                     onChange={(e) => setClientToEdit(prev => ({ ...prev, skills: e.target.value.split(',').map(s => s.trim()) }))}
+                    readOnly={!isEditingClient}
                   ></textarea>
                 </div>
+              </div>
+            )}
+
+            {/* LLM Integration Section */}
+            <div className="assign-form-actions" style={{ justifyContent: 'flex-start', marginTop: '20px' }}>
+              <button
+                className="assign-form-button assign"
+                onClick={generateClientSummary}
+                disabled={isLoadingLLMResponse}
+              >
+                {isLoadingLLMResponse ? (
+                  <>
+                    <i className="fas fa-spinner fa-spin"></i> Generating...
+                  </>
+                ) : (
+                  <>
+                    <i className="fas fa-robot"></i> Generate Client Summary
+                  </>
+                )}
+              </button>
+            </div>
+
+            {llmResponse && (
+              <div className="llm-summary-section">
+                <h4>LLM Generated Summary:</h4>
+                <p>{llmResponse}</p>
               </div>
             )}
 
@@ -4683,9 +4766,15 @@ const ManagerWorkSheet = () => {
               <button className="assign-form-button cancel" onClick={closeEditClientModal}>
                 Cancel
               </button>
-              <button className="assign-form-button assign" onClick={handleUpdateClient}>
-                Save Changes
-              </button>
+              {isEditingClient ? (
+                <button className="assign-form-button assign" onClick={handleUpdateClient}>
+                  Save Changes
+                </button>
+              ) : (
+                <button className="assign-form-button assign" onClick={() => setIsEditingClient(true)}>
+                  Edit Profile
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -4737,6 +4826,7 @@ const ManagerWorkSheet = () => {
                   name="name"
                   value={editableProfile.name || ''}
                   onChange={handleProfileChange}
+                  readOnly={!isEditingUserProfile} // Read-only unless editing
                 />
               </div>
               <div className="profile-detail-item">
@@ -4751,6 +4841,7 @@ const ManagerWorkSheet = () => {
                   name="email"
                   value={editableProfile.email || ''}
                   onChange={handleProfileChange}
+                  readOnly={!isEditingUserProfile} // Read-only unless editing
                 />
               </div>
               <div className="profile-detail-item">
@@ -4761,6 +4852,7 @@ const ManagerWorkSheet = () => {
                   name="mobile"
                   value={editableProfile.mobile || ''}
                   onChange={handleProfileChange}
+                  readOnly={!isEditingUserProfile} // Read-only unless editing
                 />
               </div>
               <div className="profile-detail-item">
@@ -4769,9 +4861,15 @@ const ManagerWorkSheet = () => {
               </div>
             </div>
             <div className="profile-actions">
-              <button className="edit-button" onClick={handleSaveProfile}>
-                Edit Profile
-              </button>
+              {isEditingUserProfile ? (
+                <button className="edit-button" onClick={handleSaveProfile}>
+                  Save Changes
+                </button>
+              ) : (
+                <button className="edit-button" onClick={() => setIsEditingUserProfile(true)}>
+                  Edit Profile
+                </button>
+              )}
               <button className="close-button" onClick={closeUserProfileModal}>
                 Close
               </button>
