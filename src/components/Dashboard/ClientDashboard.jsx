@@ -453,10 +453,17 @@ const ClientHeader = ({
         </div>
 
         <div className="ad-header-right">
+          <li className="profile-dropdown-item" onClick={onSubscriptionClick}>
+            {/* Credit Card Icon */}
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1rem', height: '1rem' }}>
+              <path d="M22 9H2C1.44772 9 1 9.44772 1 10V19C1 19.5523 1.44772 20 2 20H22C22.5523 20 23 19.5523 23 19V10C23 9.44772 22.5523 9 22 9ZM3 11V18H21V11H3ZM22 4H2C1.44772 4 1 4.44772 1 5V7C1 7.55228 1.44772 8 2 8H22C22.5523 8 23 7.55228 23 7V5C23 4.44772 22.5523 4 22 4Z" />
+            </svg>
+            Subscription
+          </li>
           <div className="ad-notification-icon" onClick={onNotificationClick}>
             {/* Bell Icon */}
             <svg className="ad-icon-btn" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1.125rem', height: '1.125rem' }}>
-              <path d="M224 0c-17.7 0-32 14.3-32 32V51.2C119 66 64 130.6 64 208v25.4c0 45.4-15.5 89.2-43.8 124.9L5.7 377.9c-2.7 4.4-3.4 9.7-1.7 14.6s4.6 8.5 9.8 10.1l39.5 12.8c10.6 3.4 21.8 3.9 32.7 1.4S120.3 400 128 392h192c7.7 8 17.5 13.6 28.3 16.3s22.1 1.9 32.7-1.4l39.5-12.8c5.2-1.7 8.2-6.1 9.8-10.1s1-10.2-1.7-14.6l-20.5-33.7C399.5 322.6 384 278.8 384 233.4V208c0-77.4-55-142-128-156.8V32c0-17.7-14.3-32-32-32zm0 96c61.9 0 112 50.1 112 112v25.4c0 47.9 13.9 94.6 39.7 134.6H184.3c25.8-40 39.7-86.7 39.7-134.6V208c0-61.9 50.1-112 112-112zm0 352a48 48 0 1 0 0-96 48 48 0 1 0 0 96z"/>
+              <path d="M224 0c-17.7 0-32 14.3-32 32V51.2C119 66 64 130.6 64 208v25.4c0 45.4-15.5 89.2-43.8 124.9L5.7 377.9c-2.7 4.4-3.4 9.7-1.7 14.6s4.6 8.5 9.8 10.1l39.5 12.8c10.6 3.4 21.8 3.9 32.7 1.4S120.3 400 128 392h192c7.7 8 17.5 13.6 28.3 16.3s22.1 1.9 32.7-1.4l39.5-12.8c5.2-1.7 8.2-6.1 9.8-10.1s1-10.2-1.7-14.6l-20.5-33.7C399.5 322.6 384 278.8 384 233.4V208c0-77.4-55-142-128-156.8V32c0-17.7-14.3-32-32-32zm0 96c61.9 0 112 50.1 112 112v25.4c0 47.9 13.9 94.6 39.7 134.6H184.3c25.8-40 39.7-86.7 39.7-134.6V208c0-61.9 50.1-112 112-112zm0 352a48 48 0 1 0 0-96 48 48 0 1 0 0 96z" />
             </svg>
             {unreadNotificationsCount > 0 && (
               <span className="ad-notification-badge">{unreadNotificationsCount}</span>
@@ -469,7 +476,7 @@ const ClientHeader = ({
                 <span className="ad-client-tag">
                   {/* User Icon */}
                   <svg className="ad-icon-btn" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ fontSize: '0.65rem', width: '0.65rem', height: '0.65rem' }}>
-                    <path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"/>
+                    <path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z" />
                   </svg>
                   Client
                 </span>
@@ -484,16 +491,9 @@ const ClientHeader = ({
                 <li className="profile-dropdown-item" onClick={onClientProfileClick}>
                   {/* User Icon */}
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1rem', height: '1rem' }}>
-                    <path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"/>
+                    <path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z" />
                   </svg>
                   Your Profile
-                </li>
-                <li className="profile-dropdown-item" onClick={onSubscriptionClick}>
-                  {/* Credit Card Icon */}
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1rem', height: '1rem' }}>
-                    <path d="M22 9H2C1.44772 9 1 9.44772 1 10V19C1 19.5523 1.44772 20 2 20H22C22.5523 20 23 19.5523 23 19V10C23 9.44772 22.5523 9 22 9ZM3 11V18H21V11H3ZM22 4H2C1.44772 4 1 4.44772 1 5V7C1 7.55228 1.44772 8 2 8H22C22.5523 8 23 7.55228 23 7V5C23 4.44772 22.5523 4 22 4Z" />
-                  </svg>
-                  Subscription
                 </li>
                 <li className="profile-dropdown-item logout" onClick={onLogoutClick}>
                   {/* Log Out Icon (Door with arrow from screenshot) */}
@@ -551,7 +551,7 @@ const ClientProfile = ({
       <div className="modal-content-style" style={{ maxWidth: '90%', width: '1200px', padding: '30px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
         <button onClick={onClose} className="modal-close-button">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M13 1L1 13M1 1L13 13" stroke="#64748B" strokeWidth="2" strokeLinecap="round"/>
+            <path d="M13 1L1 13M1 1L13 13" stroke="#64748B" strokeWidth="2" strokeLinecap="round" />
           </svg>
         </button>
         <h3 style={{
@@ -773,7 +773,7 @@ const SubscriptionDetailsModal = ({
       <div className="modal-content-style" style={{ maxWidth: '500px', padding: '40px', background: '#ffffff', color: '#1e293b' }}>
         <button onClick={onClose} className="modal-close-button" style={{ color: '#64748B' }}>
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M13 1L1 13M1 1L13 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            <path d="M13 1L1 13M1 1L13 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
         </button>
         <h3 style={{
@@ -834,7 +834,7 @@ const PaymentOptionsModal = ({ onClose, selectedPlanName, selectedPlanPrice }) =
       <div className="payment-modal-content-wrapper">
         <button onClick={onClose} className="modal-close-button" style={{ top: '20px', right: '20px' }}>
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M13 1L1 13M1 1L13 13" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round"/>
+            <path d="M13 1L1 13M1 1L13 13" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" />
           </svg>
         </button>
 
@@ -1179,7 +1179,7 @@ const PaymentPlanModal = ({ selectedRadioPlan, handleRadioPlanChange, handleProc
       <div className="modal-content-style" style={{ maxWidth: '600px', padding: '40px', background: '#334155', color: '#f1f5f9' }}>
         <button onClick={onClose} className="modal-close-button">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M13 1L1 13M1 1L13 13" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round"/>
+            <path d="M13 1L1 13M1 1L13 13" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" />
           </svg>
         </button>
         <h3 style={{
@@ -1194,10 +1194,10 @@ const PaymentPlanModal = ({ selectedRadioPlan, handleRadioPlanChange, handleProc
 
         {/* Integrated Radio Component */}
         <div style={{ margin: '20px auto 30px auto', width: 'fit-content' }}>
-            <Radio
-                selectedRadioPlan={selectedRadioPlan}
-                handleRadioPlanChange={handleRadioPlanChange}
-            />
+          <Radio
+            selectedRadioPlan={selectedRadioPlan}
+            handleRadioPlanChange={handleRadioPlanChange}
+          />
         </div>
 
 
@@ -1239,7 +1239,7 @@ const NotificationModal = ({ notifications, onClose }) => {
       <div className="modal-content-style" style={{ maxWidth: '500px', padding: '40px', background: '#ffffff', color: '#1e293b' }}>
         <button onClick={onClose} className="modal-close-button" style={{ color: '#64748B' }}>
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M13 1L1 13M1 1L13 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            <path d="M13 1L1 13M1 1L13 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
         </button>
         <h3 style={{ marginBottom: '30px', textAlign: 'center', color: '#1e293b', fontSize: '1.8rem', fontWeight: '700' }}>
@@ -1270,7 +1270,7 @@ const AttachmentModal = ({ attachments, onClose }) => {
       <div className="modal-content-style" style={{ maxWidth: '700px', padding: '40px', background: '#ffffff', color: '#1e293b' }}>
         <button onClick={onClose} className="modal-close-button" style={{ color: '#64748B' }}>
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M13 1L1 13M1 1L13 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            <path d="M13 1L1 13M1 1L13 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
         </button>
         <h3 style={{ marginBottom: '30px', textAlign: 'center', color: '#1e293b', fontSize: '1.8rem', fontWeight: '700' }}>
@@ -1382,41 +1382,41 @@ const generateDateRange = (startDate) => {
 // --- SAMPLE APPLICATIONS DATA ---
 const applicationsData = {
   [formatDate(new Date())]: [ // Today's date
-    { id: 1, jobId:'Tx101', website: 'LinkedIn', position: 'Frontend Developer', company: 'Tech Corp', link: '#', dateAdded: formatDate(new Date()), jobDescription: 'Develop and maintain web applications using React.js, proficient in HTML, CSS, JavaScript, and modern front-end build tools.' },
-    { id: 10, jobId:'Tx110', website: 'Company Site', position: 'Fullstack Engineer', company: 'Innovate Solutions', link: '#', dateAdded: formatDate(new Date()), jobDescription: 'Design, develop, and deploy full-stack applications with expertise in Node.js, Python, and database management (SQL/NoSQL).' },
-    { id: 11, jobId:'Tx111', website: 'Indeed', position: 'DevOps Specialist', company: 'CloudWorks', link: '#', dateAdded: formatDate(new Date()), jobDescription: 'Implement and manage CI/CD pipelines, automate infrastructure using tools like Docker, Kubernetes, and Ansible. Cloud platform experience (AWS/Azure/GCP) is a plus.' },
-    { id: 12, jobId:'Tx112', website: 'Glassdoor', position: 'QA Engineer', company: 'Quality First', link: '#', dateAdded: formatDate(new Date()), jobDescription: 'Execute test plans, identify and document software defects, and contribute to the overall quality assurance process for web and mobile applications.' },
-    { id: 13, jobId:'Tx113', website: 'LinkedIn', position: 'Product Designer', company: 'Creative Minds', link: '#', dateAdded: formatDate(new Date()), jobDescription: 'Create intuitive and engaging user experiences through wireframes, prototypes, and user flows. Proficient in Figma, Sketch, or Adobe XD.' },
+    { id: 1, jobId: 'Tx101', website: 'LinkedIn', position: 'Frontend Developer', company: 'Tech Corp', link: '#', dateAdded: formatDate(new Date()), jobDescription: 'Develop and maintain web applications using React.js, proficient in HTML, CSS, JavaScript, and modern front-end build tools.' },
+    { id: 10, jobId: 'Tx110', website: 'Company Site', position: 'Fullstack Engineer', company: 'Innovate Solutions', link: '#', dateAdded: formatDate(new Date()), jobDescription: 'Design, develop, and deploy full-stack applications with expertise in Node.js, Python, and database management (SQL/NoSQL).' },
+    { id: 11, jobId: 'Tx111', website: 'Indeed', position: 'DevOps Specialist', company: 'CloudWorks', link: '#', dateAdded: formatDate(new Date()), jobDescription: 'Implement and manage CI/CD pipelines, automate infrastructure using tools like Docker, Kubernetes, and Ansible. Cloud platform experience (AWS/Azure/GCP) is a plus.' },
+    { id: 12, jobId: 'Tx112', website: 'Glassdoor', position: 'QA Engineer', company: 'Quality First', link: '#', dateAdded: formatDate(new Date()), jobDescription: 'Execute test plans, identify and document software defects, and contribute to the overall quality assurance process for web and mobile applications.' },
+    { id: 13, jobId: 'Tx113', website: 'LinkedIn', position: 'Product Designer', company: 'Creative Minds', link: '#', dateAdded: formatDate(new Date()), jobDescription: 'Create intuitive and engaging user experiences through wireframes, prototypes, and user flows. Proficient in Figma, Sketch, or Adobe XD.' },
   ],
   [formatDate(new Date(new Date().setDate(new Date().getDate() - 1)))]: [ // Yesterday
-    { id: 2, jobId:'Tx102', website: 'Indeed', position: 'Backend Engineer', company: 'Data Systems', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 1))), jobDescription: 'Develop robust server-side logic and APIs using Java Spring Boot. Experience with RESTful services and microservices architecture is required.' },
-    { id: 14, jobId:'Tx114', website: 'Company Site', position: 'Data Scientist', company: 'Analytics Inc.', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 1))), jobDescription: 'Analyze large datasets to extract actionable insights. Build predictive models using machine learning techniques and Python/R.' },
+    { id: 2, jobId: 'Tx102', website: 'Indeed', position: 'Backend Engineer', company: 'Data Systems', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 1))), jobDescription: 'Develop robust server-side logic and APIs using Java Spring Boot. Experience with RESTful services and microservices architecture is required.' },
+    { id: 14, jobId: 'Tx114', website: 'Company Site', position: 'Data Scientist', company: 'Analytics Inc.', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 1))), jobDescription: 'Analyze large datasets to extract actionable insights. Build predictive models using machine learning techniques and Python/R.' },
   ],
   [formatDate(new Date(new Date().setDate(new Date().getDate() - 2)))]: [ // Two days ago
-    { id: 3, jobId:'Tx103', website: 'Glassdoor', position: 'Product Manager', company: 'Innovate Inc', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 2))), jobDescription: 'Define product vision, strategy, and roadmap. Collaborate with engineering, design, and marketing teams to deliver successful products.' },
-    { id: 4, jobId:'Tx104', website: 'AngelList', position: 'Startup Engineer', company: 'New Ventures', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 2))), jobDescription: 'Work across the stack in a fast-paced startup environment. Opportunity to contribute to all phases of product development.' },
-    { id: 15, jobId:'Tx115', website: 'LinkedIn', position: 'Mobile Developer', company: 'AppGenius', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 2))), jobDescription: 'Develop native iOS or Android applications. Strong knowledge of Swift/Kotlin and mobile UI/UX principles.' },
+    { id: 3, jobId: 'Tx103', website: 'Glassdoor', position: 'Product Manager', company: 'Innovate Inc', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 2))), jobDescription: 'Define product vision, strategy, and roadmap. Collaborate with engineering, design, and marketing teams to deliver successful products.' },
+    { id: 4, jobId: 'Tx104', website: 'AngelList', position: 'Startup Engineer', company: 'New Ventures', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 2))), jobDescription: 'Work across the stack in a fast-paced startup environment. Opportunity to contribute to all phases of product development.' },
+    { id: 15, jobId: 'Tx115', website: 'LinkedIn', position: 'Mobile Developer', company: 'AppGenius', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 2))), jobDescription: 'Develop native iOS or Android applications. Strong knowledge of Swift/Kotlin and mobile UI/UX principles.' },
   ],
   [formatDate(new Date(new Date().setDate(new Date().getDate() - 3)))]: [ // Three days ago
-    { id: 16, jobId:'Tx116', website: 'Indeed', position: 'Network Administrator', company: 'SecureNet', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 3))), jobDescription: 'Manage and maintain network infrastructure, troubleshoot connectivity issues, and ensure network security and performance.' },
+    { id: 16, jobId: 'Tx116', website: 'Indeed', position: 'Network Administrator', company: 'SecureNet', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 3))), jobDescription: 'Manage and maintain network infrastructure, troubleshoot connectivity issues, and ensure network security and performance.' },
   ],
   [formatDate(new Date(new Date().setDate(new Date().getDate() - 4)))]: [ // Four days ago
-    { id: 17, jobId:'Tx117', website: 'Company Site', position: 'Cybersecurity Analyst', company: 'Guardian Systems', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 4))), jobDescription: 'Monitor security systems, respond to incidents, and implement security measures to protect organizational data and systems.' },
-    { id: 18, jobId:'Tx118', website: 'LinkedIn', position: 'Technical Writer', company: 'DocuWrite', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 4))), jobDescription: 'Produce clear, concise, and comprehensive technical documentation for software products, including user manuals and API documentation.' },
+    { id: 17, jobId: 'Tx117', website: 'Company Site', position: 'Cybersecurity Analyst', company: 'Guardian Systems', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 4))), jobDescription: 'Monitor security systems, respond to incidents, and implement security measures to protect organizational data and systems.' },
+    { id: 18, jobId: 'Tx118', website: 'LinkedIn', position: 'Technical Writer', company: 'DocuWrite', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 4))), jobDescription: 'Produce clear, concise, and comprehensive technical documentation for software products, including user manuals and API documentation.' },
   ],
   [formatDate(new Date(new Date().setDate(new Date().getDate() - 5)))]: [ // Five days ago
-    { id: 19, jobId:'Tx119', website: 'Glassdoor', position: 'Scrum Master', company: 'Agile Teams', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 5))), jobDescription: 'Facilitate agile ceremonies, remove impediments, and coach development teams in Scrum principles and practices to maximize delivery.' },
+    { id: 19, jobId: 'Tx119', website: 'Glassdoor', position: 'Scrum Master', company: 'Agile Teams', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 5))), jobDescription: 'Facilitate agile ceremonies, remove impediments, and coach development teams in Scrum principles and practices to maximize delivery.' },
   ],
   [formatDate(new Date(new Date().setDate(new Date().getDate() - 6)))]: [ // Six days ago
-    { id: 20, jobId:'Tx120', website: 'CloudComputing', position: 'Cloud Engineer', company: 'Sky Computing', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 6))), jobDescription: 'Design, deploy, and manage cloud-based solutions on AWS, Azure, or GCP. Experience with cloud automation and cost optimization.' },
-    { id: 21, jobId:'Tx121', website: 'Other', position: 'Marketing Specialist', company: 'Brand Boost', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 6))), jobDescription: 'Develop and execute digital marketing campaigns, analyze market trends, and manage social media presence to enhance brand visibility.' },
+    { id: 20, jobId: 'Tx120', website: 'CloudComputing', position: 'Cloud Engineer', company: 'Sky Computing', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 6))), jobDescription: 'Design, deploy, and manage cloud-based solutions on AWS, Azure, or GCP. Experience with cloud automation and cost optimization.' },
+    { id: 21, jobId: 'Tx121', website: 'Other', position: 'Marketing Specialist', company: 'Brand Boost', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 6))), jobDescription: 'Develop and execute digital marketing campaigns, analyze market trends, and manage social media presence to enhance brand visibility.' },
   ],
   // Add more applications for dates in the future or past as needed for testing scrolling
   [formatDate(new Date(new Date().setDate(new Date().getDate() + 1)))]: [ // Tomorrow
-    { id: 22, jobId:'Tx122', website: 'LinkedIn', position: 'Senior Software Architect', company: 'Innovate Tomorrow', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() + 1))), jobDescription: 'Lead the architectural design and development of complex software systems, ensuring scalability, reliability, and performance.' }
+    { id: 22, jobId: 'Tx122', website: 'LinkedIn', position: 'Senior Software Architect', company: 'Innovate Tomorrow', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() + 1))), jobDescription: 'Lead the architectural design and development of complex software systems, ensuring scalability, reliability, and performance.' }
   ],
   [formatDate(new Date(new Date().setDate(new Date().getDate() + 2)))]: [ // Day after tomorrow
-    { id: 23, jobId:'Tx123', website: 'Indeed', position: 'Lead Data Scientist', company: 'Future AI', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() + 2))), jobDescription: 'Lead a team of data scientists to develop and deploy advanced analytical solutions and machine learning models.' }
+    { id: 23, jobId: 'Tx123', website: 'Indeed', position: 'Lead Data Scientist', company: 'Future AI', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() + 2))), jobDescription: 'Lead a team of data scientists to develop and deploy advanced analytical solutions and machine learning models.' }
   ],
 };
 
@@ -2754,14 +2754,14 @@ const ClientDashboard = () => {
 
   // Mock data for Scheduled Interviews (UPDATED with attachment field)
   const scheduledInterviews = [
-    { id: 1, date: '2025-06-15', jobId:'TX101', time: '10:00 AM', company: 'Innovate Solutions', role: 'Software Developer', recruiterMailId: 'alice.j@innovate.com', round: 'Round 1', attachments: ['https://placehold.co/200x150/FFD700/000000?text=Screenshot+1'] },
-    { id: 2, date: '2025-06-18', jobId:'TX102',  time: '02:30 PM', company: 'Global Tech Corp', role: 'UX Designer', recruiterMailId: 'bob.w@globaltech.com', round: 'Round 2', attachments: ['https://placehold.co/200x150/ADD8E6/000000?text=Design+Brief', 'https://placehold.co/200x150/90EE90/000000?text=Wireframes'] },
-    { id: 3, date: '2025-06-20', jobId:'TX103',  time: '11:00 AM', company: 'Data Insights Ltd.', role: 'Data Analyst', recruiterMailId: 'charlie.b@datainsights.com', round: 'Final Round', attachments: [] },
-    { id: 4, date: '2025-06-22', jobId:'TX104',  time: '09:00 AM', company: 'FutureTech Inc.', role: 'Project Manager', recruiterMailId: 'david.l@futuretech.net', round: 'Round 1', attachments: ['https://placehold.co/200x150/FFC0CB/000000?text=Project+Spec'] },
-    { id: 5, date: '2025-06-25', jobId:'TX105',  time: '01:00 PM', company: 'Digital Innovators', role: 'DevOps Engineer', recruiterMailId: 'eve.d@digitalinnov.io', round: 'Round 3', attachments: [] },
-    { id: 6, date: '2025-06-28', jobId:'TX106',  time: '03:45 PM', company: 'Quant Computing', role: 'Machine Learning Scientist', recruiterMailId: 'frank.w@quantcomp.ai', round: 'Round 2', attachments: ['https://placehold.co/200x150/DDA0DD/000000?text=Algorithm+Flow'] },
-    { id: 7, date: '2025-07-01', jobId:'TX107',  time: '10:30 AM', company: 'CyberSec Solutions', role: 'Cybersecurity Analyst', recruiterMailId: 'grace.k@cybersec.com', round: 'Round 1', attachments: ['https://placehold.co/200x150/F08080/000000?text=Security+Report'] },
-    { id: 8, date: '2025-07-03', jobId:'TX108',  time: '04:00 PM', company: 'HealthTech Connect', role: 'Mobile App Developer', recruiterMailId: 'henry.g@healthtech.org', round: 'Final Round', attachments: [] },
+    { id: 1, date: '2025-06-15', jobId: 'TX101', time: '10:00 AM', company: 'Innovate Solutions', role: 'Software Developer', recruiterMailId: 'alice.j@innovate.com', round: 'Round 1', attachments: ['https://placehold.co/200x150/FFD700/000000?text=Screenshot+1'] },
+    { id: 2, date: '2025-06-18', jobId: 'TX102', time: '02:30 PM', company: 'Global Tech Corp', role: 'UX Designer', recruiterMailId: 'bob.w@globaltech.com', round: 'Round 2', attachments: ['https://placehold.co/200x150/ADD8E6/000000?text=Design+Brief', 'https://placehold.co/200x150/90EE90/000000?text=Wireframes'] },
+    { id: 3, date: '2025-06-20', jobId: 'TX103', time: '11:00 AM', company: 'Data Insights Ltd.', role: 'Data Analyst', recruiterMailId: 'charlie.b@datainsights.com', round: 'Final Round', attachments: [] },
+    { id: 4, date: '2025-06-22', jobId: 'TX104', time: '09:00 AM', company: 'FutureTech Inc.', role: 'Project Manager', recruiterMailId: 'david.l@futuretech.net', round: 'Round 1', attachments: ['https://placehold.co/200x150/FFC0CB/000000?text=Project+Spec'] },
+    { id: 5, date: '2025-06-25', jobId: 'TX105', time: '01:00 PM', company: 'Digital Innovators', role: 'DevOps Engineer', recruiterMailId: 'eve.d@digitalinnov.io', round: 'Round 3', attachments: [] },
+    { id: 6, date: '2025-06-28', jobId: 'TX106', time: '03:45 PM', company: 'Quant Computing', role: 'Machine Learning Scientist', recruiterMailId: 'frank.w@quantcomp.ai', round: 'Round 2', attachments: ['https://placehold.co/200x150/DDA0DD/000000?text=Algorithm+Flow'] },
+    { id: 7, date: '2025-07-01', jobId: 'TX107', time: '10:30 AM', company: 'CyberSec Solutions', role: 'Cybersecurity Analyst', recruiterMailId: 'grace.k@cybersec.com', round: 'Round 1', attachments: ['https://placehold.co/200x150/F08080/000000?text=Security+Report'] },
+    { id: 8, date: '2025-07-03', jobId: 'TX108', time: '04:00 PM', company: 'HealthTech Connect', role: 'Mobile App Developer', recruiterMailId: 'henry.g@healthtech.org', round: 'Final Round', attachments: [] },
   ];
 
   // Mock data for Resume & Job Portal Updates
@@ -3046,19 +3046,19 @@ const ClientDashboard = () => {
     const isCategoricalFilterActiveOnly = (filterWebsites.length > 0 || filterPositions.length > 0 || filterCompanies.length > 0) && !isDateRangeFilterSet;
 
     if (isDateRangeFilterSet) {
-        // If date range is explicitly set, always filter from all data
-        baseApps = allApplicationsFlattened;
+      // If date range is explicitly set, always filter from all data
+      baseApps = allApplicationsFlattened;
     } else if (isSearchActiveOnly || isCategoricalFilterActiveOnly) {
-        // If only search or categorical filters are active, filter only for the selected ribbon date
-        // If no ribbon date is selected, default to today
-        const targetDate = selectedDate || formatDate(new Date());
-        baseApps = applicationsData[targetDate] || [];
+      // If only search or categorical filters are active, filter only for the selected ribbon date
+      // If no ribbon date is selected, default to today
+      const targetDate = selectedDate || formatDate(new Date());
+      baseApps = applicationsData[targetDate] || [];
     } else if (selectedDate) {
-        // If only a ribbon date is selected (and no other global filters active), use that date's data.
-        baseApps = applicationsData[selectedDate] || [];
+      // If only a ribbon date is selected (and no other global filters active), use that date's data.
+      baseApps = applicationsData[selectedDate] || [];
     } else {
-        // Default case, if no filters active and no ribbon date selected, show data for today.
-        baseApps = applicationsData[formatDate(new Date())] || [];
+      // Default case, if no filters active and no ribbon date selected, show data for today.
+      baseApps = applicationsData[formatDate(new Date())] || [];
     }
 
 
@@ -3104,11 +3104,11 @@ const ClientDashboard = () => {
   // Determine if the overlay should be visible (for all modals and sidebar)
   const isOverlayVisible = useMemo(() => {
     return menuOpen || showInterviewsModal || showResumeModal || showPaymentModal ||
-           showClientProfileModal || showSubscriptionDetailsModal ||
-           showNotificationsModal || showAttachmentModal || showDateRangeModal || showJobDescriptionModal || showFilterModal || showPaymentOptionsModal;
+      showClientProfileModal || showSubscriptionDetailsModal ||
+      showNotificationsModal || showAttachmentModal || showDateRangeModal || showJobDescriptionModal || showFilterModal || showPaymentOptionsModal;
   }, [menuOpen, showInterviewsModal, showResumeModal, showPaymentModal,
-      showClientProfileModal, showSubscriptionDetailsModal,
-      showNotificationsModal, showAttachmentModal, showDateRangeModal, showJobDescriptionModal, showFilterModal, showPaymentOptionsModal]);
+    showClientProfileModal, showSubscriptionDetailsModal,
+    showNotificationsModal, showAttachmentModal, showDateRangeModal, showJobDescriptionModal, showFilterModal, showPaymentOptionsModal]);
 
 
   return (
@@ -4374,7 +4374,7 @@ const ClientDashboard = () => {
           <div className="modal-content-style">
             <button onClick={toggleInterviewsModal} className="modal-close-button">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M13 1L1 13M1 1L13 13" stroke="#64748B" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M13 1L1 13M1 1L13 13" stroke="#64748B" strokeWidth="2" strokeLinecap="round" />
               </svg>
             </button>
             <h3 style={{
@@ -4408,7 +4408,7 @@ const ClientDashboard = () => {
                       </td>
                       <td className="modal-table-cell">{interview.time}</td>
                       <td className="modal-table-cell">{interview.jobId}</td>
-                      <td style={{fontWeight: '600'}} className="modal-table-cell">{interview.company}</td>
+                      <td style={{ fontWeight: '600' }} className="modal-table-cell">{interview.company}</td>
                       <td className="modal-table-cell">{interview.role}</td>
                       <td className="modal-table-cell">{interview.recruiterMailId}</td>
                       <td className="modal-table-cell">
@@ -4419,12 +4419,12 @@ const ClientDashboard = () => {
                           borderRadius: '16px',
                           backgroundColor:
                             interview.round === 'Round 1' ? '#EFF6FF' :
-                            interview.round === 'Round 2' ? '#ECFDF5' :
-                            interview.round === 'Round 3' ? '#FEF3C7' : '#F3E8FF',
+                              interview.round === 'Round 2' ? '#ECFDF5' :
+                                interview.round === 'Round 3' ? '#FEF3C7' : '#F3E8FF',
                           color:
                             interview.round === 'Round 1' ? '#1D4ED8' :
-                            interview.round === 'Round 2' ? '#047857' :
-                            interview.round === 'Round 3' ? '#92400E' : '#6B21A8',
+                              interview.round === 'Round 2' ? '#047857' :
+                                interview.round === 'Round 3' ? '#92400E' : '#6B21A8',
                           fontSize: '0.75rem',
                           fontWeight: '600',
                           textTransform: 'uppercase'
@@ -4476,7 +4476,7 @@ const ClientDashboard = () => {
           <div className="modal-content-style">
             <button onClick={toggleResumeModal} className="modal-close-button">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M13 1L1 13M1 1L13 13" stroke="#64748B" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M13 1L1 13M1 1L13 13" stroke="#64748B" strokeWidth="2" strokeLinecap="round" />
               </svg>
             </button>
             <h3 style={{
@@ -4504,7 +4504,7 @@ const ClientDashboard = () => {
                       <td className="modal-table-cell">
                         <div style={{ fontWeight: '500' }}>{update.date}</div>
                       </td>
-                      <td style={{fontWeight: '600'}} className="modal-table-cell">{update.type}</td>
+                      <td style={{ fontWeight: '600' }} className="modal-table-cell">{update.type}</td>
                       <td className="modal-table-cell">
                         <div style={{
                           display: 'inline-flex',
@@ -4513,12 +4513,12 @@ const ClientDashboard = () => {
                           borderRadius: '16px',
                           backgroundColor:
                             update.status === 'Updated' ? '#EFF6FF' :
-                            update.status === 'Reviewed' ? '#FEF3C7' :
-                            update.status === 'Completed' ? '#ECFDF5' : '#F3E8FF',
+                              update.status === 'Reviewed' ? '#FEF3C7' :
+                                update.status === 'Completed' ? '#ECFDF5' : '#F3E8FF',
                           color:
                             update.status === 'Updated' ? '#1D4ED8' :
-                            update.status === 'Reviewed' ? '#92400E' :
-                            update.status === 'Completed' ? '#047857' : '#6B21A8',
+                              update.status === 'Reviewed' ? '#92400E' :
+                                update.status === 'Completed' ? '#047857' : '#6B21A8',
                           fontSize: '0.75rem',
                           fontWeight: '600'
                         }}>
@@ -4689,9 +4689,9 @@ const ClientDashboard = () => {
           className="help-support-button"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginRight: '8px' }}>
-            <path d="M8 14C11.3137 14 14 11.3137 14 8C14 4.68629 11.3137 2 8 2C4.68629 2 2 4.68629 2 8C2 11.3137 4.68629 14 8 14Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M6 6C6 6 6.5 5 8 5C9.5 5 10 6 10 6C10 6 9.5 7 8 7C6.5 7 6 6 6 6Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M6 8H6.01M10 8H10.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M8 14C11.3137 14 14 11.3137 14 8C14 4.68629 11.3137 2 8 2C4.68629 2 2 4.68629 2 8C2 11.3137 4.68629 14 8 14Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M6 6C6 6 6.5 5 8 5C9.5 5 10 6 10 6C10 6 9.5 7 8 7C6.5 7 6 6 6 6Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M6 8H6.01M10 8H10.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           Help & Support
         </button>
@@ -4701,7 +4701,7 @@ const ClientDashboard = () => {
           className="logout-button"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginRight: '8px' }}>
-            <path d="M6 14H3.33333C2.97971 14 2.64057 13.8595 2.39052 13.6095C2.14048 13.3594 2 13.0203 2 12.6667V3.33333C2 2.97971 2.14048 2.64057 2.39052 2.39052C2.64057 2.14048 2.97971 2 3.33333 2H6M10.6667 11.3333L14 8M14 8L10.6667 4.66667M14 8H6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M6 14H3.33333C2.97971 14 2.64057 13.8595 2.39052 13.6095C2.14048 13.3594 2 13.0203 2 12.6667V3.33333C2 2.97971 2.14048 2.64057 2.39052 2.39052C2.64057 2.14048 2.97971 2 3.33333 2H6M10.6667 11.3333L14 8M14 8L10.6667 4.66667M14 8H6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           Log Out
         </button>
@@ -4734,7 +4734,7 @@ const ClientDashboard = () => {
                   <div className="ad-column">
                     <div className="ad-placeholder">
                       <p style={{ color: '#475569', marginBottom: '10px' }}>Sponsored</p>
-                      <img src="https://placehold.co/120x300/e0f2f7/475569?text=Ad+1" alt="Advertisement 1" onError={(e)=>{e.target.onerror = null; e.target.src='https://placehold.co/120x300/e0f2f7/475569?text=Ad+Load+Error'}}/>
+                      <img src="https://placehold.co/120x300/e0f2f7/475569?text=Ad+1" alt="Advertisement 1" onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/120x300/e0f2f7/475569?text=Ad+Load+Error' }} />
                       <p style={{ marginTop: '10px', color: '#64748b' }}>Discover new opportunities!</p>
                     </div>
                   </div>
@@ -4755,7 +4755,7 @@ const ClientDashboard = () => {
                   <div className="ad-column">
                     <div className="ad-placeholder">
                       <p style={{ color: '#475569', marginBottom: '10px' }}>Promoted</p>
-                      <img src="https://placehold.co/120x300/f0f9ff/475569?text=Ad+2" alt="Advertisement 2" onError={(e)=>{e.target.onerror = null; e.target.src='https://placehold.co/120x300/f0f9ff/475569?text=Ad+Load+Error'}}/>
+                      <img src="https://placehold.co/120x300/f0f9ff/475569?text=Ad+2" alt="Advertisement 2" onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/120x300/f0f9ff/475569?text=Ad+Load+Error' }} />
                       <p style={{ marginTop: '10px', color: '#64748b' }}>Boost your career today!</p>
                     </div>
                   </div>
@@ -4798,7 +4798,7 @@ const ClientDashboard = () => {
                     }}></div>
                     <div style={{ position: 'relative', zIndex: 2 }}>
                       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" style={{ marginBottom: '16px' }}>
-                        <path d="M8 7V3M16 7V3M7 11H17M5 21H19C20.1046 21 21 20.1046 21 19V7C21 5.89543 20.1046 5 19 5H5C3.89543 5 3 5.89543 3 7V19C3 20.1046 3.89543 21 5 21Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M8 7V3M16 7V3M7 11H17M5 21H19C20.1046 21 21 20.1046 21 19V7C21 5.89543 20.1046 5 19 5H5C3.89543 5 3 5.89543 3 7V19C3 20.1046 3.89543 21 5 21Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                       <div style={{ fontSize: '1.25rem', letterSpacing: '0.5px' }}>
                         INTERVIEWS SCHEDULED
@@ -4838,7 +4838,7 @@ const ClientDashboard = () => {
                     }}></div>
                     <div style={{ position: 'relative', zIndex: 2 }}>
                       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" style={{ marginBottom: '16px' }}>
-                        <path d="M9 12H15M9 16H15M10 3H14C15.1046 3 16 3.89543 16 5V20C16 20.5523 15.5523 21 15 21H9C8.44772 21 8 20.5523 8 20V5C8 3.89543 8.89543 3 10 3Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M9 12H15M9 16H15M10 3H14C15.1046 3 16 3.89543 16 5V20C16 20.5523 15.5523 21 15 21H9C8.44772 21 8 20.5523 8 20V5C8 3.89543 8.89543 3 10 3Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                       <div style={{ fontSize: '1.25rem', letterSpacing: '0.5px' }}>
                         RESUME UPDATES
