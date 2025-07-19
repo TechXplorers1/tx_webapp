@@ -152,11 +152,11 @@ const ManagerWorkSheet = () => {
 
   // Initial dummy data for assigned clients (5 clients, all for Vyshnavi Vysh for testing)
   const initialAssignedClientsData = [
-    { id: 201, clientName: 'John Anderson', location: 'New York, NY', position: 'Senior Frontend Developer', salary: '$120,000 - $150,000', company: 'TechFlow Inc', assignedTo: 'Vyshnavi Vysh', priority: 'high', status: 'interview', assignedDate: '2024-11-15', platform: 'LinkedIn', jobId: 'LI-1001', appliedDate: '2024-11-10' },
-    { id: 205, clientName: 'Alex Thompson', location: 'Boston, MA', position: 'Full Stack Developer', salary: '$110,000 - $140,000', company: 'StartupXYZ', assignedTo: 'Krishna Kumar', priority: 'medium', status: 'applied', assignedDate: '2024-11-20', platform: 'Indeed', jobId: 'IND-2005', appliedDate: '2024-11-18' },
-    { id: 208, clientName: 'Maria Rodriguez', location: 'Denver, CO', position: 'React Developer', salary: '$95,000 - $115,000', company: 'WebDev Inc', assignedTo: 'Nagarjuna Sai', priority: 'high', status: 'applied', assignedDate: '2024-11-28', platform: 'Company Website', jobId: 'WEB-3008', appliedDate: '2024-11-25' },
-    { id: 209, clientName: 'Chris Evans', location: 'Miami, FL', position: 'DevOps Engineer', salary: '$130,000 - $150,000', company: 'CloudOps', assignedTo: 'Vyshnavi Vysh', priority: 'high', status: 'interview', assignedDate: '2024-12-01', platform: 'Glassdoor', jobId: 'GD-4009', appliedDate: '2024-11-29' },
-    { id: 210, clientName: 'Anna Lee', location: 'Portland, OR', position: 'Data Scientist', salary: '$115,000 - $145,000', company: 'DataInsights', assignedTo: 'Mohammed Sheikh', priority: 'medium', status: 'applied', assignedDate: '2024-12-03', platform: 'LinkedIn', jobId: 'LI-5010', appliedDate: '2024-12-01' },
+    { id: 201, clientName: 'John Anderson', location: 'New York, NY', position: 'Senior Frontend Developer', salary: '$120,000 - $150,000', company: 'TechFlow Inc', assignedTo: 'Vyshnavi Vysh', priority: 'high', status: 'interview', assignedDate: '2025-07-15', platform: 'LinkedIn', jobId: 'LI-1001', appliedDate: '2025-07-10' },
+    { id: 205, clientName: 'Alex Thompson', location: 'Boston, MA', position: 'Full Stack Developer', salary: '$110,000 - $140,000', company: 'StartupXYZ', assignedTo: 'Krishna Kumar', priority: 'medium', status: 'applied', assignedDate: '2025-07-14', platform: 'Indeed', jobId: 'IND-2005', appliedDate: '2025-07-11' },
+    { id: 208, clientName: 'Maria Rodriguez', location: 'Denver, CO', position: 'React Developer', salary: '$95,000 - $115,000', company: 'WebDev Inc', assignedTo: 'Nagarjuna Sai', priority: 'high', status: 'applied', assignedDate: '2025-07-13', platform: 'Company Website', jobId: 'WEB-3008', appliedDate: '2025-07-12' },
+    { id: 209, clientName: 'Chris Evans', location: 'Miami, FL', position: 'DevOps Engineer', salary: '$130,000 - $150,000', company: 'CloudOps', assignedTo: 'Vyshnavi Vysh', priority: 'high', status: 'interview', assignedDate: '2025-07-12', platform: 'Glassdoor', jobId: 'GD-4009', appliedDate: '2025-07-13' },
+    { id: 210, clientName: 'Anna Lee', location: 'Portland, OR', position: 'Data Scientist', salary: '$115,000 - $145,000', company: 'DataInsights', assignedTo: 'Mohammed Sheikh', priority: 'medium', status: 'applied', assignedDate: '2025-07-11', platform: 'LinkedIn', jobId: 'LI-5010', appliedDate: '2025-07-14' },
   ];
 
   // Initial dummy data for employees, reflecting assignedClients counts from initialAssignedClientsData
@@ -3927,7 +3927,7 @@ Please provide a summary no longer than 150 words.`;
             <div className="table-responsive">
               <table className="applications-table">
                 <thead><tr>
-                  <th>COUNT</th>
+                  <th>S.No</th>
                   <th>EMPLOYEE</th>
                   <th>CLIENT</th>
                   <th>JOB TITLE</th>
@@ -4733,32 +4733,6 @@ Please provide a summary no longer than 150 words.`;
                     readOnly={!isEditingClient}
                   ></textarea>
                 </div>
-              </div>
-            )}
-
-            {/* LLM Integration Section */}
-            <div className="assign-form-actions" style={{ justifyContent: 'flex-start', marginTop: '20px' }}>
-              <button
-                className="assign-form-button assign"
-                onClick={generateClientSummary}
-                disabled={isLoadingLLMResponse}
-              >
-                {isLoadingLLMResponse ? (
-                  <>
-                    <i className="fas fa-spinner fa-spin"></i> Generating...
-                  </>
-                ) : (
-                  <>
-                    <i className="fas fa-robot"></i> Generate Client Summary
-                  </>
-                )}
-              </button>
-            </div>
-
-            {llmResponse && (
-              <div className="llm-summary-section">
-                <h4>LLM Generated Summary:</h4>
-                <p>{llmResponse}</p>
               </div>
             )}
 
