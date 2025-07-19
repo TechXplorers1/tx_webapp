@@ -34,26 +34,37 @@ const AssetWorksheet = () => {
     { id: 'TXP-MON-001', name: 'Dell Ultrasharp U2720Q', type: 'Monitor', status: 'available', assignedTo: 'Unassigned', assignedDate: null, location: 'Branch 1', value: '$400', brand: 'Dell', purchaseDate: '10/02/2024', serialNumber: 'DMON-001-2024', returnDate: null },
     { id: 'TXP-DT-001', name: 'HP EliteDesk 800 G9', type: 'Desktop', status: 'assigned', assignedTo: 'Prakash', assignedDate: '10/07/2024', location: 'Branch 2', value: '$800', brand: 'HP', purchaseDate: '05/09/2022', serialNumber: 'HPDT-001-2022', returnDate: null },
     { id: 'TXP-MB-001', name: 'iPhone 15 Pro', type: 'Mobile', status: 'in maintenance', assignedTo: 'Unassigned', assignedDate: null, location: 'Branch 2', value: '$1,000', brand: 'Apple', purchaseDate: '12/11/2023', serialNumber: 'IP-001-2023', returnDate: null },
-    { id: 'TXP-LT-003', name: 'Lenovo ThinkPad', type: 'Laptop', status: 'assigned', assignedTo: 'Sai', assignedDate: '01/06/2024', location: 'Branch 1', value: '$1,100', brand: 'Lenovo', purchaseDate: '10/01/2023', serialNumber: 'LNV-003-2023', returnDate: '31/12/2024' },
-    { id: 'TXP-MSE-001', name: 'Logitech MX Master 3', type: 'Mouse', status: 'available', assignedTo: 'Unassigned', assignedDate: null, location: 'Branch 1', value: '$99', brand: 'Logitech', purchaseDate: '01/01/2024', serialNumber: 'LGM-001-2024', returnDate: null },
+    { id: 'TXP-LT-003', name: 'Lenovo ThinkPad', type: 'Laptop', status: 'assigned', assignedTo: 'Sai', assignedDate: '01/06/2024', location: 'Branch 1', value: '$1,100', brand: 'Lenovo', purchaseDate: '10/01/2023', serialNumber: 'LNV-003-2023', returnDate: '18/07/2025' },
+    { id: 'TXP-MSE-001', name: 'Logitech MX Master 3', type: 'Mouse', status: 'available', assignedTo: 'Unassigned', assignedDate: null, location: 'Branch 1', value: '$99', brand: 'Logitech', purchaseDate: '01/01/2024', serialNumber: null, returnDate: null },
+    { id: 'TXP-MSE-002', name: 'Logitech MX Master 3', type: 'Mouse', status: 'available', assignedTo: 'Unassigned', assignedDate: null, location: 'Branch 1', value: '$99', brand: 'Logitech', purchaseDate: '01/01/2024', serialNumber: null, returnDate: null },
   ]);
 
   const users = ['Prakash', 'Sai', 'Bharath', 'Chaveen', 'Sandeep', 'Sapare', 'Humer', 'Unassigned'];
   const branchLocations = ['Branch 1', 'Branch 2'];
 
-  // Calculated values
-  const availableAssetCounts = useMemo(() => {
-    return assets.reduce((acc, asset) => {
-      if (asset.status === 'available') {
-        acc[asset.type] = (acc[asset.type] || 0) + 1;
-      } else if (!acc[asset.type]) {
-        // Ensure the type is initialized to 0 if no assets of that type are available
-        acc[asset.type] = 0;
+  // Helper to check if an asset should be considered available
+  const isAssetConsideredAvailable = (asset) => {
+    if (asset.status === 'available') return true;
+    if (asset.status === 'assigned' && asset.returnDate) {
+      try {
+        const [day, month, year] = asset.returnDate.split('/').map(Number);
+        if (isNaN(day) || isNaN(month) || isNaN(year)) return false;
+        // JavaScript months are 0-indexed
+        const returnDate = new Date(year, month - 1, day);
+        const today = new Date();
+        // Set time to 0 to compare dates only, ensuring the entire return day is included
+        today.setHours(0, 0, 0, 0);
+        returnDate.setHours(0,0,0,0);
+        return returnDate <= today;
+      } catch (e) {
+        console.error("Error parsing date:", asset.returnDate, e);
+        return false;
       }
-      return acc;
-    }, {});
-  }, [assets]);
+    }
+    return false;
+  };
 
+  // Calculated values
   const totalAssetValue = assets.reduce((sum, asset) => {
     const value = parseFloat(asset.value.replace(/[$,]/g, ''));
     return sum + (isNaN(value) ? 0 : value);
@@ -64,9 +75,32 @@ const AssetWorksheet = () => {
   const filteredAssets = assets.filter(asset => {
     const matchesStatus = filterStatus === 'All Statuses' || asset.status.toLowerCase() === filterStatus.toLowerCase();
     const matchesSearch = asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          asset.id.toLowerCase().includes(searchTerm.toLowerCase());
+                          asset.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (asset.serialNumber && asset.serialNumber.toLowerCase().includes(searchTerm.toLowerCase()));
     return matchesStatus && matchesSearch;
   });
+
+  // Process assets for display, grouping bulk items like 'Mouse'
+  const assetsForDisplay = useMemo(() => {
+    const otherAssets = filteredAssets.filter(a => a.type !== 'Mouse');
+    const mice = filteredAssets.filter(a => a.type === 'Mouse');
+
+    if (mice.length > 0) {
+      const firstMouse = mice[0];
+      const totalAvailableMice = assets.filter(a => a.type === 'Mouse' && isAssetConsideredAvailable(a)).length;
+      
+      const mouseSummary = {
+        ...firstMouse,
+        id: 'mouse-summary-row',
+        serialNumber: 'N/A (Bulk)',
+        availableCount: totalAvailableMice,
+        isSummary: true,
+      };
+      return [mouseSummary, ...otherAssets];
+    }
+    
+    return otherAssets;
+  }, [filteredAssets, assets]);
 
   const assignedAssets = assets.filter(asset => {
       const isAssigned = asset.status === 'assigned';
@@ -101,6 +135,7 @@ const AssetWorksheet = () => {
   const handleUpdateAsset = (updatedAsset) => {
     const originalAsset = assets.find(asset => asset.id === updatedAsset.id);
     setAssets(prevAssets => prevAssets.map(asset => asset.id === updatedAsset.id ? updatedAsset : asset));
+    
     setShowEditAssetModal(false);
     setAssetToEdit(null);
 
@@ -146,7 +181,6 @@ const AssetWorksheet = () => {
   const toggleProfileDropdown = () => setShowProfileDropdown(prev => !prev);
   const toggleNotifications = () => setShowNotifications(prev => !prev);
 
-  // Simple, direct logout function as per the working example.
   const handleLogout = () => {
     window.location.href = '/';
   };
@@ -162,7 +196,7 @@ const AssetWorksheet = () => {
     setNotifications(prev => [{ id: Date.now(), message: `Asset "${assetToAssign?.name}" assigned to ${assignedUser}.`, timestamp: new Date() }, ...prev]);
   };
   
-  const handleAddAsset = (newAssets) => { // Expects an array of assets
+  const handleAddAsset = (newAssets) => {
     setAssets(prevAssets => [...prevAssets, ...newAssets]);
     setShowAddAssetModal(false);
     setNotifications(prev => [{ 
@@ -170,7 +204,6 @@ const AssetWorksheet = () => {
       message: `Added ${newAssets.length} new asset(s): "${newAssets[0].name}".`, 
       timestamp: new Date() 
     }, ...prev]);
-    // Switch to the assets tab and filter for the new asset name
     setActiveTab('Assets');
     setSearchTerm(newAssets[0].name);
   };
@@ -188,7 +221,6 @@ const AssetWorksheet = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Helper functions to convert date formats
   const formatDateForInput = (dateStr) => {
     if (!dateStr || dateStr.split('/').length !== 3) return '';
     const [day, month, year] = dateStr.split('/');
@@ -202,15 +234,19 @@ const AssetWorksheet = () => {
   };
 
   // Modals
-  const EditAssetModal = ({ show, onClose, asset, onUpdate }) => {
+  const EditAssetModal = ({ show, onClose, asset, onUpdate, users, branchLocations }) => {
     const [formData, setFormData] = useState(asset);
     const [otherType, setOtherType] = useState('');
 
     useEffect(() => {
-        setFormData(asset);
-        if (asset && !['Laptop', 'Monitor', 'Desktop', 'Mobile', 'Mouse'].includes(asset.type)) {
-            setOtherType(asset.type);
-            setFormData(prev => ({ ...prev, type: 'Other' }));
+        if (asset) {
+          setFormData(asset);
+          if (!['Laptop', 'Monitor', 'Desktop', 'Mobile', 'Mouse'].includes(asset.type)) {
+              setOtherType(asset.type);
+              setFormData(prev => ({ ...prev, type: 'Other' }));
+          } else {
+              setOtherType('');
+          }
         }
     }, [asset]);
 
@@ -231,17 +267,17 @@ const AssetWorksheet = () => {
     if (!show) return null;
 
     return (
-      <div className="modal-overlay edit-asset-modal">
-        <div className="modal-content">
+      <div className="modal-overlay">
+        <div className="modal-content" style={{maxWidth: '800px'}}>
           <div className="modal-header">
             <h3 className="modal-title">Edit Asset</h3>
             <button className="modal-close-button" onClick={onClose}><X size={20} /></button>
           </div>
           <p className="modal-description">
-            Modify the details of the asset.
+            Modify any details for this asset.
           </p>
           <form onSubmit={handleSubmit}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
               <div className="form-group">
                 <label className="form-label">Asset Name *</label>
                 <input type="text" name="name" className="form-input" value={formData.name} onChange={handleChange} required />
@@ -259,6 +295,34 @@ const AssetWorksheet = () => {
                 </div>
               )}
               <div className="form-group">
+                <label className="form-label">Serial Number</label>
+                <input type="text" name="serialNumber" className="form-input" value={formData.serialNumber || ''} onChange={handleChange} disabled={formData.type === 'Mouse'} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Vendor/Brand</label>
+                <input type="text" name="brand" className="form-input" value={formData.brand} onChange={handleChange} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Value</label>
+                <input type="text" name="value" className="form-input" value={formData.value} onChange={handleChange} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Purchase Date</label>
+                <input type="date" name="purchaseDate" className="form-input" value={formatDateForInput(formData.purchaseDate)} onChange={(e) => setFormData(prev => ({...prev, purchaseDate: formatDateForState(e.target.value)}))} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Location</label>
+                <select name="location" className="form-select" value={formData.location} onChange={handleChange}>
+                  {branchLocations.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Status *</label>
+                <select name="status" className="form-select" value={formData.status} onChange={handleChange} required>
+                  <option>available</option><option>assigned</option><option>in maintenance</option>
+                </select>
+              </div>
+              <div className="form-group">
                 <label className="form-label">Assigned To</label>
                 <select name="assignedTo" className="form-select" value={formData.assignedTo} onChange={handleChange}>
                   {users.map(u => <option key={u} value={u}>{u}</option>)}
@@ -269,14 +333,8 @@ const AssetWorksheet = () => {
                 <input type="date" name="assignedDate" className="form-input" value={formatDateForInput(formData.assignedDate)} onChange={(e) => setFormData(prev => ({...prev, assignedDate: formatDateForState(e.target.value)}))} />
               </div>
               <div className="form-group">
-                <label className="form-label">Return Date</label>
+                <label className="form-label">Expected Return Date</label>
                 <input type="date" name="returnDate" className="form-input" value={formatDateForInput(formData.returnDate)} onChange={(e) => setFormData(prev => ({...prev, returnDate: formatDateForState(e.target.value)}))} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Status *</label>
-                <select name="status" className="form-select" value={formData.status} onChange={handleChange} required>
-                  <option>available</option><option>assigned</option><option>in maintenance</option>
-                </select>
               </div>
             </div>
             <div className="modal-footer">
@@ -317,14 +375,13 @@ const AssetWorksheet = () => {
                 assignedDate: null,
                 returnDate: null,
                 ...formData,
-                serialNumber: formData.serialNumber ? `${formData.serialNumber}-${i + 1}` : `SN-${Date.now()}${i}`,
+                serialNumber: finalType === 'Mouse' ? null : (formData.serialNumber ? `${formData.serialNumber}-${i + 1}` : `SN-${Date.now()}${i}`),
                 type: finalType,
             };
-            delete newAsset.count; // Do not store count on the asset object itself
+            delete newAsset.count;
             newAssets.push(newAsset);
         }
         onAdd(newAssets);
-        // Reset form after submission
         setFormData({ name: '', type: '', brand: '', value: '', purchaseDate: '', location: 'Branch 1', serialNumber: '', count: 1 });
         setOtherType('');
     };
@@ -362,7 +419,7 @@ const AssetWorksheet = () => {
                 <input type="date" name="purchaseDate" className="form-input" value={formatDateForInput(formData.purchaseDate)} onChange={(e) => setFormData(prev => ({...prev, purchaseDate: formatDateForState(e.target.value)}))} />
               </div>
               <div className="form-group"><label className="form-label">Branch</label><select name="location" className="form-select" value={formData.location} onChange={handleChange}>{branchLocations.map(loc => <option key={loc} value={loc}>{loc}</option>)}</select></div>
-              <div className="form-group" style={{gridColumn: 'span 2'}}><label className="form-label">Serial Number (Base)</label><input type="text" name="serialNumber" placeholder="e.g., MBP-001-2024" className="form-input" value={formData.serialNumber} onChange={handleChange} /></div>
+              {formData.type !== 'Mouse' && <div className="form-group" style={{gridColumn: 'span 2'}}><label className="form-label">Serial Number (Base)</label><input type="text" name="serialNumber" placeholder="e.g., MBP-001-2024" className="form-input" value={formData.serialNumber} onChange={handleChange} /></div>}
             </div>
             <div className="modal-footer">
               <button type="button" className="modal-button cancel" onClick={onClose}>Cancel</button>
@@ -380,7 +437,6 @@ const AssetWorksheet = () => {
     const [assignmentReason, setAssignmentReason] = useState('');
     const [assignedDate, setAssignedDate] = useState('');
 
-    // Group available assets by name, and then by type
     const groupedAssets = useMemo(() => {
         const byName = availableAssets.reduce((acc, asset) => {
             if (!acc[asset.name]) {
@@ -416,12 +472,11 @@ const AssetWorksheet = () => {
     const handleSubmit = (e) => {
       e.preventDefault();
       if (selectedAssetName && assignedUser && assignmentReason && assignedDate) {
-        // Find the selected group to get an available ID
         let assetIdToAssign = null;
         for (const typeGroup of Object.values(groupedAssets)) {
             const foundAsset = typeGroup.find(asset => asset.name === selectedAssetName);
             if (foundAsset) {
-                assetIdToAssign = foundAsset.ids[0]; // Assign the first available ID
+                assetIdToAssign = foundAsset.ids[0];
                 break;
             }
         }
@@ -486,60 +541,14 @@ const AssetWorksheet = () => {
         .employee-tag svg { margin-right: 4px; height: 12px; width: 12px; }
         .user-avatar { width: 40px; height: 40px; border-radius: 9999px; background-color: #1f2937; color: #ffffff; display: flex; justify-content: center; align-items: center; font-size: 16px; font-weight: 600; cursor: pointer; }
         
-        /* New Profile Dropdown Styles from AdminWorksheet */
-        .profile-dropdown-container {
-          position: relative;
-          display: flex;
-          align-items: center;
-          gap: 1rem;
-        }
-        .profile-dropdown-menu {
-          position: absolute;
-          top: calc(100% + 0.5rem);
-          right: 0;
-          background-color: #ffffff;
-          border-radius: 0.5rem;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-          border: 1px solid #e5e7eb;
-          min-width: 12rem;
-          padding: 0.5rem 0;
-          list-style: none;
-          margin: 0;
-          opacity: 0;
-          visibility: hidden;
-          transform: translateY(-10px);
-          transition: opacity 0.2s ease-out, transform 0.2s ease-out, visibility 0.2s ease-out;
-          z-index: 100;
-        }
-        .profile-dropdown-menu.open {
-          opacity: 1;
-          visibility: visible;
-          transform: translateY(0);
-        }
-        .profile-dropdown-item {
-          padding: 0.75rem 1rem;
-          color: #1f2937;
-          font-size: 0.9rem;
-          font-weight: 500;
-          display: flex;
-          align-items: center;
-          gap: 0.75rem;
-          transition: background-color 0.15s ease;
-          cursor: pointer;
-        }
-        .profile-dropdown-item:hover {
-          background-color: #f9fafb;
-        }
-        .profile-dropdown-item.logout {
-          color: #ef4444;
-        }
-        .profile-dropdown-item.logout:hover {
-          background-color: #fee2e2;
-        }
-        .profile-dropdown-item svg {
-          width: 1rem;
-          height: 1rem;
-        }
+        .profile-dropdown-container { position: relative; display: flex; align-items: center; gap: 1rem; }
+        .profile-dropdown-menu { position: absolute; top: calc(100% + 0.5rem); right: 0; background-color: #ffffff; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); border: 1px solid #e5e7eb; min-width: 12rem; padding: 0.5rem 0; list-style: none; margin: 0; opacity: 0; visibility: hidden; transform: translateY(-10px); transition: opacity 0.2s ease-out, transform 0.2s ease-out, visibility 0.2s ease-out; z-index: 100; }
+        .profile-dropdown-menu.open { opacity: 1; visibility: visible; transform: translateY(0); }
+        .profile-dropdown-item { padding: 0.75rem 1rem; color: #1f2937; font-size: 0.9rem; font-weight: 500; display: flex; align-items: center; gap: 0.75rem; transition: background-color 0.15s ease; cursor: pointer; }
+        .profile-dropdown-item:hover { background-color: #f9fafb; }
+        .profile-dropdown-item.logout { color: #ef4444; }
+        .profile-dropdown-item.logout:hover { background-color: #fee2e2; }
+        .profile-dropdown-item svg { width: 1rem; height: 1rem; }
 
         .notification-dot-container { position: relative; cursor: pointer; }
         .notification-dot-solid { position: absolute; top: -2px; right: -2px; width: 8px; height: 8px; background-color: #ef4444; border-radius: 50%; border: 1px solid #ffffff; }
@@ -606,8 +615,8 @@ const AssetWorksheet = () => {
         .asset-table td:last-child { text-align:center; }
         .asset-table-asset-cell { display: flex; align-items: center; justify-content: flex-start; }
         .asset-table-asset-icon { height: 20px; width: 20px; color: #9ca3af; margin-right: 8px; }
-        .asset-table-asset-id { font-size: 14px; font-weight: 500; color: #1f2937; }
-        .asset-table-asset-name { font-size: 14px; color: #6b7280; }
+        .asset-table-asset-name-main { font-size: 14px; font-weight: 500; color: #1f2937; }
+        .asset-table-asset-serial { font-size: 14px; color: #6b7280; }
         .status-badge { padding: 4px 8px; display: inline-flex; font-size: 12px; line-height: 16px; font-weight: 600; border-radius: 9999px; }
         .status-badge.available { background-color: #d1fae5; color: #065f46; }
         .status-badge.assigned { background-color: #fef9c3; color: #a16207; }
@@ -694,7 +703,7 @@ const AssetWorksheet = () => {
                 <div className="summary-card"><div className="summary-card-content"><p className="summary-card-title">Total Assets</p><p className="summary-card-value">{assets.length}</p></div><div className="summary-card-icon-wrapper total"><Hash size={24} /></div></div>
                 <div className="summary-card"><div className="summary-card-content"><p className="summary-card-title">Total Value</p><p className="summary-card-value">${totalAssetValue.toLocaleString()}</p></div><div className="summary-card-icon-wrapper value"><DollarSign size={24} /></div></div>
                 <div className="summary-card"><div className="summary-card-content"><p className="summary-card-title">Assigned</p><p className="summary-card-value">{assets.filter(a => a.status === 'assigned').length}</p></div><div className="summary-card-icon-wrapper assigned"><User size={24} /></div></div>
-                <div className="summary-card"><div className="summary-card-content"><p className="summary-card-title">Available</p><p className="summary-card-value">{assets.filter(a => a.status === 'available').length}</p></div><div className="summary-card-icon-wrapper available"><CheckCircle size={24} /></div></div>
+                <div className="summary-card"><div className="summary-card-content"><p className="summary-card-title">Available</p><p className="summary-card-value">{assets.filter(isAssetConsideredAvailable).length}</p></div><div className="summary-card-icon-wrapper available"><CheckCircle size={24} /></div></div>
                 <div className="summary-card"><div className="summary-card-content"><p className="summary-card-title">In Maintenance</p><p className="summary-card-value">{assets.filter(a => a.status === 'in maintenance').length}</p></div><div className="summary-card-icon-wrapper maintenance"><Wrench size={24} /></div></div>
               </div>
             </div>
@@ -704,14 +713,33 @@ const AssetWorksheet = () => {
             <div className="asset-content">
               <div className="asset-inventory-header"><h2 className="asset-inventory-title"><Info className="asset-inventory-icon" />Asset Inventory</h2><div className="asset-action-buttons"><button className="asset-action-button" onClick={() => setShowAddAssetModal(true)}><Plus size={16} className="asset-action-button-icon" />Add Asset</button></div></div>
               <div className="search-filter-bar">
-                <div className="search-input-container"><Search size={18} className="search-icon" /><input type="text" placeholder="Search assets..." className="search-input" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
+                <div className="search-input-container"><Search size={18} className="search-icon" /><input type="text" placeholder="Search by name, ID, or serial..." className="search-input" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
                 <div className="filter-dropdown-container"><select className="filter-dropdown" onChange={(e) => setFilterStatus(e.target.value)} value={filterStatus}><option>All Statuses</option><option>available</option><option>assigned</option><option>in maintenance</option></select><ChevronDown size={16} className="dropdown-chevron" /></div>
                 {isFilterActive && <button className="clear-filter-button" onClick={handleClearFilters}><FilterX size={16} className="asset-action-button-icon" />Clear Filter</button>}
               </div>
               <div className="asset-table-container">
                 <table className="asset-table">
                   <thead><tr><th>Asset</th><th>Type</th><th>Available</th><th>Status</th><th>Branch</th><th>Value</th><th>Actions</th></tr></thead>
-                  <tbody>{filteredAssets.map((asset) => (<tr key={asset.id}><td><div className="asset-table-asset-cell"><div><div className="asset-table-asset-id">{asset.id}</div><div className="asset-table-asset-name">{asset.name}</div></div></div></td><td>{asset.type}</td><td>{availableAssetCounts[asset.type] || 0}</td><td><span className={`status-badge ${asset.status.replace(/\s+/g, '-')}`}>{asset.status}</span></td><td>{asset.location}</td><td>{asset.value}</td><td className="actions-cell"><button className="action-icon-button" onClick={() => handleEditAssetClick(asset)}><Edit size={18} /></button><button className="action-icon-button" onClick={() => handleDeleteAssetClick(asset.id)}><Trash2 size={18} /></button></td></tr>))}</tbody>
+                  <tbody>{assetsForDisplay.map((asset) => (<tr key={asset.id}>
+                      <td>
+                        <div className="asset-table-asset-cell">
+                          <div>
+                            <div className="asset-table-asset-name-main">{asset.name}</div>
+                            <div className="asset-table-asset-serial">{asset.serialNumber || 'N/A'}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>{asset.type}</td>
+                      <td>{asset.isSummary ? asset.availableCount : (isAssetConsideredAvailable(asset) ? 1 : 0)}</td>
+                      <td><span className={`status-badge ${asset.status.replace(/\s+/g, '-')}`}>{asset.status}</span></td>
+                      <td>{asset.location}</td>
+                      <td>{asset.value}</td>
+                      <td className="actions-cell">
+                        <button className="action-icon-button" onClick={() => handleEditAssetClick(asset)}><Edit size={18} /></button>
+                        {!asset.isSummary && <button className="action-icon-button" onClick={() => handleDeleteAssetClick(asset.id)}><Trash2 size={18} /></button>}
+                      </td>
+                    </tr>))}
+                  </tbody>
                 </table>
               </div>
             </div>
@@ -724,7 +752,7 @@ const AssetWorksheet = () => {
                 <div className="filter-dropdown-container">
                   <select className="filter-dropdown" onChange={(e) => setAssignedAssetFilter(e.target.value)} value={assignedAssetFilter}>
                     <option value="All Assets">All Assets</option>
-                    {assets.filter(a => a.status === 'assigned').map(asset => <option key={asset.id} value={asset.id}>{asset.name} ({asset.id})</option>)}
+                    {assets.filter(a => a.status === 'assigned').map(asset => <option key={asset.id} value={asset.id}>{asset.name} ({asset.serialNumber})</option>)}
                   </select>
                   <ChevronDown size={16} className="dropdown-chevron" />
                 </div>
@@ -732,7 +760,7 @@ const AssetWorksheet = () => {
               <div className="asset-table-container">
                 <table className="asset-table">
                   <thead><tr><th>Asset</th><th>Assigned To</th><th>Assigned Date</th><th>Return Date</th><th>Actions</th></tr></thead>
-                  <tbody>{assignedAssets.length > 0 ? assignedAssets.map((asset) => (<tr key={asset.id}><td><div className="asset-table-asset-cell"><div><div className="asset-table-asset-id">{asset.id}</div><div className="asset-table-asset-name">{asset.name}</div></div></div></td><td>{asset.assignedTo}</td><td>{asset.assignedDate || 'N/A'}</td><td>{asset.returnDate || 'Not Yet'}</td><td className="actions-cell"><button className="action-icon-button" onClick={() => handleEditAssetClick(asset)}><Edit size={18} /></button><button className="action-icon-button" onClick={() => handleUnassignAssetClick(asset)}><Trash2 size={18} /></button></td></tr>)) : (<tr><td colSpan="5" style={{ textAlign: 'center', padding: '20px' }}>No assets are currently assigned.</td></tr>)}</tbody>
+                  <tbody>{assignedAssets.length > 0 ? assignedAssets.map((asset) => (<tr key={asset.id}><td><div className="asset-table-asset-cell"><div><div className="asset-table-asset-name-main">{asset.name}</div><div className="asset-table-asset-serial">{asset.serialNumber}</div></div></div></td><td>{asset.assignedTo}</td><td>{asset.assignedDate || 'N/A'}</td><td>{asset.returnDate || 'Not Yet'}</td><td className="actions-cell"><button className="action-icon-button" onClick={() => handleEditAssetClick(asset)}><Edit size={18} /></button><button className="action-icon-button" onClick={() => handleUnassignAssetClick(asset)}><Trash2 size={18} /></button></td></tr>)) : (<tr><td colSpan="5" style={{ textAlign: 'center', padding: '20px' }}>No assets are currently assigned.</td></tr>)}</tbody>
                 </table>
               </div>
             </div>
@@ -742,11 +770,11 @@ const AssetWorksheet = () => {
 
       {showAssignAssetModal && <AssignAssetModal show={showAssignAssetModal} onClose={() => setShowAssignAssetModal(false)} onAssign={handleAssignAsset} availableAssets={assets.filter(a => a.status === 'available')} users={users} />}
       {showAddAssetModal && <AddAssetModal show={showAddAssetModal} onClose={() => setShowAddAssetModal(false)} onAdd={handleAddAsset} />}
-      {showEditAssetModal && assetToEdit && <EditAssetModal show={showEditAssetModal} onClose={() => setShowEditAssetModal(false)} asset={assetToEdit} onUpdate={handleUpdateAsset} />}
+      {showEditAssetModal && assetToEdit && <EditAssetModal show={showEditAssetModal} onClose={() => setShowEditAssetModal(false)} asset={assetToEdit} onUpdate={handleUpdateAsset} users={users} branchLocations={branchLocations} />}
       
       {showDeleteConfirmationModal && (
         <div className="modal-overlay confirmation-modal">
-          <div className="modal-content"><div className="modal-header"><h3 className="modal-title">Confirm Deletion</h3><button className="modal-close-button" onClick={() => setShowDeleteConfirmationModal(false)}><X size={20} /></button></div><p className="modal-description">Are you sure you want to delete asset **{assetIdToDelete}**? This action cannot be undone.</p><div className="modal-footer"><button className="modal-button cancel" onClick={() => setShowDeleteConfirmationModal(false)}>Cancel</button><button type="button" className="modal-button confirm-delete" onClick={handleDeleteAssetConfirm}>Delete</button></div></div>
+          <div className="modal-content"><div className="modal-header"><h3 className="modal-title">Confirm Deletion</h3><button className="modal-close-button" onClick={() => setShowDeleteConfirmationModal(false)}><X size={20} /></button></div><p className="modal-description">Are you sure you want to delete this asset? This action cannot be undone.</p><div className="modal-footer"><button className="modal-button cancel" onClick={() => setShowDeleteConfirmationModal(false)}>Cancel</button><button type="button" className="modal-button confirm-delete" onClick={handleDeleteAssetConfirm}>Delete</button></div></div>
         </div>
       )}
       
