@@ -15,6 +15,9 @@ const AdminWorksheet = () => {
     { id: 5, name: 'John Employee', email: 'employee@techxplorers.in', roles: ['employee', 'active', 'Development'] },
     { id: 6, name: 'John Client', email: 'client', roles: ['client', 'active', 'External'] },
     { id: 7, name: 'Regular employee', email: 'employee@techxplorers.in', roles: ['employee', 'active', 'Development'] },
+    { id: 8, name: 'Jane Smith', email: 'jane.smith@techxplorers.in', roles: ['employee', 'active', 'Development'] },
+    { id: 9, name: 'Robert Brown', email: 'robert.brown@techxplorers.in', roles: ['employee', 'active', 'Marketing'] },
+    { id: 10, name: 'Laura White', email: 'laura.white@techxplorers.in', roles: ['employee', 'active', 'Sales'] },
   ]);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -65,6 +68,17 @@ const AdminWorksheet = () => {
     status: 'active',
   });
 
+  // NEW STATES FOR DEPARTMENT DETAILS VIEW
+  const [isDepartmentDetailsModalOpen, setIsDepartmentDetailsModalOpen] = useState(false);
+  const [selectedDepartmentForDetails, setSelectedDepartmentForDetails] = useState(null);
+  const [employeesInSelectedDepartment, setEmployeesInSelectedDepartment] = useState([]);
+  // State for managing employees in the edit department modal
+  const [employeesToAddInDepartment, setEmployeesToAddInDepartment] = useState([]);
+  const [availableEmployeesForDepartment, setAvailableEmployeesForDepartment] = useState([]);
+  // NEW STATE FOR ADD EMPLOYEE TO DEPARTMENT
+  const [isAddEmployeeToDepartmentModalOpen, setIsAddEmployeeToDepartmentModalOpen] = useState(false);
+  const [employeeToAddToDepartment, setEmployeeToAddToDepartment] = useState(''); // To hold selected employee ID
+
   // Client Management States (for the inline display)
   const [clientFilter, setClientFilter] = useState('registered');
   // Removed selectedManagerPerClient as it's no longer needed for unassigned/restored flow
@@ -83,7 +97,7 @@ const AdminWorksheet = () => {
   // New state for service filter
   const [selectedServiceFilter, setSelectedServiceFilter] = useState('All');
 
-  
+
 
   const [clients, setClients] = useState([
     {
@@ -302,6 +316,10 @@ const AdminWorksheet = () => {
     { id: 2, assetId: 2, employeeId: 2, assignedDate: '2024-01-10', reason: 'Manager workstation upgrade' },
     { id: 3, assetId: 3, employeeId: 3, assignedDate: '2024-05-04', reason: 'Team lead mobile device' },
   ]);
+
+  // Profile Modal State
+  const [showProfileModal, setShowProfileModal] = useState(false);
+
   const [isAssignAssetModalOpen, setIsAssignAssetModalOpen] = useState(false);
   const [newAssignment, setNewAssignment] = useState({
     assetId: '',
@@ -346,7 +364,7 @@ const AdminWorksheet = () => {
   });
   const [generatedPaymentLink, setGeneratedPaymentLink] = useState('');
 
-  
+
   // NEW: State for Generic Confirmation Modal
   const [isConfirmUpdateModalOpen, setIsConfirmUpdateModalOpen] = useState(false);
   const [confirmUpdateMessage, setConfirmUpdateMessage] = useState('');
@@ -358,7 +376,8 @@ const AdminWorksheet = () => {
 
   // Effect to manage body scroll when any modal is open
   useEffect(() => {
-if (isAddemployeeModalOpen || isEditemployeeModalOpen || isEditDepartmentModalOpen || isCreateDepartmentModalOpen || isPaymentModalOpen || isAssignAssetModalOpen || isDeleteClientConfirmModalOpen || isClientDetailsModalOpen || isEditClientModalOpen || isConfirmUpdateModalOpen) {      document.body.classList.add('no-scroll');
+    if (isAddemployeeModalOpen || isEditemployeeModalOpen || isEditDepartmentModalOpen || isCreateDepartmentModalOpen || isPaymentModalOpen || isAssignAssetModalOpen || isDeleteClientConfirmModalOpen || isClientDetailsModalOpen || isEditClientModalOpen || isConfirmUpdateModalOpen || isDepartmentDetailsModalOpen || showProfileModal) {
+      document.body.classList.add('no-scroll');
     } else {
       document.body.classList.remove('no-scroll');
     }
@@ -366,7 +385,7 @@ if (isAddemployeeModalOpen || isEditemployeeModalOpen || isEditDepartmentModalOp
     return () => {
       document.body.classList.remove('no-scroll');
     };
- }, [isAddemployeeModalOpen, isEditemployeeModalOpen, isEditDepartmentModalOpen, isCreateDepartmentModalOpen, isPaymentModalOpen, isAssignAssetModalOpen, isDeleteClientConfirmModalOpen, isClientDetailsModalOpen, isEditClientModalOpen, isConfirmUpdateModalOpen]);
+  }, [isAddemployeeModalOpen, isEditemployeeModalOpen, isEditDepartmentModalOpen, isCreateDepartmentModalOpen, isPaymentModalOpen, isAssignAssetModalOpen, isDeleteClientConfirmModalOpen, isClientDetailsModalOpen, isEditClientModalOpen, isConfirmUpdateModalOpen, isDepartmentDetailsModalOpen, showProfileModal]);
   // Effect to close profile dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -475,7 +494,7 @@ if (isAddemployeeModalOpen || isEditemployeeModalOpen || isEditDepartmentModalOp
     handleCloseAddEmployeeModal();
   };
 
-    const getEmployeeChanges = (original, updated) => {
+  const getEmployeeChanges = (original, updated) => {
     const changes = [];
     if (original.name !== updated.fullName) {
       changes.push(`Name from '${original.name}' to '${updated.fullName}'`);
@@ -540,7 +559,7 @@ if (isAddemployeeModalOpen || isEditemployeeModalOpen || isEditDepartmentModalOp
 
   const handleUpdateemployeeAccount = (e) => {
     e.preventDefault();
-      const originalEmployee = employees.find(emp => emp.id === currentemployeeToEdit.id);
+    const originalEmployee = employees.find(emp => emp.id === currentemployeeToEdit.id);
     const changes = getEmployeeChanges(originalEmployee, currentemployeeToEdit);
 
     if (changes === 'no changes') {
@@ -595,12 +614,35 @@ if (isAddemployeeModalOpen || isEditemployeeModalOpen || isEditDepartmentModalOp
     setConfirmActionType('employeeDelete');
   };
 
-  const confirmEmployeeDelete = () => {
-									   
-								
-	
+    const handleCancelDelete = () => {
+    setIsDeleteConfirmModalOpen(false);
+    setemployeeToDeleteId(null);
+  };
 
-									 
+  const handleConfirmDelete = () => {
+    setemployees(employees.filter(employee => employee.id !== employeeToDeleteId));
+    setIsDeleteConfirmModalOpen(false);
+    setemployeeToDeleteId(null);
+  };
+
+  const handleRemoveEmployeeFromDepartment = (employeeId) => {
+    const employee = employees.find(emp => emp.id === employeeId);
+    if (employee && currentDepartmentToEdit) {
+      // Remove employee from the department's employee list in the modal state
+      setEmployeesToAddInDepartment(prev => prev.filter(id => id !== employeeId));
+      // Add back to available employees if not 'client' or 'admin'
+      if (!employee.roles.includes('client') && !employee.roles.includes('admin')) {
+        setAvailableEmployeesForDepartment(prev => [...prev, employee]);
+      }
+    }
+  };
+
+  const confirmEmployeeDelete = () => {
+
+
+
+
+
     setemployees(employees.filter(employee => employee.id !== employeeToDeleteDetails.id));
     setIsConfirmUpdateModalOpen(false);
     setEmployeeToDeleteDetails(null);
@@ -631,9 +673,16 @@ if (isAddemployeeModalOpen || isEditemployeeModalOpen || isEditDepartmentModalOp
     if (original.head !== updated.head) {
       changes.push(`Head of Department from '${original.head}' to '${updated.head}'`);
     }
-    if (original.employees !== updated.employees) {
-      changes.push(`Employees from '${original.employees}' to '${updated.employees}'`);
+    // Compare employee counts
+    const currentEmployeesInDept = employees.filter(emp =>
+      emp.roles.includes(original.name.toLowerCase())
+    );
+    const updatedEmployeesInDeptCount = employeesToAddInDepartment.length;
+
+    if (currentEmployeesInDept.length !== updatedEmployeesInDeptCount) {
+      changes.push(`Employee count from '${currentEmployeesInDept.length}' to '${updatedEmployeesInDeptCount}'`);
     }
+
     if (original.status !== updated.status) {
       changes.push(`Status from '${original.status}' to '${updated.status}'`);
     }
@@ -647,6 +696,21 @@ if (isAddemployeeModalOpen || isEditemployeeModalOpen || isEditDepartmentModalOp
   const handleEditDepartmentClick = (departmentId) => {
     const department = departments.find(d => d.id === departmentId);
     if (department) {
+      // Get employees currently in this department
+      const currentEmployeesInDept = employees.filter(emp =>
+        emp.roles.includes(department.name.toLowerCase())
+      );
+      setEmployeesToAddInDepartment(currentEmployeesInDept.map(emp => emp.id));
+
+      // Get employees not in this department and not 'client' or 'admin'
+      const available = employees.filter(emp =>
+        !emp.roles.includes(department.name.toLowerCase()) &&
+        !emp.roles.includes('client') &&
+        !emp.roles.includes('admin')&&
+         !currentEmployeesInDept.some(cEmp => cEmp.id === emp.id) // Ensure not already in assigned list
+      );
+      setAvailableEmployeesForDepartment(available);
+
       setCurrentDepartmentToEdit({ ...department });
       setIsEditDepartmentModalOpen(true);
     }
@@ -655,6 +719,8 @@ if (isAddemployeeModalOpen || isEditemployeeModalOpen || isEditDepartmentModalOp
   const handleCloseEditDepartmentModal = () => {
     setIsEditDepartmentModalOpen(false);
     setCurrentDepartmentToEdit(null);
+    setEmployeesToAddInDepartment([]);
+    setAvailableEmployeesForDepartment([]);
   };
 
   const handleEditDepartmentChange = (e) => {
@@ -665,33 +731,95 @@ if (isAddemployeeModalOpen || isEditemployeeModalOpen || isEditDepartmentModalOp
     }));
   };
 
-  
+  const handleAddEmployeeToDepartment = (employeeId) => {
+    const employee = employees.find(emp => emp.id === employeeId);
+    if (employee && currentDepartmentToEdit) {
+      // Add employee to the department's employee list in the modal state
+      setEmployeesToAddInDepartment(prev => [...prev, employeeId]);
+      // Remove from available employees
+      setAvailableEmployeesForDepartment(prev => prev.filter(emp => emp.id !== employeeId));
+    }
+
+  };
+
+
   const handleUpdateDepartment = (e) => {
     e.preventDefault();
     const originalDepartment = departments.find(dept => dept.id === currentDepartmentToEdit.id);
     const changes = getDepartmentChanges(originalDepartment, currentDepartmentToEdit);
 
-    if (changes === 'no changes') {
-      setConfirmUpdateMessage('No changes were made to the department details.');
-      setIsConfirmUpdateModalOpen(true);
+
+    // Calculate employee changes for confirmation message
+    const originalEmployeeIds = employees.filter(emp => emp.roles.includes(originalDepartment.name.toLowerCase())).map(emp => emp.id);
+    const addedEmployees = employeesToAddInDepartment.filter(id => !originalEmployeeIds.includes(id)).map(id => employees.find(emp => emp.id === id)?.name);
+    const removedEmployees = originalEmployeeIds.filter(id => !employeesToAddInDepartment.includes(id)).map(id => employees.find(emp => emp.id === id)?.name);
+
+    let employeeChangeMessage = '';
+    if (addedEmployees.length > 0) {
+      employeeChangeMessage += `Added employees: ${addedEmployees.join(', ')}. `;
+    }
+    if (removedEmployees.length > 0) {
+      employeeChangeMessage += `Removed employees: ${removedEmployees.join(', ')}. `;
+    }
+    if (addedEmployees.length === 0 && removedEmployees.length === 0) {
+      employeeChangeMessage = 'No changes to associated employees.';
+    }
+
+    if (changes === 'no changes' && employeeChangeMessage === 'No changes to associated employees.') {
+     setConfirmUpdateMessage('No changes were made to the department details or associated employees.');      setIsConfirmUpdateModalOpen(true);
       setConfirmActionType(null); // No action needed
       return;
     }
 
-    setPendingDepartmentUpdate(currentDepartmentToEdit);
-    setConfirmUpdateMessage(`Are you sure you want to update department '${originalDepartment.name}' with the following changes: ${changes}?`);
+    setPendingDepartmentUpdate({
+      ...currentDepartmentToEdit,
+      employeeIds: employeesToAddInDepartment // Store the updated employee IDs
+    });
+    setConfirmUpdateMessage(`Are you sure you want to update department '${originalDepartment.name}' with the following changes: ${changes}. ${employeeChangeMessage}`);
     setIsConfirmUpdateModalOpen(true);
     setConfirmActionType('departmentUpdate');
   };
 
   const confirmDepartmentUpdate = () => {
-    setDepartments(prevDepartments => prevDepartments.map(dept =>
-      dept.id === pendingDepartmentUpdate.id ? pendingDepartmentUpdate : dept
-    ));
+    // Update departments state
+    setDepartments(prevDepartments => prevDepartments.map(dept => {
+      if (dept.id === pendingDepartmentUpdate.id) {
+        // Update employee count based on the new list of employees
+        return {
+          ...pendingDepartmentUpdate,
+          employees: pendingDepartmentUpdate.employeeIds.length // Update employee count
+        };
+      }
+      return dept;
+    }));
+
+    // Update employees' roles based on department changes
+    setemployees(prevEmployees => prevEmployees.map(emp => {
+      const currentDeptNameLower = pendingDepartmentUpdate.name.toLowerCase();
+      const originalDeptNameLower = departments.find(d => d.id === pendingDepartmentUpdate.id)?.name.toLowerCase();
+
+
+      // If employee is in the new list for this department
+      if (pendingDepartmentUpdate.employeeIds.includes(emp.id)) {
+        // Add the new department role if not already present
+        if (!emp.roles.includes(currentDeptNameLower)) {
+          return { ...emp, roles: [...emp.roles, currentDeptNameLower] };
+        }
+      } else { // If employee is NOT in the new list for this department
+        // Remove the old department role if it was present
+        if (originalDeptNameLower && emp.roles.includes(originalDeptNameLower)) {
+          return { ...emp, roles: emp.roles.filter(role => role !== originalDeptNameLower) };
+        }
+      }
+      return emp;
+    }));
+
     handleCloseEditDepartmentModal();
     setIsConfirmUpdateModalOpen(false);
     setPendingDepartmentUpdate(null);
     setConfirmActionType(null);
+
+
   };
 
   // Department Delete Confirmation Handlers
@@ -705,15 +833,86 @@ if (isAddemployeeModalOpen || isEditemployeeModalOpen || isEditDepartmentModalOp
 
   const confirmDepartmentDelete = () => {
     setDepartments(departments.filter(dept => dept.id !== departmentToDeleteDetails.id));
+    // Also remove the department role from any employees who had it
+    setemployees(prevEmployees => prevEmployees.map(emp => ({
+      ...emp,
+      roles: emp.roles.filter(role => role !== departmentToDeleteDetails.name.toLowerCase())
+    })));
+
+
+
+
     setIsConfirmUpdateModalOpen(false);
     setDepartmentToDeleteDetails(null);
     setConfirmActionType(null);
   };
 
-											   
-																				 
-								   
-	
+
+
+  // Department Details Modal Handlers
+  const handleViewDepartmentDetails = (departmentId) => {
+    const department = departments.find(d => d.id === departmentId);
+    if (department) {
+      const employeesInDept = employees.filter(emp =>
+        emp.roles.includes(department.name.toLowerCase())
+      );
+      setSelectedDepartmentForDetails(department);
+      setEmployeesInSelectedDepartment(employeesInDept);
+      setIsDepartmentDetailsModalOpen(true);
+    }
+  };
+
+  const handleCloseViewDepartmentDetailsModal = () => {
+    setIsViewDepartmentDetailsModalOpen(false);
+    setSelectedDepartmentForDetails(null);
+    setEmployeesInSelectedDepartment([]);
+  };
+
+  const handleCloseDepartmentDetailsModal = () => {
+    setIsDepartmentDetailsModalOpen(false);
+    setSelectedDepartmentForDetails(null);
+    setEmployeesInSelectedDepartment([]);
+  };
+
+
+  // NEW: Add Employee to Department Handlers
+  const handleAddEmployeeToDepartmentClick = () => {
+    setIsAddEmployeeToDepartmentModalOpen(true);
+  };
+
+  const handleCloseAddEmployeeToDepartmentModal = () => {
+    setIsAddEmployeeToDepartmentModalOpen(false);
+    setEmployeeToAddToDepartment('');
+  };
+
+  const handleSaveEmployeeToDepartment = () => {
+    if (employeeToAddToDepartment && currentDepartmentToEdit) {
+      const employeeId = parseInt(employeeToAddToDepartment);
+      setemployees(prevEmployees => prevEmployees.map(emp => {
+        if (emp.id === employeeId) {
+          // Remove any existing department role and add the new one
+          const updatedRoles = emp.roles.filter(role => !departmentOptions.map(d => d.toLowerCase()).includes(role));
+          updatedRoles.push(currentDepartmentToEdit.name.toLowerCase());
+          return { ...emp, roles: updatedRoles };
+        }
+        return emp;
+      }));
+
+      // Update the employee count in the department.
+      setDepartments(prevDepartments => prevDepartments.map(dept => {
+        if (dept.id === currentDepartmentToEdit.id) {
+          const updatedEmployeesInDept = employees.filter(emp => emp.roles.includes(dept.name.toLowerCase()) || emp.id === employeeId).length;
+          return { ...dept, employees: updatedEmployeesInDept };
+        }
+        return dept;
+      }));
+
+
+      handleCloseAddEmployeeToDepartmentModal();
+    }
+  };
+
+
 
   // Create Department Modal Handlers
   const handleCreateDepartmentClick = () => {
@@ -805,8 +1004,8 @@ if (isAddemployeeModalOpen || isEditemployeeModalOpen || isEditDepartmentModalOp
     } else {
       console.warn(`Cannot assign client ${clientId}: Manager not selected.`);
       // Optionally, show a user-friendly message to the user that manager needs to be selected.
-							
-		 
+
+
     }
   };
 
@@ -845,10 +1044,10 @@ if (isAddemployeeModalOpen || isEditemployeeModalOpen || isEditDepartmentModalOp
     let filtered = clients.filter(client => client.displayStatuses.includes(clientFilter));
 
     if (selectedServiceFilter !== 'All') {
-																							  
-		  
+
+
       filtered = filtered.filter(client => client.service === selectedServiceFilter);
- 
+
     }
 
     return filtered.filter(client =>
@@ -1197,7 +1396,7 @@ if (isAddemployeeModalOpen || isEditemployeeModalOpen || isEditDepartmentModalOp
   const renderClientTable = (clientsToRender, serviceType, currentClientFilter, title = '') => {
     // Determine headers based on the current clientFilter and serviceType
     const headers = (() => {
-																					   
+
       let baseHeaders = ['Name', 'Mobile', 'Email'];
 
       if (serviceType === 'Job Supporting & Consulting') {
@@ -1253,7 +1452,7 @@ if (isAddemployeeModalOpen || isEditemployeeModalOpen || isEditDepartmentModalOp
 
                   {(currentClientFilter === 'unassigned' || currentClientFilter === 'restored') && (
                     <td>
-														
+
                       <select
                         className="manager-select"
                         value={client.manager || ''} // Use client.manager directly
@@ -1271,9 +1470,9 @@ if (isAddemployeeModalOpen || isEditemployeeModalOpen || isEditDepartmentModalOp
                           </option>
                         ))}
                       </select>
-						   
-											 
-						
+
+
+
                     </td>
                   )}
                   {currentClientFilter === 'active' && (
@@ -1343,48 +1542,24 @@ if (isAddemployeeModalOpen || isEditemployeeModalOpen || isEditDepartmentModalOp
                       {(currentClientFilter === 'unassigned' || currentClientFilter === 'restored') && (
                         <>
                           {/* No separate edit/save for manager selection here, direct update */}
-																									
-		  
+
+
                           <button
                             onClick={() => handleAssignClient(client.id)}
                             className="action-button assign"
                             disabled={!client.manager} // Enabled if a manager is selected in the dropdown
-							   
-									
-									   
-									 
-														  
-																
-							   
-									  
-									   
-								  
-							   
-																									 
-																							  
-																								
-		  
-									 
-																		 
-																	  
-							   
-																					  
-									   
-									 
-																			 
-																
-																								  
+
                           >
                             Assign
                           </button>
-								  
-							
+
+
                         </>
                       )}
                       {currentClientFilter === 'active' && (
                         editingClientId === client.id ? (
                           <>
-		   
+
                             <button
                               onClick={() => handleSaveManagerChange(client.id)}
                               className="action-button save"
@@ -3908,9 +4083,348 @@ html.dark-mode {
 }
 
 
+ /* Department Details Modal */
+        .department-details-modal-content .details-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .department-details-modal-content .detail-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .department-details-modal-content .detail-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.25rem;
+        }
+
+        .department-details-modal-content .detail-value {
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .department-details-modal-content .employees-list-section {
+            margin-top: 1.5rem;
+            border-top: 1px solid var(--border-color);
+            padding-top: 1.5rem;
+        }
+
+        .department-details-modal-content .employees-list-section h4 {
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+        }
+
+        .department-details-modal-content .employees-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--background-color);
+            padding: 0.5rem;
+        }
+
+        .department-details-modal-content .employee-list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .department-details-modal-content .employee-list-item:last-child {
+            border-bottom: none;
+        }
+
+        .department-details-modal-content .employee-list-item span {
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+
+        /* Edit Department Modal - Employee Management */
+        .edit-department-modal-employees {
+            grid-column: 1 / -1;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .edit-department-modal-employees h4 {
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+        }
+
+        .edit-department-modal-employees .employee-selection-box {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .edit-department-modal-employees .employee-selection-box > div {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            background-color: var(--background-color);
+        }
+
+        .edit-department-modal-employees .employee-selection-box h5 {
+            font-size: 0.95rem;
+            color: var(--text-primary);
+            margin-top: 0;
+            margin-bottom: 0.75rem;
+        }
+
+        .edit-department-modal-employees .employee-list-scroll {
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background-color: var(--card-background);
+        }
+
+        .edit-department-modal-employees .employee-list-item-manage {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .edit-department-modal-employees .employee-list-item-manage:last-child {
+            border-bottom: none;
+        }
+
+        .edit-department-modal-employees .employee-list-item-manage span {
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+
+        .edit-department-modal-employees .employee-list-item-manage button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 0.3rem 0.6rem;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: background-color 0.2s ease;
+        }
+
+        .edit-department-modal-employees .employee-list-item-manage button.remove {
+            background-color: var(--delete-red);
+        }
+
+        .edit-department-modal-employees .employee-list-item-manage button:hover {
+            background-color: #3A7AD9;
+        }
+
+        .edit-department-modal-employees .employee-list-item-manage button.remove:hover {
+            background-color: var(--delete-red-hover);
+        }
+
+            /* Profile Modal */
+        .profile-modal-content .profile-details-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .profile-modal-content .profile-detail-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .profile-modal-content .profile-detail-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.25rem;
+        }
+
+        .profile-modal-content .profile-detail-value {
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .profile-modal-content .profile-avatar-large {
+            width: 80px;
+            height: 80px;
+            font-size: 2rem;
+            margin: 0 auto 1.5rem;
+        }
+
+/* Responsive adjustments */
+        @media (max-width: 768px) {
+            .ad-header-right {
+                gap: 1rem;
+            }
+
+            .ad-employee-info-text {
+                display: none; /* Hide name/role on smaller screens */
+            }
+
+            .ad-hamburger-menu {
+                display: block;
+            }
+
+            .ad-sidebar {
+                position: fixed;
+                top: 0;
+                left: -250px;
+                width: 250px;
+                height: 100%;
+                background-color: var(--card-background);
+                box-shadow: var(--shadow-color) 2px 0 5px;
+                transition: left 0.3s ease;
+                z-index: 1500;
+                padding-top: 4rem;
+                display: block;
+            }
+
+            .ad-sidebar-open {
+                left: 0;
+            }
+
+            .ad-sidebar-close-btn {
+                position: absolute;
+                top: 1rem;
+                right: 1rem;
+                background: none;
+                border: none;
+                font-size: 2rem;
+                color: var(--text-secondary);
+                cursor: pointer;
+            }
+
+            .ad-sidebar-nav {
+                display: flex;
+                flex-direction: column;
+                padding: 1rem;
+            }
+
+            .ad-nav-link {
+                padding: 0.75rem 1rem;
+                color: var(--text-primary);
+                text-decoration: none;
+                border-radius: 8px;
+                transition: background-color 0.2s ease;
+            }
+
+            .ad-nav-link:hover {
+                background-color: var(--button-hover-bg);
+            }
+
+            .ad-nav-link-active {
+                background-color: var(--primary-color);
+                color: white;
+            }
+
+            .ad-main-content {
+                padding: 1rem;
+            }
+
+            .ad-content-wrapper {
+                padding: 1rem;
+            }
+
+            .ad-dashboard-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+
+            .ad-title {
+                font-size: 1.75rem;
+            }
+
+            .custom-radio-group-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .custom-radio-item {
+                width: 100%;
+            }
+
+            .employee-management-header, .department-header, .asset-header, .client-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .employee-search-add, .department-search-filter, .asset-search-filter, .client-search-filter {
+                width: 100%;
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+
+            .employee-search-input, .department-search-input, .asset-search-input, .client-search-input {
+                width: 100%;
+                min-width: unset;
+            }
+
+            .add-employee-btn, .create-department-btn, .assign-asset-btn, .add-new-client-btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .employee-card {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .employee-actions {
+                width: 100%;
+                justify-content: flex-start;
+                margin-top: 1rem;
+            }
+
+            .modal-content {
+                width: 95%;
+                padding: 1.5rem;
+            }
+
+            .modal-form {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-footer {
+                flex-direction: column-reverse;
+                gap: 0.75rem;
+            }
+
+            .create-employee-btn, .confirm-cancel-btn, .confirm-delete-btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .department-stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .client-table .action-buttons {
+                flex-direction: column;
+            }
+
+            .payment-modal-content .generated-link-input-group {
+                flex-direction: column;
+            }
+
+            .payment-modal-content .generated-link-action-btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
         `}
       </style>
- 
+
 
 
       {/* Top Navigation Bar */}
@@ -3936,7 +4450,7 @@ html.dark-mode {
             <span className="ad-notification-badge">3</span>
           </div>
           {/* Dark/Light Mode Toggle Button */}
-          <button
+          {/* <button
             onClick={toggleTheme}
             className="ad-icon-btn"
             aria-label={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
@@ -3960,7 +4474,7 @@ html.dark-mode {
                 <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
               </svg>
             )}
-          </button>
+          </button> */}
           <div className="profile-dropdown-container" ref={profileDropdownRef}>
             <div className="ad-employee-info" onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}>
               <div className="ad-employee-info-text">
@@ -3981,7 +4495,11 @@ html.dark-mode {
             {isProfileDropdownOpen && (
               <ul className="profile-dropdown-menu open">
                 <li className="profile-dropdown-item header">My Account</li>
-                <li className="profile-dropdown-item">
+                <li className="profile-dropdown-item" onClick={() => {
+                  setIsProfileDropdownOpen(false); // Close dropdown
+                  setShowProfileModal(true); // Open profile modal
+                }}>
+
 
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1rem', height: '1rem' }}>
                     <path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z" />
@@ -4064,115 +4582,12 @@ html.dark-mode {
           </div>
 
 
-		 
 
 
-          {currentView === 'clientManagement' && (
-            <div className="client-management-container">
-              <div className="client-management-box">
-                <div className="client-management-header-section">
-                  <h2 className="client-management-title">Client Details Management</h2>
-                </div>
 
-                {/* Client Filter Tabs */}
-                <div className="client-filter-tabs">
-                  {[
-                    { label: 'Registered Clients', value: 'registered', count: clients.filter(c => c.displayStatuses.includes('registered')).length, activeBg: 'var(--client-filter-tab-bg-active-registered)', activeColor: 'var(--client-filter-tab-text-active-registered)', badgeBg: 'var(--client-filter-tab-badge-registered)' },
-                    { label: 'Unassigned Clients', value: 'unassigned', count: clients.filter(c => c.displayStatuses.includes('unassigned')).length, activeBg: 'var(--client-filter-tab-bg-active-unassigned)', activeColor: 'var(--client-filter-tab-text-active-unassigned)', badgeBg: 'var(--client-filter-tab-badge-unassigned)' },
-                    { label: 'Active Clients', value: 'active', count: clients.filter(c => c.displayStatuses.includes('active')).length, activeBg: 'var(--client-filter-tab-bg-active-active)', activeColor: 'var(--client-filter-tab-text-active-active)', badgeBg: 'var(--client-filter-tab-badge-active)' },
-                    { label: 'Rejected Clients', value: 'rejected', count: clients.filter(c => c.displayStatuses.includes('rejected')).length, activeBg: 'var(--client-filter-tab-bg-active-rejected)', activeColor: 'var(--client-filter-tab-text-active-rejected)', badgeBg: 'var(--client-filter-tab-badge-rejected)' },
-                    { label: 'Restore Clients', value: 'restored', count: clients.filter(c => c.displayStatuses.includes('restored')).length, activeBg: 'var(--client-filter-tab-bg-active-restored)', activeColor: 'var(--client-filter-tab-text-active-restored)', badgeBg: 'var(--client-filter-tab-badge-restored)' },
-                  ].map((option) => (
-                    <label
-                      key={option.value}
-                      className={`client-filter-tab-item ${option.value}`}
-                      style={{
-                        backgroundColor: clientFilter === option.value ? option.activeBg : 'transparent',
-                        color: clientFilter === option.value ? option.activeColor : 'rgba(51, 65, 85, 1)',
-                      }}
-                    >
-                      <input
-                        type="radio"
-                        name="client-filter"
-                        value={option.value}
-                        checked={clientFilter === option.value}
-                        onChange={(e) => {
-                          setClientFilter(e.target.value);
-                          setClientSearchTerm('');
-                          // selectedServiceFilter state is intentionally NOT reset here, to maintain selection across tabs
-                        }}
-                      />
-                      <span className="client-filter-tab-label">{option.label}</span>
-                      <span className="badge" style={{ backgroundColor: clientFilter === option.value ? option.badgeBg : '#9AA0A6' }}>
-                        {option.count}
-                      </span>
-                    </label>
-                  ))}
-                </div>
 
-                {/* Search Input and Service Dropdown */}
-                <div className="client-search-and-filter-group">
-                  <div className="client-search-input-group">
-                    <span className="search-icon-wrapper">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" style={{ width: '1rem', height: '1rem' }}>
-                        <path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.1-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z" />
-                      </svg>
-                    </span>
-                    <input
-                      type="text"
-                      id="clientSearch"
-                      placeholder="Search clients by name, email, mobile, job, or country"
-                      className="client-search-input"
-                      value={clientSearchTerm}
-                      onChange={handleClientSearchChange}
-                    />
-                  </div>
 
-			  
-                  <div className="service-filter-group">
-                    <label htmlFor="serviceFilter" className="form-label">Services:</label>
-                    <select
-                      id="serviceFilter"
-                      name="serviceFilter"
- 
-																														   
-                      className="form-select"
-                      value={selectedServiceFilter}
-                      onChange={(e) => setSelectedServiceFilter(e.target.value)}
-                    >
-                      {serviceOptions.map(option => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-	 
-                </div>
-
-                {selectedServiceFilter === 'All' ? (
-                  renderAllServiceTables()
-                ) : (
-                  <>
-                    <h4 className="client-table-title">
-                      {clientFilter === 'registered' && `Registered Clients`}
-                      {clientFilter === 'unassigned' && `Unassigned Clients`}
-                      {clientFilter === 'active' && `Active Clients`}
-                      {clientFilter === 'rejected' && `Rejected Clients`}
-                      {clientFilter === 'restored' && `Restored Clients`} ({filteredClients.length})
-                    </h4>
-
-   
-                    {renderClientTable(filteredClients, selectedServiceFilter, clientFilter)}
-                  </>
-                )}
-  
-              </div>
-            </div>
-          )}
-		  
-
-		  			 {currentView === 'employeeManagement' && (
+          {currentView === 'employeeManagement' && (
             <div className="employee-management-container">
               <div className="employee-management-box">
                 <div className="employee-management-header">
@@ -4265,7 +4680,7 @@ html.dark-mode {
 
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '0.9rem', height: '0.9rem' }}>
                       <path d="M256 80c0-17.7-14.3-32-32-32s-32 14.3-32 32V224H48c-17.7 0-32 14.3-32 32s14.3 32 32 32H192V432c0 17.7 14.3 32 32 32s32-14.3 32-32V288H400c17.7 0 32-14.3 32-32s-14.3-32-32-32H256V80z" />
-                      </svg>
+                    </svg>
                     Create Department
                   </button>
                 </div>
@@ -4359,18 +4774,32 @@ html.dark-mode {
                             </td>
                             <td>{dept.createdDate}</td>
                             <td>
-                              <div className="action-buttons">
+                              <div className="action-buttons"
+
+                                style={{ flexDirection: 'column', gap: '0.5rem' }}>
+                                <button
+                                  className="action-btn"
+                                  onClick={() => handleViewDepartmentDetails(dept.id)}
+                                  title="View Details"
+                                >
+                                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '0.8rem', height: '0.8rem' }}>
+                                    <path d="M12 4.5C7 4.5 2.73 7.61 1 12C2.73 16.39 7 19.5 12 19.5C17 19.5 21.27 16.39 23 12C21.27 7.61 17 4.5 12 4.5ZM12 17C9.24 17 7 14.76 7 12C7 9.24 9.24 7 12 7C14.76 7 17 9.24 17 12C17 14.76 14.76 17 12 17ZM12 9C10.34 9 9 10.34 9 12C9 13.66 10.34 15 12 15C13.66 15 15 13.66 15 12C15 10.34 13.66 9 12 9Z" />
+                                  </svg>
+                                  View
+                                </button>
                                 <button className="action-btn" onClick={() => handleEditDepartmentClick(dept.id)}>
 
                                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" fill="currentColor" style={{ width: '0.8rem', height: '0.8rem' }}>
                                     <path d="M402.6 83.2l90.2 90.2c12.5 12.5 12.5 32.8 0 45.3l-56.6 56.6c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3l56.6-56.6L362.4 97.5c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0zm-16.3 16.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3l160-160c12.5-12.5 32.8-12.5 45.3 0s12.5 32.8 0 45.3zM128 448H64V384c0-17.7-14.3-32-32-32s-32 14.3-32 32v96c0 17.7 14.3 32 32 32H128c17.7 0 32-14.3 32-32s-14.3-32-32-32zM480 352c-17.7 0-32 14.3-32 32v64H192c-17.7 0-32 14.3-32 32s14.3 32 32 32H480c17.7 0 32-14.3 32-32V384c0-17.7-14.3-32-32-32z" />
                                   </svg>
+                                  Edit
                                 </button>
                                 <button className="action-btn delete-btn" onClick={() => handleDeleteDepartmentClick(dept.id)}>
 
                                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '0.8rem', height: '0.8rem' }}>
                                     <path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z" />
                                   </svg>
+                                  Delete
                                 </button>
                               </div>
                             </td>
@@ -4386,9 +4815,9 @@ html.dark-mode {
                 </div>
               </div>
             </div>
-          )}		
+          )}
 
-				 {currentView === 'assetManagement' && (
+          {currentView === 'assetManagement' && (
             <div className="asset-management-container">
               <div className="asset-management-box">
                 <div className="asset-header">
@@ -4543,603 +4972,123 @@ html.dark-mode {
               </div>
 
             </div>
-          )}									 
-						   
+          )}
+
+          
+          {currentView === 'clientManagement' && (
+            <div className="client-management-container">
+              <div className="client-management-box">
+                <div className="client-management-header-section">
+                  <h2 className="client-management-title">Client Details Management</h2>
+                </div>
+
+                {/* Client Filter Tabs */}
+                <div className="client-filter-tabs">
+                  {[
+                    { label: 'Registered Clients', value: 'registered', count: clients.filter(c => c.displayStatuses.includes('registered')).length, activeBg: 'var(--client-filter-tab-bg-active-registered)', activeColor: 'var(--client-filter-tab-text-active-registered)', badgeBg: 'var(--client-filter-tab-badge-registered)' },
+                    { label: 'Unassigned Clients', value: 'unassigned', count: clients.filter(c => c.displayStatuses.includes('unassigned')).length, activeBg: 'var(--client-filter-tab-bg-active-unassigned)', activeColor: 'var(--client-filter-tab-text-active-unassigned)', badgeBg: 'var(--client-filter-tab-badge-unassigned)' },
+                    { label: 'Active Clients', value: 'active', count: clients.filter(c => c.displayStatuses.includes('active')).length, activeBg: 'var(--client-filter-tab-bg-active-active)', activeColor: 'var(--client-filter-tab-text-active-active)', badgeBg: 'var(--client-filter-tab-badge-active)' },
+                    { label: 'Rejected Clients', value: 'rejected', count: clients.filter(c => c.displayStatuses.includes('rejected')).length, activeBg: 'var(--client-filter-tab-bg-active-rejected)', activeColor: 'var(--client-filter-tab-text-active-rejected)', badgeBg: 'var(--client-filter-tab-badge-rejected)' },
+                    { label: 'Restore Clients', value: 'restored', count: clients.filter(c => c.displayStatuses.includes('restored')).length, activeBg: 'var(--client-filter-tab-bg-active-restored)', activeColor: 'var(--client-filter-tab-text-active-restored)', badgeBg: 'var(--client-filter-tab-badge-restored)' },
+                  ].map((option) => (
+                    <label
+                      key={option.value}
+                      className={`client-filter-tab-item ${option.value}`}
+                      style={{
+                        backgroundColor: clientFilter === option.value ? option.activeBg : 'transparent',
+                        color: clientFilter === option.value ? option.activeColor : 'rgba(51, 65, 85, 1)',
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="client-filter"
+                        value={option.value}
+                        checked={clientFilter === option.value}
+                        onChange={(e) => {
+                          setClientFilter(e.target.value);
+                          setClientSearchTerm('');
+                          // selectedServiceFilter state is intentionally NOT reset here, to maintain selection across tabs
+                        }}
+                      />
+                      <span className="client-filter-tab-label">{option.label}</span>
+                      <span className="badge" style={{ backgroundColor: clientFilter === option.value ? option.badgeBg : '#9AA0A6' }}>
+                        {option.count}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+
+                {/* Search Input and Service Dropdown */}
+                <div className="client-search-and-filter-group">
+                  <div className="client-search-input-group">
+                    <span className="search-icon-wrapper">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" style={{ width: '1rem', height: '1rem' }}>
+                        <path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.1-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z" />
+                      </svg>
+                    </span>
+                    <input
+                      type="text"
+                      id="clientSearch"
+                      placeholder="Search clients by name, email, mobile, job, or country"
+                      className="client-search-input"
+                      value={clientSearchTerm}
+                      onChange={handleClientSearchChange}
+                    />
+                  </div>
+
+
+                  <div className="service-filter-group">
+                    <label htmlFor="serviceFilter" className="form-label" style={{ fontSize: '20px' }}>Services:</label>
+                    <select
+                      id="serviceFilter"
+                      name="serviceFilter"
+
+
+                      className="form-select"
+                      value={selectedServiceFilter}
+                      onChange={(e) => setSelectedServiceFilter(e.target.value)}
+                    >
+                      {serviceOptions.map(option => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                </div>
+
+                {selectedServiceFilter === 'All' ? (
+                  renderAllServiceTables()
+                ) : (
+                  <>
+                    <h4 className="client-table-title">
+                      {clientFilter === 'registered' && `Registered Clients`}
+                      {clientFilter === 'unassigned' && `Unassigned Clients`}
+                      {clientFilter === 'active' && `Active Clients`}
+                      {clientFilter === 'rejected' && `Rejected Clients`}
+                      {clientFilter === 'restored' && `Restored Clients`} ({filteredClients.length})
+                    </h4>
+
+
+                    {renderClientTable(filteredClients, selectedServiceFilter, clientFilter)}
+                  </>
+                )}
+
+              </div>
+            </div>
+          )}
+
         </div>
       </main>
 
-      
-      {/* Client Details Modal */}
-      {isClientDetailsModalOpen && selectedClientForDetails && (
-        <div className="modal-overlay open">
-          <div className="assign-modal-content"> {/* Reusing assign-modal-content for its wider layout */}
-            <div className="assign-modal-header">
 
-              <h3 className="assign-modal-title">Client Details: {selectedClientForDetails.name || selectedClientForDetails.firstName + ' ' + selectedClientForDetails.lastName}</h3>
-
-
-   
- 
-              <button className="assign-modal-close-button" onClick={handleCloseClientDetailsModal}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1.2rem', height: '1.2rem' }}>
-                  <path d="M6.29289 6.29289C6.68342 5.90237 7.31658 5.90237 7.70711 6.29289L12 10.5858L16.2929 6.29289C16.6834 5.90237 17.3166 5.90237 17.7071 6.29289C18.0976 6.68342 18.0976 7.31658 17.7071 7.70711L13.4142 12L17.7071 16.2929C18.0976 16.6834 18.0976 17.3166 17.7071 17.7071C17.3166 18.0976 16.6834 18.0976 16.2929 17.7071L12 13.4142L7.70711 17.7071C5.90237 7.31658 5.90237 6.68342 6.29289 6.29289Z" />
-                </svg>
-              </button>
-            </div>
-
-            {/* Comprehensive Client Details Grid - now read-only form fields */}
-            <div className="client-preview-grid-container">
-              {/* Personal Information */}
-              <div className="client-preview-section">
-                <h4 className="client-preview-section-title">Personal Information</h4>
-                <div className="assign-form-group">
-                  <label>First Name</label>
-                  <div className="read-only-value">{selectedClientForDetails.firstName || '-'}</div>
-                </div>
-                <div className="assign-form-group">
-                  <label>Middle Name</label>
-                  <div className="read-only-value">{selectedClientForDetails.middleName || '-'}</div>
-                </div>
-                <div className="assign-form-group">
-                  <label>Last Name</label>
-                  <div className="read-only-value">{selectedClientForDetails.lastName || '-'}</div>
-                </div>
-                <div className="assign-form-group">
-                  <label>Date of Birth</label>
-                  <div className="read-only-value">{selectedClientForDetails.dob || '-'}</div>
-                </div>
-                <div className="assign-form-group">
-                  <label>Gender</label>
-                  <div className="read-only-value">{selectedClientForDetails.gender || '-'}</div>
-                </div>
-                <div className="assign-form-group">
-                  <label>Ethnicity</label>
-                  <div className="read-only-value">{selectedClientForDetails.ethnicity || '-'}</div>
-                </div>
-              </div>
-
-              {/* Contact Information */}
-              <div className="client-preview-section">
-                <h4 className="client-preview-section-title">Contact Information</h4>
-                <div className="assign-form-group">
-                  <label>Address</label>
-                  <div className="read-only-value" style={{ minHeight: '60px' }}>{selectedClientForDetails.address || '-'}</div>
-                </div>
-                <div className="assign-form-group">
-                  <label>Zip Code</label>
-                  <div className="read-only-value">{selectedClientForDetails.zipCode || '-'}</div>
-                </div>
-                <div className="assign-form-group">
-                  <label>Mobile</label>
-                  <div className="read-only-value">{selectedClientForDetails.mobile || '-'}</div>
-                </div>
-                <div className="assign-form-group">
-                  <label>Email</label>
-                  <div className="read-only-value">{selectedClientForDetails.email || '-'}</div>
-                </div>
-                <div className="assign-form-group">
-                  <label>Country</label>
-                  <div className="read-only-value">{selectedClientForDetails.country || '-'}</div>
-                </div>
-              </div>
-
-              {/* Service Details */}
-              <div className="client-preview-section">
-                <h4 className="client-preview-section-title">Service Details</h4>
-                <div className="assign-form-group">
-                  <label>Service</label>
-                  <div className="read-only-value">{selectedClientForDetails.service || '-'}</div>
-                </div>
-                {selectedClientForDetails.subServices && selectedClientForDetails.subServices.length > 0 && (
-                  <div className="assign-form-group">
-                    <label>What Service do you want?</label>
-                    <div className="read-only-value">
-                      {selectedClientForDetails.subServices.join(', ') || '-'}
-                    </div>
-                  </div>
-                )}
-                <div className="assign-form-group">
-                  <label>Who are you?</label>
-                  <div className="read-only-value">{selectedClientForDetails.userType || '-'}</div>
-                </div>
-              </div>
-
-              {/* Job Preferences & Status */}
-              <div className="client-preview-section">
-                <h4 className="client-preview-section-title">Job Preferences & Status</h4>
-                <div className="assign-form-group">
-                  <label>Security Clearance</label>
-                  <div className="read-only-value">{selectedClientForDetails.securityClearance || '-'}</div>
-                </div>
-                {selectedClientForDetails.securityClearance === 'Yes' && (
-                  <div className="assign-form-group">
-                    <label>Clearance Level</label>
-                    <div className="read-only-value">{selectedClientForDetails.clearanceLevel || '-'}</div>
-                  </div>
-                )}
-                <div className="assign-form-group">
-                  <label>Willing to Relocate</label>
-                  <div className="read-only-value">{selectedClientForDetails.willingToRelocate || '-'}</div>
-                </div>
-                <div className="assign-form-group">
-                  <label>Work Preference</label>
-                  <div className="read-only-value">{selectedClientForDetails.workPreference || '-'}</div>
-                </div>
-                <div className="assign-form-group">
-                  <label>Restricted Companies</label>
-                  <div className="read-only-value">{selectedClientForDetails.restrictedCompanies || '-'}</div>
-                </div>
-                <div className="assign-form-group">
-                  <label>Jobs to Apply</label>
-                  <div className="read-only-value">{selectedClientForDetails.jobsToApply || '-'}</div>
-                </div>
-                <div className="assign-form-group">
-                  <label>Current Salary</label>
-                  <div className="read-only-value">${selectedClientForDetails.currentSalary || '-'}</div>
-                </div>
-                <div className="assign-form-group">
-                  <label>Expected Salary</label>
-                  <div className="read-only-value">${selectedClientForDetails.expectedSalary || '-'}</div>
-                </div>
-                <div className="assign-form-group">
-                  <label>Visa Status</label>
-                  <div className="read-only-value">{selectedClientForDetails.visaStatus || '-'}</div>
-                </div>
-                {selectedClientForDetails.visaStatus === 'Other' && (
-                  <div className="assign-form-group">
-                    <label>Other Visa Status</label>
-                    <div className="read-only-value">{selectedClientForDetails.otherVisaStatus || '-'}</div>
-                  </div>
-                )}
-                <div className="assign-form-group">
-                  <label>Priority</label>
-                  <div className="read-only-value">{selectedClientForDetails.priority || '-'}</div>
-                </div>
-                <div className="assign-form-group">
-                  <label>Status</label>
-                  <div className="read-only-value">{selectedClientForDetails.status || '-'}</div>
-                </div>
-              </div>
-
-              {/* Education Details */}
-              <div className="client-preview-section">
-                <h4 className="client-preview-section-title">Education Details</h4>
-                <div className="assign-form-group">
-                  <label>School Name</label>
-                  <div className="read-only-value">{selectedClientForDetails.schoolName || '-'}</div>
-                </div>
-                <div className="assign-form-group">
-                  <label>School Address</label>
-                  <div className="read-only-value" style={{ minHeight: '60px' }}>{selectedClientForDetails.schoolAddress || '-'}</div>
-                </div>
-                <div className="assign-form-group">
-                  <label>School Phone</label>
-                  <div className="read-only-value">{selectedClientForDetails.schoolPhone || '-'}</div>
-                </div>
-                <div className="assign-form-group">
-                  <label>Course of Study</label>
-                  <div className="read-only-value">{selectedClientForDetails.courseOfStudy || '-'}</div>
-                </div>
-                <div className="assign-form-group">
-                  <label>Graduation Date</label>
-                  <div className="read-only-value">{selectedClientForDetails.graduationDate || '-'}</div>
-                </div>
-              </div>
-
-              {/* Employment Details */}
-              <div className="client-preview-section">
-                <h4 className="client-preview-section-title">Employment Details</h4>
-                <div className="assign-form-group">
-                  <label>Current Company</label>
-                  <div className="read-only-value">{selectedClientForDetails.currentCompany || '-'}</div>
-                </div>
-                <div className="assign-form-group">
-                  <label>Current Designation</label>
-                  <div className="read-only-value">{selectedClientForDetails.currentDesignation || '-'}</div>
-                </div>
-                <div className="assign-form-group">
-                  <label>Preferred Interview Time</label>
-                  <div className="read-only-value">{selectedClientForDetails.preferredInterviewTime || '-'}</div>
-                </div>
-                <div className="assign-form-group">
-                  <label>Earliest Joining Date</label>
-                  <div className="read-only-value">{selectedClientForDetails.earliestJoiningDate || '-'}</div>
-                </div>
-                <div className="assign-form-group">
-                  <label>Relieving Date</label>
-                  <div className="read-only-value">{selectedClientForDetails.relievingDate || '-'}</div>
-                </div>
-              </div>
-
-              {/* References */}
-              <div className="client-preview-section">
-                <h4 className="client-preview-section-title">References</h4>
-                <div className="assign-form-group">
-                  <label>Reference Name</label>
-                  <div className="read-only-value">{selectedClientForDetails.referenceName || '-'}</div>
-                </div>
-                <div className="assign-form-group">
-                  <label>Reference Phone</label>
-                  <div className="read-only-value">{selectedClientForDetails.referencePhone || '-'}</div>
-                </div>
-                <div className="assign-form-group">
-                  <label>Reference Address</label>
-                  <div className="read-only-value" style={{ minHeight: '60px' }}>{selectedClientForDetails.referenceAddress || '-'}</div>
-                </div>
-                <div className="assign-form-group">
-                  <label>Reference Email</label>
-                  <div className="read-only-value">{selectedClientForDetails.referenceEmail || '-'}</div>
-                </div>
-                <div className="assign-form-group">
-                  <label>Reference Role</label>
-                  <div className="read-only-value">{selectedClientForDetails.referenceRole || '-'}</div>
-                </div>
-              </div>
-
-              {/* Job Portal Accounts */}
-              <div className="client-preview-section">
-                <h4 className="client-preview-section-title">Job Portal Accounts</h4>
-
-                <div className="assign-form-group">
-                  <label>Account Name</label>
-                  <div className="read-only-value">{selectedClientForDetails.jobPortalAccountName || '-'}</div>
-                </div>
-                <div className="assign-form-group">
-                  <label>Credentials</label>
-                  <div className="read-only-value">{selectedClientForDetails.jobPortalCredentials || '-'}</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Skills section for viewing */}
-            {selectedClientForDetails.technologySkills && (
-              <div className="client-preview-skills-section">
-                <h4 className="assign-modal-title" style={{ marginBottom: '10px', fontSize: '18px' }}>Skills (Comma Separated)</h4>
-                <div className="assign-form-group">
-                  <div className="read-only-value" style={{ minHeight: '80px', alignItems: 'flex-start' }}>
-                    {Array.isArray(selectedClientForDetails.technologySkills) ? selectedClientForDetails.technologySkills.join(', ') : selectedClientForDetails.technologySkills || '-'}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="assign-form-actions">
-              <button className="assign-form-button assign" onClick={handleEditClientDetailsClick}>
-
-
-   
-                Edit Client Details
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-
-      {/* Edit Client Modal (now with matching style) */}
-      {isEditClientModalOpen && currentClientToEdit && (
-        <div className="modal-overlay open">
-          <div className="assign-modal-content"> {/* Reusing assign-modal-content for its wider layout */}
-            <div className="assign-modal-header">
-
-              <h3 className="assign-modal-title">Edit Client Details: {currentClientToEdit.name || currentClientToEdit.firstName + ' ' + currentClientToEdit.lastName}</h3>
-
-
-              <button className="assign-modal-close-button" onClick={handleCloseEditClientModal}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1.2rem', height: '1.2rem' }}>
-                  <path d="M6.29289 6.29289C6.68342 5.90237 7.31658 5.90237 7.70711 6.29289L12 10.5858L16.2929 6.29289C16.6834 5.90237 17.3166 5.90237 17.7071 6.29289C18.0976 6.68342 18.0976 7.31658 17.7071 7.70711L13.4142 12L17.7071 16.2929C18.0976 16.6834 18.0976 17.3166 17.7071 17.7071C17.3166 18.0976 16.6834 18.0976 16.2929 17.7071L12 13.4142L7.70711 17.7071C5.90237 7.31658 5.90237 6.68342 6.29289 6.29289Z" />
-                </svg>
-              </button>
-            </div>
-
-            {/* Comprehensive Client Details Grid - now with input fields */}
-            <div className="client-preview-grid-container">
-              {/* Personal Information */}
-              <div className="client-preview-section">
-                <h4 className="client-preview-section-title">Personal Information</h4>
-
-                <div className="assign-form-group">
-                  <label htmlFor="firstName">First Name</label>
-                  <input type="text" id="firstName" name="firstName" value={currentClientToEdit.firstName || ''} onChange={handleEditClientChange} />
-                </div>
-                <div className="assign-form-group">
-                  <label htmlFor="middleName">Middle Name</label>
-                  <input type="text" id="middleName" name="middleName" value={currentClientToEdit.middleName || ''} onChange={handleEditClientChange} />
-                </div>
-                <div className="assign-form-group">
-                  <label htmlFor="lastName">Last Name</label>
-                  <input type="text" id="lastName" name="lastName" value={currentClientToEdit.lastName || ''} onChange={handleEditClientChange} />
-                </div>
-                <div className="assign-form-group">
-                  <label htmlFor="dob">Date of Birth</label>
-                  <input type="date" id="dob" name="dob" value={currentClientToEdit.dob || ''} onChange={handleEditClientChange} />
-                </div>
-                <div className="assign-form-group">
-                  <label htmlFor="gender">Gender</label>
-                  <select id="gender" name="gender" value={currentClientToEdit.gender || ''} onChange={handleEditClientChange}>
-                    <option value="">Select</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-                <div className="assign-form-group">
-                  <label htmlFor="ethnicity">Ethnicity</label>
-                  <input type="text" id="ethnicity" name="ethnicity" value={currentClientToEdit.ethnicity || ''} onChange={handleEditClientChange} />
-                </div>
-              </div>
-
-              {/* Contact Information */}
-              <div className="client-preview-section">
-                <h4 className="client-preview-section-title">Contact Information</h4>
-
-                <div className="assign-form-group">
-                  <label htmlFor="address">Address</label>
-                  <textarea id="address" name="address" value={currentClientToEdit.address || ''} onChange={handleEditClientChange}></textarea>
-                </div>
-                <div className="assign-form-group">
-                  <label htmlFor="zipCode">Zip Code</label>
-                  <input type="text" id="zipCode" name="zipCode" value={currentClientToEdit.zipCode || ''} onChange={handleEditClientChange} />
-                </div>
-                <div className="assign-form-group">
-                  <label htmlFor="mobile">Mobile</label>
-                  <input type="tel" id="mobile" name="mobile" value={currentClientToEdit.mobile || ''} onChange={handleEditClientChange} />
-                </div>
-                <div className="assign-form-group">
-                  <label htmlFor="email">Email</label>
-                  <input type="email" id="email" name="email" value={currentClientToEdit.email || ''} onChange={handleEditClientChange} />
-                </div>
-                <div className="assign-form-group">
-                  <label htmlFor="country">Country</label>
-                  <input type="text" id="country" name="country" value={currentClientToEdit.country || ''} onChange={handleEditClientChange} />
-                </div>
-              </div>
-
-              {/* Service Details */}
-              <div className="client-preview-section">
-                <h4 className="client-preview-section-title">Service Details</h4>
-                <div className="assign-form-group">
-                  <label htmlFor="service">Service</label>
-                  <select id="service" name="service" value={currentClientToEdit.service || ''} onChange={handleEditClientChange}>
-                    <option value="">Select Service</option>
-                    {serviceOptions.filter(opt => opt !== 'All').map(option => (
-                      <option key={option} value={option}>{option}</option>
-                    ))}
-                  </select>
-                </div>
-                {(currentClientToEdit.service === 'Mobile Development' ||
-                  currentClientToEdit.service === 'Web Development' ||
-                  currentClientToEdit.service === 'Digital Marketing' ||
-                  currentClientToEdit.service === 'IT Talent Supply') && (
-                    <div className="assign-form-group">
-                      <label htmlFor="subServices">What Service do you want? (Comma Separated)</label>
-                      <textarea
-                        id="subServices"
-                        name="subServices"
-                        value={Array.isArray(currentClientToEdit.subServices) ? currentClientToEdit.subServices.join(', ') : currentClientToEdit.subServices || ''}
-                        onChange={(e) => setCurrentClientToEdit(prev => ({ ...prev, subServices: e.target.value.split(',').map(s => s.trim()) }))}
-                      ></textarea>
-                    </div>
-                  )}
-                <div className="assign-form-group">
-                  <label htmlFor="userType">Who are you?</label>
-                  <input type="text" id="userType" name="userType" value={currentClientToEdit.userType || ''} onChange={handleEditClientChange} />
-                </div>
-              </div>
-
-              {/* Job Preferences & Status */}
-
-              <div className="client-preview-section">
-                <h4 className="client-preview-section-title">Job Preferences & Status</h4>
-
-
- 
-                <div className="assign-form-group">
-                  <label htmlFor="securityClearance">Security Clearance</label>
-                  <select id="securityClearance" name="securityClearance" value={currentClientToEdit.securityClearance || 'No'} onChange={handleEditClientChange}>
-                    <option value="Yes">Yes</option>
-                    <option value="No">No</option>
-                  </select>
-
-
-  
-																														   
-																																																					 
-                </div>
-                {currentClientToEdit.securityClearance === 'Yes' && (
-                  <div className="assign-form-group">
-                    <label htmlFor="clearanceLevel">Clearance Level</label>
-                    <input type="text" id="clearanceLevel" name="clearanceLevel" value={currentClientToEdit.clearanceLevel || ''} onChange={handleEditClientChange} />
-                  </div>
-                )}
-                <div className="assign-form-group">
-                  <label htmlFor="willingToRelocate">Willing to Relocate</label>
-                  <select id="willingToRelocate" name="willingToRelocate" value={currentClientToEdit.willingToRelocate || 'No'} onChange={handleEditClientChange}>
-                    <option value="Yes">Yes</option>
-                    <option value="No">No</option>
-                  </select>
-                </div>
-                <div className="assign-form-group">
-                  <label htmlFor="workPreference">Work Preference</label>
-                  <input type="text" id="workPreference" name="workPreference" value={currentClientToEdit.workPreference || ''} onChange={handleEditClientChange} />
-                </div>
-                <div className="assign-form-group">
-                  <label htmlFor="restrictedCompanies">Restricted Companies</label>
-                  <input type="text" id="restrictedCompanies" name="restrictedCompanies" value={currentClientToEdit.restrictedCompanies || ''} onChange={handleEditClientChange} />
-                </div>
-                <div className="assign-form-group">
-                  <label htmlFor="jobsToApply">Jobs to Apply</label>
-                  <input type="text" id="jobsToApply" name="jobsToApply" value={currentClientToEdit.jobsToApply || ''} onChange={handleEditClientChange} />
-                </div>
-  
-
-
-   
-                <div className="assign-form-group">
- 
-                  <label htmlFor="currentSalary">Current Salary</label>
-                  <input type="text" id="currentSalary" name="currentSalary" value={currentClientToEdit.currentSalary || ''} onChange={handleEditClientChange} />
-                </div>
-                <div className="assign-form-group">
-                  <label htmlFor="expectedSalary">Expected Salary</label>
-                  <input type="text" id="expectedSalary" name="expectedSalary" value={currentClientToEdit.expectedSalary || ''} onChange={handleEditClientChange} />
-                </div>
-                <div className="assign-form-group">
-                  <label htmlFor="visaStatus">Visa Status</label>
-                  <input type="text" id="visaStatus" name="visaStatus" value={currentClientToEdit.visaStatus || ''} onChange={handleEditClientChange} />
-                </div>
-                {currentClientToEdit.visaStatus === 'Other' && (
-                  <div className="assign-form-group">
-                    <label htmlFor="otherVisaStatus">Other Visa Status</label>
-                    <input type="text" id="otherVisaStatus" name="otherVisaStatus" value={currentClientToEdit.otherVisaStatus || ''} onChange={handleEditClientChange} />
-                  </div>
-                )}
-                <div className="assign-form-group">
-                  <label htmlFor="priority">Priority</label>
-                  <select id="priority" name="priority" value={currentClientToEdit.priority || 'medium'} onChange={handleEditClientChange}>
-                    <option value="high">High</option>
- 
-                    <option value="medium">Medium</option>
-                    <option value="low">Low</option>
-                  </select>
-                </div>
-                <div className="assign-form-group">
-                  <label htmlFor="status">Status</label>
-                  <input type="text" id="status" name="status" value={currentClientToEdit.status || ''} onChange={handleEditClientChange} />
-
-
-  
-   
-                </div>
-              </div>
-
-              {/* Education Details */}
-              <div className="client-preview-section">
-                <h4 className="client-preview-section-title">Education Details</h4>
-                <div className="assign-form-group">
-                  <label htmlFor="schoolName">School Name</label>
-                  <input type="text" id="schoolName" name="schoolName" value={currentClientToEdit.schoolName || ''} onChange={handleEditClientChange} />
-                </div>
-                <div className="assign-form-group">
-                  <label htmlFor="schoolAddress">School Address</label>
-                  <textarea id="schoolAddress" name="schoolAddress" value={currentClientToEdit.schoolAddress || ''} onChange={handleEditClientChange}></textarea>
-
-
-  
-   
-                </div>
-                <div className="assign-form-group">
-                  <label htmlFor="schoolPhone">School Phone</label>
-                  <input type="tel" id="schoolPhone" name="schoolPhone" value={currentClientToEdit.schoolPhone || ''} onChange={handleEditClientChange} />
-                </div>
-                <div className="assign-form-group">
-                  <label htmlFor="courseOfStudy">Course of Study</label>
-                  <input type="text" id="courseOfStudy" name="courseOfStudy" value={currentClientToEdit.courseOfStudy || ''} onChange={handleEditClientChange} />
-                </div>
-                <div className="assign-form-group">
-                  <label htmlFor="graduationDate">Graduation Date</label>
-                  <input type="date" id="graduationDate" name="graduationDate" value={currentClientToEdit.graduationDate || ''} onChange={handleEditClientChange} />
-                </div>
-              </div>
-
-              {/* Employment Details */}
-              <div className="client-preview-section">
-                <h4 className="client-preview-section-title">Employment Details</h4>
-
-                <div className="assign-form-group">
-                  <label htmlFor="currentCompany">Current Company</label>
-                  <input type="text" id="currentCompany" name="currentCompany" value={currentClientToEdit.currentCompany || ''} onChange={handleEditClientChange} />
-                </div>
-                <div className="assign-form-group">
-                  <label htmlFor="currentDesignation">Current Designation</label>
-                  <input type="text" id="currentDesignation" name="currentDesignation" value={currentClientToEdit.currentDesignation || ''} onChange={handleEditClientChange} />
-                </div>
-                <div className="assign-form-group">
-                  <label htmlFor="preferredInterviewTime">Preferred Interview Time</label>
-                  <input type="text" id="preferredInterviewTime" name="preferredInterviewTime" value={currentClientToEdit.preferredInterviewTime || ''} onChange={handleEditClientChange} />
-                </div>
-                <div className="assign-form-group">
-                  <label htmlFor="earliestJoiningDate">Earliest Joining Date</label>
-                  <input type="date" id="earliestJoiningDate" name="earliestJoiningDate" value={currentClientToEdit.earliestJoiningDate || ''} onChange={handleEditClientChange} />
-                </div>
-                <div className="assign-form-group">
-                  <label htmlFor="relievingDate">Relieving Date</label>
-                  <input type="date" id="relievingDate" name="relievingDate" value={currentClientToEdit.relievingDate || ''} onChange={handleEditClientChange} />
-                </div>
-              </div>
-
-              {/* References */}
-              <div className="client-preview-section">
-                <h4 className="client-preview-section-title">References</h4>
-                <div className="assign-form-group">
-                  <label htmlFor="referenceName">Reference Name</label>
-                  <input type="text" id="referenceName" name="referenceName" value={currentClientToEdit.referenceName || ''} onChange={handleEditClientChange} />
-                </div>
-                <div className="assign-form-group">
-                  <label htmlFor="referencePhone">Reference Phone</label>
-                  <input type="tel" id="referencePhone" name="referencePhone" value={currentClientToEdit.referencePhone || ''} onChange={handleEditClientChange} />
-                </div>
-                <div className="assign-form-group">
-                  <label htmlFor="referenceAddress">Reference Address</label>
-                  <textarea id="referenceAddress" name="referenceAddress" value={currentClientToEdit.referenceAddress || ''} onChange={handleEditClientChange}></textarea>
-                </div>
-                <div className="assign-form-group">
-                  <label htmlFor="referenceEmail">Reference Email</label>
-                  <input type="email" id="referenceEmail" name="referenceEmail" value={currentClientToEdit.referenceEmail || ''} onChange={handleEditClientChange} />
-                </div>
-                <div className="assign-form-group">
-                  <label htmlFor="referenceRole">Reference Role</label>
-                  <input type="text" id="referenceRole" name="referenceRole" value={currentClientToEdit.referenceRole || ''} onChange={handleEditClientChange} />
-                </div>
-              </div>
-
-              {/* Job Portal Accounts */}
-              <div className="client-preview-section">
-                <h4 className="client-preview-section-title">Job Portal Accounts</h4>
-
-                <div className="assign-form-group">
-                  <label htmlFor="jobPortalAccountName">Account Name</label>
-                  <input type="text" id="jobPortalAccountName" name="jobPortalAccountName" value={currentClientToEdit.jobPortalAccountName || ''} onChange={handleEditClientChange} />
-                </div>
-                <div className="assign-form-group">
-                  <label htmlFor="jobPortalCredentials">Credentials</label>
-                  <input type="text" id="jobPortalCredentials" name="jobPortalCredentials" value={currentClientToEdit.jobPortalCredentials || ''} onChange={handleEditClientChange} />
-                </div>
-              </div>
-
-            </div>
-
-            {/* Skills section for editing */}
-            {currentClientToEdit.technologySkills && (
-              <div className="client-preview-skills-section">
-                <h4 className="assign-modal-title" style={{ marginBottom: '10px', fontSize: '18px' }}>Skills (Comma Separated)</h4>
-                <div className="assign-form-group">
-                  <textarea
-                    id="skills"
-                    name="technologySkills" // Changed to technologySkills to match the client object
-                    value={Array.isArray(currentClientToEdit.technologySkills) ? currentClientToEdit.technologySkills.join(', ') : currentClientToEdit.technologySkills || ''}
-                    onChange={handleEditClientChange} // Use the general handler
-                  ></textarea>
-                </div>
-              </div>
-            )}
-
-            <div className="assign-form-actions">
-              <button className="assign-form-button cancel" onClick={handleCloseEditClientModal}>
-                Cancel
-              </button>
-              <button className="assign-form-button assign" onClick={handleSaveClientDetails}>
-                Save Changes
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+    
 
 
 
 
- {/* Create New employee Account Modal */}
+      {/* Create New employee Account Modal */}
       {isAddemployeeModalOpen && (
         <div className="modal-overlay open">
           <div className="modal-content">
@@ -5456,10 +5405,76 @@ html.dark-mode {
         </div>
       )}
 
+      {/* Department Details Modal */}
+      {isDepartmentDetailsModalOpen && selectedDepartmentForDetails && (
+        <div className="modal-overlay open">
+          <div className="modal-content department-details-modal-content">
+            <div className="modal-header">
+              <div>
+                <h3 className="modal-title">Department Details: {selectedDepartmentForDetails.name}</h3>
+                <p className="modal-subtitle">Comprehensive information about the department.</p>
+              </div>
+              <button className="modal-close-btn" onClick={handleCloseDepartmentDetailsModal}>&times;</button>
+            </div>
+            <div className="details-grid">
+              <div className="detail-item">
+                <span className="detail-label">Description</span>
+                <span className="detail-value">{selectedDepartmentForDetails.description}</span>
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">Head of Department</span>
+                <span className="detail-value">{selectedDepartmentForDetails.head}</span>
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">Status</span>
+                <span className="detail-value">
+                  <span className="status-tag" style={{
+                    backgroundColor: getRoleTagBg(selectedDepartmentForDetails.status),
+                    color: getRoleTagText(selectedDepartmentForDetails.status),
+                  }}>
+                    {selectedDepartmentForDetails.status}
+                  </span>
+                </span>
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">Created Date</span>
+                <span className="detail-value">{selectedDepartmentForDetails.createdDate}</span>
+              </div>
+            </div>
+
+            <div className="employees-list-section">
+              <h4>Employees in this Department ({employeesInSelectedDepartment.length})</h4>
+              <div className="employees-list">
+                {employeesInSelectedDepartment.length > 0 ? (
+                  employeesInSelectedDepartment.map(employee => (
+                    <div key={employee.id} className="employee-list-item">
+                      <span>{employee.name} ({employee.email})</span>
+                      <span className="role-tag" style={{
+                        backgroundColor: getRoleTagBg(employee.roles[0]),
+                        color: getRoleTagText(employee.roles[0]),
+                      }}>
+                        {employee.roles[0]}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <p style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>No employees currently assigned to this department.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="modal-footer modal-form-full-width">
+              <button type="button" className="confirm-cancel-btn" onClick={handleCloseDepartmentDetailsModal}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
       {/* Edit Department Modal */}
       {isEditDepartmentModalOpen && currentDepartmentToEdit && (
         <div className="modal-overlay open">
-          <div className="modal-content">
+          <div className="modal-content" style={{ overflowY: 'auto', maxHeight: '80vh' }}>
             <div className="modal-header">
               <div>
                 <h3 className="modal-title">Edit Department</h3>
@@ -5548,6 +5563,44 @@ html.dark-mode {
                   onChange={handleEditDepartmentChange}
                 />
               </div>
+
+              {/* Employee Management Section in Edit Department Modal */}
+              <div className="edit-department-modal-employees">
+                <h4>Manage Employees in this Department</h4>
+                <div className="employee-selection-box">
+                  <div>
+                    <h5>Currently Assigned Employees ({employees.filter(emp => employeesToAddInDepartment.includes(emp.id)).length})</h5>
+                    <div className="employee-list-scroll">
+                      {employees.filter(emp => employeesToAddInDepartment.includes(emp.id)).length > 0 ? (
+                        employees.filter(emp => employeesToAddInDepartment.includes(emp.id)).map(emp => (
+                          <div key={emp.id} className="employee-list-item-manage">
+                            <span>{emp.name}</span>
+                            <button type="button" className="remove" onClick={() => handleRemoveEmployeeFromDepartment(emp.id)}>Remove</button>
+                          </div>
+                        ))
+                      ) : (
+                        <p style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '1rem' }}>No employees assigned.</p>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <h5>Available Employees to Add ({availableEmployeesForDepartment.length})</h5>
+                    <div className="employee-list-scroll">
+                      {availableEmployeesForDepartment.length > 0 ? (
+                        availableEmployeesForDepartment.map(emp => (
+                          <div key={emp.id} className="employee-list-item-manage">
+                            <span>{emp.name}</span>
+                            <button type="button" onClick={() => handleAddEmployeeToDepartment(emp.id)}>Add</button>
+                          </div>
+                        ))
+                      ) : (
+                        <p style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '1rem' }}>No more employees to add.</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div className="modal-footer modal-form-full-width">
                 <button type="button" className="confirm-cancel-btn" onClick={handleCloseEditDepartmentModal}>Cancel</button>
                 <button type="submit" className="create-employee-btn">Update Department</button>
@@ -5557,7 +5610,7 @@ html.dark-mode {
         </div>
       )}
 
- 
+
       {/* Generic Confirmation Modal */}
       {isConfirmUpdateModalOpen && (
         <div className="modal-overlay open">
@@ -5586,6 +5639,593 @@ html.dark-mode {
               {confirmActionType === null && ( // For "no changes" message
                 <button type="button" className="create-employee-btn" onClick={() => setIsConfirmUpdateModalOpen(false)}>OK</button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+        {/* Client Details Modal */}
+      {isClientDetailsModalOpen && selectedClientForDetails && (
+        <div className="modal-overlay open">
+          <div className="assign-modal-content"> {/* Reusing assign-modal-content for its wider layout */}
+            <div className="assign-modal-header">
+
+              <h3 className="assign-modal-title">Client Details: {selectedClientForDetails.name || selectedClientForDetails.firstName + ' ' + selectedClientForDetails.lastName}</h3>
+
+
+
+
+              <button className="assign-modal-close-button" onClick={handleCloseClientDetailsModal}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1.2rem', height: '1.2rem' }}>
+                  <path d="M6.29289 6.29289C6.68342 5.90237 7.31658 5.90237 7.70711 6.29289L12 10.5858L16.2929 6.29289C16.6834 5.90237 17.3166 5.90237 17.7071 6.29289C18.0976 6.68342 18.0976 7.31658 17.7071 7.70711L13.4142 12L17.7071 16.2929C18.0976 16.6834 18.0976 17.3166 17.7071 17.7071C17.3166 18.0976 16.6834 18.0976 16.2929 17.7071L12 13.4142L7.70711 17.7071C5.90237 7.31658 5.90237 6.68342 6.29289 6.29289Z" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Comprehensive Client Details Grid - now read-only form fields */}
+            <div className="client-preview-grid-container">
+              {/* Personal Information */}
+              <div className="client-preview-section">
+                <h4 className="client-preview-section-title">Personal Information</h4>
+                <div className="assign-form-group">
+                  <label>First Name</label>
+                  <div className="read-only-value">{selectedClientForDetails.firstName || '-'}</div>
+                </div>
+                <div className="assign-form-group">
+                  <label>Middle Name</label>
+                  <div className="read-only-value">{selectedClientForDetails.middleName || '-'}</div>
+                </div>
+                <div className="assign-form-group">
+                  <label>Last Name</label>
+                  <div className="read-only-value">{selectedClientForDetails.lastName || '-'}</div>
+                </div>
+                <div className="assign-form-group">
+                  <label>Date of Birth</label>
+                  <div className="read-only-value">{selectedClientForDetails.dob || '-'}</div>
+                </div>
+                <div className="assign-form-group">
+                  <label>Gender</label>
+                  <div className="read-only-value">{selectedClientForDetails.gender || '-'}</div>
+                </div>
+                <div className="assign-form-group">
+                  <label>Ethnicity</label>
+                  <div className="read-only-value">{selectedClientForDetails.ethnicity || '-'}</div>
+                </div>
+              </div>
+
+              {/* Contact Information */}
+              <div className="client-preview-section">
+                <h4 className="client-preview-section-title">Contact Information</h4>
+                <div className="assign-form-group">
+                  <label>Address</label>
+                  <div className="read-only-value" style={{ minHeight: '60px' }}>{selectedClientForDetails.address || '-'}</div>
+                </div>
+                <div className="assign-form-group">
+                  <label>Zip Code</label>
+                  <div className="read-only-value">{selectedClientForDetails.zipCode || '-'}</div>
+                </div>
+                <div className="assign-form-group">
+                  <label>Mobile</label>
+                  <div className="read-only-value">{selectedClientForDetails.mobile || '-'}</div>
+                </div>
+                <div className="assign-form-group">
+                  <label>Email</label>
+                  <div className="read-only-value">{selectedClientForDetails.email || '-'}</div>
+                </div>
+                <div className="assign-form-group">
+                  <label>Country</label>
+                  <div className="read-only-value">{selectedClientForDetails.country || '-'}</div>
+                </div>
+              </div>
+
+              {/* Service Details */}
+              <div className="client-preview-section">
+                <h4 className="client-preview-section-title">Service Details</h4>
+                <div className="assign-form-group">
+                  <label>Service</label>
+                  <div className="read-only-value">{selectedClientForDetails.service || '-'}</div>
+                </div>
+                {selectedClientForDetails.subServices && selectedClientForDetails.subServices.length > 0 && (
+                  <div className="assign-form-group">
+                    <label>What Service do you want?</label>
+                    <div className="read-only-value">
+                      {selectedClientForDetails.subServices.join(', ') || '-'}
+                    </div>
+                  </div>
+                )}
+                <div className="assign-form-group">
+                  <label>Who are you?</label>
+                  <div className="read-only-value">{selectedClientForDetails.userType || '-'}</div>
+                </div>
+              </div>
+
+              {/* Job Preferences & Status */}
+              <div className="client-preview-section">
+                <h4 className="client-preview-section-title">Job Preferences & Status</h4>
+                <div className="assign-form-group">
+                  <label>Security Clearance</label>
+                  <div className="read-only-value">{selectedClientForDetails.securityClearance || '-'}</div>
+                </div>
+                {selectedClientForDetails.securityClearance === 'Yes' && (
+                  <div className="assign-form-group">
+                    <label>Clearance Level</label>
+                    <div className="read-only-value">{selectedClientForDetails.clearanceLevel || '-'}</div>
+                  </div>
+                )}
+                <div className="assign-form-group">
+                  <label>Willing to Relocate</label>
+                  <div className="read-only-value">{selectedClientForDetails.willingToRelocate || '-'}</div>
+                </div>
+                <div className="assign-form-group">
+                  <label>Work Preference</label>
+                  <div className="read-only-value">{selectedClientForDetails.workPreference || '-'}</div>
+                </div>
+                <div className="assign-form-group">
+                  <label>Restricted Companies</label>
+                  <div className="read-only-value">{selectedClientForDetails.restrictedCompanies || '-'}</div>
+                </div>
+                <div className="assign-form-group">
+                  <label>Jobs to Apply</label>
+                  <div className="read-only-value">{selectedClientForDetails.jobsToApply || '-'}</div>
+                </div>
+                <div className="assign-form-group">
+                  <label>Current Salary</label>
+                  <div className="read-only-value">${selectedClientForDetails.currentSalary || '-'}</div>
+                </div>
+                <div className="assign-form-group">
+                  <label>Expected Salary</label>
+                  <div className="read-only-value">${selectedClientForDetails.expectedSalary || '-'}</div>
+                </div>
+                <div className="assign-form-group">
+                  <label>Visa Status</label>
+                  <div className="read-only-value">{selectedClientForDetails.visaStatus || '-'}</div>
+                </div>
+                {selectedClientForDetails.visaStatus === 'Other' && (
+                  <div className="assign-form-group">
+                    <label>Other Visa Status</label>
+                    <div className="read-only-value">{selectedClientForDetails.otherVisaStatus || '-'}</div>
+                  </div>
+                )}
+                <div className="assign-form-group">
+                  <label>Priority</label>
+                  <div className="read-only-value">{selectedClientForDetails.priority || '-'}</div>
+                </div>
+                <div className="assign-form-group">
+                  <label>Status</label>
+                  <div className="read-only-value">{selectedClientForDetails.status || '-'}</div>
+                </div>
+              </div>
+
+              {/* Education Details */}
+              <div className="client-preview-section">
+                <h4 className="client-preview-section-title">Education Details</h4>
+                <div className="assign-form-group">
+                  <label>School Name</label>
+                  <div className="read-only-value">{selectedClientForDetails.schoolName || '-'}</div>
+                </div>
+                <div className="assign-form-group">
+                  <label>School Address</label>
+                  <div className="read-only-value" style={{ minHeight: '60px' }}>{selectedClientForDetails.schoolAddress || '-'}</div>
+                </div>
+                <div className="assign-form-group">
+                  <label>School Phone</label>
+                  <div className="read-only-value">{selectedClientForDetails.schoolPhone || '-'}</div>
+                </div>
+                <div className="assign-form-group">
+                  <label>Course of Study</label>
+                  <div className="read-only-value">{selectedClientForDetails.courseOfStudy || '-'}</div>
+                </div>
+                <div className="assign-form-group">
+                  <label>Graduation Date</label>
+                  <div className="read-only-value">{selectedClientForDetails.graduationDate || '-'}</div>
+                </div>
+              </div>
+
+              {/* Employment Details */}
+              <div className="client-preview-section">
+                <h4 className="client-preview-section-title">Employment Details</h4>
+                <div className="assign-form-group">
+                  <label>Current Company</label>
+                  <div className="read-only-value">{selectedClientForDetails.currentCompany || '-'}</div>
+                </div>
+                <div className="assign-form-group">
+                  <label>Current Designation</label>
+                  <div className="read-only-value">{selectedClientForDetails.currentDesignation || '-'}</div>
+                </div>
+                <div className="assign-form-group">
+                  <label>Preferred Interview Time</label>
+                  <div className="read-only-value">{selectedClientForDetails.preferredInterviewTime || '-'}</div>
+                </div>
+                <div className="assign-form-group">
+                  <label>Earliest Joining Date</label>
+                  <div className="read-only-value">{selectedClientForDetails.earliestJoiningDate || '-'}</div>
+                </div>
+                <div className="assign-form-group">
+                  <label>Relieving Date</label>
+                  <div className="read-only-value">{selectedClientForDetails.relievingDate || '-'}</div>
+                </div>
+              </div>
+
+              {/* References */}
+              <div className="client-preview-section">
+                <h4 className="client-preview-section-title">References</h4>
+                <div className="assign-form-group">
+                  <label>Reference Name</label>
+                  <div className="read-only-value">{selectedClientForDetails.referenceName || '-'}</div>
+                </div>
+                <div className="assign-form-group">
+                  <label>Reference Phone</label>
+                  <div className="read-only-value">{selectedClientForDetails.referencePhone || '-'}</div>
+                </div>
+                <div className="assign-form-group">
+                  <label>Reference Address</label>
+                  <div className="read-only-value" style={{ minHeight: '60px' }}>{selectedClientForDetails.referenceAddress || '-'}</div>
+                </div>
+                <div className="assign-form-group">
+                  <label>Reference Email</label>
+                  <div className="read-only-value">{selectedClientForDetails.referenceEmail || '-'}</div>
+                </div>
+                <div className="assign-form-group">
+                  <label>Reference Role</label>
+                  <div className="read-only-value">{selectedClientForDetails.referenceRole || '-'}</div>
+                </div>
+              </div>
+
+              {/* Job Portal Accounts */}
+              <div className="client-preview-section">
+                <h4 className="client-preview-section-title">Job Portal Accounts</h4>
+
+                <div className="assign-form-group">
+                  <label>Account Name</label>
+                  <div className="read-only-value">{selectedClientForDetails.jobPortalAccountName || '-'}</div>
+                </div>
+                <div className="assign-form-group">
+                  <label>Credentials</label>
+                  <div className="read-only-value">{selectedClientForDetails.jobPortalCredentials || '-'}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Skills section for viewing */}
+            {selectedClientForDetails.technologySkills && (
+              <div className="client-preview-skills-section">
+                <h4 className="assign-modal-title" style={{ marginBottom: '10px', fontSize: '18px' }}>Skills (Comma Separated)</h4>
+                <div className="assign-form-group">
+                  <div className="read-only-value" style={{ minHeight: '80px', alignItems: 'flex-start' }}>
+                    {Array.isArray(selectedClientForDetails.technologySkills) ? selectedClientForDetails.technologySkills.join(', ') : selectedClientForDetails.technologySkills || '-'}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="assign-form-actions">
+              <button className="assign-form-button assign" onClick={handleEditClientDetailsClick}>
+
+
+
+                Edit Client Details
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* Edit Client Modal (now with matching style) */}
+      {isEditClientModalOpen && currentClientToEdit && (
+        <div className="modal-overlay open">
+          <div className="assign-modal-content"> {/* Reusing assign-modal-content for its wider layout */}
+            <div className="assign-modal-header">
+
+              <h3 className="assign-modal-title">Edit Client Details: {currentClientToEdit.name || currentClientToEdit.firstName + ' ' + currentClientToEdit.lastName}</h3>
+
+
+              <button className="assign-modal-close-button" onClick={handleCloseEditClientModal}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1.2rem', height: '1.2rem' }}>
+                  <path d="M6.29289 6.29289C6.68342 5.90237 7.31658 5.90237 7.70711 6.29289L12 10.5858L16.2929 6.29289C16.6834 5.90237 17.3166 5.90237 17.7071 6.29289C18.0976 6.68342 18.0976 7.31658 17.7071 7.70711L13.4142 12L17.7071 16.2929C18.0976 16.6834 18.0976 17.3166 17.7071 17.7071C17.3166 18.0976 16.6834 18.0976 16.2929 17.7071L12 13.4142L7.70711 17.7071C5.90237 7.31658 5.90237 6.68342 6.29289 6.29289Z" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Comprehensive Client Details Grid - now with input fields */}
+            <div className="client-preview-grid-container">
+              {/* Personal Information */}
+              <div className="client-preview-section">
+                <h4 className="client-preview-section-title">Personal Information</h4>
+
+                <div className="assign-form-group">
+                  <label htmlFor="firstName">First Name</label>
+                  <input type="text" id="firstName" name="firstName" value={currentClientToEdit.firstName || ''} onChange={handleEditClientChange} />
+                </div>
+                <div className="assign-form-group">
+                  <label htmlFor="middleName">Middle Name</label>
+                  <input type="text" id="middleName" name="middleName" value={currentClientToEdit.middleName || ''} onChange={handleEditClientChange} />
+                </div>
+                <div className="assign-form-group">
+                  <label htmlFor="lastName">Last Name</label>
+                  <input type="text" id="lastName" name="lastName" value={currentClientToEdit.lastName || ''} onChange={handleEditClientChange} />
+                </div>
+                <div className="assign-form-group">
+                  <label htmlFor="dob">Date of Birth</label>
+                  <input type="date" id="dob" name="dob" value={currentClientToEdit.dob || ''} onChange={handleEditClientChange} />
+                </div>
+                <div className="assign-form-group">
+                  <label htmlFor="gender">Gender</label>
+                  <select id="gender" name="gender" value={currentClientToEdit.gender || ''} onChange={handleEditClientChange}>
+                    <option value="">Select</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div className="assign-form-group">
+                  <label htmlFor="ethnicity">Ethnicity</label>
+                  <input type="text" id="ethnicity" name="ethnicity" value={currentClientToEdit.ethnicity || ''} onChange={handleEditClientChange} />
+                </div>
+              </div>
+
+              {/* Contact Information */}
+              <div className="client-preview-section">
+                <h4 className="client-preview-section-title">Contact Information</h4>
+
+                <div className="assign-form-group">
+                  <label htmlFor="address">Address</label>
+                  <textarea id="address" name="address" value={currentClientToEdit.address || ''} onChange={handleEditClientChange}></textarea>
+                </div>
+                <div className="assign-form-group">
+                  <label htmlFor="zipCode">Zip Code</label>
+                  <input type="text" id="zipCode" name="zipCode" value={currentClientToEdit.zipCode || ''} onChange={handleEditClientChange} />
+                </div>
+                <div className="assign-form-group">
+                  <label htmlFor="mobile">Mobile</label>
+                  <input type="tel" id="mobile" name="mobile" value={currentClientToEdit.mobile || ''} onChange={handleEditClientChange} />
+                </div>
+                <div className="assign-form-group">
+                  <label htmlFor="email">Email</label>
+                  <input type="email" id="email" name="email" value={currentClientToEdit.email || ''} onChange={handleEditClientChange} />
+                </div>
+                <div className="assign-form-group">
+                  <label htmlFor="country">Country</label>
+                  <input type="text" id="country" name="country" value={currentClientToEdit.country || ''} onChange={handleEditClientChange} />
+                </div>
+              </div>
+
+              {/* Service Details */}
+              <div className="client-preview-section">
+                <h4 className="client-preview-section-title">Service Details</h4>
+                <div className="assign-form-group">
+                  <label htmlFor="service">Service</label>
+                  <select id="service" name="service" value={currentClientToEdit.service || ''} onChange={handleEditClientChange}>
+                    <option value="">Select Service</option>
+                    {serviceOptions.filter(opt => opt !== 'All').map(option => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
+                </div>
+                {(currentClientToEdit.service === 'Mobile Development' ||
+                  currentClientToEdit.service === 'Web Development' ||
+                  currentClientToEdit.service === 'Digital Marketing' ||
+                  currentClientToEdit.service === 'IT Talent Supply') && (
+                    <div className="assign-form-group">
+                      <label htmlFor="subServices">What Service do you want? (Comma Separated)</label>
+                      <textarea
+                        id="subServices"
+                        name="subServices"
+                        value={Array.isArray(currentClientToEdit.subServices) ? currentClientToEdit.subServices.join(', ') : currentClientToEdit.subServices || ''}
+                        onChange={(e) => setCurrentClientToEdit(prev => ({ ...prev, subServices: e.target.value.split(',').map(s => s.trim()) }))}
+                      ></textarea>
+                    </div>
+                  )}
+                <div className="assign-form-group">
+                  <label htmlFor="userType">Who are you?</label>
+                  <input type="text" id="userType" name="userType" value={currentClientToEdit.userType || ''} onChange={handleEditClientChange} />
+                </div>
+              </div>
+
+              {/* Job Preferences & Status */}
+
+              <div className="client-preview-section">
+                <h4 className="client-preview-section-title">Job Preferences & Status</h4>
+
+
+
+                <div className="assign-form-group">
+                  <label htmlFor="securityClearance">Security Clearance</label>
+                  <select id="securityClearance" name="securityClearance" value={currentClientToEdit.securityClearance || 'No'} onChange={handleEditClientChange}>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
+
+
+
+
+
+                </div>
+                {currentClientToEdit.securityClearance === 'Yes' && (
+                  <div className="assign-form-group">
+                    <label htmlFor="clearanceLevel">Clearance Level</label>
+                    <input type="text" id="clearanceLevel" name="clearanceLevel" value={currentClientToEdit.clearanceLevel || ''} onChange={handleEditClientChange} />
+                  </div>
+                )}
+                <div className="assign-form-group">
+                  <label htmlFor="willingToRelocate">Willing to Relocate</label>
+                  <select id="willingToRelocate" name="willingToRelocate" value={currentClientToEdit.willingToRelocate || 'No'} onChange={handleEditClientChange}>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
+                </div>
+                <div className="assign-form-group">
+                  <label htmlFor="workPreference">Work Preference</label>
+                  <input type="text" id="workPreference" name="workPreference" value={currentClientToEdit.workPreference || ''} onChange={handleEditClientChange} />
+                </div>
+                <div className="assign-form-group">
+                  <label htmlFor="restrictedCompanies">Restricted Companies</label>
+                  <input type="text" id="restrictedCompanies" name="restrictedCompanies" value={currentClientToEdit.restrictedCompanies || ''} onChange={handleEditClientChange} />
+                </div>
+                <div className="assign-form-group">
+                  <label htmlFor="jobsToApply">Jobs to Apply</label>
+                  <input type="text" id="jobsToApply" name="jobsToApply" value={currentClientToEdit.jobsToApply || ''} onChange={handleEditClientChange} />
+                </div>
+
+
+
+
+                <div className="assign-form-group">
+
+                  <label htmlFor="currentSalary">Current Salary</label>
+                  <input type="text" id="currentSalary" name="currentSalary" value={currentClientToEdit.currentSalary || ''} onChange={handleEditClientChange} />
+                </div>
+                <div className="assign-form-group">
+                  <label htmlFor="expectedSalary">Expected Salary</label>
+                  <input type="text" id="expectedSalary" name="expectedSalary" value={currentClientToEdit.expectedSalary || ''} onChange={handleEditClientChange} />
+                </div>
+                <div className="assign-form-group">
+                  <label htmlFor="visaStatus">Visa Status</label>
+                  <input type="text" id="visaStatus" name="visaStatus" value={currentClientToEdit.visaStatus || ''} onChange={handleEditClientChange} />
+                </div>
+                {currentClientToEdit.visaStatus === 'Other' && (
+                  <div className="assign-form-group">
+                    <label htmlFor="otherVisaStatus">Other Visa Status</label>
+                    <input type="text" id="otherVisaStatus" name="otherVisaStatus" value={currentClientToEdit.otherVisaStatus || ''} onChange={handleEditClientChange} />
+                  </div>
+                )}
+                <div className="assign-form-group">
+                  <label htmlFor="priority">Priority</label>
+                  <select id="priority" name="priority" value={currentClientToEdit.priority || 'medium'} onChange={handleEditClientChange}>
+                    <option value="high">High</option>
+
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                  </select>
+                </div>
+                <div className="assign-form-group">
+                  <label htmlFor="status">Status</label>
+                  <input type="text" id="status" name="status" value={currentClientToEdit.status || ''} onChange={handleEditClientChange} />
+
+
+
+
+                </div>
+              </div>
+
+              {/* Education Details */}
+              <div className="client-preview-section">
+                <h4 className="client-preview-section-title">Education Details</h4>
+                <div className="assign-form-group">
+                  <label htmlFor="schoolName">School Name</label>
+                  <input type="text" id="schoolName" name="schoolName" value={currentClientToEdit.schoolName || ''} onChange={handleEditClientChange} />
+                </div>
+                <div className="assign-form-group">
+                  <label htmlFor="schoolAddress">School Address</label>
+                  <textarea id="schoolAddress" name="schoolAddress" value={currentClientToEdit.schoolAddress || ''} onChange={handleEditClientChange}></textarea>
+
+
+
+
+                </div>
+                <div className="assign-form-group">
+                  <label htmlFor="schoolPhone">School Phone</label>
+                  <input type="tel" id="schoolPhone" name="schoolPhone" value={currentClientToEdit.schoolPhone || ''} onChange={handleEditClientChange} />
+                </div>
+                <div className="assign-form-group">
+                  <label htmlFor="courseOfStudy">Course of Study</label>
+                  <input type="text" id="courseOfStudy" name="courseOfStudy" value={currentClientToEdit.courseOfStudy || ''} onChange={handleEditClientChange} />
+                </div>
+                <div className="assign-form-group">
+                  <label htmlFor="graduationDate">Graduation Date</label>
+                  <input type="date" id="graduationDate" name="graduationDate" value={currentClientToEdit.graduationDate || ''} onChange={handleEditClientChange} />
+                </div>
+              </div>
+
+              {/* Employment Details */}
+              <div className="client-preview-section">
+                <h4 className="client-preview-section-title">Employment Details</h4>
+
+                <div className="assign-form-group">
+                  <label htmlFor="currentCompany">Current Company</label>
+                  <input type="text" id="currentCompany" name="currentCompany" value={currentClientToEdit.currentCompany || ''} onChange={handleEditClientChange} />
+                </div>
+                <div className="assign-form-group">
+                  <label htmlFor="currentDesignation">Current Designation</label>
+                  <input type="text" id="currentDesignation" name="currentDesignation" value={currentClientToEdit.currentDesignation || ''} onChange={handleEditClientChange} />
+                </div>
+                <div className="assign-form-group">
+                  <label htmlFor="preferredInterviewTime">Preferred Interview Time</label>
+                  <input type="text" id="preferredInterviewTime" name="preferredInterviewTime" value={currentClientToEdit.preferredInterviewTime || ''} onChange={handleEditClientChange} />
+                </div>
+                <div className="assign-form-group">
+                  <label htmlFor="earliestJoiningDate">Earliest Joining Date</label>
+                  <input type="date" id="earliestJoiningDate" name="earliestJoiningDate" value={currentClientToEdit.earliestJoiningDate || ''} onChange={handleEditClientChange} />
+                </div>
+                <div className="assign-form-group">
+                  <label htmlFor="relievingDate">Relieving Date</label>
+                  <input type="date" id="relievingDate" name="relievingDate" value={currentClientToEdit.relievingDate || ''} onChange={handleEditClientChange} />
+                </div>
+              </div>
+
+              {/* References */}
+              <div className="client-preview-section">
+                <h4 className="client-preview-section-title">References</h4>
+                <div className="assign-form-group">
+                  <label htmlFor="referenceName">Reference Name</label>
+                  <input type="text" id="referenceName" name="referenceName" value={currentClientToEdit.referenceName || ''} onChange={handleEditClientChange} />
+                </div>
+                <div className="assign-form-group">
+                  <label htmlFor="referencePhone">Reference Phone</label>
+                  <input type="tel" id="referencePhone" name="referencePhone" value={currentClientToEdit.referencePhone || ''} onChange={handleEditClientChange} />
+                </div>
+                <div className="assign-form-group">
+                  <label htmlFor="referenceAddress">Reference Address</label>
+                  <textarea id="referenceAddress" name="referenceAddress" value={currentClientToEdit.referenceAddress || ''} onChange={handleEditClientChange}></textarea>
+                </div>
+                <div className="assign-form-group">
+                  <label htmlFor="referenceEmail">Reference Email</label>
+                  <input type="email" id="referenceEmail" name="referenceEmail" value={currentClientToEdit.referenceEmail || ''} onChange={handleEditClientChange} />
+                </div>
+                <div className="assign-form-group">
+                  <label htmlFor="referenceRole">Reference Role</label>
+                  <input type="text" id="referenceRole" name="referenceRole" value={currentClientToEdit.referenceRole || ''} onChange={handleEditClientChange} />
+                </div>
+              </div>
+
+              {/* Job Portal Accounts */}
+              <div className="client-preview-section">
+                <h4 className="client-preview-section-title">Job Portal Accounts</h4>
+
+                <div className="assign-form-group">
+                  <label htmlFor="jobPortalAccountName">Account Name</label>
+                  <input type="text" id="jobPortalAccountName" name="jobPortalAccountName" value={currentClientToEdit.jobPortalAccountName || ''} onChange={handleEditClientChange} />
+                </div>
+                <div className="assign-form-group">
+                  <label htmlFor="jobPortalCredentials">Credentials</label>
+                  <input type="text" id="jobPortalCredentials" name="jobPortalCredentials" value={currentClientToEdit.jobPortalCredentials || ''} onChange={handleEditClientChange} />
+                </div>
+              </div>
+
+            </div>
+
+            {/* Skills section for editing */}
+            {currentClientToEdit.technologySkills && (
+              <div className="client-preview-skills-section">
+                <h4 className="assign-modal-title" style={{ marginBottom: '10px', fontSize: '18px' }}>Skills (Comma Separated)</h4>
+                <div className="assign-form-group">
+                  <textarea
+                    id="skills"
+                    name="technologySkills" // Changed to technologySkills to match the client object
+                    value={Array.isArray(currentClientToEdit.technologySkills) ? currentClientToEdit.technologySkills.join(', ') : currentClientToEdit.technologySkills || ''}
+                    onChange={handleEditClientChange} // Use the general handler
+                  ></textarea>
+                </div>
+              </div>
+            )}
+
+            <div className="assign-form-actions">
+              <button className="assign-form-button cancel" onClick={handleCloseEditClientModal}>
+                Cancel
+              </button>
+              <button className="assign-form-button assign" onClick={handleSaveClientDetails}>
+                Save Changes
+              </button>
             </div>
           </div>
         </div>

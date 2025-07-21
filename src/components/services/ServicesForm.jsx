@@ -69,6 +69,11 @@ const FormComponent = () => {
   }, 3000);
     };
 
+    // Function to handle back button click
+    const handleBackClick = () => {
+        navigate(-1); // Go back to the previous page
+    };
+
     //   const services = ['Service 1', 'Service 2', 'Service 3', 'Service 4', 'Service 5'];
     const roles = ['Individual', 'Business Owner', 'Startup Founder', 'Agency', 'Student'];
 
@@ -103,6 +108,10 @@ const FormComponent = () => {
 
     return (
         <div style={formContainerStyle}>
+            {/* Back Button */}
+            <button onClick={handleBackClick} style={backButtonStyle}>
+                <span style={backArrowStyle}>&larr;</span> Back
+            </button>
             <h2 style={titleStyle}>Application Form</h2>
             <form onSubmit={handleSubmit} style={formStyle}>
                 {/* First Name */}
@@ -271,7 +280,35 @@ const formContainerStyle = {
     border: '1px solid #ddd',
     borderRadius: '12px',
     boxShadow: '0 8px 25px rgba(0, 0, 0, 0.1)',
+    position: 'relative', // Added for positioning the back button
 };
+
+const backButtonStyle = {
+    position: 'absolute',
+    top: '20px',
+    left: '20px',
+    padding: '8px 15px',
+    fontSize: '16px',
+    color: '#007bff',
+    backgroundColor: '#fff',
+    border: '1px solid #007bff',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '5px',
+    transition: 'background-color 0.3s ease, color 0.3s ease',
+};
+
+const backArrowStyle = {
+    fontSize: '20px',
+    lineHeight: '1',
+};
+
+backButtonStyle[':hover'] = {
+    backgroundColor: '#e9f5ff',
+};
+
 
 const titleStyle = {
     textAlign: 'center',
