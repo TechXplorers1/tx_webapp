@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Modal } from 'react-bootstrap';
+
 
 const AdminWorksheet = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -320,6 +322,12 @@ const AdminWorksheet = () => {
   // Profile Modal State
   const [showProfileModal, setShowProfileModal] = useState(false);
 
+   // Employee Profile Modal States
+  const [showEmployeeProfileModal, setShowEmployeeProfileModal] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [employeeDetails, setEmployeeDetails] = useState({});
+  const [editedEmployeeDetails, setEditedEmployeeDetails] = useState({});
+
   const [isAssignAssetModalOpen, setIsAssignAssetModalOpen] = useState(false);
   const [newAssignment, setNewAssignment] = useState({
     assetId: '',
@@ -376,7 +384,7 @@ const AdminWorksheet = () => {
 
   // Effect to manage body scroll when any modal is open
   useEffect(() => {
-    if (isAddemployeeModalOpen || isEditemployeeModalOpen || isEditDepartmentModalOpen || isCreateDepartmentModalOpen || isPaymentModalOpen || isAssignAssetModalOpen || isDeleteClientConfirmModalOpen || isClientDetailsModalOpen || isEditClientModalOpen || isConfirmUpdateModalOpen || isDepartmentDetailsModalOpen || showProfileModal) {
+    if (isAddemployeeModalOpen || isEditemployeeModalOpen || isEditDepartmentModalOpen || isCreateDepartmentModalOpen || isPaymentModalOpen || isAssignAssetModalOpen || isDeleteClientConfirmModalOpen || isClientDetailsModalOpen || isEditClientModalOpen || isConfirmUpdateModalOpen || isDepartmentDetailsModalOpen || showEmployeeProfileModal || isAddEmployeeToDepartmentModalOpen) {
       document.body.classList.add('no-scroll');
     } else {
       document.body.classList.remove('no-scroll');
@@ -385,7 +393,7 @@ const AdminWorksheet = () => {
     return () => {
       document.body.classList.remove('no-scroll');
     };
-  }, [isAddemployeeModalOpen, isEditemployeeModalOpen, isEditDepartmentModalOpen, isCreateDepartmentModalOpen, isPaymentModalOpen, isAssignAssetModalOpen, isDeleteClientConfirmModalOpen, isClientDetailsModalOpen, isEditClientModalOpen, isConfirmUpdateModalOpen, isDepartmentDetailsModalOpen, showProfileModal]);
+  }, [isAddemployeeModalOpen, isEditemployeeModalOpen, isEditDepartmentModalOpen, isCreateDepartmentModalOpen, isPaymentModalOpen, isAssignAssetModalOpen, isDeleteClientConfirmModalOpen, isClientDetailsModalOpen, isEditClientModalOpen, isConfirmUpdateModalOpen, isDepartmentDetailsModalOpen, showEmployeeProfileModal || isAddEmployeeToDepartmentModalOpen]);
   // Effect to close profile dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -614,7 +622,7 @@ const AdminWorksheet = () => {
     setConfirmActionType('employeeDelete');
   };
 
-    const handleCancelDelete = () => {
+  const handleCancelDelete = () => {
     setIsDeleteConfirmModalOpen(false);
     setemployeeToDeleteId(null);
   };
@@ -706,8 +714,8 @@ const AdminWorksheet = () => {
       const available = employees.filter(emp =>
         !emp.roles.includes(department.name.toLowerCase()) &&
         !emp.roles.includes('client') &&
-        !emp.roles.includes('admin')&&
-         !currentEmployeesInDept.some(cEmp => cEmp.id === emp.id) // Ensure not already in assigned list
+        !emp.roles.includes('admin') &&
+        !currentEmployeesInDept.some(cEmp => cEmp.id === emp.id) // Ensure not already in assigned list
       );
       setAvailableEmployeesForDepartment(available);
 
@@ -766,7 +774,7 @@ const AdminWorksheet = () => {
     }
 
     if (changes === 'no changes' && employeeChangeMessage === 'No changes to associated employees.') {
-     setConfirmUpdateMessage('No changes were made to the department details or associated employees.');      setIsConfirmUpdateModalOpen(true);
+      setConfirmUpdateMessage('No changes were made to the department details or associated employees.'); setIsConfirmUpdateModalOpen(true);
       setConfirmActionType(null); // No action needed
       return;
     }
@@ -1392,6 +1400,130 @@ const AdminWorksheet = () => {
     'IT Talent Supply',
     'Job Supporting & Consulting'
   ];
+
+  // Employee Profile Modal Handlers
+  const handleOpenProfileModal = () => {
+    // Assuming the admin is the user with the 'admin' role.
+    const adminUser = employees.find(e => e.roles.includes('admin'));
+    if (adminUser) {
+        const details = {
+            name: adminUser.name,
+            employeeId: `EMP${String(adminUser.id).padStart(3, '0')}`,
+            email: adminUser.email,
+            mobile: '+1 (555) 123-4567', // Mock data as it's not in the user object
+            lastLogin: '2025-07-15 10:30 AM' // Mock data
+        };
+        setEmployeeDetails(details);
+        setEditedEmployeeDetails(details);
+        setShowEmployeeProfileModal(true);
+        setIsEditingProfile(false);
+    }
+  };
+
+  const handleProfileFormChange = (e) => {
+    const { name, value } = e.target;
+    setEditedEmployeeDetails(prevDetails => ({
+        ...prevDetails,
+        [name]: value
+    }));
+  };
+
+  const handleSaveProfileChanges = () => {
+    setEmployeeDetails(editedEmployeeDetails);
+    // Also update the main 'employees' array for the logged-in user
+    const adminUser = employees.find(e => e.roles.includes('admin'));
+    if (adminUser) {
+        setemployees(prevEmployees => prevEmployees.map(emp =>
+            emp.id === adminUser.id ? { ...emp, name: editedEmployeeDetails.name } : emp
+        ));
+    }
+    setIsEditingProfile(false);
+  };
+
+  const handleCancelEditProfile = () => {
+    setEditedEmployeeDetails(employeeDetails); // Revert changes from form
+    setIsEditingProfile(false);
+  };
+
+  // Styles for the Employee Profile Modal
+  const modalHeaderStyle = {
+    backgroundColor: isDarkMode ? '#2d3748' : '#f9fafb',
+    color: isDarkMode ? '#e2e8f0' : '#1f2937',
+    borderBottom: `1px solid ${isDarkMode ? '#4a5568' : '#e5e7eb'}`,
+    fontFamily: 'Inter, sans-serif'
+  };
+
+  const modalTitleStyle = {
+    fontSize: '1.25rem',
+    fontWeight: '600',
+  };
+
+  const modalBodyStyle = {
+    backgroundColor: isDarkMode ? '#2d3748' : '#ffffff',
+    color: isDarkMode ? '#e2e8f0' : '#1f2937',
+    padding: '20px',
+    fontFamily: 'Inter, sans-serif'
+  };
+
+  const modalFooterStyle = {
+    backgroundColor: isDarkMode ? '#2d3748' : '#f9fafb',
+    borderTop: `1px solid ${isDarkMode ? '#4a5568' : '#e5e7eb'}`,
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: '10px',
+    padding: '15px 20px',
+  };
+
+  const modalFormFieldGroupStyle = {
+    marginBottom: '15px'
+  };
+
+  const modalLabelStyle = {
+    display: 'block',
+    marginBottom: '5px',
+    fontWeight: '500',
+    color: isDarkMode ? '#cbd5e0' : '#374151'
+  };
+
+  const modalInputStyle = {
+    width: '100%',
+    padding: '10px',
+    borderRadius: '0.375rem',
+    border: `1px solid ${isDarkMode ? '#4a5568' : '#d1d5db'}`,
+    backgroundColor: isDarkMode ? '#374151' : '#ffffff',
+    color: isDarkMode ? '#e2e8f0' : '#1f2937'
+  };
+  
+  const modalInputDisabledStyle = {
+    ...modalInputStyle,
+    backgroundColor: isDarkMode ? '#4a5568' : '#e5e7eb',
+    cursor: 'not-allowed'
+  }
+
+  const modalViewDetailItemStyle = {
+    margin: '0 0 10px 0',
+    fontSize: '1rem',
+    color: isDarkMode ? '#cbd5e0' : '#374151'
+  };
+
+  const modalCancelButtonStyle = {
+    padding: '10px 20px',
+    borderRadius: '0.375rem',
+    border: `1px solid ${isDarkMode ? '#4a5568' : '#d1d5db'}`,
+    backgroundColor: isDarkMode ? '#4b5563' : '#e5e7eb',
+    color: isDarkMode ? '#f9fafb' : '#374151',
+    cursor: 'pointer'
+  };
+
+  const modalAddButtonPrimaryStyle = {
+    padding: '10px 20px',
+    borderRadius: '0.375rem',
+    border: 'none',
+    backgroundColor: '#2563eb',
+    color: '#ffffff',
+    cursor: 'pointer'
+  };
+
 
   const renderClientTable = (clientsToRender, serviceType, currentClientFilter, title = '') => {
     // Determine headers based on the current clientFilter and serviceType
@@ -4478,8 +4610,7 @@ html.dark-mode {
           <div className="profile-dropdown-container" ref={profileDropdownRef}>
             <div className="ad-employee-info" onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}>
               <div className="ad-employee-info-text">
-                <p className="ad-employee-name">{adminemployeeName}</p>
-
+<p className="ad-employee-name">{employees.find(e => e.roles.includes('admin'))?.name || 'Admin'}</p>
                 <span className="ad-admin-tag">
 
                   <svg className="ad-icon-btn" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ fontSize: '0.65rem', width: '0.65rem', height: '0.65rem' }}>
@@ -4489,15 +4620,14 @@ html.dark-mode {
                 </span>
               </div>
               <div className="ad-initials-avatar">
-                <span className="ad-initials-text">{adminInitials}</span>
-              </div>
+  <span className="ad-initials-text">{getInitials(employees.find(e => e.roles.includes('admin'))?.name)}</span>              </div>
             </div>
             {isProfileDropdownOpen && (
               <ul className="profile-dropdown-menu open">
                 <li className="profile-dropdown-item header">My Account</li>
                 <li className="profile-dropdown-item" onClick={() => {
                   setIsProfileDropdownOpen(false); // Close dropdown
-                  setShowProfileModal(true); // Open profile modal
+                  handleOpenProfileModal(); // Open profile modal
                 }}>
 
 
@@ -4974,7 +5104,7 @@ html.dark-mode {
             </div>
           )}
 
-          
+
           {currentView === 'clientManagement' && (
             <div className="client-management-container">
               <div className="client-management-box">
@@ -5083,7 +5213,115 @@ html.dark-mode {
       </main>
 
 
-    
+{/* Employee Profile Details Modal */}
+      <Modal show={showEmployeeProfileModal} onHide={() => setShowEmployeeProfileModal(false)} size="md" centered>
+        <Modal.Header closeButton style={modalHeaderStyle}>
+          <Modal.Title style={modalTitleStyle}>Employee Profile</Modal.Title>
+        </Modal.Header>
+        <Modal.Body style={modalBodyStyle}>
+          {isEditingProfile ? (
+            // Edit Mode
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <div style={modalFormFieldGroupStyle}>
+                <label style={modalLabelStyle}>Name <span style={{ color: 'red' }}>*</span></label>
+                <input
+                  type="text"
+                  name="name"
+                  value={editedEmployeeDetails.name || ''}
+                  onChange={handleProfileFormChange}
+                  style={modalInputStyle}
+                  required
+                />
+              </div>
+              <div style={modalFormFieldGroupStyle}>
+                <label style={modalLabelStyle}>Employee ID</label>
+                <input
+                  type="text"
+                  name="employeeId"
+                  value={editedEmployeeDetails.employeeId || ''}
+                  style={modalInputDisabledStyle}
+                  disabled // Employee ID is not editable
+                />
+              </div>
+              <div style={modalFormFieldGroupStyle}>
+                <label style={modalLabelStyle}>Email <span style={{ color: 'red' }}>*</span></label>
+                <input
+                  type="email"
+                  name="email"
+                  value={editedEmployeeDetails.email || ''}
+                  onChange={handleProfileFormChange}
+                  style={modalInputDisabledStyle}
+                  disabled
+                />
+              </div>
+              <div style={modalFormFieldGroupStyle}>
+                <label style={modalLabelStyle}>Mobile No. <span style={{ color: 'red' }}>*</span></label>
+                <input
+                  type="text"
+                  name="mobile"
+                  value={editedEmployeeDetails.mobile || ''}
+                  onChange={handleProfileFormChange}
+                  style={modalInputStyle}
+                  required
+                />
+              </div>
+              <div style={modalFormFieldGroupStyle}>
+                <label style={modalLabelStyle}>Last Login</label>
+                <input
+                  type="text"
+                  name="lastLogin"
+                  value={editedEmployeeDetails.lastLogin || ''}
+                  style={modalInputDisabledStyle}
+                  disabled // Last Login is not editable
+                />
+              </div>
+            </div>
+          ) : (
+            // View Mode
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <p style={modalViewDetailItemStyle}><strong>Name:</strong> {employeeDetails.name}</p>
+              <p style={modalViewDetailItemStyle}><strong>Employee ID:</strong> {employeeDetails.employeeId}</p>
+              <p style={modalViewDetailItemStyle}><strong>Email:</strong> {employeeDetails.email}</p>
+              <p style={modalViewDetailItemStyle}><strong>Mobile No.:</strong> {employeeDetails.mobile}</p>
+              <p style={modalViewDetailItemStyle}><strong>Last Login:</strong> {employeeDetails.lastLogin}</p>
+            </div>
+          )}
+        </Modal.Body>
+        <Modal.Footer style={modalFooterStyle}>
+          {isEditingProfile ? (
+            <>
+              <button
+                onClick={handleCancelEditProfile}
+                style={modalCancelButtonStyle}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveProfileChanges}
+                style={modalAddButtonPrimaryStyle}
+              >
+                Save Changes
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => setIsEditingProfile(true)}
+                style={modalAddButtonPrimaryStyle} // Reusing primary style for edit button
+              >
+                Edit Profile
+              </button>
+              <button
+                onClick={() => setShowEmployeeProfileModal(false)}
+                style={modalCancelButtonStyle}
+              >
+                Close
+              </button>
+            </>
+          )}
+        </Modal.Footer>
+      </Modal>
+
 
 
 
@@ -5644,7 +5882,7 @@ html.dark-mode {
         </div>
       )}
 
-        {/* Client Details Modal */}
+      {/* Client Details Modal */}
       {isClientDetailsModalOpen && selectedClientForDetails && (
         <div className="modal-overlay open">
           <div className="assign-modal-content"> {/* Reusing assign-modal-content for its wider layout */}
