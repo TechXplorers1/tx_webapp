@@ -5,6 +5,7 @@ import webIcon from '../assets/webAppService.png';
 import marketingIcon from '../assets/digitalMarketingService.png';
 import talentIcon from '../assets/ItTalentSupplyService.png';
 import consultingIcon from '../assets/JobSupportingService.png';
+import CyberIcon from '../assets/CyberSecurityService.png';
 import '../styles/Services.css';
 
 const services = [
@@ -13,6 +14,7 @@ const services = [
   { title: "Digital Marketing",icon: marketingIcon, path: "/services/digital-marketing" },
   { title: "IT Talent Supply",icon: talentIcon, path: "/services/it-talent-supply" },
   { title: "Job Support & IT Consulting", icon: consultingIcon, path: "/services/job-support" },
+  { title: "Cyber Security", icon: CyberIcon, path: "/services/cyber-security" },
 ];
 
 const ServicesDropdown = () => {
@@ -47,6 +49,11 @@ const ServicesDropdown = () => {
   <Link to="/services/job-support" className="service-card-link">
     <div className="service-card1 custom-bg" style={{ backgroundImage: `url(${consultingIcon})` }}>
       <span>Job Support & IT Consulting</span>
+    </div>
+  </Link>
+  <Link to="/services/cyber-security" className="service-card-link">
+    <div className="service-card1 custom-bg" style={{ backgroundImage: `url(${CyberIcon})` }}>
+      <span>Cyber Security</span>
     </div>
   </Link>
 </div>

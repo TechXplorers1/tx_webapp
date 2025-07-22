@@ -104,6 +104,13 @@ const FormComponent = () => {
             "Remote / Offshore Staffing",
             "Technical Screening & Interviews",
         ],
+         "Cyber Security": [
+            "Vulnerability Assessment & Penetration Testing (VAPT)",
+            "Managed Detection and Response (MDR)",
+            "Endpoint Security",
+            "Security Information and Event Management (SIEM)",
+            "Identity and Access Management (IAM)",
+        ],
     };
 
     return (

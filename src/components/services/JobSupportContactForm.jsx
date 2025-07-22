@@ -61,7 +61,10 @@ const ContactForm = () => {
     referenceRole: '',
 
     // Job Portal Information
-    jobPortalAccountNameandCredentials: ''
+    jobPortalAccountNameandCredentials: '' ,
+
+    // Resume Upload
+    resume: null,
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -84,7 +87,7 @@ const ContactForm = () => {
       'currentCompany', 'currentDesignation', 'preferredInterviewTime',
       'earliestJoiningDate', 'relievingDate', 'referenceName', 'referencePhone',
       'referenceAddress', 'referenceEmail', 'referenceRole',
-      'jobPortalAccountNameandCredentials'
+      'jobPortalAccountNameandCredentials' , 'resume'
     ];
 
     for (const field of mandatoryFields) {
@@ -98,6 +101,11 @@ const ContactForm = () => {
     if (formData.visaStatus === 'other' && !formData.otherVisaStatus) {
       setSubmitStatus({ success: false, message: "Please specify your 'Other Visa Status'." });
       return false;
+    }
+
+      if (!formData.resume) {
+        setSubmitStatus({ success: false, message: 'Please upload your resume.' });
+        return false;
     }
 
     setSubmitStatus({ success: false, message: '' }); // Clear previous error messages
@@ -146,7 +154,7 @@ const ContactForm = () => {
       schoolName: '', schoolAddress: '', courseOfStudy: '', graduationFromDate: '', graduationToDate: '',
       currentCompany: '', currentDesignation: '', preferredInterviewTime: '', earliestJoiningDate: '', relievingDate: '',
       referenceName: '', referencePhone: '', referenceAddress: '', referenceEmail: '', referenceRole: '',
-      jobPortalAccountNameandCredentials: ''
+      jobPortalAccountNameandCredentials: '' , resume: ''
     });
     setSubmitStatus({ success: true, message: 'Form submitted successfully!' });
     setShowPreviewModal(false); // Close modal on successful submission
@@ -989,6 +997,25 @@ const ContactForm = () => {
             />
           </Form.Group>
 
+             {/* NEW: Upload Resume Section */}
+          <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Upload Resume</h4>
+          <Form.Group controlId="formResume" className="mb-3">
+            <Form.Label className="form-label">Upload Your Resume <span className="text-danger">*</span></Form.Label>
+            <Form.Control
+                type="file"
+                name="resume"
+                onChange={handleChange}
+                required
+                style={inputControlStyle}
+                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
+                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
+                accept=".pdf,.doc,.docx"
+            />
+            <Form.Text className="text-muted">
+                Please upload your resume in PDF, DOC, or DOCX format.
+            </Form.Text>
+          </Form.Group>
+
           <div className="d-flex justify-content-center mt-4 p-3"> {/* Use flexbox for buttons */}
             <Button
               type="button" // Change to type="button" to prevent default form submission
@@ -1243,6 +1270,13 @@ const ContactForm = () => {
           <Form.Group controlId="previewJobPortalCredentials" className="mb-3">
             <Form.Label className="form-label">Job Portal Account Name & Credentials:</Form.Label>
             <div style={previewTextAreaDisplay}>{formData.jobPortalAccountNameandCredentials || 'N/A'}</div>
+          </Form.Group>
+
+            {/* NEW: Resume Preview */}
+          <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Uploaded Resume</h4>
+          <Form.Group controlId="previewResume" className="mb-3">
+            <Form.Label className="form-label">Resume File Name:</Form.Label>
+            <div style={previewValueDisplay}>{formData.resume ? formData.resume.name : 'N/A'}</div>
           </Form.Group>
 
         </Modal.Body>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Modal } from 'react-bootstrap';
+import { Modal, Button } from 'react-bootstrap';
 
 
 const AdminWorksheet = () => {
@@ -8,6 +8,32 @@ const AdminWorksheet = () => {
   const [currentView, setCurrentView] = useState('clientManagement');
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const profileDropdownRef = useRef(null);
+
+  // --- Request Management States ---
+  const [requestTab, setRequestTab] = useState('career');
+  const [showCareerDetailsModal, setShowCareerDetailsModal] = useState(false);
+  const [selectedCareerSubmission, setSelectedCareerSubmission] = useState(null);
+  const [showContactDetailsModal, setShowContactDetailsModal] = useState(false);
+  const [selectedContactSubmission, setSelectedContactSubmission] = useState(null);
+  const [showRequestConfirmModal, setShowRequestConfirmModal] = useState(false);
+  const [requestConfirmAction, setRequestConfirmAction] = useState(null);
+  const [requestConfirmMessage, setRequestConfirmMessage] = useState('');
+  const [itemToProcess, setItemToProcess] = useState(null);
+
+  // Mock data for Career Submissions
+  const [careerSubmissions, setCareerSubmissions] = useState([
+    { id: 1, firstName: 'John', lastName: 'Doe', email: 'john.d@example.com', mobile: '1234567890', role: 'Data Analyst', experience: 3, currentSalary: '70000', expectedSalary: '85000', resume: 'john_doe_resume.pdf', status: 'Pending' },
+    { id: 2, firstName: 'Jane', lastName: 'Smith', email: 'jane.s@example.com', mobile: '0987654321', role: 'Scrum Master', experience: 5, currentSalary: '90000', expectedSalary: '110000', resume: 'jane_smith_cv.docx', status: 'Pending' },
+    { id: 3, firstName: 'Peter', lastName: 'Jones', email: 'peter.j@example.com', mobile: '1122334455', role: 'Cyber Security', experience: 2, currentSalary: '65000', expectedSalary: '75000', resume: 'peter_jones_resume.pdf', status: 'Accepted' },
+  ]);
+
+  // Mock data for Contact Us Submissions
+  const [contactSubmissions, setContactSubmissions] = useState([
+    { id: 1, firstName: 'Alice', lastName: 'Williams', email: 'alice.w@example.com', phone: '5551234567', message: 'I am interested in your web development services. Can we schedule a call?', date: '2024-07-20' },
+    { id: 2, firstName: 'Bob', lastName: 'Brown', email: 'bob.b@example.com', phone: '5559876543', message: 'Question about pricing for digital marketing packages.', date: '2024-07-21' },
+    { id: 3, firstName: 'Charlie', lastName: 'Davis', email: 'charlie.d@example.com', phone: '5551112222', message: 'Support request regarding a previous project. Need assistance.', date: '2024-07-22' },
+  ]);
+
 
   const [employees, setemployees] = useState([
     { id: 1, name: 'Admin employee', email: 'admin@techxplorers.in', roles: ['admin', 'active', 'Management'] },
@@ -297,6 +323,109 @@ const AdminWorksheet = () => {
       userType: 'Individual',
       firstName: 'Karen', middleName: '', lastName: 'Taylor', dob: '1990-07-19', gender: 'Female', ethnicity: 'African American', address: '99 Talent Way, Austin, USA', zipCode: '78701', securityClearance: 'No', clearanceLevel: 'None', willingToRelocate: 'Yes', workPreference: 'Hybrid', restrictedCompanies: 'None', jobsToApply: '', technologySkills: ['ATS', 'Interviewing', 'Onboarding'], currentSalary: '88000', expectedSalary: '98000', otherVisaStatus: '', schoolName: 'University of Texas at Austin', schoolAddress: 'Austin, TX', schoolPhone: '512-111-2222', courseOfStudy: 'Business Administration', graduationDate: '2012-05-20', currentCompany: 'Staffing Solutions', currentDesignation: 'Talent Acquisition Specialist', preferredInterviewTime: 'Morning', earliestJoiningDate: '2024-09-01', relievingDate: '2024-08-31', referenceName: 'David Recruiter', referencePhone: '512-333-4444', referenceAddress: '50 Recruitment Center', referenceEmail: 'david.r@example.com', referenceRole: 'Recruitment Manager', jobPortalAccountName: 'karent_hr', jobPortalCredentials: 'encrypted_password_5678'
     },
+    // Cyber Security Client 1 - Individual (Security Analyst)
+    {
+      id: 15,
+      name: 'Marcus Reed',
+      mobile: '555-666-7777',
+      email: 'marcus.reed@example.com',
+      jobsApplyFor: '',
+      registeredDate: '2023-11-05',
+      country: 'USA',
+      visaStatus: 'US Citizen',
+      paymentStatus: 'Paid',
+      displayStatuses: ['registered'],
+      service: 'Cyber Security',
+      subServices: ['Penetration Testing', 'Security Operations (SOC)'],
+      userType: 'Individual',
+      firstName: 'Marcus',
+      middleName: '',
+      lastName: 'Reed',
+      dob: '1988-03-14',
+      gender: 'Male',
+      ethnicity: 'African American',
+      address: '210 Secure Lane, Atlanta, GA, USA',
+      zipCode: '30301',
+      securityClearance: 'Yes',
+      clearanceLevel: 'Secret',
+      willingToRelocate: 'Yes',
+      workPreference: 'Hybrid',
+      restrictedCompanies: 'None',
+      jobsToApply: '',
+      technologySkills: ['Kali Linux', 'Metasploit', 'Wireshark', 'SIEM', 'Incident Response', 'Nmap'],
+      currentSalary: '105000',
+      expectedSalary: '120000',
+      otherVisaStatus: '',
+      schoolName: 'Georgia Institute of Technology',
+      schoolAddress: 'Atlanta, GA, USA',
+      schoolPhone: '404-888-9999',
+      courseOfStudy: 'Cybersecurity Engineering',
+      graduationDate: '2010-12-15',
+      currentCompany: 'SecureNet Solutions',
+      currentDesignation: 'Senior Security Analyst',
+      preferredInterviewTime: 'Morning',
+      earliestJoiningDate: '2024-09-01',
+      relievingDate: '2024-08-31',
+      referenceName: 'Linda Thompson',
+      referencePhone: '404-777-8888',
+      referenceAddress: '100 Cyber Hub, Atlanta, GA',
+      referenceEmail: 'linda.t@securenet.com',
+      referenceRole: 'SOC Manager',
+      jobPortalAccountName: 'marcusreed_cyber',
+      jobPortalCredentials: 'encrypted_password_sec1'
+    },
+
+    // Cyber Security Client 2 - Agency (Specialized Cybersecurity Firm)
+    {
+      id: 16,
+      name: 'NovaShield Cyber Solutions',
+      mobile: '444-999-2222',
+      email: 'contact@novashield-cs.com',
+      jobsApplyFor: '',
+      registeredDate: '2023-11-18',
+      country: 'Canada',
+      visaStatus: 'Work Permit',
+      paymentStatus: 'Pending',
+      displayStatuses: ['registered'],
+      service: 'Cyber Security',
+      subServices: ['Vulnerability Assessment', 'Incident Response & Forensics'],
+      userType: 'Agency',
+      firstName: 'Elena',
+      middleName: 'Marie',
+      lastName: 'Dubois',
+      dob: '1982-09-25',
+      gender: 'Female',
+      ethnicity: 'Caucasian',
+      address: '777 Firewall Blvd, Toronto, ON, Canada',
+      zipCode: 'M5V 3L9',
+      securityClearance: 'Yes',
+      clearanceLevel: 'Top Secret (Private Sector Equivalent)',
+      willingToRelocate: 'No',
+      workPreference: 'Remote',
+      restrictedCompanies: 'Government Contractors',
+      jobsToApply: '',
+      technologySkills: ['CISSP', 'CEH', 'DFIR', 'Splunk', 'CrowdStrike', 'AWS Security'],
+      currentSalary: '140000',
+      expectedSalary: '160000',
+      otherVisaStatus: 'Company Sponsored Work Visa',
+      schoolName: 'University of Waterloo',
+      schoolAddress: 'Waterloo, ON, Canada',
+      schoolPhone: '519-252-5555',
+      courseOfStudy: 'Computer Science with Security Specialization',
+      graduationDate: '2005-04-30',
+      currentCompany: 'NovaShield Cyber Solutions',
+      currentDesignation: 'Founder & Lead Security Consultant',
+      preferredInterviewTime: 'Afternoon',
+      earliestJoiningDate: '2024-08-20',
+      relievingDate: 'N/A',
+      referenceName: 'Jean Moreau',
+      referencePhone: '416-888-1234',
+      referenceAddress: '88 Cyber Defense Tower, Toronto',
+      referenceEmail: 'jean.m@novashield-cs.com',
+      referenceRole: 'Technical Director',
+      jobPortalAccountName: 'novashield_linkedin',
+      jobPortalCredentials: 'encrypted_password_nova_cs'
+    }
   ]);
 
   const managers = [
@@ -322,7 +451,7 @@ const AdminWorksheet = () => {
   // Profile Modal State
   const [showProfileModal, setShowProfileModal] = useState(false);
 
-   // Employee Profile Modal States
+  // Employee Profile Modal States
   const [showEmployeeProfileModal, setShowEmployeeProfileModal] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [employeeDetails, setEmployeeDetails] = useState({});
@@ -382,9 +511,64 @@ const AdminWorksheet = () => {
   const [employeeToDeleteDetails, setEmployeeToDeleteDetails] = useState(null); // To hold employee details for delete confirmation
   const [departmentToDeleteDetails, setDepartmentToDeleteDetails] = useState(null); // To hold department details for delete confirmation
 
+  // --- Request Management Handlers ---
+  const handleViewCareerDetails = (submission) => {
+    setSelectedCareerSubmission(submission);
+    setShowCareerDetailsModal(true);
+  };
+
+  const handleCloseCareerDetailsModal = () => {
+    setShowCareerDetailsModal(false);
+    setSelectedCareerSubmission(null);
+  };
+
+  const handleViewContactDetails = (submission) => {
+    setSelectedContactSubmission(submission);
+    setShowContactDetailsModal(true);
+  };
+
+  const handleCloseContactDetailsModal = () => {
+    setShowContactDetailsModal(false);
+    setSelectedContactSubmission(null);
+  };
+
+  const handleRequestAction = (action, item) => {
+    setItemToProcess(item);
+    setRequestConfirmAction(action);
+    let message = '';
+    if (action === 'accept') message = `Are you sure you want to accept the application from ${item.firstName} ${item.lastName}?`;
+    if (action === 'reject') message = `Are you sure you want to reject the application from ${item.firstName} ${item.lastName}?`;
+    if (action === 'deleteContact') message = `Are you sure you want to delete the message from ${item.firstName} ${item.lastName}? This cannot be undone.`;
+    setRequestConfirmMessage(message);
+    setShowRequestConfirmModal(true);
+  };
+
+  const confirmRequestAction = () => {
+    if (requestConfirmAction === 'accept') {
+      setCareerSubmissions(prev => prev.map(sub => sub.id === itemToProcess.id ? { ...sub, status: 'Accepted' } : sub));
+    }
+    if (requestConfirmAction === 'reject') {
+      setCareerSubmissions(prev => prev.map(sub => sub.id === itemToProcess.id ? { ...sub, status: 'Rejected' } : sub));
+    }
+    if (requestConfirmAction === 'deleteContact') {
+      setContactSubmissions(prev => prev.filter(sub => sub.id !== itemToProcess.id));
+    }
+    closeRequestConfirmModal();
+  };
+
+  const closeRequestConfirmModal = () => {
+    setShowRequestConfirmModal(false);
+    setRequestConfirmAction(null);
+    setRequestConfirmMessage('');
+    setItemToProcess(null);
+  };
+
+  // --- End of Request Management Handlers ---
+
+
   // Effect to manage body scroll when any modal is open
   useEffect(() => {
-    if (isAddemployeeModalOpen || isEditemployeeModalOpen || isEditDepartmentModalOpen || isCreateDepartmentModalOpen || isPaymentModalOpen || isAssignAssetModalOpen || isDeleteClientConfirmModalOpen || isClientDetailsModalOpen || isEditClientModalOpen || isConfirmUpdateModalOpen || isDepartmentDetailsModalOpen || showEmployeeProfileModal || isAddEmployeeToDepartmentModalOpen) {
+    if (isAddemployeeModalOpen || isEditemployeeModalOpen || isEditDepartmentModalOpen || isCreateDepartmentModalOpen || isPaymentModalOpen || isAssignAssetModalOpen || isDeleteClientConfirmModalOpen || isClientDetailsModalOpen || isEditClientModalOpen || isConfirmUpdateModalOpen || isDepartmentDetailsModalOpen || showEmployeeProfileModal || isAddEmployeeToDepartmentModalOpen || showCareerDetailsModal || showContactDetailsModal || showRequestConfirmModal) {
       document.body.classList.add('no-scroll');
     } else {
       document.body.classList.remove('no-scroll');
@@ -393,7 +577,7 @@ const AdminWorksheet = () => {
     return () => {
       document.body.classList.remove('no-scroll');
     };
-  }, [isAddemployeeModalOpen, isEditemployeeModalOpen, isEditDepartmentModalOpen, isCreateDepartmentModalOpen, isPaymentModalOpen, isAssignAssetModalOpen, isDeleteClientConfirmModalOpen, isClientDetailsModalOpen, isEditClientModalOpen, isConfirmUpdateModalOpen, isDepartmentDetailsModalOpen, showEmployeeProfileModal || isAddEmployeeToDepartmentModalOpen]);
+  }, [isAddemployeeModalOpen, isEditemployeeModalOpen, isEditDepartmentModalOpen, isCreateDepartmentModalOpen, isPaymentModalOpen, isAssignAssetModalOpen, isDeleteClientConfirmModalOpen, isClientDetailsModalOpen, isEditClientModalOpen, isConfirmUpdateModalOpen, isDepartmentDetailsModalOpen, showEmployeeProfileModal, isAddEmployeeToDepartmentModalOpen , showCareerDetailsModal, showContactDetailsModal, showRequestConfirmModal]);
   // Effect to close profile dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -1120,6 +1304,7 @@ const AdminWorksheet = () => {
     { value: 'departments', label: 'Departments' },
     { value: 'employeeManagement', label: 'Employee Management' },
     { value: 'assetManagement', label: 'Asset Management' },
+    { value: 'requestManagement', label: 'Request Management' },
   ];
 
   // Data for dropdowns
@@ -1347,6 +1532,7 @@ const AdminWorksheet = () => {
 
       case 'assigned': return '#E0F2FE';
       case 'available': return '#D9F5E6';
+      case 'accepted': return '#C8E6C9';
       default: return 'var(--border-color)';
     }
   };
@@ -1385,6 +1571,8 @@ const AdminWorksheet = () => {
       case 'paid': return '#28A745';
       case 'pending': return '#B45309';
       case 'n/a': return '#6B7280';
+      case 'accepted': return '#388E3C';
+
 
       case 'assigned': return '#2563EB';
       case 'available': return '#28A745';
@@ -1406,25 +1594,25 @@ const AdminWorksheet = () => {
     // Assuming the admin is the user with the 'admin' role.
     const adminUser = employees.find(e => e.roles.includes('admin'));
     if (adminUser) {
-        const details = {
-            name: adminUser.name,
-            employeeId: `EMP${String(adminUser.id).padStart(3, '0')}`,
-            email: adminUser.email,
-            mobile: '+1 (555) 123-4567', // Mock data as it's not in the user object
-            lastLogin: '2025-07-15 10:30 AM' // Mock data
-        };
-        setEmployeeDetails(details);
-        setEditedEmployeeDetails(details);
-        setShowEmployeeProfileModal(true);
-        setIsEditingProfile(false);
+      const details = {
+        name: adminUser.name,
+        employeeId: `EMP${String(adminUser.id).padStart(3, '0')}`,
+        email: adminUser.email,
+        mobile: '+1 (555) 123-4567', // Mock data as it's not in the user object
+        lastLogin: '2025-07-15 10:30 AM' // Mock data
+      };
+      setEmployeeDetails(details);
+      setEditedEmployeeDetails(details);
+      setShowEmployeeProfileModal(true);
+      setIsEditingProfile(false);
     }
   };
 
   const handleProfileFormChange = (e) => {
     const { name, value } = e.target;
     setEditedEmployeeDetails(prevDetails => ({
-        ...prevDetails,
-        [name]: value
+      ...prevDetails,
+      [name]: value
     }));
   };
 
@@ -1433,9 +1621,9 @@ const AdminWorksheet = () => {
     // Also update the main 'employees' array for the logged-in user
     const adminUser = employees.find(e => e.roles.includes('admin'));
     if (adminUser) {
-        setemployees(prevEmployees => prevEmployees.map(emp =>
-            emp.id === adminUser.id ? { ...emp, name: editedEmployeeDetails.name } : emp
-        ));
+      setemployees(prevEmployees => prevEmployees.map(emp =>
+        emp.id === adminUser.id ? { ...emp, name: editedEmployeeDetails.name } : emp
+      ));
     }
     setIsEditingProfile(false);
   };
@@ -1493,7 +1681,7 @@ const AdminWorksheet = () => {
     backgroundColor: isDarkMode ? '#374151' : '#ffffff',
     color: isDarkMode ? '#e2e8f0' : '#1f2937'
   };
-  
+
   const modalInputDisabledStyle = {
     ...modalInputStyle,
     backgroundColor: isDarkMode ? '#4a5568' : '#e5e7eb',
@@ -1818,6 +2006,8 @@ const AdminWorksheet = () => {
   --search-border: #d1d5db;
   --search-icon: #9ca3af;
   --logo-x-color: #2563eb;
+  --primary-color: #007bff;
+  --background-primary: #ffffff;
 
   /* Dashboard specific colors */
   --card-value-color: #1f2937;
@@ -4392,8 +4582,155 @@ html.dark-mode {
             margin: 0 auto 1.5rem;
         }
 
-/* Responsive adjustments */
-        @media (max-width: 768px) {
+
+         /* NEW STYLES FOR REQUEST MANAGEMENT */
+        .request-management-container {
+          background-color: var(--background-primary);
+          padding: 2rem;
+          border-radius: 0.75rem;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+        .request-tabs {
+          display: flex;
+          gap: 0.5rem;
+          border-bottom: 2px solid var(--border-color);
+          margin-bottom: 1.5rem;
+        }
+        .request-tab-btn {
+          padding: 0.75rem 1.5rem;
+          border: none;
+          background-color: transparent;
+          color: var(--text-secondary);
+          font-size: 1rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          border-bottom: 3px solid transparent;
+          position: relative;
+          top: 2px;
+        }
+        .request-tab-btn.active {
+          color: var(--primary-color);
+          border-bottom-color: var(--primary-color);
+          font-weight: 600;
+        }
+        .request-table-container {
+          overflow-x: auto;
+        }
+        .request-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 0.9rem;
+        }
+        .request-table th, .request-table td {
+          padding: 0.75rem 1rem;
+          border: 1px solid var(--border-color);
+          text-align: left;
+           vertical-align: middle;
+        }
+        .request-table th {
+           font-weight: 600;
+            color: var(--text-primary);
+            background-color: #f8f9fa;
+        }
+        .request-table tr:nth-child(even) {
+          background-color: var(--background-secondary);
+        }
+        .request-table .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-start;
+        }
+        .request-table .action-button {
+            padding: 0.3rem 0.6rem;
+            border-radius: 0.375rem;
+            border: 1px solid transparent;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .request-table .action-button.view {
+            background-color: #DBEAFE;
+            color: #1D4ED8;
+            border-color: #BFDBFE;
+        }
+        .request-table .action-button.accept {
+            background-color: #D1FAE5;
+            color: #065F46;
+            border-color: #A7F3D0;
+        }
+        .request-table .action-button.reject {
+            background-color: #FEE2E2;
+            color: #991B1B;
+            border-color: #FECACA;
+        }
+        .request-table .action-button.download {
+            background-color: #E0E7FF;
+            color: #3730A3;
+            border-color: #C7D2FE;
+        }
+        .request-table .message-cell {
+            max-width: 300px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .action-button.view { background-color: #e0e7ff; color: #3730a3; }
+        .action-button.view:hover { background-color: #c7d2fe; }
+        
+        .action-button.accept { background-color: #dcfce7; color: #166534; }
+        .action-button.accept:hover { background-color: #bbf7d0; }
+
+        .action-button.reject { background-color: #fee2e2; color: #991b1b; }
+        .action-button.reject:hover { background-color: #fecaca; }
+
+        .action-button.download { background-color: #e0f2fe; color: #075985; }
+        .action-button.download:hover { background-color: #bae6fd; }
+
+        .message-cell {
+            max-width: 300px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: pointer;
+        }
+
+        .status-tag {
+            padding: 0.25rem 0.6rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: capitalize;
+        }
+
+        /* Modal Styles for Request Management */
+        .request-details-modal .modal-body {
+            font-size: 1rem;
+        }
+        .request-details-modal .detail-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .request-details-modal .detail-label {
+            font-weight: 600;
+            color: #4b5563;
+        }
+        .request-details-modal .detail-value {
+            color: #1f2937;
+        }
+        .request-details-modal .message-content {
+            margin-top: 1rem;
+            padding: 1rem;
+            background-color: #f9fafb;
+            border-radius: 0.5rem;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+              /* Responsive adjustments */
+         @media (max-width: 768px) {
             .ad-header-right {
                 gap: 1rem;
             }
@@ -4552,7 +4889,7 @@ html.dark-mode {
                 width: 100%;
                 justify-content: center;
             }
-        }
+        } }
 
         `}
       </style>
@@ -4610,7 +4947,7 @@ html.dark-mode {
           <div className="profile-dropdown-container" ref={profileDropdownRef}>
             <div className="ad-employee-info" onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}>
               <div className="ad-employee-info-text">
-<p className="ad-employee-name">{employees.find(e => e.roles.includes('admin'))?.name || 'Admin'}</p>
+                <p className="ad-employee-name">{employees.find(e => e.roles.includes('admin'))?.name || 'Admin'}</p>
                 <span className="ad-admin-tag">
 
                   <svg className="ad-icon-btn" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ fontSize: '0.65rem', width: '0.65rem', height: '0.65rem' }}>
@@ -4620,7 +4957,7 @@ html.dark-mode {
                 </span>
               </div>
               <div className="ad-initials-avatar">
-  <span className="ad-initials-text">{getInitials(employees.find(e => e.roles.includes('admin'))?.name)}</span>              </div>
+                <span className="ad-initials-text">{getInitials(employees.find(e => e.roles.includes('admin'))?.name)}</span>              </div>
             </div>
             {isProfileDropdownOpen && (
               <ul className="profile-dropdown-menu open">
@@ -4675,7 +5012,7 @@ html.dark-mode {
             <a
               key={option.value}
               href="#"
-              onClick={() => { setCurrentView(option.value); setIsSidebarOpen(false); }}
+              onClick={(e) => { e.preventDefault(); setCurrentView(option.value); setIsSidebarOpen(false); }}
               className={`ad-nav-link ${currentView === option.value ? 'ad-nav-link-active' : ''}`}
             >
               {option.label}
@@ -4712,7 +5049,113 @@ html.dark-mode {
           </div>
 
 
+          {/* NEW: Request Management View */}
+          {currentView === 'requestManagement' && (
+            <div className="request-management-container">
+              <div className="request-tabs">
+                <button
+                  className={`request-tab-btn ${requestTab === 'career' ? 'active' : ''}`}
+                  onClick={() => setRequestTab('career')}
+                >
+                  Career Applications ({careerSubmissions.length})
+                </button>
+                <button
+                  className={`request-tab-btn ${requestTab === 'contactUs' ? 'active' : ''}`}
+                  onClick={() => setRequestTab('contactUs')}
+                >
+                  Contact Us Messages ({contactSubmissions.length})
+                </button>
+              </div>
 
+              {requestTab === 'career' && (
+                <div className="request-table-container">
+                  <table className="request-table">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Name</th>
+                       <th>Email & Mobile</th>
+                        <th>Role Applied</th>
+                        <th>Experience (Yrs)</th>
+                        <th>Status</th>
+                        <th>Resume</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {careerSubmissions.map((sub, index) => (
+                        <tr key={sub.id}>
+                          <td>{index + 1}</td>
+                          <td>{sub.firstName} {sub.lastName}</td>
+                         <td>
+                            <div>{sub.email}</div>
+                            <div style={{color: 'var(--text-secondary)', fontSize: '0.8rem'}}>{sub.mobile}</div>
+                          </td>
+                          <td>{sub.role}</td>
+                          <td>{sub.experience} yrs</td>
+                          <td>
+                            <span className="status-tag" style={{ backgroundColor: getRoleTagBg(sub.status), color: getRoleTagText(sub.status) }}>
+                              {sub.status}
+                            </span>
+                          </td>
+                          <td>
+                            <button className="action-button download">{sub.resume}</button>
+                          </td>
+                          <td>
+                            <div className="action-buttons">
+                                  <button className="action-button view" onClick={() => handleViewCareerDetails(sub)}>View</button>
+                                  {sub.status === 'Pending' && (
+                                <>
+                                  <button className="action-button accept" onClick={() => handleRequestAction('accept', sub)}>Accept</button>
+                                  <button className="action-button reject" onClick={() => handleRequestAction('reject', sub)}>Reject</button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {requestTab === 'contactUs' && (
+                <div className="request-table-container">
+                  <table className="request-table">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Name</th>
+                        <th>Email & Phone</th>
+                        <th>Message</th>
+                        <th>Received</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {contactSubmissions.map((sub, index) => (
+                        <tr key={sub.id}>
+                          <td>{index + 1}</td>
+                          <td>{sub.firstName} {sub.lastName}</td>
+                         <td>
+                            <div>{sub.email}</div>
+                            <div style={{color: 'var(--text-secondary)', fontSize: '0.8rem'}}>{sub.phone}</div>
+                          </td>
+                          <td className="message-cell" title={sub.message} onClick={() => handleViewContactDetails(sub)}>{sub.message}</td>
+                          <td>{sub.date}</td>                          <td>
+                            <div className="action-buttons">
+                               <button className="action-button view" onClick={() => handleViewContactDetails(sub)}>View</button>
+                              <button className="action-button reject" onClick={() => handleRequestAction('deleteContact', sub)}>Delete</button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
 
 
 
@@ -5208,120 +5651,130 @@ html.dark-mode {
               </div>
             </div>
           )}
-
         </div>
       </main>
 
 
-{/* Employee Profile Details Modal */}
-      <Modal show={showEmployeeProfileModal} onHide={() => setShowEmployeeProfileModal(false)} size="md" centered>
-        <Modal.Header closeButton style={modalHeaderStyle}>
-          <Modal.Title style={modalTitleStyle}>Employee Profile</Modal.Title>
-        </Modal.Header>
-        <Modal.Body style={modalBodyStyle}>
-          {isEditingProfile ? (
-            // Edit Mode
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Name <span style={{ color: 'red' }}>*</span></label>
-                <input
-                  type="text"
-                  name="name"
-                  value={editedEmployeeDetails.name || ''}
-                  onChange={handleProfileFormChange}
-                  style={modalInputStyle}
-                  required
-                />
+      {/* Employee Profile Details Modal */}
+      {showEmployeeProfileModal && (
+        <div className="modal-overlay open">
+          <div className="modal-content">
+            <div className="modal-header">
+              <div>
+                <h3 className="modal-title">Employee Profile</h3>
               </div>
-              <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Employee ID</label>
-                <input
-                  type="text"
-                  name="employeeId"
-                  value={editedEmployeeDetails.employeeId || ''}
-                  style={modalInputDisabledStyle}
-                  disabled // Employee ID is not editable
-                />
-              </div>
-              <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Email <span style={{ color: 'red' }}>*</span></label>
-                <input
-                  type="email"
-                  name="email"
-                  value={editedEmployeeDetails.email || ''}
-                  onChange={handleProfileFormChange}
-                  style={modalInputDisabledStyle}
-                  disabled
-                />
-              </div>
-              <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Mobile No. <span style={{ color: 'red' }}>*</span></label>
-                <input
-                  type="text"
-                  name="mobile"
-                  value={editedEmployeeDetails.mobile || ''}
-                  onChange={handleProfileFormChange}
-                  style={modalInputStyle}
-                  required
-                />
-              </div>
-              <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Last Login</label>
-                <input
-                  type="text"
-                  name="lastLogin"
-                  value={editedEmployeeDetails.lastLogin || ''}
-                  style={modalInputDisabledStyle}
-                  disabled // Last Login is not editable
-                />
-              </div>
+              <button className="modal-close-btn" onClick={() => setShowEmployeeProfileModal(false)}>&times;</button>
             </div>
-          ) : (
-            // View Mode
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <p style={modalViewDetailItemStyle}><strong>Name:</strong> {employeeDetails.name}</p>
-              <p style={modalViewDetailItemStyle}><strong>Employee ID:</strong> {employeeDetails.employeeId}</p>
-              <p style={modalViewDetailItemStyle}><strong>Email:</strong> {employeeDetails.email}</p>
-              <p style={modalViewDetailItemStyle}><strong>Mobile No.:</strong> {employeeDetails.mobile}</p>
-              <p style={modalViewDetailItemStyle}><strong>Last Login:</strong> {employeeDetails.lastLogin}</p>
-            </div>
-          )}
-        </Modal.Body>
-        <Modal.Footer style={modalFooterStyle}>
-          {isEditingProfile ? (
-            <>
-              <button
-                onClick={handleCancelEditProfile}
-                style={modalCancelButtonStyle}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveProfileChanges}
-                style={modalAddButtonPrimaryStyle}
-              >
-                Save Changes
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={() => setIsEditingProfile(true)}
-                style={modalAddButtonPrimaryStyle} // Reusing primary style for edit button
-              >
-                Edit Profile
-              </button>
-              <button
-                onClick={() => setShowEmployeeProfileModal(false)}
-                style={modalCancelButtonStyle}
-              >
-                Close
-              </button>
-            </>
-          )}
-        </Modal.Footer>
-      </Modal>
 
+            <div className="modal-form" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              {isEditingProfile ? (
+                // Edit Mode
+                <>
+                  <div className="form-group">
+                    <label className="form-label">Name <span style={{ color: 'red' }}>*</span></label>
+                    <input
+                      type="text"
+                      name="name"
+                      value={editedEmployeeDetails.name || ''}
+                      onChange={handleProfileFormChange}
+                      className="form-input"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Employee ID</label>
+                    <input
+                      type="text"
+                      name="employeeId"
+                      value={editedEmployeeDetails.employeeId || ''}
+                      className="form-input"
+                      style={{ cursor: 'not-allowed', backgroundColor: 'var(--border-color)'}}
+                      disabled 
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Email <span style={{ color: 'red' }}>*</span></label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={editedEmployeeDetails.email || ''}
+                      onChange={handleProfileFormChange}
+                      className="form-input"
+                      style={{ cursor: 'not-allowed', backgroundColor: 'var(--border-color)'}}
+                      disabled
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Mobile No. <span style={{ color: 'red' }}>*</span></label>
+                    <input
+                      type="text"
+                      name="mobile"
+                      value={editedEmployeeDetails.mobile || ''}
+                      onChange={handleProfileFormChange}
+                      className="form-input"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Last Login</label>
+                    <input
+                      type="text"
+                      name="lastLogin"
+                      value={editedEmployeeDetails.lastLogin || ''}
+                      className="form-input"
+                      style={{ cursor: 'not-allowed', backgroundColor: 'var(--border-color)'}}
+                      disabled 
+                    />
+                  </div>
+                </>
+              ) : (
+                // View Mode
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <p><strong>Name:</strong> {employeeDetails.name}</p>
+                  <p><strong>Employee ID:</strong> {employeeDetails.employeeId}</p>
+                  <p><strong>Email:</strong> {employeeDetails.email}</p>
+                  <p><strong>Mobile No.:</strong> {employeeDetails.mobile}</p>
+                  <p><strong>Last Login:</strong> {employeeDetails.lastLogin}</p>
+                </div>
+              )}
+            </div>
+            
+            <div className="modal-footer">
+              {isEditingProfile ? (
+                <>
+                  <button
+                    onClick={handleCancelEditProfile}
+                    className="confirm-cancel-btn"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveProfileChanges}
+                    className="create-employee-btn"
+                  >
+                    Save Changes
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setIsEditingProfile(true)}
+                    className="create-employee-btn"
+                  >
+                    Edit Profile
+                  </button>
+                  <button
+                    onClick={() => setShowEmployeeProfileModal(false)}
+                    className="confirm-cancel-btn"
+                  >
+                    Close
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
 
 
@@ -6701,7 +7154,105 @@ html.dark-mode {
           </div>
         </div>
       )}
-    </div>
+
+      {/* --- Request Management Modals (Refactored) --- */}
+
+      {/* Career Submission Details Modal */}
+      {showCareerDetailsModal && (
+        <div className="modal-overlay open">
+          <div className="modal-content request-details-modal">
+            <div className="modal-header">
+              <div>
+                <h3 className="modal-title">Career Application Details</h3>
+              </div>
+              <button className="modal-close-btn" onClick={handleCloseCareerDetailsModal}>&times;</button>
+            </div>
+            <div className="modal-body">
+              {selectedCareerSubmission && (
+                <div>
+                  <div className="detail-item"><span className="detail-label">Name:</span> <span className="detail-value">{selectedCareerSubmission.firstName} {selectedCareerSubmission.lastName}</span></div>
+                  <div className="detail-item"><span className="detail-label">Email:</span> <span className="detail-value">{selectedCareerSubmission.email}</span></div>
+                  <div className="detail-item"><span className="detail-label">Mobile:</span> <span className="detail-value">{selectedCareerSubmission.mobile}</span></div>
+                  <div className="detail-item"><span className="detail-label">Role Applied For:</span> <span className="detail-value">{selectedCareerSubmission.role}</span></div>
+                  <div className="detail-item"><span className="detail-label">Years of Experience:</span> <span className="detail-value">{selectedCareerSubmission.experience}</span></div>
+                  <div className="detail-item"><span className="detail-label">Current Salary:</span> <span className="detail-value">${selectedCareerSubmission.currentSalary}</span></div>
+                  <div className="detail-item"><span className="detail-label">Expected Salary:</span> <span className="detail-value">${selectedCareerSubmission.expectedSalary}</span></div>
+                  <div className="detail-item"><span className="detail-label">Resume:</span> <span className="detail-value"><button className="action-button download">{selectedCareerSubmission.resume}</button></span></div>
+                  <div className="detail-item"><span className="detail-label">Status:</span> <span className="detail-value">
+                    <span className="status-tag" style={{ backgroundColor: getRoleTagBg(selectedCareerSubmission.status), color: getRoleTagText(selectedCareerSubmission.status) }}>
+                      {selectedCareerSubmission.status}
+                    </span>
+                  </span></div>
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button type="button" className="confirm-cancel-btn" onClick={handleCloseCareerDetailsModal}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Contact Us Message Details Modal */}
+      {showContactDetailsModal && (
+        <div className="modal-overlay open">
+          <div className="modal-content request-details-modal">
+            <div className="modal-header">
+              <div>
+                <h3 className="modal-title">Contact Us Message</h3>
+              </div>
+              <button className="modal-close-btn" onClick={handleCloseContactDetailsModal}>&times;</button>
+            </div>
+            <div className="modal-body">
+              {selectedContactSubmission && (
+                <div>
+                  <div className="detail-item"><span className="detail-label">From:</span> <span className="detail-value">{selectedContactSubmission.firstName} {selectedContactSubmission.lastName}</span></div>
+                  <div className="detail-item"><span className="detail-label">Email:</span> <span className="detail-value">{selectedContactSubmission.email}</span></div>
+                  <div className="detail-item"><span className="detail-label">Phone:</span> <span className="detail-value">{selectedContactSubmission.phone}</span></div>
+                  <div className="detail-item"><span className="detail-label">Received On:</span> <span className="detail-value">{selectedContactSubmission.date}</span></div>
+                  <div className="message-content">
+                    <h5 className="detail-label">Message:</h5>
+                    <p className="detail-value">{selectedContactSubmission.message}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button type="button" className="confirm-cancel-btn" onClick={handleCloseContactDetailsModal}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Request Confirmation Modal */}
+      {showRequestConfirmModal && (
+        <div className="modal-overlay open">
+          <div className="modal-content">
+            <div className="modal-header">
+              <div>
+                <h3 className="modal-title">Confirm Action</h3>
+              </div>
+              <button className="modal-close-btn" onClick={closeRequestConfirmModal}>&times;</button>
+            </div>
+            <div className="modal-body" style={{paddingTop: "1rem"}}>
+              <p>{requestConfirmMessage}</p>
+            </div>
+            <div className="confirm-modal-buttons">
+              <button type="button" className="confirm-cancel-btn" onClick={closeRequestConfirmModal}>Cancel</button>
+              <button
+                type="button"
+                className={requestConfirmAction === 'deleteContact' || requestConfirmAction === 'reject' ? 'confirm-delete-btn' : 'create-employee-btn'}
+                onClick={confirmRequestAction}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+        </div>
   );
 };
 

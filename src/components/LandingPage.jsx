@@ -14,6 +14,9 @@ import Image2 from '../assets/WebDev.png';
 import Image3 from '../assets/DigiMark.png';
 import Image4 from '../assets/JobApply.png';
 import Image5 from '../assets/ItTalentSupply.png';
+import Image6 from '../assets/CyberSecurity.png';
+
+
 
 // Service images
 import WebAnalyticsImg from '../assets/WebAnalytics&Reporting.png';
@@ -49,7 +52,9 @@ const LandingPage = () => {
     path: "/services/job-support", 
     isJobSupport: true // Special flag for Job Support
   },
-    { id: 5, image: Image5, alt: "TechXplorers Service 5", text: "IT Talent Supply", path: "/services/it-talent-supply", service: "IT Talent Supply" }
+    { id: 5, image: Image5, alt: "TechXplorers Service 5", text: "IT Talent Supply", path: "/services/it-talent-supply", service: "IT Talent Supply" },
+        { id: 6, image: Image6, alt: "TechXplorers Service 6", text: "Cyber Security", path: "/services/cyber-security", service: "Cyber Security" }
+
   ];
 
   // UseInView with triggerOnce: false for re-animation on re-entry
