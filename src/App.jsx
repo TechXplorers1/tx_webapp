@@ -15,7 +15,7 @@ import ITTalentSupply from './components/services/ItTalentSupply';
 import DigitalMarketing from './components/services/DigitalMarketing';
 import JobSupport from './components/services/JobSupport';
 import CyberSecurity from './components/services/CyberSecurity';
-import JobSupportForm from './components/services/JobSupportContactForm';
+import JobSupportContactForm from './components/services/JobSupportContactForm';
 import UserDashboard from './components/Dashboard/UserDashboard';
 import AdminDashboard from './components/Dashboard/AdminDashboard';
 import ManagerData from './components/Dashboard/ManagerData';
@@ -26,7 +26,7 @@ import WorkGroups from './components/workgroups';
 import AssetsWorksheet from './components/AssetWorksheet';
 import EmployeeRegistrationForm from './components/employeeRegistrationForm';
 import EmployeeOnboardingWorkSheet from './components/employeeOnboardingSheet';
-import ServiceFormComponent from './components/services/ServicesForm';
+import ServicesForm from './components/services/ServicesForm';
 
 import AdminWorksheet from './components/AdminWorksheet';
 import ManagerWorksheet from './components/ManagerWorksheet';
@@ -60,8 +60,8 @@ const App = () => {
         <Route path="/services/it-talent-supply" element={<ITTalentSupply />} />
         <Route path="/services/job-support" element={<JobSupport />} />
         <Route path="/services/cyber-security" element={<CyberSecurity />} />
-        <Route path="/services/job-contact-form" element={<JobSupportForm />} />
-        <Route path="/services/servicesForm" element={<ServiceFormComponent />} />
+        <Route path="/services/job-contact-form" element={<JobSupportContactForm />} />
+        <Route path="/services/servicesForm" element={<ServicesForm />} />
            {/* DashBoards */}
         <Route path="/admindashboard" element={<AdminDashboard />} />
         <Route path="/assetworksheet" element={<AssetsWorksheet/>} />

@@ -136,7 +136,8 @@ const AdminWorksheet = () => {
 
 
 
-  const [clients, setClients] = useState([
+
+      const initialClients = [
     {
       id: 1,
       name: 'John Doe',
@@ -435,12 +436,31 @@ const AdminWorksheet = () => {
       jobPortalAccountName: 'novashield_linkedin',
       jobPortalCredentials: 'encrypted_password_nova_cs'
     }
-  ]);
+  ];
+
+  const [clients, setClients] = useState(initialClients);
+
+  // useEffect to load clients from localStorage on component mount
+  useEffect(() => {
+    const storedClients = JSON.parse(localStorage.getItem('registeredClients')) || [];
+    if (storedClients.length > 0) {
+        // Combine initial clients with stored clients, avoiding duplicates
+        setClients(prevClients => {
+            const clientIds = new Set(prevClients.map(c => c.id));
+            const newClients = storedClients.filter(sc => !clientIds.has(sc.id));
+            return [...prevClients, ...newClients];
+        });
+	}
+  }, []);
 
   const managers = [
     { id: 1, firstName: 'Sarah', lastName: 'Wilson' },
     { id: 2, firstName: 'Michael', lastName: 'Johnson' },
     { id: 3, firstName: 'Emily', lastName: 'Davis' },
+  ];
+
+const employees1 = [
+      { id: 1, name: 'Admin User', roles: ['admin'], email: 'admin@example.com' }
   ];
 
   // Asset Management States
@@ -1217,7 +1237,7 @@ const AdminWorksheet = () => {
         client.id === clientId ? { ...client, displayStatuses: ['active'], manager: clientToAssign.manager } : client
       ));
     } else {
-      console.warn(`Cannot assign client ${clientId}: Manager not selected.`);
+      alert('Please select a manager first.');
       // Optionally, show a user-friendly message to the user that manager needs to be selected.
 
 
@@ -1267,7 +1287,7 @@ const AdminWorksheet = () => {
 
     return filtered.filter(client =>
       [client.name, client.email, client.mobile, client.jobsApplyFor, client.country, client.service]
-        .some(field => field && field.toLowerCase().includes(clientSearchTerm.toLowerCase()))
+        .some(field => field && String(field).toLowerCase().includes(clientSearchTerm.toLowerCase()))
     );
   };
 
@@ -1298,25 +1318,17 @@ const AdminWorksheet = () => {
 
   const handleEditClientChange = (e) => {
     const { name, value } = e.target;
-    setCurrentClientToEdit(prevClient => ({
-      ...prevClient,
+    setCurrentClientToEdit(prev => ({
+      ...prev,
       [name]: value
     }));
   };
 
   const handleSaveClientDetails = (e) => {
     e.preventDefault();
-    setClients(prevClients => prevClients.map(client => {
-      if (client.id === currentClientToEdit.id) {
-        // Handle skills as an array if it's a string from textarea
-        const updatedClient = { ...currentClientToEdit };
-        if (typeof updatedClient.technologySkills === 'string') {
-          updatedClient.technologySkills = updatedClient.technologySkills.split(',').map(s => s.trim());
-        }
-        return updatedClient;
-      }
-      return client;
-    }));
+   setClients(prevClients => prevClients.map(client =>
+      client.id === currentClientToEdit.id ? { ...currentClientToEdit } : client
+    ));
     handleCloseEditClientModal();
   };
 
@@ -1609,7 +1621,8 @@ const AdminWorksheet = () => {
     'Web Development',
     'Digital Marketing',
     'IT Talent Supply',
-    'Job Supporting & Consulting'
+    'Job Supporting & Consulting',
+    'Cyber Security'
   ];
 
   // Employee Profile Modal Handlers
@@ -1736,83 +1749,55 @@ const AdminWorksheet = () => {
   };
 
 
-  const renderClientTable = (clientsToRender, serviceType, currentClientFilter, title = '') => {
-    // Determine headers based on the current clientFilter and serviceType
-    const headers = (() => {
+   const renderClientTable = (clientsToRender, serviceType, currentClientFilter, title = '') => {
+    const headers = ['Name', 'Mobile', 'Email', serviceType === 'Job Supporting & Consulting' ? 'Jobs Apply For' : 'Service', 'Registered Date', 'Country'];
+							
 
-      let baseHeaders = ['Name', 'Mobile', 'Email'];
+													
 
-      if (serviceType === 'Job Supporting & Consulting') {
-        baseHeaders.push('Jobs Apply For');
-      } else {
-        baseHeaders.push('Service');
-      }
-      baseHeaders.push('Registered Date', 'Country');
+														  
+										   
+			  
+									
+	   
+													 
 
-      if (serviceType === 'Job Supporting & Consulting') {
-        baseHeaders.push('Visa Status');
-      }
+    if (serviceType === 'Job Supporting & Consulting') headers.push('Visa Status');
+    if (['unassigned', 'active', 'restored'].includes(currentClientFilter)) headers.push('Manager');
+	   
 
-      if (currentClientFilter === 'unassigned' || currentClientFilter === 'active' || currentClientFilter === 'restored') {
-        baseHeaders.push('Manager');
-      }
+																														   
+									
+	   
 
-      baseHeaders.push('Details', 'Actions');
-      return baseHeaders;
-    })();
+    headers.push('Details', 'Actions');
 
 
     return (
       <div className="client-table-container">
         {title && <h4 className="client-table-title">{title} ({clientsToRender.length})</h4>}
         <table className="client-table">
-          <thead>
-            <tr>
-              {headers.map((header) => (
-                <th key={header} style={{ textAlign: header === 'Actions' || header === 'Details' ? 'center' : 'left' }}>
-                  {header}
-                </th>
-              ))}
-            </tr>
-          </thead>
+                   <thead><tr>{headers.map(h => <th key={h}>{h}</th>)}</tr></thead>
+
           <tbody>
             {clientsToRender.length > 0 ? (
-              clientsToRender.map((client) => (
+              clientsToRender.map(client => (
                 <tr key={client.id}>
                   <td>{client.name}</td>
                   <td>{client.mobile}</td>
                   <td>{client.email}</td>
-                  {client.service === 'Job Supporting & Consulting' ? (
-                    <td>{client.jobsApplyFor}</td>
-                  ) : (
-                    <td>{client.service}</td>
-                  )}
+                  <td>{client.service === 'Job Supporting & Consulting' ? client.jobsApplyFor : client.service}</td>
                   <td>{client.registeredDate}</td>
                   <td>{client.country}</td>
-                  {client.service === 'Job Supporting & Consulting' ? (
-                    <td>{client.visaStatus}</td>
-                  ) : null}
+                  {client.service === 'Job Supporting & Consulting' && <td>{client.visaStatus}</td>}
 
                   {(currentClientFilter === 'unassigned' || currentClientFilter === 'restored') && (
                     <td>
 
-                      <select
-                        className="manager-select"
-                        value={client.manager || ''} // Use client.manager directly
-                        onChange={(e) => {
-                          const newManager = e.target.value;
-                          setClients(prevClients => prevClients.map(c =>
-                            c.id === client.id ? { ...c, manager: newManager === '' ? null : newManager } : c
-                          ));
-                        }}
-                      >
-                        <option value="">Select Manager</option>
-                        {managers.map((mgr, idx) => (
-                          <option key={idx} value={`${mgr.firstName} ${mgr.lastName}`}>
-                            {mgr.firstName} {mgr.lastName}
-                          </option>
-                        ))}
-                      </select>
+                       <select className="manager-select" value={client.manager || ''} onChange={(e) => setClients(prev => prev.map(c => c.id === client.id ? { ...c, manager: e.target.value } : c))}>
+                      <option value="">Select Manager</option>
+                      {managers.map((mgr, idx) => <option key={idx} value={`${mgr.firstName} ${mgr.lastName}`}>{mgr.firstName} {mgr.lastName}</option>)}
+                    </select>
 
 
 
@@ -1827,11 +1812,11 @@ const AdminWorksheet = () => {
                           onChange={(e) => setTempSelectedManager(e.target.value)}
                         >
                           <option value="">Select Manager</option>
-                          {managers.map((mgr, idx) => (
+                          {managers.map((mgr, idx) => 
                             <option key={idx} value={`${mgr.firstName} ${mgr.lastName}`}>
                               {mgr.firstName} {mgr.lastName}
                             </option>
-                          ))}
+                          )}
                         </select>
                       ) : (
                         client.manager || '-'
@@ -1853,111 +1838,15 @@ const AdminWorksheet = () => {
                       </svg>
                     </button>
                   </td>
-                  <td>
-                    <div className="action-buttons" style={{ flexDirection: (currentClientFilter === 'registered' || currentClientFilter === 'rejected') ? 'column' : 'row' }}>
-                      {currentClientFilter === 'registered' && (
-                        <>
-                          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                            <button
-                              onClick={() => handleAcceptClient(client.id)}
-                              className="action-button accept"
-                            >
-                              Accept
-                            </button>
-                            <button
-                              onClick={() => handleDeclineClient(client.id)}
-                              className="action-button decline"
-                            >
-                              Decline
-                            </button>
-                          </div>
-                          <button
-                            onClick={() => handleOpenPaymentModal(client)}
-                            className="action-button send-payment-link"
-                          >
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '0.9rem', height: '0.9rem' }}>
-                              <path d="M20 4H4C3.44772 4 3 4.44772 3 5V19C3 19.5523 3.44772 20 4 20H20C20.5523 20 21 19.5523 21 19V5C21 4.44772 20.5523 4 20 4ZM5 7H19V9H5V7ZM5 11H17V13H5V11ZM5 15H13V17H5V15Z" />
-                            </svg>
-                            Send Payment Link
-                          </button>
-                        </>
-                      )}
-                      {(currentClientFilter === 'unassigned' || currentClientFilter === 'restored') && (
-                        <>
-                          {/* No separate edit/save for manager selection here, direct update */}
-
-
-                          <button
-                            onClick={() => handleAssignClient(client.id)}
-                            className="action-button assign"
-                            disabled={!client.manager} // Enabled if a manager is selected in the dropdown
-
-                          >
-                            Assign
-                          </button>
-
-
-                        </>
-                      )}
-                      {currentClientFilter === 'active' && (
-                        editingClientId === client.id ? (
-                          <>
-
-                            <button
-                              onClick={() => handleSaveManagerChange(client.id)}
-                              className="action-button save"
-                              disabled={!tempSelectedManager}
-                            >
-                              Save
-                            </button>
-                            <button
-                              onClick={handleCancelEdit}
-                              className="action-button cancel"
-                            >
-                              Cancel
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            onClick={() => handleEditManager(client)}
-                            className="action-button edit-manager"
-                          >
-                            Edit Manager
-                          </button>
-                        )
-                      )}
-                      {currentClientFilter === 'rejected' && (
-                        <>
-                          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                            <button
-                              onClick={() => handleRestoreClient(client.id)}
-                              className="action-button restore"
-                            >
-                              Restore
-                            </button>
-                            <button
-                              onClick={() => handleDeleteRejectedClient(client.id)}
-                              className="action-button delete-btn"
-                              title="Delete Client"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '0.9rem', height: '0.9rem' }}>
-                                <path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z" />
-                              </svg>
-                            </button>
-                          </div>
-                          <button
-                            onClick={() => handleOpenPaymentModal(client)}
-                            className="action-button send-payment-link"
-                          >
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '0.9rem', height: '0.9rem' }}>
-                              <path d="M20 4H4C3.44772 4 3 4.44772 3 5V19C3 19.5523 3.44772 20 4 20H20C20.5523 20 21 19.5523 21 19V5C21 4.44772 20.5523 4 20 4ZM5 7H19V9H5V7ZM5 11H17V13H5V11ZM5 15H13V17H5V15Z" />
-                            </svg>
-                            Send Payment Link
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
+                  <td><button onClick={() => handleViewClientDetails(client)} className="action-button">View</button></td>
+                <td>
+                  <div className="action-buttons">
+                    {currentClientFilter === 'registered' && (<><button onClick={() => handleAcceptClient(client.id)} className="action-button accept">Accept</button><button onClick={() => handleDeclineClient(client.id)} className="action-button decline">Decline</button></>)}
+                    {(currentClientFilter === 'unassigned' || currentClientFilter === 'restored') && <button onClick={() => handleAssignClient(client.id)} className="action-button assign" disabled={!client.manager}>Assign</button>}
+                    {currentClientFilter === 'active' && (editingClientId === client.id ? (<><button onClick={() => handleSaveManagerChange(client.id)} className="action-button save" disabled={!tempSelectedManager}>Save</button><button onClick={handleCancelEdit} className="action-button cancel">Cancel</button></>) : (<button onClick={() => handleEditManager(client)} className="action-button edit-manager">Edit Manager</button>))}
+                    {currentClientFilter === 'rejected' && (<><button onClick={() => handleRestoreClient(client.id)} className="action-button restore">Restore</button><button onClick={() => handleDeleteRejectedClient(client.id)} className="action-button delete-btn">Delete</button></>)}
+                  </div>
+                </td>
                 </tr>
               ))
             ) : (
@@ -1983,8 +1872,7 @@ const AdminWorksheet = () => {
           const clientsForService = clients.filter(client =>
             client.displayStatuses.includes(clientFilter) &&
             client.service === service &&
-            [client.name, client.email, client.mobile, client.jobsApplyFor, client.country, client.service]
-              .some(field => field && field.toLowerCase().includes(clientSearchTerm.toLowerCase()))
+            (client.name.toLowerCase().includes(clientSearchTerm.toLowerCase()) || client.email.toLowerCase().includes(clientSearchTerm.toLowerCase()))
           );
           return (
             <div key={service} className="service-table-list-item">
@@ -4967,7 +4855,7 @@ html.dark-mode {
           <div className="profile-dropdown-container" ref={profileDropdownRef}>
             <div className="ad-employee-info" onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}>
               <div className="ad-employee-info-text">
-                <p className="ad-employee-name">{employees.find(e => e.roles.includes('admin'))?.name || 'Admin'}</p>
+                <p className="ad-employee-name">{employees1.find(e => e.roles.includes('admin'))?.name || 'Admin'}</p>
                 <span className="ad-admin-tag">
 
                   <svg className="ad-icon-btn" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ fontSize: '0.65rem', width: '0.65rem', height: '0.65rem' }}>
@@ -4977,7 +4865,7 @@ html.dark-mode {
                 </span>
               </div>
               <div className="ad-initials-avatar">
-                <span className="ad-initials-text">{getInitials(employees.find(e => e.roles.includes('admin'))?.name)}</span>              </div>
+                <span className="ad-initials-text">{getInitials(employees1.find(e => e.roles.includes('admin'))?.name)}</span>              </div>
             </div>
             {isProfileDropdownOpen && (
               <ul className="profile-dropdown-menu open">

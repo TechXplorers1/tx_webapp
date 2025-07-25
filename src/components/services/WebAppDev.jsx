@@ -74,7 +74,7 @@ const WebAppDev = () => {
   ];
 
   const handleApplyNow = () => {
-    navigate('/services/servicesForm', { state: { service: 'Web Application Development' } });
+    navigate('/services/servicesForm', { state: { service: 'Web Development' } });
   };
 
   const handleChange = (e) => {

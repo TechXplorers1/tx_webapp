@@ -63,6 +63,11 @@ Our comprehensive job support services are designed to assist IT professionals i
     }
   ];
 
+    // This function correctly navigates to the JobSupportContactForm.
+  const handleRegisterNow = () => {
+    navigate('/services/job-contact-form');
+  };
+
   return (
     <div className="jobsupport-container">
       <CustomNavbar />
@@ -119,7 +124,7 @@ Our comprehensive job support services are designed to assist IT professionals i
           </a>&nbsp; &nbsp; &nbsp;OR &nbsp; &nbsp; &nbsp;
           <button
             className="contact-button btn-lg btn-primary"
-            onClick={() => navigate('/services/job-contact-form')}
+             onClick={handleRegisterNow}
           >
             Register Now
           </button>

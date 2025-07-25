@@ -1,17 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Container, Form, Button, Row, Col, Alert, Modal } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-const ContactForm = () => {
+const JobSupportContactForm = () => {
   const navigate = useNavigate();
+  const countryDropdownRef = useRef(null);
 
   // Define the initial state for the form data
   const initialFormData = {
 
- // ** NEW: Hidden service field **
+    // ** NEW: Hidden service field **
     // This field will be included in the form submission data
-    service: 'Job Support',
+    service: 'Job Supporting & Consulting',
 
     // Personal Information
     firstName: '',
@@ -70,7 +71,7 @@ const ContactForm = () => {
     // Resume Upload
     resume: null,
 
-   
+
   };
 
   const [formData, setFormData] = useState(initialFormData);
@@ -78,12 +79,16 @@ const ContactForm = () => {
   const [submitStatus, setSubmitStatus] = useState({ success: false, message: '' });
   const [showPreviewModal, setShowPreviewModal] = useState(false);
 
+  // State for the custom country code dropdown
+  const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
+  const [countrySearchTerm, setCountrySearchTerm] = useState('');
+
   const handleChange = (e) => {
     const { name, value, files } = e.target;
     if (name === "resume") {
-        setFormData(prev => ({ ...prev, [name]: files[0] }));
+      setFormData(prev => ({ ...prev, [name]: files[0] }));
     } else {
-        setFormData(prev => ({ ...prev, [name]: value }));
+      setFormData(prev => ({ ...prev, [name]: value }));
     }
   };
 
@@ -96,9 +101,7 @@ const ContactForm = () => {
       'expectedSalary', 'visaStatus', 'universityName', 'universityAddress',
       'courseOfStudy', 'graduationFromDate', 'graduationToDate',
       'currentCompany', 'currentDesignation', 'preferredInterviewTime',
-      'earliestJoiningDate', 'relievingDate', 'referenceName', 'referencePhone',
-      'referenceAddress', 'referenceEmail', 'referenceRole',
-      'jobPortalAccountNameandCredentials', 'resume'
+      'earliestJoiningDate', 'relievingDate', 'resume'
     ];
 
     for (const field of mandatoryFields) {
@@ -115,11 +118,11 @@ const ContactForm = () => {
       setSubmitStatus({ success: false, message: "Please specify your 'Other Visa Status'." });
       return false;
     }
-    
+
     // Conditional mandatory field for 'clearanceLevel'
     if (formData.securityClearance === 'yes' && !formData.clearanceLevel) {
-        setSubmitStatus({ success: false, message: "Please specify your 'Clearance Level'." });
-        return false;
+      setSubmitStatus({ success: false, message: "Please specify your 'Clearance Level'." });
+      return false;
     }
 
     if (!formData.resume) {
@@ -142,48 +145,91 @@ const ContactForm = () => {
     setShowPreviewModal(false);
   };
 
-  const handleSubmit = async (e) => {
+  const handleConfirmAndSubmit = async (e) => {
     if (e) e.preventDefault();
 
     if (!validateForm()) {
+      setShowPreviewModal(false); // Close modal to show error alert
       return;
     }
 
     setIsSubmitting(true);
-    // The commented-out section below shows where you would handle the form submission.
-    // The `formData` object, which now includes the `service` field, would be sent.
-    // try {
-    //   console.log("Submitting form data:", formData); // You can see the 'service' field here
-    //   const response = await emailjs.send(
-    //     'YOUR_SERVICE_ID',
-    //     'YOUR_TEMPLATE_ID',
-    //     formData,
-    //     'YOUR_USER_ID'
-    //   );
-    //   console.log('EmailJS Response:', response);
-    //
-    //   // Reset form to its initial state on successful submission
-    //   setFormData(initialFormData);
-    //   setSubmitStatus({ success: true, message: 'Form submitted successfully!' });
-    //   setShowPreviewModal(false);
-    // } catch (error) {
-    //   setSubmitStatus({ success: false, message: 'Submission failed. Please try again.' });
-    // } finally {
-    //   setIsSubmitting(false);
-    // }
+    // Find country name from country code for storage
+    const countryData = countryCodes.find(c => c.dialCode === formData.countryCode);
+    const countryName = countryData ? countryData.name : 'N/A';
+    const newClient = {
+      id: new Date().getTime(),
+      name: `${formData.firstName} ${formData.lastName}`,
+      mobile: `${formData.countryCode} ${formData.mobile}`,
+      email: formData.email,
+      jobsApplyFor: formData.jobsToApply,
+      registeredDate: new Date().toISOString().split('T')[0],
+      country: countryName,
+      visaStatus: formData.visaStatus === 'other' ? formData.otherVisaStatus : formData.visaStatus,
+      paymentStatus: 'Pending',
+      displayStatuses: ['registered'],
+      service: formData.service,
+      subServices: [],
+      userType: 'Individual', // Assuming job support applicants are individuals
+      firstName: formData.firstName,
+      middleName: formData.middleName,
+      lastName: formData.lastName,
+      dob: formData.dob,
+      gender: formData.gender,
+      ethnicity: formData.ethnicity,
+      address: formData.address,
+      zipCode: formData.zipCode,
+      securityClearance: formData.securityClearance,
+      clearanceLevel: formData.clearanceLevel,
+      willingToRelocate: formData.willingToRelocate,
+      workPreference: formData.workPreference,
+      restrictedCompanies: formData.restrictedCompanies,
+      technologySkills: formData.technologySkills.split(',').map(s => s.trim()),
+      currentSalary: formData.currentSalary,
+      expectedSalary: formData.expectedSalary,
+      schoolName: formData.universityName,
+      schoolAddress: formData.universityAddress,
+      courseOfStudy: formData.courseOfStudy,
+      graduationFromDate: formData.graduationFromDate,
+      graduationToDate: formData.graduationToDate,
+      currentCompany: formData.currentCompany,
+      currentDesignation: formData.currentDesignation,
+      preferredInterviewTime: formData.preferredInterviewTime,
+      earliestJoiningDate: formData.earliestJoiningDate,
+      relievingDate: formData.relievingDate,
+      referenceName: formData.referenceName,
+      referencePhone: formData.referencePhone,
+      referenceAddress: formData.referenceAddress,
+      referenceEmail: formData.referenceEmail,
+      referenceRole: formData.referenceRole,
+      jobPortalAccountName: formData.jobPortalAccountNameandCredentials,
+      // Resume file is not stored in localStorage, just its name for preview
+    };
 
-    // Simulating a successful submission for demonstration purposes
-    console.log("Form data to be submitted:", formData);
-    setTimeout(() => {
+    try {
+      const existingClients = JSON.parse(localStorage.getItem('registeredClients')) || [];
+      existingClients.push(newClient);
+      localStorage.setItem('registeredClients', JSON.stringify(existingClients));
+
+      console.log("Form data saved to localStorage:", newClient);
+
       setSubmitStatus({ success: true, message: 'Form submitted successfully!' });
-      setFormData(initialFormData); // Reset form
-      document.getElementById("contact-form").reset(); // Also reset the native form element
-      setIsSubmitting(false);
+      setFormData(initialFormData);
+      // document.getElementById("contact-form").reset(); // Reset might not work well with React state
       setShowPreviewModal(false);
-    }, 1000);
+
+      setTimeout(() => {
+        navigate('/');
+      }, 2000);
+    } catch (error) {
+      setSubmitStatus({ success: false, message: 'Submission failed. Please try again.' });
+      console.error("Failed to save to localStorage", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-// Comprehensive list of country codes and names
+  // Comprehensive list of country codes and names
   const countryCodes = [
     { shortCode: 'US', dialCode: '+1', name: 'United States' },
     { shortCode: 'CA', dialCode: '+1', name: 'Canada' },
@@ -299,6 +345,22 @@ const ContactForm = () => {
     { shortCode: 'LU', dialCode: '+352', name: 'Luxembourg' },
   ];
 
+  const filteredCountries = countryCodes.filter(country =>
+    country.name.toLowerCase().includes(countrySearchTerm.toLowerCase()) ||
+    country.dialCode.includes(countrySearchTerm)
+  );
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (countryDropdownRef.current && !countryDropdownRef.current.contains(event.target)) {
+        setIsCountryDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
 
   const containerStyle = {
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
@@ -407,10 +469,10 @@ const ContactForm = () => {
           </Alert>
         )}
         <h2 style={formHeaderStyle}>Job Support Contact Form</h2>
-        <Form id="contact-form" onSubmit={handleSubmit}>
-           {/* ** NEW: Hidden input field for the service ** */}
-           {/* This ensures the 'service' value is part of the form post data */}
-           <input type="hidden" name="service" value={formData.service} />
+        <Form id="contact-form" onSubmit={handlePreview}>
+          {/* ** NEW: Hidden input field for the service ** */}
+          {/* This ensures the 'service' value is part of the form post data */}
+          <input type="hidden" name="service" value={formData.service} />
 
           {/* Personal Information */}
           <h4 className="border-bottom pb-2 mb-3" style={subHeaderStyle}>Personal Information</h4>
@@ -463,15 +525,55 @@ const ContactForm = () => {
             </Form.Group>
           </Row>
           <Row className="mb-3">
-            <Form.Group as={Col} controlId="formCountryCode">
+            <Form.Group as={Col} controlId="formCountryCode" ref={countryDropdownRef}>
+
               <Form.Label>Country Code <span className="text-danger">*</span></Form.Label>
-              <Form.Select name="countryCode" value={formData.countryCode} onChange={handleChange} required style={inputControlStyle}>
-                {countryCodes.map((country, index) => (
-                  <option key={index} value={country.dialCode}>
-                    {country.name} ({country.dialCode})
-                  </option>
-                ))}
-              </Form.Select>
+
+              <div style={{ position: 'relative' }}>
+
+                <Form.Control
+
+                  type="text"
+
+                  value={isCountryDropdownOpen ? countrySearchTerm : `${countryCodes.find(c => c.dialCode === formData.countryCode)?.name || ''} (${formData.countryCode})`}
+
+                  onFocus={() => setIsCountryDropdownOpen(true)}
+
+                  onChange={(e) => setCountrySearchTerm(e.target.value)}
+
+                  placeholder="Search country..."
+
+                  style={inputControlStyle}
+
+                />
+
+                {isCountryDropdownOpen && (
+
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: '1px solid #ccc', maxHeight: '200px', overflowY: 'auto', zIndex: 1000 }}>
+
+                    {filteredCountries.map((country, index) => (
+
+                      <div key={index} style={{ padding: '8px 12px', cursor: 'pointer' }} onClick={() => {
+
+                        setFormData(prev => ({ ...prev, countryCode: country.dialCode }));
+
+                        setCountrySearchTerm('');
+
+                        setIsCountryDropdownOpen(false);
+
+                      }}>
+
+                        {country.name} ({country.dialCode})
+
+                      </div>
+
+                    ))}
+
+                  </div>
+
+                )}
+
+              </div>
             </Form.Group>
             <Form.Group as={Col} controlId="formMobile">
               <Form.Label>Mobile <span className="text-danger">*</span></Form.Label>
@@ -528,41 +630,41 @@ const ContactForm = () => {
           {/* Job Preferences */}
           <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Job Preferences</h4>
           <Row className="mb-3">
-             <Form.Group as={Col} controlId="formJobsToApply">
-                <Form.Label>Jobs to Apply For <span className="text-danger">*</span></Form.Label>
-                <Form.Control type="text" name="jobsToApply" onChange={handleChange} required style={inputControlStyle} />
+            <Form.Group as={Col} controlId="formJobsToApply">
+              <Form.Label>Jobs to Apply For <span className="text-danger">*</span></Form.Label>
+              <Form.Control type="text" name="jobsToApply" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
             <Form.Group as={Col} controlId="formTechnologySkills">
-                <Form.Label>Technology Skills <span className="text-danger">*</span></Form.Label>
-                <Form.Control type="text" name="technologySkills" onChange={handleChange} required style={inputControlStyle} />
+              <Form.Label>Technology Skills <span className="text-danger">*</span></Form.Label>
+              <Form.Control type="text" name="technologySkills" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
           </Row>
           <Row className="mb-3">
             <Form.Group as={Col} controlId="formCurrentSalary">
-                <Form.Label>Current Salary <span className="text-danger">*</span></Form.Label>
-                <Form.Control type="text" name="currentSalary" onChange={handleChange} required style={inputControlStyle} />
+              <Form.Label>Current Salary <span className="text-danger">*</span></Form.Label>
+              <Form.Control type="text" name="currentSalary" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
             <Form.Group as={Col} controlId="formExpectedSalary">
-                <Form.Label>Expected Salary <span className="text-danger">*</span></Form.Label>
-                <Form.Control type="text" name="expectedSalary" onChange={handleChange} required style={inputControlStyle} />
+              <Form.Label>Expected Salary <span className="text-danger">*</span></Form.Label>
+              <Form.Control type="text" name="expectedSalary" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
             <Form.Group as={Col} controlId="formVisaStatus">
-                <Form.Label>Visa Status <span className="text-danger">*</span></Form.Label>
-                <Form.Select name="visaStatus" onChange={handleChange} required style={inputControlStyle}>
-                    <option value="">Select Status</option>
-                    <option value="us_citizen">US Citizen</option>
-                    <option value="green_card">Green Card</option>
-                    <option value="h1b">H1B</option>
-                    <option value="opt">OPT</option>
-                    <option value="cpt">CPT</option>
-                    <option value="other">Other</option>
-                </Form.Select>
+              <Form.Label>Visa Status <span className="text-danger">*</span></Form.Label>
+              <Form.Select name="visaStatus" onChange={handleChange} required style={inputControlStyle}>
+                <option value="">Select Status</option>
+                <option value="us_citizen">US Citizen</option>
+                <option value="green_card">Green Card</option>
+                <option value="h1b">H1B</option>
+                <option value="opt">OPT</option>
+                <option value="cpt">CPT</option>
+                <option value="other">Other</option>
+              </Form.Select>
             </Form.Group>
             {formData.visaStatus === 'other' && (
-                <Form.Group as={Col} controlId="formOtherVisaStatus">
-                    <Form.Label>Please specify <span className="text-danger">*</span></Form.Label>
-                    <Form.Control type="text" name="otherVisaStatus" onChange={handleChange} required style={inputControlStyle} />
-                </Form.Group>
+              <Form.Group as={Col} controlId="formOtherVisaStatus">
+                <Form.Label>Please specify <span className="text-danger">*</span></Form.Label>
+                <Form.Control type="text" name="otherVisaStatus" onChange={handleChange} required style={inputControlStyle} />
+              </Form.Group>
             )}
           </Row>
 
@@ -570,26 +672,26 @@ const ContactForm = () => {
           <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Education</h4>
           <Row className="mb-3">
             <Form.Group as={Col} controlId="formUniversityName">
-                <Form.Label>University Name <span className="text-danger">*</span></Form.Label>
-                <Form.Control type="text" name="universityName" onChange={handleChange} required style={inputControlStyle} />
+              <Form.Label>University Name <span className="text-danger">*</span></Form.Label>
+              <Form.Control type="text" name="universityName" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
             <Form.Group as={Col} controlId="formUniversityAddress">
-                <Form.Label>University Address <span className="text-danger">*</span></Form.Label>
-                <Form.Control type="text" name="universityAddress" onChange={handleChange} required style={inputControlStyle} />
+              <Form.Label>University Address <span className="text-danger">*</span></Form.Label>
+              <Form.Control type="text" name="universityAddress" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
             <Form.Group as={Col} controlId="formCourseOfStudy">
-                <Form.Label>Course of Study <span className="text-danger">*</span></Form.Label>
-                <Form.Control type="text" name="courseOfStudy" onChange={handleChange} required style={inputControlStyle} />
+              <Form.Label>Course of Study <span className="text-danger">*</span></Form.Label>
+              <Form.Control type="text" name="courseOfStudy" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
           </Row>
           <Row className="mb-3">
             <Form.Group as={Col} controlId="formGraduationFromDate">
-                <Form.Label>Graduation From Date <span className="text-danger">*</span></Form.Label>
-                <Form.Control type="date" name="graduationFromDate" onChange={handleChange} required style={inputControlStyle} />
+              <Form.Label>Graduation From Date <span className="text-danger">*</span></Form.Label>
+              <Form.Control type="date" name="graduationFromDate" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
             <Form.Group as={Col} controlId="formGraduationToDate">
-                <Form.Label>Graduation To Date <span className="text-danger">*</span></Form.Label>
-                <Form.Control type="date" name="graduationToDate" onChange={handleChange} required style={inputControlStyle} />
+              <Form.Label>Graduation To Date <span className="text-danger">*</span></Form.Label>
+              <Form.Control type="date" name="graduationToDate" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
           </Row>
 
@@ -597,61 +699,61 @@ const ContactForm = () => {
           <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Current Employment</h4>
           <Row className="mb-3">
             <Form.Group as={Col} controlId="formCurrentCompany">
-                <Form.Label>Current Company <span className="text-danger">*</span></Form.Label>
-                <Form.Control type="text" name="currentCompany" onChange={handleChange} required style={inputControlStyle} />
+              <Form.Label>Current Company <span className="text-danger">*</span></Form.Label>
+              <Form.Control type="text" name="currentCompany" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
             <Form.Group as={Col} controlId="formCurrentDesignation">
-                <Form.Label>Current Designation <span className="text-danger">*</span></Form.Label>
-                <Form.Control type="text" name="currentDesignation" onChange={handleChange} required style={inputControlStyle} />
+              <Form.Label>Current Designation <span className="text-danger">*</span></Form.Label>
+              <Form.Control type="text" name="currentDesignation" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
           </Row>
           <Row className="mb-3">
             <Form.Group as={Col} controlId="formPreferredInterviewTime">
-                <Form.Label>Preferred Interview Time <span className="text-danger">*</span></Form.Label>
-                <Form.Control type="text" name="preferredInterviewTime" onChange={handleChange} required style={inputControlStyle} />
+              <Form.Label>Preferred Interview Time <span className="text-danger">*</span></Form.Label>
+              <Form.Control type="text" name="preferredInterviewTime" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
             <Form.Group as={Col} controlId="formEarliestJoiningDate">
-                <Form.Label>Earliest Joining Date <span className="text-danger">*</span></Form.Label>
-                <Form.Control type="date" name="earliestJoiningDate" onChange={handleChange} required style={inputControlStyle} />
+              <Form.Label>Earliest Joining Date <span className="text-danger">*</span></Form.Label>
+              <Form.Control type="date" name="earliestJoiningDate" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
             <Form.Group as={Col} controlId="formRelievingDate">
-                <Form.Label>Relieving Date <span className="text-danger">*</span></Form.Label>
-                <Form.Control type="date" name="relievingDate" onChange={handleChange} required style={inputControlStyle} />
+              <Form.Label>Relieving Date <span className="text-danger">*</span></Form.Label>
+              <Form.Control type="date" name="relievingDate" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
           </Row>
 
-          {/* References */}
+          {/* References (Optional) */}
           <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>References</h4>
           <Row className="mb-3">
             <Form.Group as={Col} controlId="formReferenceName">
-                <Form.Label>Reference Name <span className="text-danger">*</span></Form.Label>
-                <Form.Control type="text" name="referenceName" onChange={handleChange} required style={inputControlStyle} />
+              <Form.Label>Reference Name (Optional)</Form.Label>
+              <Form.Control type="text" name="referenceName" onChange={handleChange}  style={inputControlStyle} />
             </Form.Group>
             <Form.Group as={Col} controlId="formReferencePhone">
-                <Form.Label>Reference Phone <span className="text-danger">*</span></Form.Label>
-                <Form.Control type="text" name="referencePhone" onChange={handleChange} required style={inputControlStyle} />
+              <Form.Label>Reference Phone (Optional)</Form.Label>
+              <Form.Control type="text" name="referencePhone" onChange={handleChange}  style={inputControlStyle} />
             </Form.Group>
             <Form.Group as={Col} controlId="formReferenceAddress">
-                <Form.Label>Reference Address <span className="text-danger">*</span></Form.Label>
-                <Form.Control type="text" name="referenceAddress" onChange={handleChange} required style={inputControlStyle} />
+              <Form.Label>Reference Address (Optional)</Form.Label>
+              <Form.Control type="text" name="referenceAddress" onChange={handleChange}  style={inputControlStyle} />
             </Form.Group>
           </Row>
           <Row className="mb-3">
             <Form.Group as={Col} controlId="formReferenceEmail">
-                <Form.Label>Reference Email <span className="text-danger">*</span></Form.Label>
-                <Form.Control type="email" name="referenceEmail" onChange={handleChange} required style={inputControlStyle} />
+              <Form.Label>Reference Email (Optional)</Form.Label>
+              <Form.Control type="email" name="referenceEmail" onChange={handleChange}  style={inputControlStyle} />
             </Form.Group>
             <Form.Group as={Col} controlId="formReferenceRole">
-                <Form.Label>Reference Role <span className="text-danger">*</span></Form.Label>
-                <Form.Control type="text" name="referenceRole" onChange={handleChange} required style={inputControlStyle} />
+              <Form.Label>Reference Role (Optional)</Form.Label>
+              <Form.Control type="text" name="referenceRole" onChange={handleChange}  style={inputControlStyle} />
             </Form.Group>
           </Row>
 
-          {/* Job Portal Information */}
+          {/* Job Portal Information (Optional) */}
           <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Job Portal Information</h4>
           <Form.Group controlId="formJobPortalCredentials" className="mb-3">
-            <Form.Label>Job Portal Account Name & Credentials <span className="text-danger">*</span></Form.Label>
-            <Form.Control name="jobPortalAccountNameandCredentials" onChange={handleChange} as="textarea" rows={2} required style={{ ...inputControlStyle, minHeight: '80px', resize: 'vertical' }} />
+            <Form.Label>Job Portal Account Name & Credentials (Optional)</Form.Label>
+            <Form.Control name="jobPortalAccountNameandCredentials" onChange={handleChange} as="textarea" rows={2}  style={{ ...inputControlStyle, minHeight: '80px', resize: 'vertical' }} />
           </Form.Group>
 
           {/* Upload Resume Section */}
@@ -708,68 +810,68 @@ const ContactForm = () => {
 
           {/* Employment Information Preview */}
           <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Employment Information</h4>
-           <Row className="mb-3">
-              <Col><Form.Label>Security Clearance:</Form.Label><div style={previewValueDisplay}>{formData.securityClearance || 'N/A'}</div></Col>
-              {formData.securityClearance === 'yes' && (
-                <Col><Form.Label>Clearance Level:</Form.Label><div style={previewValueDisplay}>{formData.clearanceLevel || 'N/A'}</div></Col>
-              )}
-              <Col><Form.Label>Willing to Relocate:</Form.Label><div style={previewValueDisplay}>{formData.willingToRelocate || 'N/A'}</div></Col>
-           </Row>
-           <Row className="mb-3">
-              <Col><Form.Label>Work Preference:</Form.Label><div style={previewValueDisplay}>{formData.workPreference || 'N/A'}</div></Col>
-              <Col><Form.Label>Restricted Companies:</Form.Label><div style={previewValueDisplay}>{formData.restrictedCompanies || 'N/A'}</div></Col>
-           </Row>
+          <Row className="mb-3">
+            <Col><Form.Label>Security Clearance:</Form.Label><div style={previewValueDisplay}>{formData.securityClearance || 'N/A'}</div></Col>
+            {formData.securityClearance === 'yes' && (
+              <Col><Form.Label>Clearance Level:</Form.Label><div style={previewValueDisplay}>{formData.clearanceLevel || 'N/A'}</div></Col>
+            )}
+            <Col><Form.Label>Willing to Relocate:</Form.Label><div style={previewValueDisplay}>{formData.willingToRelocate || 'N/A'}</div></Col>
+          </Row>
+          <Row className="mb-3">
+            <Col><Form.Label>Work Preference:</Form.Label><div style={previewValueDisplay}>{formData.workPreference || 'N/A'}</div></Col>
+            <Col><Form.Label>Restricted Companies:</Form.Label><div style={previewValueDisplay}>{formData.restrictedCompanies || 'N/A'}</div></Col>
+          </Row>
 
           {/* Job Preferences Preview */}
           <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Job Preferences</h4>
-            <Row className="mb-3">
-                <Col><Form.Label>Jobs to Apply For:</Form.Label><div style={previewValueDisplay}>{formData.jobsToApply || 'N/A'}</div></Col>
-                <Col><Form.Label>Technology Skills:</Form.Label><div style={previewValueDisplay}>{formData.technologySkills || 'N/A'}</div></Col>
-            </Row>
-            <Row className="mb-3">
-                <Col><Form.Label>Current Salary:</Form.Label><div style={previewValueDisplay}>{formData.currentSalary || 'N/A'}</div></Col>
-                <Col><Form.Label>Expected Salary:</Form.Label><div style={previewValueDisplay}>{formData.expectedSalary || 'N/A'}</div></Col>
-                <Col><Form.Label>Visa Status:</Form.Label><div style={previewValueDisplay}>{formData.visaStatus || 'N/A'}</div></Col>
-                {formData.visaStatus === 'other' && (
-                    <Col><Form.Label>Please specify:</Form.Label><div style={previewValueDisplay}>{formData.otherVisaStatus || 'N/A'}</div></Col>
-                )}
-            </Row>
+          <Row className="mb-3">
+            <Col><Form.Label>Jobs to Apply For:</Form.Label><div style={previewValueDisplay}>{formData.jobsToApply || 'N/A'}</div></Col>
+            <Col><Form.Label>Technology Skills:</Form.Label><div style={previewValueDisplay}>{formData.technologySkills || 'N/A'}</div></Col>
+          </Row>
+          <Row className="mb-3">
+            <Col><Form.Label>Current Salary:</Form.Label><div style={previewValueDisplay}>{formData.currentSalary || 'N/A'}</div></Col>
+            <Col><Form.Label>Expected Salary:</Form.Label><div style={previewValueDisplay}>{formData.expectedSalary || 'N/A'}</div></Col>
+            <Col><Form.Label>Visa Status:</Form.Label><div style={previewValueDisplay}>{formData.visaStatus || 'N/A'}</div></Col>
+            {formData.visaStatus === 'other' && (
+              <Col><Form.Label>Please specify:</Form.Label><div style={previewValueDisplay}>{formData.otherVisaStatus || 'N/A'}</div></Col>
+            )}
+          </Row>
 
           {/* Education Preview */}
           <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Education</h4>
-            <Row className="mb-3">
-                <Col><Form.Label>University Name:</Form.Label><div style={previewValueDisplay}>{formData.universityName || 'N/A'}</div></Col>
-                <Col><Form.Label>University Address:</Form.Label><div style={previewValueDisplay}>{formData.universityAddress || 'N/A'}</div></Col>
-                <Col><Form.Label>Course of Study:</Form.Label><div style={previewValueDisplay}>{formData.courseOfStudy || 'N/A'}</div></Col>
-            </Row>
-            <Row className="mb-3">
-                <Col><Form.Label>Graduation From Date:</Form.Label><div style={previewValueDisplay}>{formData.graduationFromDate || 'N/A'}</div></Col>
-                <Col><Form.Label>Graduation To Date:</Form.Label><div style={previewValueDisplay}>{formData.graduationToDate || 'N/A'}</div></Col>
-            </Row>
+          <Row className="mb-3">
+            <Col><Form.Label>University Name:</Form.Label><div style={previewValueDisplay}>{formData.universityName || 'N/A'}</div></Col>
+            <Col><Form.Label>University Address:</Form.Label><div style={previewValueDisplay}>{formData.universityAddress || 'N/A'}</div></Col>
+            <Col><Form.Label>Course of Study:</Form.Label><div style={previewValueDisplay}>{formData.courseOfStudy || 'N/A'}</div></Col>
+          </Row>
+          <Row className="mb-3">
+            <Col><Form.Label>Graduation From Date:</Form.Label><div style={previewValueDisplay}>{formData.graduationFromDate || 'N/A'}</div></Col>
+            <Col><Form.Label>Graduation To Date:</Form.Label><div style={previewValueDisplay}>{formData.graduationToDate || 'N/A'}</div></Col>
+          </Row>
 
           {/* Current Employment Preview */}
           <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Current Employment</h4>
-            <Row className="mb-3">
-                <Col><Form.Label>Current Company:</Form.Label><div style={previewValueDisplay}>{formData.currentCompany || 'N/A'}</div></Col>
-                <Col><Form.Label>Current Designation:</Form.Label><div style={previewValueDisplay}>{formData.currentDesignation || 'N/A'}</div></Col>
-            </Row>
-            <Row className="mb-3">
-                <Col><Form.Label>Preferred Interview Time:</Form.Label><div style={previewValueDisplay}>{formData.preferredInterviewTime || 'N/A'}</div></Col>
-                <Col><Form.Label>Earliest Joining Date:</Form.Label><div style={previewValueDisplay}>{formData.earliestJoiningDate || 'N/A'}</div></Col>
-                <Col><Form.Label>Relieving Date:</Form.Label><div style={previewValueDisplay}>{formData.relievingDate || 'N/A'}</div></Col>
-            </Row>
+          <Row className="mb-3">
+            <Col><Form.Label>Current Company:</Form.Label><div style={previewValueDisplay}>{formData.currentCompany || 'N/A'}</div></Col>
+            <Col><Form.Label>Current Designation:</Form.Label><div style={previewValueDisplay}>{formData.currentDesignation || 'N/A'}</div></Col>
+          </Row>
+          <Row className="mb-3">
+            <Col><Form.Label>Preferred Interview Time:</Form.Label><div style={previewValueDisplay}>{formData.preferredInterviewTime || 'N/A'}</div></Col>
+            <Col><Form.Label>Earliest Joining Date:</Form.Label><div style={previewValueDisplay}>{formData.earliestJoiningDate || 'N/A'}</div></Col>
+            <Col><Form.Label>Relieving Date:</Form.Label><div style={previewValueDisplay}>{formData.relievingDate || 'N/A'}</div></Col>
+          </Row>
 
           {/* References Preview */}
           <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>References</h4>
-            <Row className="mb-3">
-                <Col><Form.Label>Reference Name:</Form.Label><div style={previewValueDisplay}>{formData.referenceName || 'N/A'}</div></Col>
-                <Col><Form.Label>Reference Phone:</Form.Label><div style={previewValueDisplay}>{formData.referencePhone || 'N/A'}</div></Col>
-                <Col><Form.Label>Reference Address:</Form.Label><div style={previewValueDisplay}>{formData.referenceAddress || 'N/A'}</div></Col>
-            </Row>
-            <Row className="mb-3">
-                <Col><Form.Label>Reference Email:</Form.Label><div style={previewValueDisplay}>{formData.referenceEmail || 'N/A'}</div></Col>
-                <Col><Form.Label>Reference Role:</Form.Label><div style={previewValueDisplay}>{formData.referenceRole || 'N/A'}</div></Col>
-            </Row>
+          <Row className="mb-3">
+            <Col><Form.Label>Reference Name:</Form.Label><div style={previewValueDisplay}>{formData.referenceName || 'N/A'}</div></Col>
+            <Col><Form.Label>Reference Phone:</Form.Label><div style={previewValueDisplay}>{formData.referencePhone || 'N/A'}</div></Col>
+            <Col><Form.Label>Reference Address:</Form.Label><div style={previewValueDisplay}>{formData.referenceAddress || 'N/A'}</div></Col>
+          </Row>
+          <Row className="mb-3">
+            <Col><Form.Label>Reference Email:</Form.Label><div style={previewValueDisplay}>{formData.referenceEmail || 'N/A'}</div></Col>
+            <Col><Form.Label>Reference Role:</Form.Label><div style={previewValueDisplay}>{formData.referenceRole || 'N/A'}</div></Col>
+          </Row>
 
           {/* Job Portal Information Preview */}
           <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Job Portal Information</h4>
@@ -790,8 +892,8 @@ const ContactForm = () => {
           <Button variant="secondary" onClick={handleClosePreviewModal}>
             Edit
           </Button>
-          <Button variant="primary" onClick={() => handleSubmit()}>
-            Confirm & Submit
+          <Button variant="primary" onClick={handleConfirmAndSubmit} disabled={isSubmitting}>
+            {isSubmitting ? 'Submitting...' : 'Confirm & Submit'}
           </Button>
         </Modal.Footer>
       </Modal>
@@ -799,4 +901,4 @@ const ContactForm = () => {
   );
 };
 
-export default ContactForm;
+export default JobSupportContactForm;

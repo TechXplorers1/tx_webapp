@@ -30,7 +30,7 @@ const CyberSecurity = () => {
   };
 
   const handleServiceSelect = (service) => {
-    setNewtonData({ ...formData, service });
+    setFormData({ ...formData, service });
   };
 
   const handleUserTypeSelect = (userType) => {

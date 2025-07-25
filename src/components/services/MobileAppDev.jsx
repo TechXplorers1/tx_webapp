@@ -64,7 +64,7 @@ TechXplorers specializes in a wide range of mobile solutions including Bluetooth
   ];
 
   const handleApplyNow = () => {
-    navigate('/services/servicesForm', { state: { service: 'Mobile App Development' } });
+    navigate('/services/servicesForm', { state: { service: 'Mobile Development' } });
   };
 
   const handleChange = (e) => {
