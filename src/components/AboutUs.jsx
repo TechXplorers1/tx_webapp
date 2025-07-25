@@ -19,6 +19,16 @@ import industry3 from '../assets/mobile3.png';
 import industry4 from '../assets/mobile4.png';
 import industry5 from '../assets/mobile5.png';
 
+
+// About Us Page - Data for Carousel
+const industries = [
+  { id: 1, image: industry1, text: "Healthcare & Life Sciences" },
+  { id: 2, image: industry2, text: "Banking & Finance" },
+  { id: 3, image: industry3, text: "Retail & E-commerce" },
+  { id: 4, image: industry4, text: "Manufacturing & Logistics" },
+  { id: 5, image: industry5, text: "Education & E-learning" },
+];
+
 function AboutUs() {
   const navigate = useNavigate();
 
@@ -52,17 +62,29 @@ function AboutUs() {
       </Container>
 
       {/* Industries Carousel */}
-      <Container className="my-1">
-        <h2 className="mb-3">INDUSTRIES WE SERVE :</h2>
-        <Carousel indicators={false} className="carousel-shadow">
-          {[industry1, industry2, industry3, industry4, industry5].map((image, index) => (
-            <Carousel.Item key={index}>
-              <img className="d-block w-100 carousel-img" src={image} alt={`Slide ${index + 1}`} />
-            </Carousel.Item>
-          ))}
-        </Carousel>
-       
-      </Container>
+<Container className="my-5">
+  <h2 className="mb-4 text-center">INDUSTRIES WE SERVE</h2>
+  <Carousel indicators={true} interval={3000} className="carousel-shadow">
+    {industries.map((industry) => (
+      <Carousel.Item key={industry.id} className="carousel-item-custom position-relative">
+        {/* Text Overlay */}
+        <div className="carousel-overlay-content position-absolute top-50 start-50 translate-middle text-center text-white">
+          <h3>{industry.text}</h3>
+        </div>
+        
+        {/* Carousel Image */}
+        <img
+          className="d-block w-100 carousel-img"
+          src={industry.image}
+          alt={industry.text}
+        />
+
+        {/* Dark Mask */}
+        <div className="carousel-mask" />
+      </Carousel.Item>
+    ))}
+  </Carousel>
+</Container>
 
       {/* Scrolling Video Section */}
       <Container className="my-5 no-padding">
@@ -91,16 +113,6 @@ function AboutUs() {
       {/* Footer */}
       <footer className="py-5">
         <Container>
-          <Form className="d-flex justify-content-center align-items-center mb-5">
-            <Form.Control
-              type="text"
-              placeholder="Ask"
-              className="me-2 rounded-0 py-2"
-              style={{ width: '25%' }}
-            />
-            <button className="btn btn-primary rounded-0 px-4 py-2">Submit</button>
-          </Form>
-
           <div className="d-flex justify-content-center align-items-center">
             <p className="mb-2 mb-md-0">© {new Date().getFullYear()} TechXplorers Pvt. Ltd. All rights reserved.</p>
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;

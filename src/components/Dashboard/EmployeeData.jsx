@@ -1525,6 +1525,8 @@ const EmployeeData = () => {
   };
 
 
+
+
   return (
     <div style={containerStyle}>
       <AdminHeader
@@ -2667,6 +2669,39 @@ const EmployeeData = () => {
                       <p style={clientDataDetailStyle}><strong>Account Name:</strong> {selectedClient.jobPortalAccountName || '-'}</p>
                       <p style={clientDataDetailStyle}><strong>Credentials:</strong> {selectedClient.jobPortalCredentials ? '********' : '-'}</p>
                     </div>
+
+                    <div style={clientDataSectionStyle}>
+                  <h3 style={clientDataSectionTitleStyle}>Resume</h3>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <p style={{ ...clientDataDetailStyle, margin: 0, flexGrow: 1 }}>
+                      {selectedClient.resume || 'No resume uploaded'}
+                    </p>
+                    {selectedClient.resume && (
+                      <button
+                        style={{
+                          backgroundColor: '#28a745',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '5px',
+                          padding: '6px 12px',
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px'
+                        }}
+                        onClick={() => handleDownloadResume(selectedClient.resume)}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                          <polyline points="7 10 12 15 17 10"></polyline>
+                          <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Download
+                      </button>
+                    )}
+                  </div>
+                </div>
                   </div>
                 </div>
               )}

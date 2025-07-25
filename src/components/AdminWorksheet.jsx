@@ -19,6 +19,9 @@ const AdminWorksheet = () => {
   const [requestConfirmAction, setRequestConfirmAction] = useState(null);
   const [requestConfirmMessage, setRequestConfirmMessage] = useState('');
   const [itemToProcess, setItemToProcess] = useState(null);
+    // New states for Service Request tab
+  const [showServiceRequestModal, setShowServiceRequestModal] = useState(false);
+  const [selectedServiceRequest, setSelectedServiceRequest] = useState(null);
 
   // Mock data for Career Submissions
   const [careerSubmissions, setCareerSubmissions] = useState([
@@ -34,6 +37,12 @@ const AdminWorksheet = () => {
     { id: 3, firstName: 'Charlie', lastName: 'Davis', email: 'charlie.d@example.com', phone: '5551112222', message: 'Support request regarding a previous project. Need assistance.', date: '2024-07-22' },
   ]);
 
+  // Mock data for Service Request Submissions
+  const [serviceRequests, setServiceRequests] = useState([
+    { id: 1, email: 'service.user1@example.com', message: 'I need help setting up my new software.', receivedDate: '2024-07-23' },
+    { id: 2, email: 'service.user2@example.com', message: 'There is an issue with my account billing.', receivedDate: '2024-07-22' },
+    { id: 3, email: 'service.user3@example.com', message: 'Requesting a feature enhancement for the dashboard.', receivedDate: '2024-07-21' },
+  ]);
 
   const [employees, setemployees] = useState([
     { id: 1, name: 'Admin employee', email: 'admin@techxplorers.in', roles: ['admin', 'active', 'Management'] },
@@ -532,6 +541,16 @@ const AdminWorksheet = () => {
     setSelectedContactSubmission(null);
   };
 
+    const handleViewServiceRequestDetails = (submission) => {
+    setSelectedServiceRequest(submission);
+    setShowServiceRequestModal(true);
+  };
+
+  const handleCloseServiceRequestModal = () => {
+      setShowServiceRequestModal(false);
+      setSelectedServiceRequest(null);
+  };
+
   const handleRequestAction = (action, item) => {
     setItemToProcess(item);
     setRequestConfirmAction(action);
@@ -539,6 +558,7 @@ const AdminWorksheet = () => {
     if (action === 'accept') message = `Are you sure you want to accept the application from ${item.firstName} ${item.lastName}?`;
     if (action === 'reject') message = `Are you sure you want to reject the application from ${item.firstName} ${item.lastName}?`;
     if (action === 'deleteContact') message = `Are you sure you want to delete the message from ${item.firstName} ${item.lastName}? This cannot be undone.`;
+    if (action === 'deleteServiceRequest') message = `Are you sure you want to delete the service request from ${item.email}? This cannot be undone.`;
     setRequestConfirmMessage(message);
     setShowRequestConfirmModal(true);
   };
@@ -552,6 +572,9 @@ const AdminWorksheet = () => {
     }
     if (requestConfirmAction === 'deleteContact') {
       setContactSubmissions(prev => prev.filter(sub => sub.id !== itemToProcess.id));
+    }
+       if (requestConfirmAction === 'deleteServiceRequest') {
+      setServiceRequests(prev => prev.filter(req => req.id !== itemToProcess.id));
     }
     closeRequestConfirmModal();
   };
@@ -4907,10 +4930,7 @@ html.dark-mode {
         </div>
 
         <div className="ad-header-right">
-          {/* Search Icon */}
-          <svg className="ad-icon-btn" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" style={{ width: '1.125rem', height: '1.125rem' }}>
-            <path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.1-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z" />
-          </svg>
+         
           <div className="ad-notification-icon">
             {/* Bell Icon */}
             <svg className="ad-icon-btn" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1.125rem', height: '1.125rem' }}>
@@ -5065,6 +5085,12 @@ html.dark-mode {
                 >
                   Contact Us Messages ({contactSubmissions.length})
                 </button>
+                  <button
+                  className={`request-tab-btn ${requestTab === 'serviceRequest' ? 'active' : ''}`}
+                  onClick={() => setRequestTab('serviceRequest')}
+                >
+                  Service Requests ({serviceRequests.length})
+                </button>
               </div>
 
               {requestTab === 'career' && (
@@ -5154,6 +5180,38 @@ html.dark-mode {
                   </table>
                 </div>
               )}
+ {requestTab === 'serviceRequest' && (
+                <div className="request-table-container">
+                  <table className="request-table">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Email</th>
+                        <th>Message</th>
+                        <th>Received Date</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {serviceRequests.map((req, index) => (
+                        <tr key={req.id}>
+                          <td>{index + 1}</td>
+                          <td>{req.email}</td>
+                          <td className="message-cell" title={req.message} onClick={() => handleViewServiceRequestDetails(req)}>{req.message}</td>
+                          <td>{req.receivedDate}</td>
+                          <td>
+                            <div className="action-buttons">
+                              <button className="action-button view" onClick={() => handleViewServiceRequestDetails(req)}>View</button>
+                              <button className="action-button reject" onClick={() => handleRequestAction('deleteServiceRequest', req)}>Delete</button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              
             </div>
           )}
 
@@ -7224,10 +7282,45 @@ html.dark-mode {
         </div>
       )}
 
+      {/* Service Request Details Modal */}
+{showServiceRequestModal && (
+  <div className="modal-overlay open">
+    <div className="modal-content request-details-modal">
+      <div className="modal-header">
+        <div>
+          <h3 className="modal-title">Service Request Details</h3>
+        </div>
+        <button className="modal-close-btn" onClick={handleCloseServiceRequestModal}>&times;</button>
+      </div>
+      <div className="modal-body">
+        {selectedServiceRequest && (
+          <div>
+            <div className="detail-item">
+              <span className="detail-label">From Email:</span> 
+              <span className="detail-value">{selectedServiceRequest.email}</span>
+            </div>
+            <div className="detail-item">
+              <span className="detail-label">Received On:</span> 
+              <span className="detail-value">{selectedServiceRequest.receivedDate}</span>
+            </div>
+            <div className="message-content">
+              <h5 className="detail-label">Message:</h5>
+              <p className="detail-value">{selectedServiceRequest.message}</p>
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="modal-footer">
+        <button type="button" className="confirm-cancel-btn" onClick={handleCloseServiceRequestModal}>Close</button>
+      </div>
+    </div>
+  </div>
+)}
+
       {/* Request Confirmation Modal */}
       {showRequestConfirmModal && (
         <div className="modal-overlay open">
-          <div className="modal-content">
+          <div className="modal-content request-details-modal">
             <div className="modal-header">
               <div>
                 <h3 className="modal-title">Confirm Action</h3>
@@ -7241,7 +7334,7 @@ html.dark-mode {
               <button type="button" className="confirm-cancel-btn" onClick={closeRequestConfirmModal}>Cancel</button>
               <button
                 type="button"
-                className={requestConfirmAction === 'deleteContact' || requestConfirmAction === 'reject' ? 'confirm-delete-btn' : 'create-employee-btn'}
+                className={requestConfirmAction === 'deleteContact' || requestConfirmAction === 'reject' || requestConfirmAction === 'deleteServiceRequest' ? 'confirm-delete-btn' : 'create-employee-btn'}
                 onClick={confirmRequestAction}
               >
                 Confirm
@@ -7250,6 +7343,41 @@ html.dark-mode {
           </div>
         </div>
       )}
+
+      {/* Service Request Details Modal */}
+{showServiceRequestModal && (
+  <div className="modal-overlay open">
+    <div className="modal-content request-details-modal">
+      <div className="modal-header">
+        <div>
+          <h3 className="modal-title">Service Request Details</h3>
+        </div>
+        <button className="modal-close-btn" onClick={handleCloseServiceRequestModal}>&times;</button>
+      </div>
+      <div className="modal-body">
+        {selectedServiceRequest && (
+          <div>
+            <div className="detail-item">
+              <span className="detail-label">From Email:</span> 
+              <span className="detail-value">{selectedServiceRequest.email}</span>
+            </div>
+            <div className="detail-item">
+              <span className="detail-label">Received On:</span> 
+              <span className="detail-value">{selectedServiceRequest.receivedDate}</span>
+            </div>
+            <div className="message-content">
+              <h5 className="detail-label">Message:</h5>
+              <p className="detail-value">{selectedServiceRequest.message}</p>
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="modal-footer">
+        <button type="button" className="confirm-cancel-btn" onClick={handleCloseServiceRequestModal}>Close</button>
+      </div>
+    </div>
+  </div>
+)}
 
 
         </div>

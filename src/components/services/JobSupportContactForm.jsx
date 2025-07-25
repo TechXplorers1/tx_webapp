@@ -1,14 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Container, Form, Button, Row, Col, Alert, Modal } from 'react-bootstrap';
-import { useNavigate } from 'react-router-dom'; // Import useNavigate
-// import emailjs from 'emailjs-com';
-// import '../../styles/services/JobSupportContactForm.css'; // Assuming this is no longer used for inline styles
+import { useNavigate } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 const ContactForm = () => {
-  const navigate = useNavigate(); // Initialize useNavigate
+  const navigate = useNavigate();
 
-  const [formData, setFormData] = useState({
+  // Define the initial state for the form data
+  const initialFormData = {
+
+ // ** NEW: Hidden service field **
+    // This field will be included in the form submission data
+    service: 'Job Support',
+
     // Personal Information
     firstName: '',
     middleName: '',
@@ -40,8 +44,8 @@ const ContactForm = () => {
     otherVisaStatus: '',
 
     // Education
-    schoolName: '',
-    schoolAddress: '',
+    universityName: '',
+    universityAddress: '',
     courseOfStudy: '',
     graduationFromDate: '',
     graduationToDate: '',
@@ -61,19 +65,26 @@ const ContactForm = () => {
     referenceRole: '',
 
     // Job Portal Information
-    jobPortalAccountNameandCredentials: '' ,
+    jobPortalAccountNameandCredentials: '',
 
     // Resume Upload
     resume: null,
-  });
 
+   
+  };
+
+  const [formData, setFormData] = useState(initialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState({ success: false, message: '' });
-  const [showPreviewModal, setShowPreviewModal] = useState(false); // State for preview modal visibility
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value, files } = e.target;
+    if (name === "resume") {
+        setFormData(prev => ({ ...prev, [name]: files[0] }));
+    } else {
+        setFormData(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   // Function to validate all mandatory fields
@@ -82,17 +93,19 @@ const ContactForm = () => {
       'firstName', 'lastName', 'dob', 'gender', 'address', 'zipCode',
       'countryCode', 'mobile', 'email', 'securityClearance', 'willingToRelocate',
       'workPreference', 'jobsToApply', 'technologySkills', 'currentSalary',
-      'expectedSalary', 'visaStatus', 'schoolName', 'schoolAddress',
+      'expectedSalary', 'visaStatus', 'universityName', 'universityAddress',
       'courseOfStudy', 'graduationFromDate', 'graduationToDate',
       'currentCompany', 'currentDesignation', 'preferredInterviewTime',
       'earliestJoiningDate', 'relievingDate', 'referenceName', 'referencePhone',
       'referenceAddress', 'referenceEmail', 'referenceRole',
-      'jobPortalAccountNameandCredentials' , 'resume'
+      'jobPortalAccountNameandCredentials', 'resume'
     ];
 
     for (const field of mandatoryFields) {
       if (!formData[field]) {
-        setSubmitStatus({ success: false, message: `Please fill in the '${field}' field.` });
+        // Create a more user-friendly field name from the camelCase key
+        const fieldName = field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+        setSubmitStatus({ success: false, message: `Please fill in the '${fieldName}' field.` });
         return false;
       }
     }
@@ -102,10 +115,16 @@ const ContactForm = () => {
       setSubmitStatus({ success: false, message: "Please specify your 'Other Visa Status'." });
       return false;
     }
-
-      if (!formData.resume) {
-        setSubmitStatus({ success: false, message: 'Please upload your resume.' });
+    
+    // Conditional mandatory field for 'clearanceLevel'
+    if (formData.securityClearance === 'yes' && !formData.clearanceLevel) {
+        setSubmitStatus({ success: false, message: "Please specify your 'Clearance Level'." });
         return false;
+    }
+
+    if (!formData.resume) {
+      setSubmitStatus({ success: false, message: 'Please upload your resume.' });
+      return false;
     }
 
     setSubmitStatus({ success: false, message: '' }); // Clear previous error messages
@@ -113,7 +132,7 @@ const ContactForm = () => {
   };
 
   const handlePreview = (e) => {
-    e.preventDefault(); // Prevent default form submission
+    e.preventDefault();
     if (validateForm()) {
       setShowPreviewModal(true);
     }
@@ -124,48 +143,47 @@ const ContactForm = () => {
   };
 
   const handleSubmit = async (e) => {
-    // This function can be called directly from the form or from the preview modal
-    // If called from the form, it will perform validation.
-    // If called from the modal, validation is assumed to have passed in handlePreview.
-    if (e) e.preventDefault(); // Only prevent default if event object is passed (i.e., direct form submit)
+    if (e) e.preventDefault();
 
     if (!validateForm()) {
-      // If validation fails here, it means handleSubmit was called directly without preview, or preview was skipped.
-      // The error message is already set by validateForm.
       return;
     }
 
     setIsSubmitting(true);
+    // The commented-out section below shows where you would handle the form submission.
+    // The `formData` object, which now includes the `service` field, would be sent.
     // try {
+    //   console.log("Submitting form data:", formData); // You can see the 'service' field here
     //   const response = await emailjs.send(
-    //     'service_6zo0q3i',
-    //     'template_plu2dxj',
+    //     'YOUR_SERVICE_ID',
+    //     'YOUR_TEMPLATE_ID',
     //     formData,
-    //     'I1UJMnujMWkyQsjA0'
+    //     'YOUR_USER_ID'
     //   );
     //   console.log('EmailJS Response:', response);
-
-    // Reset form
-    setFormData({
-      firstName: '', middleName: '', lastName: '', dob: '', gender: '', ethnicity: '',
-      address: '', zipCode: '', countryCode: '+1', mobile: '', email: '',
-      securityClearance: '', clearanceLevel: '', willingToRelocate: '', workPreference: '', restrictedCompanies: '',
-      jobsToApply: '', technologySkills: '', currentSalary: '', expectedSalary: '', visaStatus: '', otherVisaStatus: '',
-      schoolName: '', schoolAddress: '', courseOfStudy: '', graduationFromDate: '', graduationToDate: '',
-      currentCompany: '', currentDesignation: '', preferredInterviewTime: '', earliestJoiningDate: '', relievingDate: '',
-      referenceName: '', referencePhone: '', referenceAddress: '', referenceEmail: '', referenceRole: '',
-      jobPortalAccountNameandCredentials: '' , resume: ''
-    });
-    setSubmitStatus({ success: true, message: 'Form submitted successfully!' });
-    setShowPreviewModal(false); // Close modal on successful submission
+    //
+    //   // Reset form to its initial state on successful submission
+    //   setFormData(initialFormData);
+    //   setSubmitStatus({ success: true, message: 'Form submitted successfully!' });
+    //   setShowPreviewModal(false);
     // } catch (error) {
     //   setSubmitStatus({ success: false, message: 'Submission failed. Please try again.' });
     // } finally {
-    setIsSubmitting(false); // Ensure submission state is reset
+    //   setIsSubmitting(false);
     // }
+
+    // Simulating a successful submission for demonstration purposes
+    console.log("Form data to be submitted:", formData);
+    setTimeout(() => {
+      setSubmitStatus({ success: true, message: 'Form submitted successfully!' });
+      setFormData(initialFormData); // Reset form
+      document.getElementById("contact-form").reset(); // Also reset the native form element
+      setIsSubmitting(false);
+      setShowPreviewModal(false);
+    }, 1000);
   };
 
-  // Comprehensive list of country codes and names
+// Comprehensive list of country codes and names
   const countryCodes = [
     { shortCode: 'US', dialCode: '+1', name: 'United States' },
     { shortCode: 'CA', dialCode: '+1', name: 'Canada' },
@@ -281,14 +299,15 @@ const ContactForm = () => {
     { shortCode: 'LU', dialCode: '+352', name: 'Luxembourg' },
   ];
 
+
   const containerStyle = {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)', // Slightly transparent white background
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     padding: '30px',
     borderRadius: '10px',
     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
     marginTop: '50px',
     marginBottom: '50px',
-    position: 'relative', // Added for positioning the back button
+    position: 'relative',
   };
 
   const formHeaderStyle = {
@@ -311,78 +330,57 @@ const ContactForm = () => {
     fontSize: '0.95rem',
   };
 
-  const inputControlFocusStyle = {
-    borderColor: '#007bff',
-    boxShadow: '0 0 0 0.2rem rgba(0, 123, 255, 0.25)',
-  };
-
   const buttonStyle = {
-    backgroundColor: '#28a745', // Green for Submit
+    backgroundColor: '#28a745',
     borderColor: '#28a745',
     color: 'white',
     fontSize: '1.2rem',
     padding: '10px 20px',
     borderRadius: '8px',
     transition: 'background-color 0.3s ease, transform 0.3s ease',
-    flexGrow: 1, // Allows buttons to grow
-  };
-
-  const buttonHoverStyle = {
-    backgroundColor: '#218838',
-    transform: 'translateY(-2px)',
+    flexGrow: 1,
   };
 
   const previewButtonStyle = {
-    backgroundColor: '#007bff', // Blue for Preview
+    backgroundColor: '#007bff',
     borderColor: '#007bff',
     color: 'white',
     fontSize: '1.2rem',
     padding: '10px 20px',
     borderRadius: '8px',
     transition: 'background-color 0.3s ease, transform 0.3s ease',
-    flexGrow: 1, // Allows buttons to grow
-    marginRight: '10px', // Space between buttons
-  };
-
-  const previewButtonHoverStyle = {
-    backgroundColor: '#0056b3',
-    transform: 'translateY(-2px)',
+    flexGrow: 1,
+    marginRight: '10px',
   };
 
   const backButtonStyle = {
     position: 'absolute',
     top: '20px',
     left: '20px',
-    backgroundColor: '#6c757d', // Grey color for back button
+    backgroundColor: '#6c757d',
     borderColor: '#6c757d',
     color: 'white',
     padding: '8px 15px',
     borderRadius: '5px',
     cursor: 'pointer',
     zIndex: 10,
-    transition: 'background-color 0.3s ease',
-  };
-
-  const backButtonHoverStyle = {
-    backgroundColor: '#5a6268',
   };
 
   const previewModalContentStyle = {
-    maxHeight: '70vh', // Limit height for scrollability
-    overflowY: 'auto', // Enable vertical scrolling
+    maxHeight: '70vh',
+    overflowY: 'auto',
     padding: '15px',
     backgroundColor: '#f8f9fa',
     borderRadius: '8px',
   };
 
-  // Styles for displaying values in the preview modal
   const previewValueDisplay = {
     padding: '0.4rem 0.6rem',
     fontSize: '0.95rem',
-    backgroundColor: '#e9ecef', // Light grey background for values
+    backgroundColor: '#e9ecef',
     borderRadius: '5px',
     border: '1px solid #ced4da',
-    minHeight: '38px', // Match input height
+    minHeight: '38px',
     display: 'flex',
     alignItems: 'center',
     wordBreak: 'break-word',
@@ -392,19 +390,14 @@ const ContactForm = () => {
     ...previewValueDisplay,
     minHeight: '80px',
     alignItems: 'flex-start',
-    paddingTop: '0.6rem',
-    paddingBottom: '0.6rem',
   };
-
 
   return (
     <div style={{ background: 'linear-gradient(to right, #e0f7fa, #b2ebf2)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <Container style={containerStyle}>
         <Button
           style={backButtonStyle}
-          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = backButtonHoverStyle.backgroundColor)}
-          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = backButtonStyle.backgroundColor)}
-          onClick={() => navigate(-1)} // Navigates back one step in history
+          onClick={() => navigate(-1)}
         >
           &larr; Back
         </Button>
@@ -414,76 +407,36 @@ const ContactForm = () => {
           </Alert>
         )}
         <h2 style={formHeaderStyle}>Job Support Contact Form</h2>
-        <Form onSubmit={handleSubmit}>
+        <Form id="contact-form" onSubmit={handleSubmit}>
+           {/* ** NEW: Hidden input field for the service ** */}
+           {/* This ensures the 'service' value is part of the form post data */}
+           <input type="hidden" name="service" value={formData.service} />
+
           {/* Personal Information */}
           <h4 className="border-bottom pb-2 mb-3" style={subHeaderStyle}>Personal Information</h4>
           <Row className="mb-3">
             <Form.Group as={Col} controlId="formFirstName">
-              <Form.Label className="form-label">First Name <span className="text-danger">*</span></Form.Label>
-              <Form.Control
-                type="text"
-                name="firstName"
-                value={formData.firstName}
-                onChange={handleChange}
-                required
-                style={inputControlStyle}
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-              />
+              <Form.Label>First Name <span className="text-danger">*</span></Form.Label>
+              <Form.Control type="text" name="firstName" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
             <Form.Group as={Col} controlId="formMiddleName">
-              <Form.Label className="form-label">Middle Name</Form.Label>
-              <Form.Control
-                type="text"
-                name="middleName"
-                value={formData.middleName}
-                onChange={handleChange}
-                style={inputControlStyle}
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-              />
+              <Form.Label>Middle Name</Form.Label>
+              <Form.Control type="text" name="middleName" onChange={handleChange} style={inputControlStyle} />
             </Form.Group>
             <Form.Group as={Col} controlId="formLastName">
-              <Form.Label className="form-label">Last Name <span className="text-danger">*</span></Form.Label>
-              <Form.Control
-                type="text"
-                name="lastName"
-                value={formData.lastName}
-                onChange={handleChange}
-                required
-                style={inputControlStyle}
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-              />
+              <Form.Label>Last Name <span className="text-danger">*</span></Form.Label>
+              <Form.Control type="text" name="lastName" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
           </Row>
 
           <Row className="mb-3">
             <Form.Group as={Col} controlId="formDob">
-              <Form.Label className="form-label">Date of Birth <span className="text-danger">*</span></Form.Label>
-              <Form.Control
-                type="date"
-                name="dob"
-                value={formData.dob}
-                onChange={handleChange}
-                required
-                style={inputControlStyle}
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-              />
+              <Form.Label>Date of Birth <span className="text-danger">*</span></Form.Label>
+              <Form.Control type="date" name="dob" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
             <Form.Group as={Col} controlId="formGender">
-              <Form.Label className="form-label">Gender <span className="text-danger">*</span></Form.Label>
-              <Form.Select
-                name="gender"
-                value={formData.gender}
-                onChange={handleChange}
-                required
-                style={inputControlStyle}
-                className="custom-select-cyan"
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-              >
+              <Form.Label>Gender <span className="text-danger">*</span></Form.Label>
+              <Form.Select name="gender" onChange={handleChange} required style={inputControlStyle}>
                 <option value="">Select Gender</option>
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
@@ -492,16 +445,8 @@ const ContactForm = () => {
               </Form.Select>
             </Form.Group>
             <Form.Group as={Col} controlId="formEthnicity">
-              <Form.Label className="form-label">Ethnicity</Form.Label>
-              <Form.Control
-                type="text"
-                name="ethnicity"
-                value={formData.ethnicity}
-                onChange={handleChange}
-                style={inputControlStyle}
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-              />
+              <Form.Label>Ethnicity</Form.Label>
+              <Form.Control type="text" name="ethnicity" onChange={handleChange} style={inputControlStyle} />
             </Form.Group>
           </Row>
 
@@ -509,45 +454,18 @@ const ContactForm = () => {
           <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Contact Information</h4>
           <Row className="mb-3">
             <Form.Group as={Col} controlId="formAddress">
-              <Form.Label className="form-label">Address <span className="text-danger">*</span></Form.Label>
-              <Form.Control
-                type="text"
-                name="address"
-                value={formData.address}
-                onChange={handleChange}
-                required
-                style={inputControlStyle}
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-              />
+              <Form.Label>Address <span className="text-danger">*</span></Form.Label>
+              <Form.Control type="text" name="address" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
-            <Form.Group as={Col} controlId="formZipCode">
-              <Form.Label className="form-label">Zip Code <span className="text-danger">*</span></Form.Label>
-              <Form.Control
-                type="text"
-                name="zipCode"
-                value={formData.zipCode}
-                onChange={handleChange}
-                required
-                style={inputControlStyle}
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-              />
+            <Form.Group as={Col} md={4} controlId="formZipCode">
+              <Form.Label>Zip Code <span className="text-danger">*</span></Form.Label>
+              <Form.Control type="text" name="zipCode" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
           </Row>
           <Row className="mb-3">
             <Form.Group as={Col} controlId="formCountryCode">
-              <Form.Label className="form-label">Country Code <span className="text-danger">*</span></Form.Label>
-              <Form.Select
-                name="countryCode"
-                value={formData.countryCode}
-                onChange={handleChange}
-                required
-                style={inputControlStyle}
-                className="custom-select-cyan"
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-              >
+              <Form.Label>Country Code <span className="text-danger">*</span></Form.Label>
+              <Form.Select name="countryCode" value={formData.countryCode} onChange={handleChange} required style={inputControlStyle}>
                 {countryCodes.map((country, index) => (
                   <option key={index} value={country.dialCode}>
                     {country.name} ({country.dialCode})
@@ -556,30 +474,12 @@ const ContactForm = () => {
               </Form.Select>
             </Form.Group>
             <Form.Group as={Col} controlId="formMobile">
-              <Form.Label className="form-label">Mobile <span className="text-danger">*</span></Form.Label>
-              <Form.Control
-                type="text"
-                name="mobile"
-                value={formData.mobile}
-                onChange={handleChange}
-                required
-                style={inputControlStyle}
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-              />
+              <Form.Label>Mobile <span className="text-danger">*</span></Form.Label>
+              <Form.Control type="text" name="mobile" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
             <Form.Group as={Col} controlId="formEmail">
-              <Form.Label className="form-label">Email <span className="text-danger">*</span></Form.Label>
-              <Form.Control
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                style={inputControlStyle}
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-              />
+              <Form.Label>Email <span className="text-danger">*</span></Form.Label>
+              <Form.Control type="email" name="email" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
           </Row>
 
@@ -587,17 +487,8 @@ const ContactForm = () => {
           <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Employment Information</h4>
           <Row className="mb-3">
             <Form.Group as={Col} controlId="formSecurityClearance">
-              <Form.Label className="form-label">Security Clearance <span className="text-danger">*</span></Form.Label>
-              <Form.Select
-                name="securityClearance"
-                value={formData.securityClearance}
-                onChange={handleChange}
-                required
-                style={inputControlStyle}
-                className="custom-select-cyan"
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-              >
+              <Form.Label>Security Clearance <span className="text-danger">*</span></Form.Label>
+              <Form.Select name="securityClearance" value={formData.securityClearance} onChange={handleChange} required style={inputControlStyle}>
                 <option value="">Select Option</option>
                 <option value="yes">Yes</option>
                 <option value="no">No</option>
@@ -605,31 +496,13 @@ const ContactForm = () => {
             </Form.Group>
             {formData.securityClearance === 'yes' && (
               <Form.Group as={Col} controlId="formClearanceLevel">
-                <Form.Label className="form-label">Clearance Level <span className="text-danger">*</span></Form.Label>
-                <Form.Control
-                  type="text"
-                  name="clearanceLevel"
-                  value={formData.clearanceLevel}
-                  onChange={handleChange}
-                  required
-                  style={inputControlStyle}
-                  onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                  onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-                />
+                <Form.Label>Clearance Level <span className="text-danger">*</span></Form.Label>
+                <Form.Control type="text" name="clearanceLevel" value={formData.clearanceLevel} onChange={handleChange} required style={inputControlStyle} />
               </Form.Group>
             )}
             <Form.Group as={Col} controlId="formWillingToRelocate">
-              <Form.Label className="form-label">Willing to Relocate <span className="text-danger">*</span></Form.Label>
-              <Form.Select
-                name="willingToRelocate"
-                value={formData.willingToRelocate}
-                onChange={handleChange}
-                required
-                style={inputControlStyle}
-                className="custom-select-cyan"
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-              >
+              <Form.Label>Willing to Relocate <span className="text-danger">*</span></Form.Label>
+              <Form.Select name="willingToRelocate" value={formData.willingToRelocate} onChange={handleChange} required style={inputControlStyle}>
                 <option value="">Select Option</option>
                 <option value="yes">Yes</option>
                 <option value="no">No</option>
@@ -638,17 +511,8 @@ const ContactForm = () => {
           </Row>
           <Row className="mb-3">
             <Form.Group as={Col} controlId="formWorkPreference">
-              <Form.Label className="form-label">Work Preference <span className="text-danger">*</span></Form.Label>
-              <Form.Select
-                name="workPreference"
-                value={formData.workPreference}
-                onChange={handleChange}
-                required
-                style={inputControlStyle}
-                className="custom-select-cyan"
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-              >
+              <Form.Label>Work Preference <span className="text-danger">*</span></Form.Label>
+              <Form.Select name="workPreference" value={formData.workPreference} onChange={handleChange} required style={inputControlStyle}>
                 <option value="">Select Preference</option>
                 <option value="remote">Remote</option>
                 <option value="onsite">On-site</option>
@@ -656,183 +520,76 @@ const ContactForm = () => {
               </Form.Select>
             </Form.Group>
             <Form.Group as={Col} controlId="formRestrictedCompanies">
-              <Form.Label className="form-label">Restricted Companies</Form.Label>
-              <Form.Control
-                type="text"
-                name="restrictedCompanies"
-                value={formData.restrictedCompanies}
-                onChange={handleChange}
-                style={inputControlStyle}
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-              />
+              <Form.Label>Restricted Companies</Form.Label>
+              <Form.Control type="text" name="restrictedCompanies" value={formData.restrictedCompanies} onChange={handleChange} style={inputControlStyle} />
             </Form.Group>
           </Row>
 
           {/* Job Preferences */}
           <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Job Preferences</h4>
           <Row className="mb-3">
-            <Form.Group as={Col} controlId="formJobsToApply">
-              <Form.Label className="form-label">Jobs to Apply For <span className="text-danger">*</span></Form.Label>
-              <Form.Control
-                type="text"
-                name="jobsToApply"
-                value={formData.jobsToApply}
-                onChange={handleChange}
-                required
-                style={inputControlStyle}
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-              />
+             <Form.Group as={Col} controlId="formJobsToApply">
+                <Form.Label>Jobs to Apply For <span className="text-danger">*</span></Form.Label>
+                <Form.Control type="text" name="jobsToApply" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
             <Form.Group as={Col} controlId="formTechnologySkills">
-              <Form.Label className="form-label">Technology Skills <span className="text-danger">*</span></Form.Label>
-              <Form.Control
-                type="text"
-                name="technologySkills"
-                value={formData.technologySkills}
-                onChange={handleChange}
-                required
-                style={inputControlStyle}
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-              />
+                <Form.Label>Technology Skills <span className="text-danger">*</span></Form.Label>
+                <Form.Control type="text" name="technologySkills" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
           </Row>
           <Row className="mb-3">
             <Form.Group as={Col} controlId="formCurrentSalary">
-              <Form.Label className="form-label">Current Salary <span className="text-danger">*</span></Form.Label>
-              <Form.Control
-                type="text"
-                name="currentSalary"
-                value={formData.currentSalary}
-                onChange={handleChange}
-                required
-                style={inputControlStyle}
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-              />
+                <Form.Label>Current Salary <span className="text-danger">*</span></Form.Label>
+                <Form.Control type="text" name="currentSalary" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
             <Form.Group as={Col} controlId="formExpectedSalary">
-              <Form.Label className="form-label">Expected Salary <span className="text-danger">*</span></Form.Label>
-              <Form.Control
-                type="text"
-                name="expectedSalary"
-                value={formData.expectedSalary}
-                onChange={handleChange}
-                required
-                style={inputControlStyle}
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-              />
+                <Form.Label>Expected Salary <span className="text-danger">*</span></Form.Label>
+                <Form.Control type="text" name="expectedSalary" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
             <Form.Group as={Col} controlId="formVisaStatus">
-              <Form.Label className="form-label">Visa Status <span className="text-danger">*</span></Form.Label>
-              <Form.Select
-                name="visaStatus"
-                value={formData.visaStatus}
-                onChange={handleChange}
-                required
-                style={inputControlStyle}
-                className="custom-select-cyan"
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-              >
-                <option value="">Select Status</option>
-                <option value="us_citizen">US Citizen</option>
-                <option value="green_card">Green Card</option>
-                <option value="h1b">H1B</option>
-                <option value="opt">OPT</option>
-                <option value="cpt">CPT</option>
-                <option value="other">Other</option>
-              </Form.Select>
+                <Form.Label>Visa Status <span className="text-danger">*</span></Form.Label>
+                <Form.Select name="visaStatus" onChange={handleChange} required style={inputControlStyle}>
+                    <option value="">Select Status</option>
+                    <option value="us_citizen">US Citizen</option>
+                    <option value="green_card">Green Card</option>
+                    <option value="h1b">H1B</option>
+                    <option value="opt">OPT</option>
+                    <option value="cpt">CPT</option>
+                    <option value="other">Other</option>
+                </Form.Select>
             </Form.Group>
             {formData.visaStatus === 'other' && (
-              <Form.Group as={Col} controlId="formOtherVisaStatus">
-                <Form.Label className="form-label">Please specify <span className="text-danger">*</span></Form.Label>
-                <Form.Control
-                  type="text"
-                  name="otherVisaStatus"
-                  value={formData.otherVisaStatus}
-                  onChange={handleChange}
-                  required
-                  style={inputControlStyle}
-                  onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                  onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-                />
-              </Form.Group>
+                <Form.Group as={Col} controlId="formOtherVisaStatus">
+                    <Form.Label>Please specify <span className="text-danger">*</span></Form.Label>
+                    <Form.Control type="text" name="otherVisaStatus" onChange={handleChange} required style={inputControlStyle} />
+                </Form.Group>
             )}
           </Row>
 
           {/* Education */}
           <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Education</h4>
           <Row className="mb-3">
-            <Form.Group as={Col} controlId="formSchoolName">
-              <Form.Label className="form-label">School Name <span className="text-danger">*</span></Form.Label>
-              <Form.Control
-                type="text"
-                name="schoolName"
-                value={formData.schoolName}
-                onChange={handleChange}
-                required
-                style={inputControlStyle}
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-              />
+            <Form.Group as={Col} controlId="formUniversityName">
+                <Form.Label>University Name <span className="text-danger">*</span></Form.Label>
+                <Form.Control type="text" name="universityName" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
-            <Form.Group as={Col} controlId="formSchoolAddress">
-              <Form.Label className="form-label">School Address <span className="text-danger">*</span></Form.Label>
-              <Form.Control
-                type="text"
-                name="schoolAddress"
-                value={formData.schoolAddress}
-                onChange={handleChange}
-                required
-                style={inputControlStyle}
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-              />
+            <Form.Group as={Col} controlId="formUniversityAddress">
+                <Form.Label>University Address <span className="text-danger">*</span></Form.Label>
+                <Form.Control type="text" name="universityAddress" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
             <Form.Group as={Col} controlId="formCourseOfStudy">
-              <Form.Label className="form-label">Course of Study <span className="text-danger">*</span></Form.Label>
-              <Form.Control
-                type="text"
-                name="courseOfStudy"
-                value={formData.courseOfStudy}
-                onChange={handleChange}
-                required
-                style={inputControlStyle}
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-              />
+                <Form.Label>Course of Study <span className="text-danger">*</span></Form.Label>
+                <Form.Control type="text" name="courseOfStudy" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
           </Row>
           <Row className="mb-3">
             <Form.Group as={Col} controlId="formGraduationFromDate">
-              <Form.Label className="form-label">Graduation From Date <span className="text-danger">*</span></Form.Label>
-              <Form.Control
-                type="date"
-                name="graduationFromDate"
-                value={formData.graduationFromDate}
-                onChange={handleChange}
-                required
-                style={inputControlStyle}
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-              />
+                <Form.Label>Graduation From Date <span className="text-danger">*</span></Form.Label>
+                <Form.Control type="date" name="graduationFromDate" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
             <Form.Group as={Col} controlId="formGraduationToDate">
-              <Form.Label className="form-label">Graduation To Date <span className="text-danger">*</span></Form.Label>
-              <Form.Control
-                type="date"
-                name="graduationToDate"
-                value={formData.graduationToDate}
-                onChange={handleChange}
-                required
-                style={inputControlStyle}
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-              />
+                <Form.Label>Graduation To Date <span className="text-danger">*</span></Form.Label>
+                <Form.Control type="date" name="graduationToDate" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
           </Row>
 
@@ -840,71 +597,26 @@ const ContactForm = () => {
           <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Current Employment</h4>
           <Row className="mb-3">
             <Form.Group as={Col} controlId="formCurrentCompany">
-              <Form.Label className="form-label">Current Company <span className="text-danger">*</span></Form.Label>
-              <Form.Control
-                type="text"
-                name="currentCompany"
-                value={formData.currentCompany}
-                onChange={handleChange}
-                required
-                style={inputControlStyle}
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-              />
+                <Form.Label>Current Company <span className="text-danger">*</span></Form.Label>
+                <Form.Control type="text" name="currentCompany" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
             <Form.Group as={Col} controlId="formCurrentDesignation">
-              <Form.Label className="form-label">Current Designation <span className="text-danger">*</span></Form.Label>
-              <Form.Control
-                type="text"
-                name="currentDesignation"
-                value={formData.currentDesignation}
-                onChange={handleChange}
-                required
-                style={inputControlStyle}
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-              />
+                <Form.Label>Current Designation <span className="text-danger">*</span></Form.Label>
+                <Form.Control type="text" name="currentDesignation" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
           </Row>
           <Row className="mb-3">
             <Form.Group as={Col} controlId="formPreferredInterviewTime">
-              <Form.Label className="form-label">Preferred Interview Time <span className="text-danger">*</span></Form.Label>
-              <Form.Control
-                type="text"
-                name="preferredInterviewTime"
-                value={formData.preferredInterviewTime}
-                onChange={handleChange}
-                required
-                style={inputControlStyle}
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-              />
+                <Form.Label>Preferred Interview Time <span className="text-danger">*</span></Form.Label>
+                <Form.Control type="text" name="preferredInterviewTime" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
             <Form.Group as={Col} controlId="formEarliestJoiningDate">
-              <Form.Label className="form-label">Earliest Joining Date <span className="text-danger">*</span></Form.Label>
-              <Form.Control
-                type="date"
-                name="earliestJoiningDate"
-                value={formData.earliestJoiningDate}
-                onChange={handleChange}
-                required
-                style={inputControlStyle}
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-              />
+                <Form.Label>Earliest Joining Date <span className="text-danger">*</span></Form.Label>
+                <Form.Control type="date" name="earliestJoiningDate" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
             <Form.Group as={Col} controlId="formRelievingDate">
-              <Form.Label className="form-label">Relieving Date <span className="text-danger">*</span></Form.Label>
-              <Form.Control
-                type="date"
-                name="relievingDate"
-                value={formData.relievingDate}
-                onChange={handleChange}
-                required
-                style={inputControlStyle}
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-              />
+                <Form.Label>Relieving Date <span className="text-danger">*</span></Form.Label>
+                <Form.Control type="date" name="relievingDate" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
           </Row>
 
@@ -912,150 +624,51 @@ const ContactForm = () => {
           <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>References</h4>
           <Row className="mb-3">
             <Form.Group as={Col} controlId="formReferenceName">
-              <Form.Label className="form-label">Reference Name <span className="text-danger">*</span></Form.Label>
-              <Form.Control
-                type="text"
-                name="referenceName"
-                value={formData.referenceName}
-                onChange={handleChange}
-                required
-                style={inputControlStyle}
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-              />
+                <Form.Label>Reference Name <span className="text-danger">*</span></Form.Label>
+                <Form.Control type="text" name="referenceName" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
             <Form.Group as={Col} controlId="formReferencePhone">
-              <Form.Label className="form-label">Reference Phone <span className="text-danger">*</span></Form.Label>
-              <Form.Control
-                type="text"
-                name="referencePhone"
-                value={formData.referencePhone}
-                onChange={handleChange}
-                required
-                style={inputControlStyle}
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-              />
+                <Form.Label>Reference Phone <span className="text-danger">*</span></Form.Label>
+                <Form.Control type="text" name="referencePhone" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
             <Form.Group as={Col} controlId="formReferenceAddress">
-              <Form.Label className="form-label">Reference Address <span className="text-danger">*</span></Form.Label>
-              <Form.Control
-                type="text"
-                name="referenceAddress"
-                value={formData.referenceAddress}
-                onChange={handleChange}
-                required
-                style={inputControlStyle}
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-              />
+                <Form.Label>Reference Address <span className="text-danger">*</span></Form.Label>
+                <Form.Control type="text" name="referenceAddress" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
           </Row>
           <Row className="mb-3">
             <Form.Group as={Col} controlId="formReferenceEmail">
-              <Form.Label className="form-label">Reference Email <span className="text-danger">*</span></Form.Label>
-              <Form.Control
-                type="email"
-                name="referenceEmail"
-                value={formData.referenceEmail}
-                onChange={handleChange}
-                required
-                style={inputControlStyle}
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-              />
+                <Form.Label>Reference Email <span className="text-danger">*</span></Form.Label>
+                <Form.Control type="email" name="referenceEmail" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
             <Form.Group as={Col} controlId="formReferenceRole">
-              <Form.Label className="form-label">Reference Role <span className="text-danger">*</span></Form.Label>
-              <Form.Control
-                type="text"
-                name="referenceRole"
-                value={formData.referenceRole}
-                onChange={handleChange}
-                required
-                style={inputControlStyle}
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-              />
+                <Form.Label>Reference Role <span className="text-danger">*</span></Form.Label>
+                <Form.Control type="text" name="referenceRole" onChange={handleChange} required style={inputControlStyle} />
             </Form.Group>
           </Row>
 
           {/* Job Portal Information */}
           <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Job Portal Information</h4>
           <Form.Group controlId="formJobPortalCredentials" className="mb-3">
-            <Form.Label className="form-label">Job Portal Account Name & Credentials <span className="text-danger">*</span></Form.Label>
-            <Form.Control
-              name="jobPortalAccountNameandCredentials"
-              value={formData.jobPortalAccountNameandCredentials}
-              onChange={handleChange}
-              as="textarea"
-              rows={2}
-              required // Made mandatory
-              style={{ ...inputControlStyle, minHeight: '80px', resize: 'vertical' }}
-              onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-              onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-            />
+            <Form.Label>Job Portal Account Name & Credentials <span className="text-danger">*</span></Form.Label>
+            <Form.Control name="jobPortalAccountNameandCredentials" onChange={handleChange} as="textarea" rows={2} required style={{ ...inputControlStyle, minHeight: '80px', resize: 'vertical' }} />
           </Form.Group>
 
-             {/* NEW: Upload Resume Section */}
+          {/* Upload Resume Section */}
           <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Upload Resume</h4>
           <Form.Group controlId="formResume" className="mb-3">
-            <Form.Label className="form-label">Upload Your Resume <span className="text-danger">*</span></Form.Label>
-            <Form.Control
-                type="file"
-                name="resume"
-                onChange={handleChange}
-                required
-                style={inputControlStyle}
-                onFocus={(e) => e.target.style.borderColor = inputControlFocusStyle.borderColor}
-                onBlur={(e) => e.target.style.borderColor = inputControlStyle.border}
-                accept=".pdf,.doc,.docx"
-            />
+            <Form.Label>Upload Your Resume <span className="text-danger">*</span></Form.Label>
+            <Form.Control type="file" name="resume" onChange={handleChange} required style={inputControlStyle} accept=".pdf,.doc,.docx" />
             <Form.Text className="text-muted">
-                Please upload your resume in PDF, DOC, or DOCX format.
+              Please upload your resume in PDF, DOC, or DOCX format.
             </Form.Text>
           </Form.Group>
 
-          <div className="d-flex justify-content-center mt-4 p-3"> {/* Use flexbox for buttons */}
-            <Button
-              type="button" // Change to type="button" to prevent default form submission
-              size="lg"
-              style={isSubmitting ? { ...previewButtonStyle, opacity: 0.7, cursor: 'not-allowed' } : previewButtonStyle}
-              onMouseEnter={(e) => {
-                if (!isSubmitting) {
-                  e.currentTarget.style.backgroundColor = previewButtonHoverStyle.backgroundColor;
-                  e.currentTarget.style.transform = previewButtonHoverStyle.transform;
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isSubmitting) {
-                  e.currentTarget.style.backgroundColor = previewButtonStyle.backgroundColor;
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }
-              }}
-              onClick={handlePreview} // Call handlePreview
-              disabled={isSubmitting}
-            >
+          <div className="d-flex justify-content-center mt-4 p-3">
+            <Button type="button" size="lg" style={previewButtonStyle} onClick={handlePreview} disabled={isSubmitting}>
               Preview
             </Button>
-            <Button
-              type="submit" // Keep as type="submit" for direct submission if preview is skipped
-              size="lg"
-              style={isSubmitting ? { ...buttonStyle, opacity: 0.7, cursor: 'not-allowed' } : buttonStyle}
-              onMouseEnter={(e) => {
-                if (!isSubmitting) {
-                  e.currentTarget.style.backgroundColor = buttonHoverStyle.backgroundColor;
-                  e.currentTarget.style.transform = buttonHoverStyle.transform;
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isSubmitting) {
-                  e.currentTarget.style.backgroundColor = buttonStyle.backgroundColor;
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }
-              }}
-              disabled={isSubmitting}
-            >
+            <Button type="submit" size="lg" style={buttonStyle} disabled={isSubmitting}>
               {isSubmitting ? 'Sending...' : 'Submit'}
             </Button>
           </div>
@@ -1068,214 +681,107 @@ const ContactForm = () => {
           <Modal.Title>Preview Your Details</Modal.Title>
         </Modal.Header>
         <Modal.Body style={previewModalContentStyle}>
-          {/* Replicating the form structure for preview */}
+          {/* Personal Information Preview */}
           <h4 className="border-bottom pb-2 mb-3" style={subHeaderStyle}>Personal Information</h4>
           <Row className="mb-3">
-            <Form.Group as={Col} controlId="previewFirstName">
-              <Form.Label className="form-label">First Name:</Form.Label>
-              <div style={previewValueDisplay}>{formData.firstName || 'N/A'}</div>
-            </Form.Group>
-            <Form.Group as={Col} controlId="previewMiddleName">
-              <Form.Label className="form-label">Middle Name:</Form.Label>
-              <div style={previewValueDisplay}>{formData.middleName || 'N/A'}</div>
-            </Form.Group>
-            <Form.Group as={Col} controlId="previewLastName">
-              <Form.Label className="form-label">Last Name:</Form.Label>
-              <div style={previewValueDisplay}>{formData.lastName || 'N/A'}</div>
-            </Form.Group>
+            <Col><Form.Label>First Name:</Form.Label><div style={previewValueDisplay}>{formData.firstName || 'N/A'}</div></Col>
+            <Col><Form.Label>Middle Name:</Form.Label><div style={previewValueDisplay}>{formData.middleName || 'N/A'}</div></Col>
+            <Col><Form.Label>Last Name:</Form.Label><div style={previewValueDisplay}>{formData.lastName || 'N/A'}</div></Col>
           </Row>
-
           <Row className="mb-3">
-            <Form.Group as={Col} controlId="previewDob">
-              <Form.Label className="form-label">Date of Birth:</Form.Label>
-              <div style={previewValueDisplay}>{formData.dob || 'N/A'}</div>
-            </Form.Group>
-            <Form.Group as={Col} controlId="previewGender">
-              <Form.Label className="form-label">Gender:</Form.Label>
-              <div style={previewValueDisplay}>{formData.gender || 'N/A'}</div>
-            </Form.Group>
-            <Form.Group as={Col} controlId="previewEthnicity">
-              <Form.Label className="form-label">Ethnicity:</Form.Label>
-              <div style={previewValueDisplay}>{formData.ethnicity || 'N/A'}</div>
-            </Form.Group>
+            <Col><Form.Label>Date of Birth:</Form.Label><div style={previewValueDisplay}>{formData.dob || 'N/A'}</div></Col>
+            <Col><Form.Label>Gender:</Form.Label><div style={previewValueDisplay}>{formData.gender || 'N/A'}</div></Col>
+            <Col><Form.Label>Ethnicity:</Form.Label><div style={previewValueDisplay}>{formData.ethnicity || 'N/A'}</div></Col>
           </Row>
 
+          {/* Contact Information Preview */}
           <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Contact Information</h4>
           <Row className="mb-3">
-            <Form.Group as={Col} controlId="previewAddress">
-              <Form.Label className="form-label">Address:</Form.Label>
-              <div style={previewValueDisplay}>{formData.address || 'N/A'}</div>
-            </Form.Group>
-            <Form.Group as={Col} controlId="previewZipCode">
-              <Form.Label className="form-label">Zip Code:</Form.Label>
-              <div style={previewValueDisplay}>{formData.zipCode || 'N/A'}</div>
-            </Form.Group>
+            <Col><Form.Label>Address:</Form.Label><div style={previewValueDisplay}>{formData.address || 'N/A'}</div></Col>
+            <Col md={4}><Form.Label>Zip Code:</Form.Label><div style={previewValueDisplay}>{formData.zipCode || 'N/A'}</div></Col>
           </Row>
           <Row className="mb-3">
-            <Form.Group as={Col} controlId="previewCountryCode">
-              <Form.Label className="form-label">Country Code:</Form.Label>
-              <div style={previewValueDisplay}>
-                {countryCodes.find(c => c.dialCode === formData.countryCode)?.name || 'N/A'} ({formData.countryCode || 'N/A'})
-              </div>
-            </Form.Group>
-            <Form.Group as={Col} controlId="previewMobile">
-              <Form.Label className="form-label">Mobile:</Form.Label>
-              <div style={previewValueDisplay}>{formData.mobile || 'N/A'}</div>
-            </Form.Group>
-            <Form.Group as={Col} controlId="previewEmail">
-              <Form.Label className="form-label">Email:</Form.Label>
-              <div style={previewValueDisplay}>{formData.email || 'N/A'}</div>
-            </Form.Group>
+            <Col><Form.Label>Country Code:</Form.Label><div style={previewValueDisplay}>{countryCodes.find(c => c.dialCode === formData.countryCode)?.name || 'N/A'} ({formData.countryCode || 'N/A'})</div></Col>
+            <Col><Form.Label>Mobile:</Form.Label><div style={previewValueDisplay}>{formData.mobile || 'N/A'}</div></Col>
+            <Col><Form.Label>Email:</Form.Label><div style={previewValueDisplay}>{formData.email || 'N/A'}</div></Col>
           </Row>
 
+          {/* Employment Information Preview */}
           <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Employment Information</h4>
-          <Row className="mb-3">
-            <Form.Group as={Col} controlId="previewSecurityClearance">
-              <Form.Label className="form-label">Security Clearance:</Form.Label>
-              <div style={previewValueDisplay}>{formData.securityClearance || 'N/A'}</div>
-            </Form.Group>
-            {formData.securityClearance === 'yes' && (
-              <Form.Group as={Col} controlId="previewClearanceLevel">
-                <Form.Label className="form-label">Clearance Level:</Form.Label>
-                <div style={previewValueDisplay}>{formData.clearanceLevel || 'N/A'}</div>
-              </Form.Group>
-            )}
-            <Form.Group as={Col} controlId="previewWillingToRelocate">
-              <Form.Label className="form-label">Willing to Relocate:</Form.Label>
-              <div style={previewValueDisplay}>{formData.willingToRelocate || 'N/A'}</div>
-            </Form.Group>
-          </Row>
-          <Row className="mb-3">
-            <Form.Group as={Col} controlId="previewWorkPreference">
-              <Form.Label className="form-label">Work Preference:</Form.Label>
-              <div style={previewValueDisplay}>{formData.workPreference || 'N/A'}</div>
-            </Form.Group>
-            <Form.Group as={Col} controlId="previewRestrictedCompanies">
-              <Form.Label className="form-label">Restricted Companies:</Form.Label>
-              <div style={previewValueDisplay}>{formData.restrictedCompanies || 'N/A'}</div>
-            </Form.Group>
-          </Row>
+           <Row className="mb-3">
+              <Col><Form.Label>Security Clearance:</Form.Label><div style={previewValueDisplay}>{formData.securityClearance || 'N/A'}</div></Col>
+              {formData.securityClearance === 'yes' && (
+                <Col><Form.Label>Clearance Level:</Form.Label><div style={previewValueDisplay}>{formData.clearanceLevel || 'N/A'}</div></Col>
+              )}
+              <Col><Form.Label>Willing to Relocate:</Form.Label><div style={previewValueDisplay}>{formData.willingToRelocate || 'N/A'}</div></Col>
+           </Row>
+           <Row className="mb-3">
+              <Col><Form.Label>Work Preference:</Form.Label><div style={previewValueDisplay}>{formData.workPreference || 'N/A'}</div></Col>
+              <Col><Form.Label>Restricted Companies:</Form.Label><div style={previewValueDisplay}>{formData.restrictedCompanies || 'N/A'}</div></Col>
+           </Row>
 
+          {/* Job Preferences Preview */}
           <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Job Preferences</h4>
-          <Row className="mb-3">
-            <Form.Group as={Col} controlId="previewJobsToApply">
-              <Form.Label className="form-label">Jobs to Apply For:</Form.Label>
-              <div style={previewValueDisplay}>{formData.jobsToApply || 'N/A'}</div>
-            </Form.Group>
-            <Form.Group as={Col} controlId="previewTechnologySkills">
-              <Form.Label className="form-label">Technology Skills:</Form.Label>
-              <div style={previewValueDisplay}>{formData.technologySkills || 'N/A'}</div>
-            </Form.Group>
-          </Row>
-          <Row className="mb-3">
-            <Form.Group as={Col} controlId="previewCurrentSalary">
-              <Form.Label className="form-label">Current Salary:</Form.Label>
-              <div style={previewValueDisplay}>{formData.currentSalary || 'N/A'}</div>
-            </Form.Group>
-            <Form.Group as={Col} controlId="previewExpectedSalary">
-              <Form.Label className="form-label">Expected Salary:</Form.Label>
-              <div style={previewValueDisplay}>{formData.expectedSalary || 'N/A'}</div>
-            </Form.Group>
-            <Form.Group as={Col} controlId="previewVisaStatus">
-              <Form.Label className="form-label">Visa Status:</Form.Label>
-              <div style={previewValueDisplay}>{formData.visaStatus || 'N/A'}</div>
-            </Form.Group>
-            {formData.visaStatus === 'other' && (
-              <Form.Group as={Col} controlId="previewOtherVisaStatus">
-                <Form.Label className="form-label">Please specify:</Form.Label>
-                <div style={previewValueDisplay}>{formData.otherVisaStatus || 'N/A'}</div>
-              </Form.Group>
-            )}
-          </Row>
+            <Row className="mb-3">
+                <Col><Form.Label>Jobs to Apply For:</Form.Label><div style={previewValueDisplay}>{formData.jobsToApply || 'N/A'}</div></Col>
+                <Col><Form.Label>Technology Skills:</Form.Label><div style={previewValueDisplay}>{formData.technologySkills || 'N/A'}</div></Col>
+            </Row>
+            <Row className="mb-3">
+                <Col><Form.Label>Current Salary:</Form.Label><div style={previewValueDisplay}>{formData.currentSalary || 'N/A'}</div></Col>
+                <Col><Form.Label>Expected Salary:</Form.Label><div style={previewValueDisplay}>{formData.expectedSalary || 'N/A'}</div></Col>
+                <Col><Form.Label>Visa Status:</Form.Label><div style={previewValueDisplay}>{formData.visaStatus || 'N/A'}</div></Col>
+                {formData.visaStatus === 'other' && (
+                    <Col><Form.Label>Please specify:</Form.Label><div style={previewValueDisplay}>{formData.otherVisaStatus || 'N/A'}</div></Col>
+                )}
+            </Row>
 
+          {/* Education Preview */}
           <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Education</h4>
-          <Row className="mb-3">
-            <Form.Group as={Col} controlId="previewSchoolName">
-              <Form.Label className="form-label">School Name:</Form.Label>
-              <div style={previewValueDisplay}>{formData.schoolName || 'N/A'}</div>
-            </Form.Group>
-            <Form.Group as={Col} controlId="previewSchoolAddress">
-              <Form.Label className="form-label">School Address:</Form.Label>
-              <div style={previewValueDisplay}>{formData.schoolAddress || 'N/A'}</div>
-            </Form.Group>
-            <Form.Group as={Col} controlId="previewCourseOfStudy">
-              <Form.Label className="form-label">Course of Study:</Form.Label>
-              <div style={previewValueDisplay}>{formData.courseOfStudy || 'N/A'}</div>
-            </Form.Group>
-          </Row>
-          <Row className="mb-3">
-            <Form.Group as={Col} controlId="previewGraduationFromDate">
-              <Form.Label className="form-label">Graduation From Date:</Form.Label>
-              <div style={previewValueDisplay}>{formData.graduationFromDate || 'N/A'}</div>
-            </Form.Group>
-            <Form.Group as={Col} controlId="previewGraduationToDate">
-              <Form.Label className="form-label">Graduation To Date:</Form.Label>
-              <div style={previewValueDisplay}>{formData.graduationToDate || 'N/A'}</div>
-            </Form.Group>
-          </Row>
+            <Row className="mb-3">
+                <Col><Form.Label>University Name:</Form.Label><div style={previewValueDisplay}>{formData.universityName || 'N/A'}</div></Col>
+                <Col><Form.Label>University Address:</Form.Label><div style={previewValueDisplay}>{formData.universityAddress || 'N/A'}</div></Col>
+                <Col><Form.Label>Course of Study:</Form.Label><div style={previewValueDisplay}>{formData.courseOfStudy || 'N/A'}</div></Col>
+            </Row>
+            <Row className="mb-3">
+                <Col><Form.Label>Graduation From Date:</Form.Label><div style={previewValueDisplay}>{formData.graduationFromDate || 'N/A'}</div></Col>
+                <Col><Form.Label>Graduation To Date:</Form.Label><div style={previewValueDisplay}>{formData.graduationToDate || 'N/A'}</div></Col>
+            </Row>
 
+          {/* Current Employment Preview */}
           <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Current Employment</h4>
-          <Row className="mb-3">
-            <Form.Group as={Col} controlId="previewCurrentCompany">
-              <Form.Label className="form-label">Current Company:</Form.Label>
-              <div style={previewValueDisplay}>{formData.currentCompany || 'N/A'}</div>
-            </Form.Group>
-            <Form.Group as={Col} controlId="previewCurrentDesignation">
-              <Form.Label className="form-label">Current Designation:</Form.Label>
-              <div style={previewValueDisplay}>{formData.currentDesignation || 'N/A'}</div>
-            </Form.Group>
-          </Row>
-          <Row className="mb-3">
-            <Form.Group as={Col} controlId="previewPreferredInterviewTime">
-              <Form.Label className="form-label">Preferred Interview Time:</Form.Label>
-              <div style={previewValueDisplay}>{formData.preferredInterviewTime || 'N/A'}</div>
-            </Form.Group>
-            <Form.Group as={Col} controlId="previewEarliestJoiningDate">
-              <Form.Label className="form-label">Earliest Joining Date:</Form.Label>
-              <div style={previewValueDisplay}>{formData.earliestJoiningDate || 'N/A'}</div>
-            </Form.Group>
-            <Form.Group as={Col} controlId="previewRelievingDate">
-              <Form.Label className="form-label">Relieving Date:</Form.Label>
-              <div style={previewValueDisplay}>{formData.relievingDate || 'N/A'}</div>
-            </Form.Group>
-          </Row>
+            <Row className="mb-3">
+                <Col><Form.Label>Current Company:</Form.Label><div style={previewValueDisplay}>{formData.currentCompany || 'N/A'}</div></Col>
+                <Col><Form.Label>Current Designation:</Form.Label><div style={previewValueDisplay}>{formData.currentDesignation || 'N/A'}</div></Col>
+            </Row>
+            <Row className="mb-3">
+                <Col><Form.Label>Preferred Interview Time:</Form.Label><div style={previewValueDisplay}>{formData.preferredInterviewTime || 'N/A'}</div></Col>
+                <Col><Form.Label>Earliest Joining Date:</Form.Label><div style={previewValueDisplay}>{formData.earliestJoiningDate || 'N/A'}</div></Col>
+                <Col><Form.Label>Relieving Date:</Form.Label><div style={previewValueDisplay}>{formData.relievingDate || 'N/A'}</div></Col>
+            </Row>
 
+          {/* References Preview */}
           <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>References</h4>
-          <Row className="mb-3">
-            <Form.Group as={Col} controlId="previewReferenceName">
-              <Form.Label className="form-label">Reference Name:</Form.Label>
-              <div style={previewValueDisplay}>{formData.referenceName || 'N/A'}</div>
-            </Form.Group>
-            <Form.Group as={Col} controlId="previewReferencePhone">
-              <Form.Label className="form-label">Reference Phone:</Form.Label>
-              <div style={previewValueDisplay}>{formData.referencePhone || 'N/A'}</div>
-            </Form.Group>
-            <Form.Group as={Col} controlId="previewReferenceAddress">
-              <Form.Label className="form-label">Reference Address:</Form.Label>
-              <div style={previewValueDisplay}>{formData.referenceAddress || 'N/A'}</div>
-            </Form.Group>
-          </Row>
-          <Row className="mb-3">
-            <Form.Group as={Col} controlId="previewReferenceEmail">
-              <Form.Label className="form-label">Reference Email:</Form.Label>
-              <div style={previewValueDisplay}>{formData.referenceEmail || 'N/A'}</div>
-            </Form.Group>
-            <Form.Group as={Col} controlId="previewReferenceRole">
-              <Form.Label className="form-label">Reference Role:</Form.Label>
-              <div style={previewValueDisplay}>{formData.referenceRole || 'N/A'}</div>
-            </Form.Group>
-          </Row>
+            <Row className="mb-3">
+                <Col><Form.Label>Reference Name:</Form.Label><div style={previewValueDisplay}>{formData.referenceName || 'N/A'}</div></Col>
+                <Col><Form.Label>Reference Phone:</Form.Label><div style={previewValueDisplay}>{formData.referencePhone || 'N/A'}</div></Col>
+                <Col><Form.Label>Reference Address:</Form.Label><div style={previewValueDisplay}>{formData.referenceAddress || 'N/A'}</div></Col>
+            </Row>
+            <Row className="mb-3">
+                <Col><Form.Label>Reference Email:</Form.Label><div style={previewValueDisplay}>{formData.referenceEmail || 'N/A'}</div></Col>
+                <Col><Form.Label>Reference Role:</Form.Label><div style={previewValueDisplay}>{formData.referenceRole || 'N/A'}</div></Col>
+            </Row>
 
+          {/* Job Portal Information Preview */}
           <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Job Portal Information</h4>
           <Form.Group controlId="previewJobPortalCredentials" className="mb-3">
-            <Form.Label className="form-label">Job Portal Account Name & Credentials:</Form.Label>
+            <Form.Label>Job Portal Account Name & Credentials:</Form.Label>
             <div style={previewTextAreaDisplay}>{formData.jobPortalAccountNameandCredentials || 'N/A'}</div>
           </Form.Group>
 
-            {/* NEW: Resume Preview */}
+          {/* Resume Preview */}
           <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Uploaded Resume</h4>
           <Form.Group controlId="previewResume" className="mb-3">
-            <Form.Label className="form-label">Resume File Name:</Form.Label>
+            <Form.Label>Resume File Name:</Form.Label>
             <div style={previewValueDisplay}>{formData.resume ? formData.resume.name : 'N/A'}</div>
           </Form.Group>
 
@@ -1284,8 +790,8 @@ const ContactForm = () => {
           <Button variant="secondary" onClick={handleClosePreviewModal}>
             Edit
           </Button>
-          <Button variant="primary" onClick={handleClosePreviewModal}> {/* Changed to Close button */}
-            Close
+          <Button variant="primary" onClick={() => handleSubmit()}>
+            Confirm & Submit
           </Button>
         </Modal.Footer>
       </Modal>
