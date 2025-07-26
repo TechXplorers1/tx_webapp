@@ -607,7 +607,7 @@ const EmployeeData = () => {
       ],
       jobApplications: [
         { id: 101, clientId: 1, jobTitle: 'Full Stack Developer', company: 'WebTech Solutions', platform: 'LinkedIn', status: 'Applied', appliedDate: '2025-06-21', jobUrl: 'https://example.com/job1', salaryRange: '$90,000 - $110,000', location: 'San Francisco, CA', notes: 'Initial application sent.', jobId: 'WEBFS101' },
-        { id: 102, clientId: 1, jobTitle: 'Senior Frontend Developer', company: 'TechFlow Inc', platform: 'LinkedIn', status: 'Interview', appliedDate: '2025-06-20', jobUrl: 'https://example.com/job2', salaryRange: '$100,000 - $120,000', location: 'Remote', notes: 'Interview scheduled for next week.', jobId: 'TFSE202', round: '1', interviewDate: '2025-07-01' }, // Added round and interviewDate
+        { id: 102, clientId: 1, jobTitle: 'Senior Frontend Developer', company: 'TechFlow Inc', platform: 'LinkedIn', status: 'Interview', appliedDate: '2025-06-20', jobUrl: 'https://example.com/job2', salaryRange: '$100,000 - $120,000', location: 'Remote', notes: 'Interview scheduled for next week.', jobId: 'TFSE202', round: '1', interviewDate: '2025-07-01', recruiterMail:'accenture@gmail.com' }, // Added round and interviewDate
         { id: 103, clientId: 1, jobTitle: 'React Developer', company: 'StartupXYZ', platform: 'Indeed', status: 'Applied', appliedDate: '2025-06-19', jobUrl: 'https://example.com/job3', salaryRange: '$80,000 - $100,000', location: 'New York, NY', notes: 'Followed up via email.', jobId: 'SXYZRD303' },
       ],
       files: [
@@ -675,7 +675,7 @@ const EmployeeData = () => {
       jobApplications: [
         { id: 201, clientId: 2, jobTitle: 'Product Designer', company: 'DesignCo', platform: 'Behance', status: 'Applied', appliedDate: '2025-06-18', jobUrl: 'https://example.com/job4', salaryRange: '$75,000 - $90,000', location: 'Remote', notes: 'Portfolio reviewed.', jobId: 'DCPROD201' },
         { id: 202, clientId: 2, jobTitle: 'UI/UX Lead', company: 'InnovateCorp', platform: 'LinkedIn', status: 'Rejected', appliedDate: '2025-06-15', jobUrl: 'https://example.com/job5', salaryRange: '$80,000 - $95,000', location: 'Austin, TX', notes: 'Received rejection email.', jobId: 'ICUIUX202' },
-        { id: 203, clientId: 2, jobTitle: 'Junior UX Designer', company: 'CreativeLabs', platform: 'AngelList', status: 'Interview', appliedDate: '2025-06-10', jobUrl: 'https://example.com/job6', salaryRange: '$60,000 - $75,000', location: 'San Diego, CA', notes: 'First round interview completed.', jobId: 'CLJUX303', round: '1', interviewDate: '2025-06-25' }, // Added round and interviewDate
+        { id: 203, clientId: 2, jobTitle: 'Junior UX Designer', company: 'CreativeLabs', platform: 'AngelList', status: 'Interview', appliedDate: '2025-06-10', jobUrl: 'https://example.com/job6', salaryRange: '$60,000 - $75,000', location: 'San Diego, CA', notes: 'First round interview completed.', jobId: 'CLJUX303', round: '1', interviewDate: '2025-06-25', recruiterMail:'accenture@gmail.com' }, // Added round and interviewDate
       ],
       files: [
         { id: 2001, clientId: 2, name: 'sarah_portfolio.pdf', size: '3.5 MB', type: 'portfolio', status: 'Uploaded', uploadDate: '2025-06-18', notes: '' },
@@ -740,7 +740,7 @@ const EmployeeData = () => {
       ],
       jobApplications: [
         { id: 301, clientId: 3, jobTitle: 'Data Scientist', company: 'Data Insights', platform: 'Indeed', status: 'Applied', appliedDate: '2025-06-19', jobUrl: 'https://example.com/job7', salaryRange: '$85,000 - $105,000', location: 'New York, NY', notes: 'Awaiting response.', jobId: 'DI_DS_NY_007' },
-        { id: 302, clientId: 3, jobTitle: 'Business Intelligence Analyst', company: 'Analytics Pros', platform: 'Glassdoor', status: 'Interview', appliedDate: '2025-06-17', jobUrl: 'https://example.com/job8', salaryRange: '$70,000 - $90,000', location: 'Chicago, IL', notes: 'Technical interview next week.', jobId: 'AP_BI_CHI_008', round: '2', interviewDate: '2025-07-05' }, // Added round and interviewDate
+        { id: 302, clientId: 3, jobTitle: 'Business Intelligence Analyst', company: 'Analytics Pros', platform: 'Glassdoor', status: 'Interview', appliedDate: '2025-06-17', jobUrl: 'https://example.com/job8', salaryRange: '$70,000 - $90,000', location: 'Chicago, IL', notes: 'Technical interview next week.', jobId: 'AP_BI_CHI_008', round: '2', interviewDate: '2025-07-05', recruiterMail:'accenture@gmail.com' }, // Added round and interviewDate
       ],
       files: [
         { id: 3001, clientId: 3, name: 'michael_resume.pdf', size: '280 KB', type: 'resume', status: 'Uploaded', uploadDate: '2025-06-19', notes: '' },
@@ -920,7 +920,7 @@ const EmployeeData = () => {
           clientId: client.id,
           initials: client.initials,
           name: client.name,
-          description: `Interview scheduled with ${app.company} for ${app.jobTitle} position (Round: ${app.round || 'N/A'}, Date: ${app.interviewDate || 'N/A'})`,
+          description: `Interview scheduled with ${app.company} for ${app.jobTitle} position (Round: ${app.round || 'N/A'}, Date: ${app.interviewDate || 'N/A'}, Mail: ${app.recruiterMail || 'N/A'})`,
           type: 'interview scheduled',
           date: app.interviewDate || app.appliedDate, // Use interview date if available, otherwise applied date
           time: '9:30 PM', // Placeholder for time
@@ -1122,6 +1122,7 @@ const EmployeeData = () => {
       attachments: application.attachments || [],
       round: application.round || '', // Initialize round
       interviewDate: application.interviewDate || '', // Initialize interviewDate
+      recruiterMail:application.recruiterMail || '',
     });
     setShowEditApplicationModal(true);
   };
@@ -3715,6 +3716,7 @@ const EmployeeData = () => {
                 <>
                   <p style={modalViewDetailItemStyle}><strong>Round:</strong> {viewedApplication.round || '-'}</p>
                   <p style={modalViewDetailItemStyle}><strong>Interview Date:</strong> {viewedApplication.interviewDate || '-'}</p>
+                  <p style={modalViewDetailItemStyle}><strong>Recruiter Mail ID:</strong> {viewedApplication.recruiterMail || '-'}</p>
                 </>
               )}
               <div style={{ ...modalViewDetailItemStyle, gridColumn: '1 / -1' }}>
@@ -3899,6 +3901,16 @@ const EmployeeData = () => {
                       style={modalInputStyle}
                     />
                   </div>
+                   <div style={modalFormFieldGroupStyle}>
+                    <label style={modalLabelStyle}>Recruiter Mail ID<span style={{ color: 'red' }}>*</span></label>
+                    <input
+                      type="email"
+                      name="recruiterMail"
+                      value={editedApplicationFormData.recruiterMail || ''}
+                      onChange={handleEditedApplicationFormChange}
+                      style={modalInputStyle}
+                    />
+                  </div>
                 </>
               )}
 
@@ -4054,7 +4066,7 @@ const EmployeeData = () => {
                 <p style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '5px' }}>Supported formats: PDF, DOC, DOCX, PNG, JPG, JPEG (Max 10MB)</p>
               </div>
               <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
-                <label style={modalLabelStyle}>Notes</label>
+                <label style={modalLabelStyle}>Details</label>
                 <textarea
                   name="notes"
                   value={newFileFormData.notes}

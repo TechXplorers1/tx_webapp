@@ -23,6 +23,8 @@ const AdminWorksheet = () => {
   const [showServiceRequestModal, setShowServiceRequestModal] = useState(false);
   const [selectedServiceRequest, setSelectedServiceRequest] = useState(null);
 
+   const simplifiedServices = ['Mobile Development', 'Web Development', 'Digital Marketing', 'IT Talent Supply', 'Cyber Security'];
+
   // Mock data for Career Submissions
   const [careerSubmissions, setCareerSubmissions] = useState([
     { id: 1, firstName: 'John', lastName: 'Doe', email: 'john.d@example.com', mobile: '1234567890', role: 'Data Analyst', experience: 3, currentSalary: '70000', expectedSalary: '85000', resume: 'john_doe_resume.pdf', status: 'Pending' },
@@ -45,16 +47,41 @@ const AdminWorksheet = () => {
   ]);
 
   const [employees, setemployees] = useState([
-    { id: 1, name: 'Admin employee', email: 'admin@techxplorers.in', roles: ['admin', 'active', 'Management'] },
-    { id: 2, name: 'Sarah Wilson', email: 'manager@techxplorers.in', roles: ['manager', 'active', 'Management'] },
-    { id: 3, name: 'Michael Johnson', email: 'teamlead@techxplorers.in', roles: ['team lead', 'active', 'Tech Placement'] },
-    { id: 4, name: 'Asset Manager', email: 'assets@techxplorers.in', roles: ['asset manager', 'active', 'Operations'] },
-    { id: 5, name: 'John Employee', email: 'employee@techxplorers.in', roles: ['employee', 'active', 'Development'] },
-    { id: 6, name: 'John Client', email: 'client', roles: ['client', 'active', 'External'] },
-    { id: 7, name: 'Regular employee', email: 'employee@techxplorers.in', roles: ['employee', 'active', 'Development'] },
-    { id: 8, name: 'Jane Smith', email: 'jane.smith@techxplorers.in', roles: ['employee', 'active', 'Development'] },
-    { id: 9, name: 'Robert Brown', email: 'robert.brown@techxplorers.in', roles: ['employee', 'active', 'Marketing'] },
-    { id: 10, name: 'Laura White', email: 'laura.white@techxplorers.in', roles: ['employee', 'active', 'Sales'] },
+        { 
+        id: 1, roles: ['admin', 'active', 'Management'],
+        firstName: "Admin", lastName: "employee", gender: "Male", dateOfBirth: "1985-05-20", maritalStatus: "Married",
+        personalNumber: "9876543210", alternativeNumber: "8765432109", country: "India", state: "Telangana",
+        city: "Hyderabad", address: "123 Tech Park, Hitech City", zipcode: "500081", dateOfJoin: "2020-01-15",
+        personalMail: "admin.personal@email.com"
+    },
+ { 
+        id: 2, roles: ['manager', 'active', 'Management'],
+        firstName: "Sarah", lastName: "Wilson", gender: "Female", dateOfBirth: "1988-11-10", maritalStatus: "Single",
+        personalNumber: "9123456780", alternativeNumber: "", country: "USA", state: "California",
+        city: "San Francisco", address: "456 Bay Area", zipcode: "94105", dateOfJoin: "2021-03-22",
+        personalMail: "sarah.wilson@email.com"
+    },  
+ { 
+        id: 3, roles: ['team lead', 'active', 'Tech Placement'],
+        firstName: "Michael", lastName: "Johnson", gender: "Male", dateOfBirth: "1992-02-25", maritalStatus: "Single",
+        personalNumber: "8123456789", alternativeNumber: "7123456789", country: "UK", state: "London",
+        city: "London", address: "789 Tech Street", zipcode: "SW1A 0AA", dateOfJoin: "2022-07-01",
+        personalMail: "michael.j@email.com"
+    },
+ { 
+        id: 4, roles: ['asset manager', 'active', 'Operations'],
+        firstName: "Asset", lastName: "Manager", gender: "Other", dateOfBirth: "1990-01-01", maritalStatus: "Single",
+        personalNumber: "1234509876", alternativeNumber: "", country: "Canada", state: "Ontario",
+        city: "Toronto", address: "101 Operations Ave", zipcode: "M5H 2N2", dateOfJoin: "2021-06-18",
+        personalMail: "asset.mgr@email.com"
+    },
+{ 
+        id: 5, roles: ['employee', 'active', 'Development'],
+        firstName: "John", lastName: "Employee", gender: "Male", dateOfBirth: "1995-09-15", maritalStatus: "Married",
+        personalNumber: "7890123456", alternativeNumber: "", country: "Australia", state: "New South Wales",
+        city: "Sydney", address: "22 Dev Lane", zipcode: "2000", dateOfJoin: "2023-01-20",
+        personalMail: "john.emp@email.com"
+    },   
   ]);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -140,7 +167,6 @@ const AdminWorksheet = () => {
       const initialClients = [
     {
       id: 1,
-      name: 'John Doe',
       mobile: '123-456-7890',
       email: 'john.doe@example.com',
       jobsApplyFor: 'Software Engineer',
@@ -191,7 +217,6 @@ const AdminWorksheet = () => {
     },
     {
       id: 2,
-      name: 'Jane Smith',
       mobile: '098-765-4321',
       email: 'jane.smith@example.com',
       jobsApplyFor: 'Data Analyst',
@@ -241,21 +266,21 @@ const AdminWorksheet = () => {
       jobPortalCredentials: 'encrypted_password_456'
     },
     {
-      id: 3, name: 'Alice Johnson', mobile: '111-222-3333', email: 'alice.j@example.com', jobsApplyFor: 'UX Designer', registeredDate: '2023-03-01', country: 'UK', visaStatus: 'Tier 2', manager: 'Sarah Wilson', paymentStatus: 'N/A', displayStatuses: ['registered'],
+      id: 3, mobile: '111-222-3333', email: 'alice.j@example.com', jobsApplyFor: 'UX Designer', registeredDate: '2023-03-01', country: 'UK', visaStatus: 'Tier 2', manager: 'Sarah Wilson', paymentStatus: 'N/A', displayStatuses: ['registered'],
       service: 'Web Development',
       subServices: ['Frontend Development', 'Backend Development'],
       userType: 'Startup Founder',
       firstName: 'Alice', middleName: '', lastName: 'Johnson', dob: '1988-08-01', gender: 'Female', ethnicity: 'Caucasian', address: '10 Downing St, London, UK', zipCode: 'SW1A 2AA', securityClearance: 'No', clearanceLevel: 'None', willingToRelocate: 'Yes', workPreference: 'On-site', restrictedCompanies: 'XYZ Design', jobsToApply: 'UX Designer, UI Designer', technologySkills: ['Figma', 'Sketch', 'Adobe XD'], currentSalary: '60000', expectedSalary: '70000', otherVisaStatus: '', schoolName: 'London College of Art', schoolAddress: '100 Art St', schoolPhone: '020-1234-5678', courseOfStudy: 'Graphic Design', graduationDate: '2010-07-01', currentCompany: 'Design Innovators', currentDesignation: 'UX Designer', preferredInterviewTime: 'Any', earliestJoiningDate: '2024-07-01', relievingDate: '2024-06-30', referenceName: 'David Creative', referencePhone: '020-8765-4321', referenceAddress: '20 Design Hub', referenceEmail: 'david.c@example.com', referenceRole: 'Creative Director', jobPortalAccountName: 'alicej_behance', jobPortalCredentials: 'encrypted_password_789'
     },
     {
-      id: 4, name: 'Bob Williams', mobile: '444-555-6666', email: 'bob.w@example.com', jobsApplyFor: 'Project Manager', registeredDate: '2023-04-10', country: 'Australia', visaStatus: 'Working Holiday', paymentStatus: 'Pending', displayStatuses: ['registered'],
+      id: 4, mobile: '444-555-6666', email: 'bob.w@example.com', jobsApplyFor: 'Project Manager', registeredDate: '2023-04-10', country: 'Australia', visaStatus: 'Working Holiday', paymentStatus: 'Pending', displayStatuses: ['registered'],
       service: 'Digital Marketing',
       subServices: ['Email Marketing', 'Social Media Marketing (SMM)'],
       userType: 'Agency',
       firstName: 'Bob', middleName: '', lastName: 'Williams', dob: '1985-03-15', gender: 'Male', ethnicity: 'Caucasian', address: '15 Ocean Dr, Sydney, Australia', zipCode: '2000', securityClearance: 'No', clearanceLevel: 'None', willingToRelocate: 'No', workPreference: 'Hybrid', restrictedCompanies: 'None', jobsToApply: 'Project Manager, Scrum Master', technologySkills: ['Jira', 'Confluence', 'Agile'], currentSalary: '90000', expectedSalary: '100000', otherVisaStatus: '', schoolName: 'University of Sydney', schoolAddress: '50 University Rd', schoolPhone: '02-9876-5432', courseOfStudy: 'Business Administration', graduationDate: '2007-12-01', currentCompany: 'Global Projects', currentDesignation: 'Project Coordinator', preferredInterviewTime: 'Morning', earliestJoiningDate: '2024-08-15', relievingDate: '2024-08-14', referenceName: 'Chris Lead', referencePhone: '02-1234-5678', referenceAddress: '30 Business Park', referenceEmail: 'chris.l@example.com', referenceRole: 'Team Lead', jobPortalAccountName: 'bobw_seek', jobPortalCredentials: 'encrypted_password_abc'
     },
     {
-      id: 5, name: 'Charlie Brown', mobile: '777-888-9999', email: 'charlie.b@example.com', jobsApplyFor: 'DevOps Engineer', registeredDate: '2023-05-05', country: 'Germany', visaStatus: 'Blue Card', manager: 'Michael Johnson', paymentStatus: 'Paid', displayStatuses: ['registered'],
+      id: 5, mobile: '777-888-9999', email: 'charlie.b@example.com', jobsApplyFor: 'DevOps Engineer', registeredDate: '2023-05-05', country: 'Germany', visaStatus: 'Blue Card', manager: 'Michael Johnson', paymentStatus: 'Paid', displayStatuses: ['registered'],
       service: 'IT Talent Supply',
       subServices: ['IT Internship Staffing', 'Permanent Staffing'],
       userType: 'Individual',
@@ -263,7 +288,7 @@ const AdminWorksheet = () => {
       schoolAddress: '10 Tech Ave', schoolPhone: '030-99887766', courseOfStudy: 'Computer Engineering', graduationDate: '2017-09-01', currentCompany: 'Cloud Solutions GmbH', currentDesignation: 'Junior DevOps', preferredInterviewTime: 'Any', earliestJoiningDate: '2024-09-10', relievingDate: '2024-09-09', referenceName: 'Lena Cloud', referencePhone: '030-11223344', referenceAddress: '40 Cloud Park', referenceEmail: 'lena.c@example.com', referenceRole: 'Senior Engineer', jobPortalAccountName: 'charlieb_xing', jobPortalCredentials: 'encrypted_password_def'
     },
     {
-      id: 6, name: 'Diana Prince', mobile: '123-123-1234', email: 'diana.p@example.com', jobsApplyFor: 'Product Manager', registeredDate: '2023-06-01', country: 'USA', visaStatus: 'Green Card', paymentStatus: 'N/A', displayStatuses: ['registered'],
+      id: 6, mobile: '123-123-1234', email: 'diana.p@example.com', jobsApplyFor: 'Product Manager', registeredDate: '2023-06-01', country: 'USA', visaStatus: 'Green Card', paymentStatus: 'N/A', displayStatuses: ['registered'],
       service: 'Job Supporting & Consulting',
       subServices: [],
       userType: 'Student',
@@ -271,7 +296,7 @@ const AdminWorksheet = () => {
     },
     // New Mobile Development Client
     {
-      id: 7, name: 'Eve Adams', mobile: '999-888-7777', email: 'eve.a@example.com', jobsApplyFor: '', registeredDate: '2023-07-10', country: 'USA', visaStatus: 'H1B', paymentStatus: 'Paid', displayStatuses: ['registered'],
+      id: 7, mobile: '999-888-7777', email: 'eve.a@example.com', jobsApplyFor: '', registeredDate: '2023-07-10', country: 'USA', visaStatus: 'H1B', paymentStatus: 'Paid', displayStatuses: ['registered'],
       service: 'Mobile Development',
       subServices: ['iOS App Development', 'Progressive Web Apps (PWA)'],
       userType: 'Individual',
@@ -279,7 +304,7 @@ const AdminWorksheet = () => {
     },
     // Another Mobile Development Client
     {
-      id: 11, name: 'Grace Hopper', mobile: '111-222-3333', email: 'grace.h@example.com', jobsApplyFor: '', registeredDate: '2023-07-20', country: 'USA', visaStatus: 'Green Card', paymentStatus: 'Pending', displayStatuses: ['registered'],
+      id: 11, mobile: '111-222-3333', email: 'grace.h@example.com', jobsApplyFor: '', registeredDate: '2023-07-20', country: 'USA', visaStatus: 'Green Card', paymentStatus: 'Pending', displayStatuses: ['registered'],
       service: 'Mobile Development',
       subServices: ['Android App Development'],
       userType: 'Business Owner',
@@ -287,7 +312,7 @@ const AdminWorksheet = () => {
     },
     // New Web Development Client
     {
-      id: 8, name: 'Frank White', mobile: '222-333-4444', email: 'frank.w@example.com', jobsApplyFor: '', registeredDate: '2023-08-01', country: 'Canada', visaStatus: 'PR', paymentStatus: 'Pending', displayStatuses: ['registered'],
+      id: 8, mobile: '222-333-4444', email: 'frank.w@example.com', jobsApplyFor: '', registeredDate: '2023-08-01', country: 'Canada', visaStatus: 'PR', paymentStatus: 'Pending', displayStatuses: ['registered'],
       service: 'Web Development',
       subServices: ['Fullstack Development', 'Database Design & Management'],
       userType: 'Business Owner',
@@ -295,7 +320,7 @@ const AdminWorksheet = () => {
     },
     // Another Web Development Client
     {
-      id: 12, name: 'Ivy Green', mobile: '444-555-6666', email: 'ivy.g@example.com', jobsApplyFor: '', registeredDate: '2023-08-15', country: 'UK', visaStatus: 'Tier 2', paymentStatus: 'Paid', displayStatuses: ['registered'],
+      id: 12, mobile: '444-555-6666', email: 'ivy.g@example.com', jobsApplyFor: '', registeredDate: '2023-08-15', country: 'UK', visaStatus: 'Tier 2', paymentStatus: 'Paid', displayStatuses: ['registered'],
       service: 'Web Development',
       subServices: ['Frontend Development', 'Web Hosting & Deployment'],
       userType: 'Startup Founder',
@@ -303,7 +328,7 @@ const AdminWorksheet = () => {
     },
     // New Digital Marketing Client
     {
-      id: 9, name: 'Grace Lee', mobile: '555-111-2222', email: 'grace.l@example.com', jobsApplyFor: '', registeredDate: '2023-09-05', country: 'UK', visaStatus: 'Tier 2', paymentStatus: 'Paid', displayStatuses: ['registered'],
+      id: 9, mobile: '555-111-2222', email: 'grace.l@example.com', jobsApplyFor: '', registeredDate: '2023-09-05', country: 'UK', visaStatus: 'Tier 2', paymentStatus: 'Paid', displayStatuses: ['registered'],
       service: 'Digital Marketing',
       subServices: ['Search Engine Optimization (SEO)', 'Content Marketing'],
       userType: 'Startup Founder',
@@ -311,7 +336,7 @@ const AdminWorksheet = () => {
     },
     // Another Digital Marketing Client
     {
-      id: 13, name: 'Jack Black', mobile: '777-888-9999', email: 'jack.b@example.com', jobsApplyFor: '', registeredDate: '2023-09-20', country: 'Australia', visaStatus: 'Working Holiday', paymentStatus: 'Pending', displayStatuses: ['registered'],
+      id: 13, mobile: '777-888-9999', email: 'jack.b@example.com', jobsApplyFor: '', registeredDate: '2023-09-20', country: 'Australia', visaStatus: 'Working Holiday', paymentStatus: 'Pending', displayStatuses: ['registered'],
       service: 'Digital Marketing',
       subServices: ['Email Marketing', 'Social Media Marketing (SMM)'],
       userType: 'Agency',
@@ -319,7 +344,7 @@ const AdminWorksheet = () => {
     },
     // New IT Talent Supply Client
     {
-      id: 10, name: 'Henry Green', mobile: '777-444-1111', email: 'henry.g@example.com', jobsApplyFor: '', registeredDate: '2023-10-12', country: 'Germany', visaStatus: 'Blue Card', paymentStatus: 'N/A', displayStatuses: ['registered'],
+      id: 10, mobile: '777-444-1111', email: 'henry.g@example.com', jobsApplyFor: '', registeredDate: '2023-10-12', country: 'Germany', visaStatus: 'Blue Card', paymentStatus: 'N/A', displayStatuses: ['registered'],
       service: 'IT Talent Supply',
       subServices: ['Contract Staffing', 'Technical Screening & Interviews'],
       userType: 'Agency',
@@ -327,7 +352,7 @@ const AdminWorksheet = () => {
     },
     // Another IT Talent Supply Client
     {
-      id: 14, name: 'Karen Taylor', mobile: '333-222-1111', email: 'karen.t@example.com', jobsApplyFor: '', registeredDate: '2023-10-25', country: 'USA', visaStatus: 'Green Card', paymentStatus: 'Paid', displayStatuses: ['registered'],
+      id: 14, mobile: '333-222-1111', email: 'karen.t@example.com', jobsApplyFor: '', registeredDate: '2023-10-25', country: 'USA', visaStatus: 'Green Card', paymentStatus: 'Paid', displayStatuses: ['registered'],
       service: 'IT Talent Supply',
       subServices: ['Permanent Staffing', 'IT Internship Staffing'],
       userType: 'Individual',
@@ -336,7 +361,6 @@ const AdminWorksheet = () => {
     // Cyber Security Client 1 - Individual (Security Analyst)
     {
       id: 15,
-      name: 'Marcus Reed',
       mobile: '555-666-7777',
       email: 'marcus.reed@example.com',
       jobsApplyFor: '',
@@ -388,7 +412,6 @@ const AdminWorksheet = () => {
     // Cyber Security Client 2 - Agency (Specialized Cybersecurity Firm)
     {
       id: 16,
-      name: 'NovaShield Cyber Solutions',
       mobile: '444-999-2222',
       email: 'contact@novashield-cs.com',
       jobsApplyFor: '',
@@ -502,12 +525,11 @@ const employees1 = [
 
   const getInitials = (name) => {
     if (!name) return '';
-    const nameParts = name.split(' ').filter(part => part.length > 0);
-    if (nameParts.length === 1) {
-      return nameParts[0].charAt(0).toUpperCase();
-    } else if (nameParts.length >= 2) {
-      return (nameParts[0].charAt(0) + nameParts[nameParts.length - 1].charAt(0)).toUpperCase();
-    }
+   const nameParts = (name || '').split(' ').filter(part => part.length > 0);
+
+    if (nameParts.length === 1) return nameParts[0].charAt(0).toUpperCase();
+
+    if (nameParts.length >= 2) return (nameParts[0].charAt(0) + nameParts[nameParts.length - 1].charAt(0)).toUpperCase();
     return '';
   };
 
@@ -660,10 +682,10 @@ const employees1 = [
     setSearchTerm(event.target.value);
   };
 
-  const filteredemployees = employees.filter(employee =>
-    employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    employee.roles.some(role => role.toLowerCase().includes(searchTerm.toLowerCase()))
+ const filteredemployees = employees.filter(employee =>
+    (employee.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (employee.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (employee.roles || []).some(role => (role || '').toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   // Add employee Modal Handlers
@@ -674,12 +696,24 @@ const employees1 = [
   const handleCloseAddEmployeeModal = () => {
     setIsAddEmployeeModalOpen(false);
     setNewemployee({
-      fullName: '',
-      email: '',
       role: 'employee',
       department: 'No department assigned',
       accountStatus: 'Active',
       temporaryPassword: '',
+       firstName: '',
+        lastName:'',
+        gender: '',
+        dateOfBirth:  '',
+        maritalStatus:  '',
+        personalNumber: '',
+        alternativeNumber:  '',
+        country:  '',
+        state:  '',
+        city:  '',
+        address:  '',
+        zipcode: '',
+        dateOfJoin:  '',
+        personalMail:  '',
     });
   };
 
@@ -760,20 +794,29 @@ const employees1 = [
     const employee = employees.find(u => u.id === employeeId);
     if (employee) {
 
-      const employeeDepartment = departmentOptions.find(dept => employee.roles.includes(dept.toLowerCase())) || 'No department assigned';
-
-      const employeeAccountStatus = accountStatusOptions.find(status => employee.roles.includes(status.toLowerCase())) || 'Active';
-
-      const employeeRole = roleOptions.find(role => employee.roles.includes(role.value.toLowerCase()))?.value || 'employee';
+     const employeeDepartment = departmentOptions.find(dept => (employee.roles || []).includes(dept.toLowerCase())) || 'No department assigned';
+      const employeeAccountStatus = accountStatusOptions.find(status => (employee.roles || []).includes(status.toLowerCase())) || 'Active';
+      const employeeRole = roleOptions.find(role => (employee.roles || []).includes(role.value.toLowerCase()))?.value || 'Employee';
 
       setCurrentemployeeToEdit({
         id: employee.id,
-        fullName: employee.name,
-        email: employee.email,
         role: employeeRole,
         department: employeeDepartment,
         accountStatus: employeeAccountStatus,
-        temporaryPassword: '',
+        firstName: employee.firstName || '',
+        lastName: employee.lastName || '',
+        gender: employee.gender || '',
+        dateOfBirth: employee.dateOfBirth || '',
+        maritalStatus: employee.maritalStatus || '',
+        personalNumber: employee.personalNumber || '',
+        alternativeNumber: employee.alternativeNumber || '',
+        country: employee.country || '',
+        state: employee.state || '',
+        city: employee.city || '',
+        address: employee.address || '',
+        zipcode: employee.zipcode || '',
+        dateOfJoin: employee.dateOfJoin || '',
+        personalMail: employee.personalMail || '',
       });
       setIsEditemployeeModalOpen(true);
     }
@@ -813,23 +856,31 @@ const employees1 = [
   const confirmEmployeeUpdate = () => {
     setemployees(prevemployees => prevemployees.map(employee => {
       if (employee.id === pendingEmployeeUpdate.id) {
-
+        // Filter out old department role before adding the new one
+        const baseRoles = employee.roles.filter(r => !departmentOptions.map(d => d.toLowerCase()).includes(r));
+        
         const updatedRoles = [pendingEmployeeUpdate.role.toLowerCase()];
-        if (pendingEmployeeUpdate.accountStatus.toLowerCase() === 'active') {
-          updatedRoles.push('active');
-        } else if (pendingEmployeeUpdate.accountStatus.toLowerCase() === 'inactive') {
-          updatedRoles.push('inactive');
-        } else if (pendingEmployeeUpdate.accountStatus.toLowerCase() === 'pending') {
-          updatedRoles.push('pending');
-        }
-        if (pendingEmployeeUpdate.department !== 'No department assigned') {
-          updatedRoles.push(pendingEmployeeUpdate.department.toLowerCase());
+        if (pendingEmployeeUpdate.accountStatus) updatedRoles.push(pendingEmployeeUpdate.accountStatus.toLowerCase());
+        if (pendingEmployeeUpdate.department && pendingEmployeeUpdate.department !== 'No department assigned') {
+            updatedRoles.push(pendingEmployeeUpdate.department.toLowerCase());
         }
         return {
           ...employee,
-          name: pendingEmployeeUpdate.fullName,
-          email: pendingEmployeeUpdate.email,
           roles: updatedRoles,
+          firstName: pendingEmployeeUpdate.firstName,
+          lastName: pendingEmployeeUpdate.lastName,
+          gender: pendingEmployeeUpdate.gender,
+          dateOfBirth: pendingEmployeeUpdate.dateOfBirth,
+          maritalStatus: pendingEmployeeUpdate.maritalStatus,
+          personalNumber: pendingEmployeeUpdate.personalNumber,
+          alternativeNumber: pendingEmployeeUpdate.alternativeNumber,
+          country: pendingEmployeeUpdate.country,
+          state: pendingEmployeeUpdate.state,
+          city: pendingEmployeeUpdate.city,
+          address: pendingEmployeeUpdate.address,
+          zipcode: pendingEmployeeUpdate.zipcode,
+          dateOfJoin: pendingEmployeeUpdate.dateOfJoin,
+          personalMail: pendingEmployeeUpdate.personalMail,
         };
       }
       return employee;
@@ -910,7 +961,7 @@ const employees1 = [
     }
     // Compare employee counts
     const currentEmployeesInDept = employees.filter(emp =>
-      emp.roles.includes(original.name.toLowerCase())
+        (emp.roles || []).includes(department.name.toLowerCase())
     );
     const updatedEmployeesInDeptCount = employeesToAddInDepartment.length;
 
@@ -944,7 +995,7 @@ const employees1 = [
         !emp.roles.includes('admin') &&
         !currentEmployeesInDept.some(cEmp => cEmp.id === emp.id) // Ensure not already in assigned list
       );
-      setAvailableEmployeesForDepartment(available);
+      setEmployeesInSelectedDepartment(currentEmployeesInDept);
 
       setCurrentDepartmentToEdit({ ...department });
       setIsEditDepartmentModalOpen(true);
@@ -1353,30 +1404,13 @@ const employees1 = [
     { value: 'Asset Manager', label: 'Asset Manager', description: 'Asset and equipment management' },
   ];
 
-  const departmentOptions = [
-    'No department assigned',
-    'Management',
-    'Development',
-    'Design',
-    'Marketing',
-    'Sales',
-    'Operations',
-    'Finance',
-    'Support',
-    'Quality Assurance',
-    'Tech Placement',
-    'HR',
-    'External',
-  ];
+ const departmentOptions = departments.map(d => d.name);
+  departmentOptions.unshift('No department assigned');
 
   // Head of Department options for the edit department modal.
 
-  const headOfDepartmentOptions = [
-    'Not assigned',
-    'Sarah Wilson',
-    'Michael Johnson',
+  const headOfDepartmentOptions = ['Not assigned', ...employees.filter(e => e.roles.includes('manager') || e.roles.includes('team lead')).map(e => e.name)];
 
-  ];
 
   const accountStatusOptions = ['Active', 'Inactive', 'Pending'];
   const departmentStatusOptions = ['active', 'inactive', 'pending'];
@@ -1523,9 +1557,9 @@ const employees1 = [
       asset.type.toLowerCase().includes(assetSearchTermInModal.toLowerCase()))
   );
 
-  const filteredEmployeesForAssignment = employees.filter(employee =>
-    employee.name.toLowerCase().includes(employeeSearchTermInModal.toLowerCase()) ||
-    employee.email.toLowerCase().includes(employeeSearchTermInModal.toLowerCase())
+const filteredEmployeesForAssignment = employees.filter(employee =>
+    (employee.name || '').toLowerCase().includes(employeeSearchTermInModal.toLowerCase()) ||
+    (employee.email || '').toLowerCase().includes(employeeSearchTermInModal.toLowerCase())
   );
 
 
@@ -1750,7 +1784,7 @@ const employees1 = [
 
 
    const renderClientTable = (clientsToRender, serviceType, currentClientFilter, title = '') => {
-    const headers = ['Name', 'Mobile', 'Email', serviceType === 'Job Supporting & Consulting' ? 'Jobs Apply For' : 'Service', 'Registered Date', 'Country'];
+    const headers = ['First Name','Last Name', 'Mobile', 'Email', serviceType === 'Job Supporting & Consulting' ? 'Jobs Apply For' : 'Service', 'Registered Date', 'Country'];
 							
 
 													
@@ -1783,7 +1817,8 @@ const employees1 = [
             {clientsToRender.length > 0 ? (
               clientsToRender.map(client => (
                 <tr key={client.id}>
-                  <td>{client.name}</td>
+                  <td>{client.firstName}</td>
+                  <td>{client.lastName}</td>
                   <td>{client.mobile}</td>
                   <td>{client.email}</td>
                   <td>{client.service === 'Job Supporting & Consulting' ? client.jobsApplyFor : client.service}</td>
@@ -1825,19 +1860,7 @@ const employees1 = [
                   )}
 
 
-                  <td>
-                    <button
-                      onClick={() => handleViewClientDetails(client)}
-                      className="action-button"
-                      title="View Details"
-                      style={{ padding: '0.5rem', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '0 auto' }}
-                    >
-                      {/* Eye Icon */}
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1.1rem', height: '1.1rem' }}>
-                        <path d="M12 4.5C7 4.5 2.73 7.61 1 12C2.73 16.39 7 19.5 12 19.5C17 19.5 21.27 16.39 23 12C21.27 7.61 17 4.5 12 4.5ZM12 17C9.24 17 7 14.76 7 12C7 9.24 9.24 7 12 7C14.76 7 17 9.24 17 12C17 14.76 14.76 17 12 17ZM12 9C10.34 9 9 10.34 9 12C9 13.66 10.34 15 12 15C13.66 15 15 13.66 15 12C15 10.34 13.66 9 12 9Z" />
-                      </svg>
-                    </button>
-                  </td>
+                 
                   <td><button onClick={() => handleViewClientDetails(client)} className="action-button">View</button></td>
                 <td>
                   <div className="action-buttons">
@@ -1868,12 +1891,19 @@ const employees1 = [
 
     return (
       <div className="all-services-list">
-        {servicesToDisplay.map(service => {
+      {servicesToDisplay.map(service => {
           const clientsForService = clients.filter(client =>
             client.displayStatuses.includes(clientFilter) &&
             client.service === service &&
-            (client.name.toLowerCase().includes(clientSearchTerm.toLowerCase()) || client.email.toLowerCase().includes(clientSearchTerm.toLowerCase()))
+            // FIX: Added a check for client.name and client.email to prevent .toLowerCase() on undefined
+            ((client.name || '').toLowerCase().includes(clientSearchTerm.toLowerCase()) || 
+             (client.email || '').toLowerCase().includes(clientSearchTerm.toLowerCase()))
           );
+          
+          if (clientsForService.length === 0) {
+            return null; // Don't render the table if there are no clients for this service
+          }
+
           return (
             <div key={service} className="service-table-list-item">
               {renderClientTable(clientsForService, service, clientFilter, service)}
@@ -2639,6 +2669,152 @@ html.dark-mode {
   background-color: var(--radio-item-hover-bg); /* Subtle hover background for inactive tabs */
 }
 /* End of Custom Radio Button Styles */
+
+
+/* Edit Employee Modal overlay */
+.modal-overlay.open {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(20, 20, 20, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+/* Modal content */
+.employee-edit-modal-content {
+  background: #fff;
+  border-radius: 12px;
+  max-width: 850px;
+  width: 95%;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 24px 32px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Header */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1f2d3d;
+}
+
+.modal-subtitle {
+  margin: 4px 0 0;
+  font-size: 0.95rem;
+  color: #6c757d;
+}
+
+.modal-close-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #999;
+  transition: color 0.2s;
+}
+
+.modal-close-btn:hover {
+  color: #333;
+}
+
+/* Form layout grid */
+.details-grid.form-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+/* Section Title */
+.section-title {
+  grid-column: 1 / -1;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 16px 0 4px;
+  color: #2b3e50;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 4px;
+}
+
+/* Form items */
+.form-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-item label {
+  font-weight: 500;
+  margin-bottom: 4px;
+  font-size: 0.92rem;
+  color: #34495e;
+}
+
+.form-item input,
+.form-item select,
+.form-item textarea {
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  outline: none;
+}
+
+.form-item textarea {
+  resize: vertical;
+}
+
+/* Modal footer */
+.modal-footer.modal-form-full-width {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 12px;
+  border-top: 1px solid #eee;
+}
+
+.confirm-cancel-btn,
+.confirm-save-btn {
+  padding: 8px 16px;
+  font-size: 0.95rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.confirm-cancel-btn {
+  background-color: #f1f1f1;
+  color: #555;
+}
+
+.confirm-cancel-btn:hover {
+  background-color: #e0e0e0;
+}
+
+.confirm-save-btn {
+  background-color: #2e7d32;
+  color: #fff;
+}
+
+.confirm-save-btn:hover {
+  background-color: #27642a;
+}
 
 
 /* employee Management Specific Styles */
@@ -4855,79 +5031,35 @@ html.dark-mode {
           <div className="profile-dropdown-container" ref={profileDropdownRef}>
             <div className="ad-employee-info" onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}>
               <div className="ad-employee-info-text">
-                <p className="ad-employee-name">{employees1.find(e => e.roles.includes('admin'))?.name || 'Admin'}</p>
-                <span className="ad-admin-tag">
+                <p className="ad-employee-name">{(employees.find(e => (e.roles || []).includes('admin')) || {}).name || 'Admin'}</p>
+                                           <span className="ad-admin-tag">Admin</span>
 
-                  <svg className="ad-icon-btn" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ fontSize: '0.65rem', width: '0.65rem', height: '0.65rem' }}>
-                    <path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z" />
-                  </svg>
-                  Admin
-                </span>
               </div>
-              <div className="ad-initials-avatar">
-                <span className="ad-initials-text">{getInitials(employees1.find(e => e.roles.includes('admin'))?.name)}</span>              </div>
+                        <div className="ad-initials-avatar"><span className="ad-initials-text">{getInitials((employees.find(e => (e.roles || []).includes('admin')) || {}).name)}</span></div>
+
             </div>
-            {isProfileDropdownOpen && (
-              <ul className="profile-dropdown-menu open">
-                <li className="profile-dropdown-item header">My Account</li>
-                <li className="profile-dropdown-item" onClick={() => {
-                  setIsProfileDropdownOpen(false); // Close dropdown
-                  handleOpenProfileModal(); // Open profile modal
-                }}>
-
-
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1rem', height: '1rem' }}>
-                    <path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z" />
-                  </svg>
-                  Profile
-                </li>
-                <li className="profile-dropdown-item logout" onClick={() => window.location.href = '/'}>
-
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1rem', height: '1rem' }}>
-                    <path d="M10 4H4C3.44772 4 3 4.44772 3 5V19C3 19.5523 3.44772 20 4 20H10C10.5523 20 11 19.5523 11 19V17H13V19C13 20.6569 11.6569 22 10 22H4C2.34315 22 1 20.6569 1 19V5C1 3.34315 2.34315 2 4 2H10C11.6569 2 13 3.34315 13 5V7H11V5C11 4.44772 10.5523 4 10 4ZM19.2929 10.2929L22.2929 13.2929C22.6834 13.6834 22.6834 14.3166 22.2929 14.7071L19.2929 17.7071C18.9024 18.0976 18.2692 18.0976 17.8787 17.7071C17.4882 17.3166 17.4882 16.6834 17.8787 16.2929L19.5858 14.5858H11C10.4477 14.5858 10 14.1381 10 13.5858C10 13.0335 10.4477 12.5858 11 12.5858H19.5858L17.8787 10.8787C17.4882 10.4882 17.4882 9.85497 17.8787 9.46447C18.2692 9.07395 18.9024 9.07395 19.2929 9.46447Z" />
-                  </svg>
-                  Log out
-                </li>
-              </ul>
-            )}
+          {isProfileDropdownOpen && (
+                        <ul className="profile-dropdown-menu open">
+                            <li>Profile</li>
+                            <li onClick={() => window.location.href = '/'}>Log out</li>
+                        </ul>
+                    )}
           </div>
         </div>
 
-        <button
-          className="ad-hamburger-menu"
-          onClick={toggleSidebar}
-        >
-
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1.125rem', height: '1.125rem' }}>
-            <path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z" />
-          </svg>
-        </button>
-      </header>
-
-      {/* Sidebar for Mobile */}
-      <div
-        className={`ad-sidebar ${isSidebarOpen ? 'ad-sidebar-open' : ''}`}
-      >
-        <button
-          className="ad-sidebar-close-btn"
-          onClick={toggleSidebar}
-        >
-          &times;
-        </button>
-        <nav className="ad-sidebar-nav">
-
-          {adminViewOptions.map(option => (
-            <a
-              key={option.value}
-              href="#"
-              onClick={(e) => { e.preventDefault(); setCurrentView(option.value); setIsSidebarOpen(false); }}
-              className={`ad-nav-link ${currentView === option.value ? 'ad-nav-link-active' : ''}`}
-            >
-              {option.label}
-            </a>
-          ))}
-        </nav>
-      </div>
+   <button className="ad-hamburger-menu" onClick={toggleSidebar}>&#9776;</button>
+        </header>
+        <div className={`ad-sidebar ${isSidebarOpen ? 'ad-sidebar-open' : ''}`}>
+            <button className="ad-sidebar-close-btn" onClick={toggleSidebar}>&times;</button>
+            <nav className="ad-sidebar-nav">
+                {adminViewOptions.map(option => (
+                    <a key={option.value} href="#" onClick={(e) => { e.preventDefault(); setCurrentView(option.value); setIsSidebarOpen(false); }}
+                        className={`ad-nav-link ${currentView === option.value ? 'ad-nav-link-active' : ''}`}>
+                        {option.label}
+                    </a>
+                ))}
+            </nav>
+        </div>
 
       {/* Main Content Area */}
       <main className="ad-main-content">
@@ -4941,20 +5073,14 @@ html.dark-mode {
           </div>
 
           {/* Custom Radio Button Navigation */}
-          <div className="custom-radio-group-container">
-            {adminViewOptions.map((option) => (
-              <label className="custom-radio-item" key={option.value}>
-                <input
-                  type="radio"
-                  name="adminView"
-                  value={option.value}
-                  checked={currentView === option.value}
-                  onChange={() => setCurrentView(option.value)}
-                />
-                <span className="custom-radio-label">{option.label}</span>
-              </label>
-            ))}
-          </div>
+<div className="custom-radio-group-container">
+                    {adminViewOptions.map((option) => (
+                        <label className="custom-radio-item" key={option.value}>
+                            <input type="radio" name="adminView" value={option.value} checked={currentView === option.value} onChange={() => setCurrentView(option.value)} />
+                            <span className="custom-radio-label">{option.label}</span>
+                        </label>
+                    ))}
+                </div>
 
 
           {/* NEW: Request Management View */}
@@ -5106,235 +5232,75 @@ html.dark-mode {
 
 
 
-          {currentView === 'employeeManagement' && (
-            <div className="employee-management-container">
-              <div className="employee-management-box">
-                <div className="employee-management-header">
-                  <h2 className="employee-management-title">Employee Management</h2>
-                  <div className="employee-search-add">
-                    <input
-                      type="text"
-                      placeholder="Search employees..."
-                      className="employee-search-input"
-                      value={searchTerm}
-                      onChange={handleSearchChange}
-                    />
-                    <button className="add-employee-btn" onClick={handleAddEmployeeClick}>
-
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '0.9rem', height: '0.9rem' }}>
-                        <path d="M256 80c0-17.7-14.3-32-32-32s-32 14.3-32 32V224H48c-17.7 0-32 14.3-32 32s14.3 32 32 32H192V432c0 17.7 14.3 32 32 32s32-14.3 32-32V288H400c17.7 0 32-14.3 32-32s-14.3-32-32-32H256V80z" />
-                      </svg>
-                      Add Employee
-                    </button>
-                  </div>
-                </div>
-
-                <div className="employee-list">
-                  {filteredemployees.length > 0 ? (
-                    filteredemployees.map(employee => (
-                      <div className="employee-card" key={employee.id}>
-                        <div className="employee-card-left">
-                          <div className="employee-avatar">
-
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1.5rem', height: '1.5rem' }}>
-                              <path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z" />
-                            </svg>
-                          </div>
-                          <div className="employee-info">
-                            <div className="employee-name">{employee.name}</div>
-                            <div className="employee-email">{employee.email}</div>
-                            <div className="employee-roles">
-                              {employee.roles.map(role => (
-                                <span
-                                  key={role}
-                                  className="role-tag"
-                                  style={{
-                                    backgroundColor: getRoleTagBg(role),
-                                    color: getRoleTagText(role),
-                                  }}
-                                >
-                                  {role}
-                                </span>
-                              ))}
+                  {currentView === 'employeeManagement' && (
+                    <div className="employee-management-container">
+                        <div className="employee-management-box">
+                            <div className="employee-management-header">
+                                <h2 className="employee-management-title">Employee Management</h2>
+                                <div className="employee-search-add">
+                                    <input type="text" placeholder="Search employees..." className="employee-search-input" value={searchTerm} onChange={handleSearchChange} />
+                                    <button className="add-employee-btn" onClick={handleAddEmployeeClick}  >Add Employee</button>
+                                </div>
                             </div>
-                          </div>
+                            <div className="employee-list">
+                                {filteredemployees.map(employee => (
+                                    <div className="employee-card" key={employee.id}>
+                                        <div className="employee-card-left">
+                                            <div className="employee-avatar">{getInitials(employee.name)}</div>
+                                            <div className="employee-info">
+                                                <div className="employee-name">{employee.name}</div>
+                                                <div className="employee-email">{employee.email}</div>
+                                                <div className="employee-roles">
+                                                    {(employee.roles || []).map(role => (
+                                                        <span key={role} className="role-tag" style={{ backgroundColor: getRoleTagBg(role), color: getRoleTagText(role) }}>{role}</span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="employee-actions">
+                                            <button className="action-btn" onClick={() => handleEditEmployeeClick(employee.id)}>Edit</button>
+                                            <button className="action-btn delete-btn" onClick={() => handleDeleteemployeeClick(employee.id)}>Delete</button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                        <div className="employee-actions">
-                          <button className="action-btn" onClick={() => handleEditEmployeeClick(employee.id)}>
-
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" fill="currentColor" style={{ width: '0.8rem', height: '0.8rem' }}>
-                              <path d="M402.6 83.2l90.2 90.2c12.5 12.5 12.5 32.8 0 45.3l-56.6 56.6c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3l56.6-56.6L362.4 97.5c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0zm-16.3 16.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3l160-160c12.5-12.5 32.8-12.5 45.3 0s12.5 32.8 0 45.3zM128 448H64V384c0-17.7-14.3-32-32-32s-32 14.3-32 32v96c0 17.7 14.3 32 32 32H128c17.7 0 32-14.3 32-32s-14.3-32-32-32zM480 352c-17.7 0-32 14.3-32 32v64H192c-17.7 0-32 14.3-32 32s14.3 32 32 32H480c17.7 0 32-14.3 32-32V384c0-17.7-14.3-32-32-32z" />
-                            </svg>
-                            Edit
-                          </button>
-                          <button className="action-btn delete-btn" onClick={() => handleDeleteemployeeClick(employee.id)}>
-
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '0.8rem', height: '0.8rem' }}>
-                              <path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z" />
-                            </svg>
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="ad-card" style={{ textAlign: 'center', padding: '2rem' }}>
-                      <p className="ad-subtitle">No employees found matching your search criteria.</p>
                     </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
+                )}
 
-          {currentView === 'departments' && (
-            <div className="department-management-container">
-              <div className="department-management-box">
-                <div className="department-header">
-                  <div>
-                    <h2 className="department-title">Department Management</h2>
-                    <p className="department-subtitle">Create and manage organizational departments</p>
-                  </div>
-                  <button className="create-department-btn" onClick={handleCreateDepartmentClick}>
-
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '0.9rem', height: '0.9rem' }}>
-                      <path d="M256 80c0-17.7-14.3-32-32-32s-32 14.3-32 32V224H48c-17.7 0-32 14.3-32 32s14.3 32 32 32H192V432c0 17.7 14.3 32 32 32s32-14.3 32-32V288H400c17.7 0 32-14.3 32-32s-14.3-32-32-32H256V80z" />
-                    </svg>
-                    Create Department
-                  </button>
-                </div>
-
-                <div className="department-stats-grid">
-
-                  <div className="department-stat-card">
-                    <div className="department-stat-card-icon-wrapper total">
-
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1.25rem', height: '1.25rem' }}>
-                        <path d="M192 32c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32V480c0 17.7-14.3 32-32 32H224c-17.7 0-32-14.3-32-32V32zm64 0V480H384V32H256zM64 128c-17.7 0-32 14.3-32 32V480c0 17.7 14.3 32 32 32H160c17.7 0 32-14.3 32-32V160c0-17.7-14.3-32-32-32H64zm32 32V448h32V160H96z" />
-                      </svg>
+         {currentView === 'departments' && (
+                    <div className="department-management-container">
+                         <div className="department-management-box">
+                            <div className="department-header">
+                                <h2>Department Management</h2>
+                            </div>
+                            <div className="department-table-container">
+                                <table className="department-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Department</th>
+                                            <th>Head of Department</th>
+                                            <th>Employees</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {departments.map(dept => (
+                                            <tr key={dept.id}>
+                                                <td>{dept.name}</td>
+                                                <td>{dept.head}</td>
+                                                <td>{employees.filter(e => (e.roles || []).includes(dept.name.toLowerCase())).length}</td>
+                                                <td>
+                                                    <button className="action-btn" onClick={() => handleEditDepartmentClick(dept.id)}>Edit</button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                         </div>
                     </div>
-                    <div className="department-stat-card-value">{departments.length}</div>
-                    <div className="department-stat-card-label">Total Departments</div>
-                  </div>
-
-
-                  <div className="department-stat-card">
-                    <div className="department-stat-card-icon-wrapper active">
-
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" style={{ width: '1.25rem', height: '1.25rem' }}>
-                        <path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM369 209L241 337c-9.4 9.4-24.6 9.4-33.9 0l-64-64c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l47 47L335 175c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9z" />
-                      </svg>
-                    </div>
-                    <div className="department-stat-card-value">{departments.filter(d => d.status === 'active').length}</div>
-                    <div className="department-stat-card-label">Active Departments</div>
-                  </div>
-
-
-                  <div className="department-stat-card">
-                    <div className="department-stat-card-icon-wrapper employees">
-
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1.25rem', height: '1.25rem' }}>
-                        <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2ZM12 5C13.6569 5 15 6.34315 15 8C15 9.65685 13.6569 11 12 11C10.3431 11 9 9.65685 9 8C9 6.34315 10.3431 5 12 5ZM12 19.25C9.03261 19.25 6.48033 17.6169 5 15.1672C5.00001 13.197 8.33333 12.1667 12 12.1667C15.6667 12.1667 19 13.197 19 15.1672C17.5197 17.6169 14.9674 19.25 12 19.25Z" />
-                      </svg>
-                    </div>
-                    <div className="department-stat-card-value">{departments.reduce((sum, dept) => sum + dept.employees, 0)}</div>
-                    <div className="department-stat-card-label">Total Employees</div>
-                  </div>
-                </div>
-
-                <div className="department-search-filter">
-                  <input
-                    type="text"
-                    placeholder="Search departments..."
-                    className="department-search-input"
-                    value={departmentSearchTerm}
-                    onChange={handleDepartmentSearchChange}
-                  />
-
-                </div>
-
-                <div className="department-table-container">
-                  <table className="department-table">
-                    <thead>
-                      <tr>
-                        <th>Department</th>
-                        <th>Head of Department</th>
-                        <th>Employees</th>
-                        <th>Status</th>
-                        <th>Created Date</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredDepartments.length > 0 ? (
-                        filteredDepartments.map(dept => (
-                          <tr key={dept.id}>
-                            <td>
-                              <div>{dept.name}</div>
-                              <div className="description">{dept.description}</div>
-                            </td>
-                            <td>{dept.head}</td>
-                            <td>
-                              <div className="employee-count">
-
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '0.8rem', height: '0.8rem' }}>
-                                  <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2ZM12 5C13.6569 5 15 6.34315 15 8C15 9.65685 13.6569 11 12 11C10.3431 11 9 9.65685 9 8C9 6.34315 10.3431 5 12 5ZM12 19.25C9.03261 19.25 6.48033 17.6169 5 15.1672C5.00001 13.197 8.33333 12.1667 12 12.1667C15.6667 12.1667 19 13.197 19 15.1672C17.5197 17.6169 14.9674 19.25 12 19.25Z" />
-                                </svg>
-                                {dept.employees}
-                              </div>
-                            </td>
-                            <td>
-                              <span className="status-tag" style={{
-                                backgroundColor: getRoleTagBg(dept.status),
-                                color: getRoleTagText(dept.status),
-                              }}>
-                                {dept.status}
-                              </span>
-                            </td>
-                            <td>{dept.createdDate}</td>
-                            <td>
-                              <div className="action-buttons"
-
-                                style={{ flexDirection: 'column', gap: '0.5rem' }}>
-                                <button
-                                  className="action-btn"
-                                  onClick={() => handleViewDepartmentDetails(dept.id)}
-                                  title="View Details"
-                                >
-                                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '0.8rem', height: '0.8rem' }}>
-                                    <path d="M12 4.5C7 4.5 2.73 7.61 1 12C2.73 16.39 7 19.5 12 19.5C17 19.5 21.27 16.39 23 12C21.27 7.61 17 4.5 12 4.5ZM12 17C9.24 17 7 14.76 7 12C7 9.24 9.24 7 12 7C14.76 7 17 9.24 17 12C17 14.76 14.76 17 12 17ZM12 9C10.34 9 9 10.34 9 12C9 13.66 10.34 15 12 15C13.66 15 15 13.66 15 12C15 10.34 13.66 9 12 9Z" />
-                                  </svg>
-                                  View
-                                </button>
-                                <button className="action-btn" onClick={() => handleEditDepartmentClick(dept.id)}>
-
-                                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" fill="currentColor" style={{ width: '0.8rem', height: '0.8rem' }}>
-                                    <path d="M402.6 83.2l90.2 90.2c12.5 12.5 12.5 32.8 0 45.3l-56.6 56.6c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3l56.6-56.6L362.4 97.5c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0zm-16.3 16.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3l160-160c12.5-12.5 32.8-12.5 45.3 0s12.5 32.8 0 45.3zM128 448H64V384c0-17.7-14.3-32-32-32s-32 14.3-32 32v96c0 17.7 14.3 32 32 32H128c17.7 0 32-14.3 32-32s-14.3-32-32-32zM480 352c-17.7 0-32 14.3-32 32v64H192c-17.7 0-32 14.3-32 32s14.3 32 32 32H480c17.7 0 32-14.3 32-32V384c0-17.7-14.3-32-32-32z" />
-                                  </svg>
-                                  Edit
-                                </button>
-                                <button className="action-btn delete-btn" onClick={() => handleDeleteDepartmentClick(dept.id)}>
-
-                                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '0.8rem', height: '0.8rem' }}>
-                                    <path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z" />
-                                  </svg>
-                                  Delete
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>No departments found matching your criteria.</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
+                )}
 
           {currentView === 'assetManagement' && (
             <div className="asset-management-container">
@@ -5845,105 +5811,127 @@ html.dark-mode {
           </div>
         </div>
       )}
+
       {/* Edit employee Account Modal */}
       {isEditemployeeModalOpen && currentemployeeToEdit && (
-        <div className="modal-overlay open">
-          <div className="modal-content">
-            <div className="modal-header">
-              <div>
-                <h3 className="modal-title">Edit employee Account</h3>
-                <p className="modal-subtitle">Modify the details for {currentemployeeToEdit.fullName}.</p>
-              </div>
-              <button className="modal-close-btn" onClick={handleCloseEditemployeeModal}>&times;</button>
-            </div>
-            <form className="modal-form" onSubmit={handleUpdateemployeeAccount}>
-              <div className="form-group">
-                <label htmlFor="editFullName" className="form-label">Full Name *</label>
-                <input
-                  type="text"
-                  id="editFullName"
-                  name="fullName"
-                  className="form-input"
-                  placeholder="Enter full name"
-                  value={currentemployeeToEdit.fullName}
-                  onChange={handleEditemployeeChange}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="editEmail" className="form-label">Email Address *</label>
-                <input
-                  type="email"
-                  id="editEmail"
-                  name="email"
-                  className="form-input"
-                  placeholder="Enter email address"
-                  value={currentemployeeToEdit.email}
-                  onChange={handleEditemployeeChange}
-                  required
-                />
-              </div>
-              <div className="form-group modal-form-full-width">
-                <label htmlFor="editRole" className="form-label">Role *</label>
-                <select
-                  id="editRole"
-                  name="role"
-                  className="form-select"
-                  value={currentemployeeToEdit.role}
-                  onChange={handleEditemployeeChange}
-                  required
-                >
-                  {roleOptions.map(option => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <p className="role-description">
-                  {roleOptions.find(option => option.value === currentemployeeToEdit.role)?.description}
-                </p>
-              </div>
-              <div className="form-group">
-                <label htmlFor="editDepartment" className="form-label">Department</label>
-                <select
-                  id="editDepartment"
-                  name="department"
-                  className="form-select"
-                  value={currentemployeeToEdit.department}
-                  onChange={handleEditemployeeChange}
-                >
-                  {departmentOptions.map(option => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label htmlFor="editAccountStatus" className="form-label">Account Status</label>
-                <select
-                  id="editAccountStatus"
-                  name="accountStatus"
-                  className="form-select"
-                  value={currentemployeeToEdit.accountStatus}
-                  onChange={handleEditemployeeChange}
-                >
-                  {accountStatusOptions.map(option => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="modal-footer modal-form-full-width">
-                <button type="button" className="confirm-cancel-btn" onClick={handleCloseEditemployeeModal}>Cancel</button>
-                <button type="submit" className="create-employee-btn">Update employee Account</button>
-              </div>
-            </form>
-          </div>
+  <div className="modal-overlay open">
+    <div className="modal-content employee-edit-modal-content">
+      <div className="modal-header">
+        <div>
+          <h3 className="modal-title">Edit Employee Account</h3>
+          <p className="modal-subtitle">Update employee's personal and work details.</p>
         </div>
-      )}
+        <button className="modal-close-btn" onClick={handleCloseEditemployeeModal}>&times;</button>
+      </div>
+
+      <div className="details-grid form-layout">
+        {/* Personal Info */}
+        <div className="section-title">Personal Information</div>
+        <div className="form-item">
+          <label>First Name *</label>
+          <input type="text" name="firstName" value={currentemployeeToEdit.firstName} onChange={handleEditemployeeChange} required />
+        </div>
+        <div className="form-item">
+          <label>Last Name *</label>
+          <input type="text" name="lastName" value={currentemployeeToEdit.lastName} onChange={handleEditemployeeChange} required />
+        </div>
+        <div className="form-item">
+          <label>Date of Birth</label>
+          <input type="date" name="dateOfBirth" value={currentemployeeToEdit.dateOfBirth} onChange={handleEditemployeeChange} />
+        </div>
+        <div className="form-item">
+          <label>Gender</label>
+          <select name="gender" value={currentemployeeToEdit.gender} onChange={handleEditemployeeChange}>
+            <option value="">Select...</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div className="form-item">
+          <label>Marital Status</label>
+          <select name="maritalStatus" value={currentemployeeToEdit.maritalStatus} onChange={handleEditemployeeChange}>
+            <option value="">Select...</option>
+            <option value="Single">Single</option>
+            <option value="Married">Married</option>
+            <option value="Divorced">Divorced</option>
+            <option value="Widowed">Widowed</option>
+          </select>
+        </div>
+
+        {/* Contact Info */}
+        <div className="section-title">Contact Details</div>
+        <div className="form-item">
+          <label>Personal Phone</label>
+          <input type="tel" name="personalNumber" value={currentemployeeToEdit.personalNumber} onChange={handleEditemployeeChange} />
+        </div>
+        <div className="form-item">
+          <label>Alternative Phone</label>
+          <input type="tel" name="alternativeNumber" value={currentemployeeToEdit.alternativeNumber} onChange={handleEditemployeeChange} />
+        </div>
+        <div className="form-item">
+          <label>Personal Email</label>
+          <input type="email" name="personalMail" value={currentemployeeToEdit.personalMail} onChange={handleEditemployeeChange} />
+        </div>
+        <div className="form-item">
+          <label>Work Email *</label>
+          <input type="email" name="email" value={currentemployeeToEdit.email} onChange={handleEditemployeeChange} required />
+        </div>
+        <div className="form-item">
+          <label>Address</label>
+          <textarea name="address" value={currentemployeeToEdit.address} onChange={handleEditemployeeChange}></textarea>
+        </div>
+        <div className="form-item">
+          <label>City</label>
+          <input type="text" name="city" value={currentemployeeToEdit.city} onChange={handleEditemployeeChange} />
+        </div>
+        <div className="form-item">
+          <label>State</label>
+          <input type="text" name="state" value={currentemployeeToEdit.state} onChange={handleEditemployeeChange} />
+        </div>
+        <div className="form-item">
+          <label>Zip Code</label>
+          <input type="text" name="zipcode" value={currentemployeeToEdit.zipcode} onChange={handleEditemployeeChange} />
+        </div>
+        <div className="form-item">
+          <label>Country</label>
+          <input type="text" name="country" value={currentemployeeToEdit.country} onChange={handleEditemployeeChange} />
+        </div>
+
+        {/* Company Info */}
+        <div className="section-title">Company Details</div>
+        <div className="form-item">
+          <label>Date of Joining</label>
+          <input type="date" name="dateOfJoin" value={currentemployeeToEdit.dateOfJoin} onChange={handleEditemployeeChange} />
+        </div>
+        <div className="form-item">
+          <label>Role *</label>
+          <select name="role" value={currentemployeeToEdit.role} onChange={handleEditemployeeChange} required>
+            {roleOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
+        <div className="form-item">
+          <label>Department</label>
+          <select name="department" value={currentemployeeToEdit.department} onChange={handleEditemployeeChange}>
+            {departmentOptions.map(o => <option key={o} value={o}>{o}</option>)}
+          </select>
+        </div>
+        <div className="form-item">
+          <label>Account Status</label>
+          <select name="accountStatus" value={currentemployeeToEdit.accountStatus} onChange={handleEditemployeeChange}>
+            {accountStatusOptions.map(o => <option key={o} value={o}>{o}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div className="modal-footer modal-form-full-width">
+        <button type="button" className="confirm-cancel-btn" onClick={handleCloseEditemployeeModal}>Cancel</button>
+        <button type="button" className="confirm-save-btn" onClick={handleUpdateemployeeAccount}>Update Account</button>
+      </div>
+    </div>
+  </div>
+)}
+
 
       {/* Delete employee Confirmation Modal */}
       {isDeleteConfirmModalOpen && (
@@ -6110,142 +6098,49 @@ html.dark-mode {
 
       {/* Edit Department Modal */}
       {isEditDepartmentModalOpen && currentDepartmentToEdit && (
-        <div className="modal-overlay open">
-          <div className="modal-content" style={{ overflowY: 'auto', maxHeight: '80vh' }}>
-            <div className="modal-header">
-              <div>
-                <h3 className="modal-title">Edit Department</h3>
-                <p className="modal-subtitle">Modify the details for {currentDepartmentToEdit.name}.</p>
-              </div>
-              <button className="modal-close-btn" onClick={handleCloseEditDepartmentModal}>&times;</button>
-            </div>
-            <form className="modal-form" onSubmit={handleUpdateDepartment}>
-              <div className="form-group modal-form-full-width">
-                <label htmlFor="editDeptName" className="form-label">Department Name *</label>
-                <input
-                  type="text"
-                  id="editDeptName"
-                  name="name"
-                  className="form-input"
-                  placeholder="Enter department name"
-                  value={currentDepartmentToEdit.name}
-                  onChange={handleEditDepartmentChange}
-                  required
-                />
-              </div>
-              <div className="form-group modal-form-full-width">
-                <label htmlFor="editDeptDescription" className="form-label">Description</label>
-                <input
-                  type="text"
-                  id="editDeptDescription"
-                  name="description"
-                  className="form-input"
-                  placeholder="Enter department description"
-                  value={currentDepartmentToEdit.description}
-                  onChange={handleEditDepartmentChange}
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="editDeptHead" className="form-label">Head of Department</label>
-                <select
-                  id="editDeptHead"
-                  name="head"
-                  className="form-select"
-                  value={currentDepartmentToEdit.head}
-                  onChange={handleEditDepartmentChange}
-                >
-                  {headOfDepartmentOptions.map(option => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label htmlFor="editDeptEmployees" className="form-label">Employees</label>
-                <input
-                  type="number"
-                  id="editDeptEmployees"
-                  name="employees"
-                  className="form-input"
-                  value={currentDepartmentToEdit.employees}
-                  onChange={handleEditDepartmentChange}
-                  min="0"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="editDeptStatus" className="form-label">Status</label>
-                <select
-                  id="editDeptStatus"
-                  name="status"
-                  className="form-select"
-                  value={currentDepartmentToEdit.status}
-                  onChange={handleEditDepartmentChange}
-                >
-                  {departmentStatusOptions.map(option => (
-                    <option key={option} value={option}>
-                      {option.charAt(0).toUpperCase() + option.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label htmlFor="editDeptCreatedDate" className="form-label">Created Date</label>
-                <input
-                  type="text"
-                  id="editDeptCreatedDate"
-                  name="createdDate"
-                  className="form-input"
-                  value={currentDepartmentToEdit.createdDate}
-                  onChange={handleEditDepartmentChange}
-                />
-              </div>
-
-              {/* Employee Management Section in Edit Department Modal */}
-              <div className="edit-department-modal-employees">
-                <h4>Manage Employees in this Department</h4>
-                <div className="employee-selection-box">
-                  <div>
-                    <h5>Currently Assigned Employees ({employees.filter(emp => employeesToAddInDepartment.includes(emp.id)).length})</h5>
-                    <div className="employee-list-scroll">
-                      {employees.filter(emp => employeesToAddInDepartment.includes(emp.id)).length > 0 ? (
-                        employees.filter(emp => employeesToAddInDepartment.includes(emp.id)).map(emp => (
-                          <div key={emp.id} className="employee-list-item-manage">
-                            <span>{emp.name}</span>
-                            <button type="button" className="remove" onClick={() => handleRemoveEmployeeFromDepartment(emp.id)}>Remove</button>
-                          </div>
-                        ))
-                      ) : (
-                        <p style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '1rem' }}>No employees assigned.</p>
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <h5>Available Employees to Add ({availableEmployeesForDepartment.length})</h5>
-                    <div className="employee-list-scroll">
-                      {availableEmployeesForDepartment.length > 0 ? (
-                        availableEmployeesForDepartment.map(emp => (
-                          <div key={emp.id} className="employee-list-item-manage">
-                            <span>{emp.name}</span>
-                            <button type="button" onClick={() => handleAddEmployeeToDepartment(emp.id)}>Add</button>
-                          </div>
-                        ))
-                      ) : (
-                        <p style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '1rem' }}>No more employees to add.</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="modal-footer modal-form-full-width">
-                <button type="button" className="confirm-cancel-btn" onClick={handleCloseEditDepartmentModal}>Cancel</button>
-                <button type="submit" className="create-employee-btn">Update Department</button>
-              </div>
-            </form>
-          </div>
+  <div className="modal-overlay open">
+    <div className="modal-content department-edit-modal-content">
+      <div className="modal-header">
+        <div>
+          <h3 className="modal-title">Edit Department: {currentDepartmentToEdit.name}</h3>
+          <p className="modal-subtitle">Modify department information and employee list.</p>
         </div>
-      )}
+        <button className="modal-close-btn" onClick={handleCloseEditDepartmentModal}>&times;</button>
+      </div>
+
+      <div className="details-grid">
+        <div className="detail-item">
+          <span className="detail-label">Department Name</span>
+          <span className="detail-value">{currentDepartmentToEdit.name}</span>
+        </div>
+        <div className="detail-item">
+          <span className="detail-label">Description</span>
+          <span className="detail-value">{currentDepartmentToEdit.description}</span>
+        </div>
+      </div>
+
+      <div className="employees-list-section">
+        <h4>Employees in this Department ({employeesInSelectedDepartment.length})</h4>
+        <div className="employees-list">
+          {employeesInSelectedDepartment.length > 0 ? (
+            employeesInSelectedDepartment.map(emp => (
+              <div key={emp.id} className="employee-list-item">
+                <span>{emp.name}</span>
+              </div>
+            ))
+          ) : (
+            <p style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>No employees currently assigned to this department.</p>
+          )}
+        </div>
+      </div>
+
+      <div className="modal-footer modal-form-full-width">
+        <button type="button" className="confirm-cancel-btn" onClick={handleCloseEditDepartmentModal}>Close</button>
+      </div>
+    </div>
+  </div>
+)}
+
 
 
       {/* Generic Confirmation Modal */}
@@ -6299,6 +6194,49 @@ html.dark-mode {
               </button>
             </div>
 
+              {/* ====== CONDITIONAL RENDERING LOGIC STARTS HERE ====== */}
+            {simplifiedServices.includes(selectedClientForDetails.service) ? (
+              // --- NEW SIMPLIFIED VIEW ---
+              <div className="client-preview-grid-container" style={{ gridTemplateColumns: '1fr' }}>
+                <div className="client-preview-section">
+                  <h4 className="client-preview-section-title">Service Request Details</h4>
+                  <div className="assign-form-group">
+                    <label>First Name *</label>
+                    <div className="read-only-value">{selectedClientForDetails.firstName || '-'}</div>
+                  </div>
+                  <div className="assign-form-group">
+                    <label>Last Name *</label>
+                    <div className="read-only-value">{selectedClientForDetails.lastName || '-'}</div>
+                  </div>
+                  <div className="assign-form-group">
+                    <label>Mobile *</label>
+                    <div className="read-only-value">{selectedClientForDetails.mobile || '-'}</div>
+                  </div>
+                   <div className="assign-form-group">
+                    <label>Email ID *</label>
+                    <div className="read-only-value">{selectedClientForDetails.email || '-'}</div>
+                  </div>
+                  <div className="assign-form-group">
+                    <label>Service *</label>
+                    <div className="read-only-value">{selectedClientForDetails.service || '-'}</div>
+                  </div>
+                  {selectedClientForDetails.subServices && selectedClientForDetails.subServices.length > 0 && (
+                    <div className="assign-form-group">
+                      <label>What service do you want?</label>
+                      <div className="read-only-value">
+                        {selectedClientForDetails.subServices.join(', ') || '-'}
+                      </div>
+                    </div>
+                  )}
+                  <div className="assign-form-group">
+                    <label>Who are you?</label>
+                    <div className="read-only-value">{selectedClientForDetails.userType || '-'}</div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              // --- ORIGINAL DETAILED VIEW ---
+              <>
             {/* Comprehensive Client Details Grid - now read-only form fields */}
             <div className="client-preview-grid-container">
               {/* Personal Information */}
@@ -6533,6 +6471,8 @@ html.dark-mode {
                   </div>
                 </div>
               </div>
+              )}
+              </>
             )}
 
             <div className="assign-form-actions">
@@ -6563,6 +6503,65 @@ html.dark-mode {
                 </svg>
               </button>
             </div>
+             {/* ====== CONDITIONAL RENDERING LOGIC FOR EDIT FORM ====== */}
+              {simplifiedServices.includes(currentClientToEdit.service) ? (
+                // --- NEW SIMPLIFIED EDIT FORM ---
+                <div className="client-preview-grid-container" style={{ gridTemplateColumns: '1fr' }}>
+                  <div className="client-preview-section">
+                    <h4 className="client-preview-section-title">Service Request Details</h4>
+                    <div className="assign-form-group">
+                      <label htmlFor="firstName">First Name *</label>
+                      <input type="text" id="firstName" name="firstName" value={currentClientToEdit.firstName || ''} onChange={handleEditClientChange} required />
+                    </div>
+                    <div className="assign-form-group">
+                      <label htmlFor="lastName">Last Name *</label>
+                      <input type="text" id="lastName" name="lastName" value={currentClientToEdit.lastName || ''} onChange={handleEditClientChange} required />
+                    </div>
+                    <div className="assign-form-group">
+                      <label htmlFor="mobile">Mobile *</label>
+                      <input type="tel" id="mobile" name="mobile" value={currentClientToEdit.mobile || ''} onChange={handleEditClientChange} required />
+                    </div>
+                    <div className="assign-form-group">
+                      <label htmlFor="email">Email ID *</label>
+                      <input type="email" id="email" name="email" value={currentClientToEdit.email || ''} onChange={handleEditClientChange} required />
+                    </div>
+                    <div className="assign-form-group">
+                      <label htmlFor="service">Service *</label>
+                      <select id="service" name="service" value={currentClientToEdit.service || ''} onChange={handleEditClientChange} required>
+                        <option value="">Select Service</option>
+                        {serviceOptions.filter(opt => opt !== 'All').map(option => (
+                          <option key={option} value={option}>{option}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="assign-form-group">
+                      <label htmlFor="subServices">What service do you want? (Comma Separated)</label>
+                      <textarea
+                        id="subServices"
+                        name="subServices"
+                        value={Array.isArray(currentClientToEdit.subServices) ? currentClientToEdit.subServices.join(', ') : (currentClientToEdit.subServices || '')}
+                        onChange={(e) => {
+                          const { name, value } = e.target;
+                          setCurrentClientToEdit(prev => ({ ...prev, [name]: value.split(',').map(s => s.trim()) }));
+                        }}
+                      ></textarea>
+                    </div>
+                    <div className="assign-form-group">
+                      <label htmlFor="userType">Who are you?</label>
+                       <select id="userType" name="userType" value={currentClientToEdit.userType || ''} onChange={handleEditClientChange}>
+                         <option value="">Select Type</option>
+                         <option value="Individual">Individual</option>
+                         <option value="Business Owner">Business Owner</option>
+                         <option value="Startup Founder">Startup Founder</option>
+                         <option value="Agency">Agency</option>
+                         <option value="Student">Student</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                // --- ORIGINAL DETAILED EDIT FORM ---
+                <>
 
             {/* Comprehensive Client Details Grid - now with input fields */}
             <div className="client-preview-grid-container">
@@ -6854,6 +6853,8 @@ html.dark-mode {
                   ></textarea>
                 </div>
               </div>
+              )}
+                </>
             )}
 
             <div className="assign-form-actions">
