@@ -2,15 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from 'react-bootstrap';
 import { Country, State, City } from 'country-state-city';
 
-const EmployeeOnboardingWorkSheet = () => {
-    // Hardcoded data to be used as a fallback if local storage is empty
+const EmployeeManagement = () => {
     const initialEmployees = [
         { id: 1, firstName: 'John', lastName: 'Doe', gender: 'Male', dateOfBirth: '1990-05-15', personalNumber: '1234567890', alternativeNumber: '', personalMail: 'john.doe@example.com', dateOfJoin: '2023-09-01', country: 'US', state: 'NY', city: 'New York', zipcode: '10001', address: '123 Main St', submittedOn: '2025-06-26 at 12:31:22 PM', status: 'Awaiting', designations: '', maritalStatus: 'Married' },
         { id: 2, firstName: 'Jane', lastName: 'Smith', gender: 'Female', dateOfBirth: '1988-11-22', personalNumber: '9876543210', alternativeNumber: '9988776655', personalMail: 'jane.smith@example.com', dateOfJoin: '2023-10-15', country: 'US', state: 'CA', city: 'Los Angeles', zipcode: '90001', address: '456 Oak Ave', submittedOn: '2025-06-26 at 12:31:22 PM', status: 'Awaiting', designations: '', maritalStatus: 'Married' },
         { id: 3, firstName: 'Alice', lastName: 'Johnson', gender: 'Female', dateOfBirth: '1992-03-10', personalNumber: '5555555555', alternativeNumber: '', personalMail: 'alice.johnson@example.com', dateOfJoin: '2023-11-01', country: 'US', state: 'IL', city: 'Chicago', zipcode: '60601', address: '789 Pine Ln', submittedOn: '2025-06-26 at 12:31:22 PM', status: 'Awaiting', designations: '', maritalStatus: 'Married' },
     ];
 
-    // NEW: Initialize state from local storage or use fallback data
     const [employees, setEmployees] = useState(() => {
         try {
             const savedEmployees = localStorage.getItem('employees');
@@ -23,7 +21,7 @@ const EmployeeOnboardingWorkSheet = () => {
         return initialEmployees;
     });
 
-    const [activeTab, setActiveTab] = useState('Awaiting');
+    const [activeEmployeeTab, setActiveEmployeeTab] = useState('Awaiting');
     const [showDetailsModal, setShowDetailsModal] = useState(false);
     const [selectedEmployee, setSelectedEmployee] = useState(null);
     const [showEditForm, setShowEditForm] = useState(false);
@@ -40,7 +38,6 @@ const EmployeeOnboardingWorkSheet = () => {
 
     const availableDesignations = ['Admin', 'Job Application Specialist', 'Manager', 'Asset Manager', 'Team Lead'];
 
-    // NEW: Effect to save employees to local storage whenever the list changes
     useEffect(() => {
         try {
             localStorage.setItem('employees', JSON.stringify(employees));
@@ -49,7 +46,6 @@ const EmployeeOnboardingWorkSheet = () => {
         }
     }, [employees]);
     
-    // NEW: Effect to listen for storage changes from other tabs/windows
     useEffect(() => {
         const handleStorageChange = (event) => {
             if (event.key === 'employees' && event.newValue) {
@@ -80,8 +76,10 @@ const EmployeeOnboardingWorkSheet = () => {
             });
             const states = State.getStatesOfCountry(selectedEmployee.country);
             setEditFormStates(states);
-            const cities = City.getCitiesOfState(selectedEmployee.country, selectedEmployee.state);
-            setEditFormCities(cities);
+            if (selectedEmployee.country && selectedEmployee.state) {
+                const cities = City.getCitiesOfState(selectedEmployee.country, selectedEmployee.state);
+                setEditFormCities(cities);
+            }
         }
     }, [selectedEmployee]);
 
@@ -103,7 +101,6 @@ const EmployeeOnboardingWorkSheet = () => {
 
     const handleSaveEditedDetails = (e) => {
         e.preventDefault();
-        // The useEffect hook will automatically save the updated list to local storage
         setEmployees(employees.map(emp =>
             emp.id === selectedEmployee.id ? { ...emp, ...editFormData } : emp
         ));
@@ -141,6 +138,7 @@ const EmployeeOnboardingWorkSheet = () => {
             const country = allCountries.find(c => c.isoCode === isoCode);
             return country ? country.name : isoCode;
         } else if (type === 'state') {
+            if(!countryIsoCode) return isoCode;
             const state = State.getStatesOfCountry(countryIsoCode).find(s => s.isoCode === isoCode);
             return state ? state.name : isoCode;
         }
@@ -156,7 +154,6 @@ const EmployeeOnboardingWorkSheet = () => {
     };
 
     const handleSaveDesignations = () => {
-        // The useEffect hook will automatically save the updated list to local storage
         setEmployees(employees.map(emp =>
             emp.id === selectedEmployee.id
                 ? { ...emp, designations: selectedDesignations.join(', ') }
@@ -168,43 +165,16 @@ const EmployeeOnboardingWorkSheet = () => {
 
     const handleCloseDesignationModal = () => setShowDesignationModal(false);
 
-  // In EmployeeOnboardingSheet.js
+    const handleApprove = (employeeId) => {
+        setEmployees(employees.map(emp =>
+            emp.id === employeeId ? { ...emp, status: 'Review' } : emp
+        ));
+        setShowDetailsModal(false);
+        setSelectedEmployee(null);
+    };
 
-// REPLACE the existing handleApprove function with this new version
-const handleApprove = (employeeId) => {
-    const employeeToMove = employees.find(emp => emp.id === employeeId);
-    if (!employeeToMove) return;
+    const filteredEmployees = employees.filter(emp => emp.status === activeEmployeeTab);
 
-    // Set the employee's status to 'Review' for the AdminWorksheet
-    const approvedEmployee = { ...employeeToMove, status: 'Review' };
-
-    // 1. Get the existing list from AdminWorksheet's local storage
-    const adminEmployees = JSON.parse(localStorage.getItem('admin_managed_employees') || '[]');
-
-    // 2. Add the newly approved employee to the admin list and save it
-    // This new key 'admin_managed_employees' is what the AdminWorksheet will listen for.
-    localStorage.setItem(
-        'admin_managed_employees',
-        JSON.stringify([approvedEmployee, ...adminEmployees])
-    );
-
-    // 3. Remove the employee from this component's list, which will update
-    // the 'employees' key in local storage via your existing useEffect.
-    const remainingOnboardingEmployees = employees.filter(emp => emp.id !== employeeId);
-    setEmployees(remainingOnboardingEmployees);
-
-    // Close the details modal after approval
-    setShowDetailsModal(false);
-};
-
-    const filteredEmployees = employees.filter(emp => emp.status === activeTab);
-
-    // --- All existing styles are preserved below ---
-    const containerStyle = { padding: '20px', fontFamily: 'Arial, sans-serif', backgroundColor: '#f4f7f6', minHeight: '100vh' };
-    const headerStyle = { textAlign: 'center', color: '#333', marginBottom: '30px', fontSize: '2em' };
-    const tabsContainerStyle = { display: 'flex', justifyContent: 'center', marginBottom: '30px', backgroundColor: '#e9ecef', borderRadius: '8px', padding: '5px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' };
-    const tabButtonStyle = { padding: '12px 25px', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '1em', fontWeight: 'bold', transition: 'background-color 0.3s ease, color 0.3s ease', backgroundColor: 'transparent', color: '#555', margin: '0 5px' };
-    const activeTabButtonStyle = { ...tabButtonStyle, backgroundColor: '#007bff', color: '#fff', boxShadow: '0 2px 8px rgba(0, 123, 255, 0.3)' };
     const tableContainerStyle = { backgroundColor: '#fff', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', overflowX: 'auto' };
     const tableStyle = { width: '100%', borderCollapse: 'collapse', marginTop: '20px' };
     const thStyle = { padding: '12px 15px', borderBottom: '2px solid #dee2e6', textAlign: 'left', backgroundColor: '#f8f9fa', color: '#495057', fontSize: '0.9em', textTransform: 'uppercase' };
@@ -238,25 +208,18 @@ const handleApprove = (employeeId) => {
     const cancelButtonEditStyle = { backgroundColor: '#6c757d', color: '#fff', padding: '12px 25px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '1em', fontWeight: 'bold', transition: 'background-color 0.2s ease' };
 
     return (
-        <div style={containerStyle}>
-            {/* --- All JSX and rendering logic remains unchanged --- */}
-            <h1 style={headerStyle}>Employee Onboarding Worksheet</h1>
-            <p style={{ textAlign: 'center', color: '#666', marginBottom: '40px' }}>Track and manage new employee onboarding process</p>
-            <div style={tabsContainerStyle}>
-                <button style={activeTab === 'Awaiting' ? activeTabButtonStyle : tabButtonStyle} onClick={() => setActiveTab('Awaiting')}>Awaiting {employees.filter(emp => emp.status === 'Awaiting').length > 0 && <span style={{ marginLeft: '5px', padding: '3px 8px', backgroundColor: '#dc3545', borderRadius: '50%', color: '#fff', fontSize: '0.8em' }}>{employees.filter(emp => emp.status === 'Awaiting').length}</span>}</button>
-                <button style={activeTab === 'Review' ? activeTabButtonStyle : tabButtonStyle} onClick={() => setActiveTab('Review')}>Review {employees.filter(emp => emp.status === 'Review').length > 0 && <span style={{ marginLeft: '5px', padding: '3px 8px', backgroundColor: '#17a2b8', borderRadius: '50%', color: '#fff', fontSize: '0.8em' }}>{employees.filter(emp => emp.status === 'Review').length}</span>}</button>
-            </div>
+        <div>
             <div style={tableContainerStyle}>
-                <h3 style={{ color: '#333', marginBottom: '20px' }}>{activeTab} Employees</h3>
+                <h3 style={{ color: '#333', marginBottom: '20px' }}>{activeEmployeeTab} Employees</h3>
                 <table style={tableStyle}>
                     <thead><tr><th style={thStyle}>Employee</th><th style={thStyle}>Contact</th><th style={thStyle}>Email</th><th style={thStyle}>Location</th><th style={thStyle}>Join Date</th><th style={thStyle}>Status</th><th style={thStyle}>Designations</th><th style={thStyle}>Actions</th></tr></thead>
                     <tbody>
-                        {filteredEmployees.length === 0 ? (<tr><td colSpan="8" style={{ ...tdStyle, textAlign: 'center', padding: '20px' }}>No {activeTab.toLowerCase()} employees found.</td></tr>) : (
+                        {filteredEmployees.length === 0 ? (<tr><td colSpan="8" style={{ ...tdStyle, textAlign: 'center', padding: '20px' }}>No {activeEmployeeTab.toLowerCase()} employees found.</td></tr>) : (
                             filteredEmployees.map((employee) => (
                                 <tr key={employee.id}>
                                     <td style={tdStyle}><div style={{ fontWeight: 'bold' }}>{`${employee.firstName} ${employee.lastName}`}</div><div style={{ fontSize: '0.8em', color: '#777' }}>{employee.gender}</div></td>
                                     <td style={tdStyle}>{employee.personalNumber}</td><td style={tdStyle}>{employee.personalMail}</td>
-                                    <td style={tdStyle}>{`${employee.city}, ${employee.state ? getDisplayName('state', employee.state, employee.country) : ''}, ${employee.country ? getDisplayName('country', employee.country) : ''}`}</td>
+                                    <td style={tdStyle}>{`${employee.city}, ${getDisplayName('state', employee.state, employee.country)}, ${getDisplayName('country', employee.country)}`}</td>
                                     <td style={tdStyle}>{employee.dateOfJoin}</td>
                                     <td style={tdStyle}><span style={{ ...statusBadgeStyle, ...(employee.status === 'Awaiting' ? awaitingStatusStyle : reviewStatusStyle) }}><span style={{ fontSize: '18px', lineHeight: '1', marginRight: '4px' }}>&#x25CF;</span>{employee.status}</span></td>
                                     <td style={tdStyle}>{employee.designations || 'No designations assigned'}</td>
@@ -281,7 +244,7 @@ const handleApprove = (employeeId) => {
                         <div style={detailsSectionStyle}><h6 style={detailsSectionTitleStyle}>Personal Information</h6><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}><div style={{ marginBottom: '10px' }}><div style={detailLabelStyle}>Full Name</div><div style={detailValueStyle}>{`${selectedEmployee.firstName} ${selectedEmployee.lastName}`}</div></div><div style={{ marginBottom: '10px' }}><div style={detailLabelStyle}>Gender</div><div style={detailValueStyle}>{selectedEmployee.gender}</div></div><div style={{ marginBottom: '10px' }}><div style={detailLabelStyle}>Date of Birth</div><div style={detailValueStyle}>{selectedEmployee.dateOfBirth}</div></div><div style={{ marginBottom: '10px' }}><div style={detailLabelStyle}>Marital Status</div><div style={detailValueStyle}>{selectedEmployee.maritalStatus}</div></div></div></div>
                         <div style={detailsSectionStyle}><h6 style={detailsSectionTitleStyle}>Contact Information</h6><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}><div style={{ marginBottom: '10px' }}><div style={detailLabelStyle}>Personal Number</div><div style={detailValueStyle}>{selectedEmployee.personalNumber}</div></div><div style={{ marginBottom: '10px' }}><div style={detailLabelStyle}>Alternative Number</div><div style={detailValueStyle}>{selectedEmployee.alternativeNumber || '-'}</div></div><div style={{ marginBottom: '10px' }}><div style={detailLabelStyle}>Personal Mail</div><div style={detailValueStyle}>{selectedEmployee.personalMail}</div></div><div style={{ marginBottom: '10px' }}><div style={detailLabelStyle}>Date of Join</div><div style={detailValueStyle}>{selectedEmployee.dateOfJoin}</div></div><div style={{ marginBottom: '10px' }}><div style={detailLabelStyle}>Password Status</div><div style={{ ...detailValueStyle, display: 'flex', alignItems: 'center', gap: '5px' }}><span style={{ fontSize: '16px' }}>&#128274;</span> {selectedEmployee.passwordStatus || 'Password Created'}</div></div></div></div>
                         <div style={detailsSectionStyle}><h6 style={detailsSectionTitleStyle}>Address Information</h6><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}><div style={{ marginBottom: '10px' }}><div style={detailLabelStyle}>Country</div><div style={detailValueStyle}>{getDisplayName('country', selectedEmployee.country)}</div></div><div style={{ marginBottom: '10px' }}><div style={detailLabelStyle}>State</div><div style={detailValueStyle}>{getDisplayName('state', selectedEmployee.state, selectedEmployee.country)}</div></div><div style={{ marginBottom: '10px' }}><div style={detailLabelStyle}>City</div><div style={detailValueStyle}>{selectedEmployee.city}</div></div><div style={{ marginBottom: '10px' }}><div style={detailLabelStyle}>Zipcode</div><div style={detailValueStyle}>{selectedEmployee.zipcode}</div></div><div style={{ marginBottom: '10px' }}><div style={detailLabelStyle}>Full Address</div><div style={{ ...detailValueStyle, gridColumn: '1 / span 2' }}>{selectedEmployee.address}</div></div></div></div>
-                        <div style={detailsSectionStyle}><h6 style={detailsSectionTitleStyle}>Assigned Designations</h6><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div style={detailValueStyle}>{selectedEmployee.designations || 'No designations assigned'}</div><button style={assignDesignationsButtonStyle} onMouseEnter={(e) => Object.assign(e.target.style, assignDesignationsButtonStyle, assignDesignationsButtonHoverStyle)} onMouseLeave={(e) => Object.assign(e.target.style, assignDesignationsButtonStyle)} onClick={() => { setSelectedDesignations(selectedEmployee?.designations?.split(", ").filter(d => d !== '') || []); setShowDesignationModal(true); }}><span style={{ fontSize: '18px' }}>&#128100;</span> Assign Designations</button></div></div>
+                        <div style={detailsSectionStyle}><h6 style={detailsSectionTitleStyle}>Assigned Designations</h6><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div style={detailValueStyle}>{selectedEmployee.designations || 'No designations assigned'}</div><button style={assignDesignationsButtonStyle} onMouseEnter={(e) => Object.assign(e.target.style, assignDesignationsButtonStyle, assignDesignationsButtonHoverStyle)} onMouseLeave={(e) => Object.assign(e.target.style, assignDesignationsButtonStyle)} onClick={() => { setSelectedDesignations(selectedEmployee?.designations?.split(", ").filter(d => d) || []); setShowDesignationModal(true); }}><span style={{ fontSize: '18px' }}>&#128100;</span> Assign Designations</button></div></div>
                     </Modal.Body>
                     <Modal.Footer style={{ borderTop: 'none', paddingTop: '0', display: 'flex', justifyContent: 'center', gap: '20px' }}>
                         <button style={editDetailsButtonStyle} onMouseEnter={(e) => Object.assign(e.target.style, editDetailsButtonStyle, editDetailsButtonHoverStyle)} onMouseLeave={(e) => Object.assign(e.target.style, editDetailsButtonStyle)} onClick={handleEditDetails}>&#9998; Edit Details</button>
@@ -331,4 +294,4 @@ const handleApprove = (employeeId) => {
     );
 };
 
-export default EmployeeOnboardingWorkSheet;
+export default EmployeeManagement;

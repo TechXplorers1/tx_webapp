@@ -137,12 +137,6 @@ const ManagerWorkSheet = () => {
   // Initial dummy data for unassigned clients (7 clients)
   const initialUnassignedClientsData = [
     { id: 1, name: 'David Wilson', priority: 'high', skills: ['Python', 'Django', 'PostgreSQL'], experience: '6 years experience', remote: true, email: 'david.wilson@example.com', salary: '$100,000 - $120,000' },
-    // { id: 2, name: 'Sarah J. Unassigned', priority: 'medium', skills: ['React', 'Node.js', 'MongoDB'], experience: '4 years experience', remote: false, email: 'sarah.j.unassigned@example.com', salary: '$80,000 - $100,000' },
-    // { id: 3, name: 'Michael Brown', priority: 'low', skills: ['Java', 'Spring Boot'], experience: '3 years experience', remote: true, email: 'michael.b@example.com', salary: '$70,000 - $90,000' },
-    // { id: 4, name: 'Emily White', priority: 'high', skills: ['Vue.js', 'Firebase', 'TypeScript'], experience: '5 years experience', remote: false, email: 'emily.w@example.com', salary: '$95,000 - $115,000' },
-    // { id: 5, name: 'Daniel Green', priority: 'medium', skills: ['C#', '.NET', 'SQL Server'], experience: '7 years experience', remote: true, email: 'daniel.g@example.com', salary: '$110,000 - $130,000' },
-    // { id: 6, name: 'Olivia Black', priority: 'low', skills: ['PHP', 'Laravel', 'MySQL'], experience: '2 years experience', remote: false, email: 'olivia.b@example.com', salary: '$60,000 - $80,000' },
-    // { id: 7, name: 'James Blue', priority: 'high', skills: ['Go', 'Docker', 'Kubernetes'], experience: '8 years experience', remote: true, email: 'james.b@example.com', salary: '$120,000 - $140,000' },
     // NEW: Added full profiles for clients previously only in applications/interviews
     { id: 8, name: 'Sarah Mitchell', priority: 'medium', skills: ['UX Design', 'Figma', 'User Research'], experience: '5 years experience', remote: false, email: 'sarah.m@example.com', salary: '$90,000 - $110,000' },
     { id: 9, name: 'Mohammed Sheikh', priority: 'high', skills: ['Data Analysis', 'SQL', 'Python (Pandas)'], experience: '4 years experience', remote: true, email: 'michael.chen.client@example.com', salary: '$85,000 - $105,000' },
@@ -210,8 +204,24 @@ const ManagerWorkSheet = () => {
 
 
   // State variables for dynamic data
-  const [unassignedClients, setUnassignedClients] = useState(initialUnassignedClientsData);
-  const [assignedClients, setAssignedClients] = useState(initialAssignedClientsData);
+// 2. REPLACE your 'useState' for unassignedClients with this new logic
+const [unassignedClients, setUnassignedClients] = useState(() => {
+    // Get clients assigned from the Admin worksheet
+    const clientsFromAdmin = JSON.parse(localStorage.getItem('manager_unassigned_clients') || '[]');
+    
+    // Combine the new clients with your initial list, avoiding duplicates by checking IDs
+    const combinedClients = [...clientsFromAdmin];
+    const existingIds = new Set(clientsFromAdmin.map(c => c.id));
+    
+    initialUnassignedClientsData.forEach(initialClient => {
+        if (!existingIds.has(initialClient.id)) {
+            combinedClients.push(initialClient);
+        }
+    });
+
+    return combinedClients;
+}); 
+ const [assignedClients, setAssignedClients] = useState(initialAssignedClientsData);
   const [employees, setEmployees] = useState(baseDummyEmployees); // Initialize with base, counts will be updated
   const [interviewData, setInterviewData] = useState(initialInterviewData);
   const [applicationData, setApplicationData] = useState([]); // Initialize as empty, will be populated by useEffect
@@ -973,6 +983,48 @@ const ManagerWorkSheet = () => {
   }, [assignedClients]); // Recalculate when assignedClients changes
 
 
+  // In ManagerWorkSheet.js, add these two new useEffect hooks
+
+// This effect listens for new clients being assigned from the Admin worksheet
+useEffect(() => {
+    const handleStorageChange = (event) => {
+        if (event.key === 'manager_unassigned_clients' && event.newValue) {
+            const clientsFromAdmin = JSON.parse(event.newValue);
+            
+            // Re-create the list by combining with initial data
+            const combinedClients = [...clientsFromAdmin];
+            const existingIds = new Set(clientsFromAdmin.map(c => c.id));
+
+            initialUnassignedClientsData.forEach(initialClient => {
+                if (!existingIds.has(initialClient.id)) {
+                    combinedClients.push(initialClient);
+                }
+            });
+            
+            setUnassignedClients(combinedClients);
+        }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+        window.removeEventListener('storage', handleStorageChange);
+    };
+}, []); // Empty array ensures this runs only once on mount
+
+// This effect saves changes made within the ManagerWorkSheet back to local storage
+useEffect(() => {
+    try {
+        // Filter out the initial hardcoded clients to only save the dynamic ones
+        const initialIds = new Set(initialUnassignedClientsData.map(c => c.id));
+        const clientsToSave = unassignedClients.filter(client => !initialIds.has(client.id));
+        
+        localStorage.setItem('manager_unassigned_clients', JSON.stringify(clientsToSave));
+    } catch (error) {
+        console.error("Failed to save manager's unassigned clients", error);
+    }
+}, [unassignedClients]); // This runs whenever the manager's list changes
+
   // Function to toggle between light and dark themes
   const toggleTheme = () => {
     setTheme((prevTheme) => (prevTheme === 'light' ? 'dark' : 'light'));
@@ -1011,11 +1063,15 @@ const ManagerWorkSheet = () => {
   const filteredClients = unassignedClients.filter(client => {
     const matchesPriority = filterPriority === 'all' || client.priority === filterPriority;
     const lowerCaseSearchQuery = unassignedSearchQuery.toLowerCase();
-    const matchesSearch = client.name.toLowerCase().includes(lowerCaseSearchQuery) ||
-                          client.skills.some(skill => skill.toLowerCase().includes(lowerCaseSearchQuery)) ||
-                          client.experience.toLowerCase().includes(lowerCaseSearchQuery) ||
-                          client.email.toLowerCase().includes(lowerCaseSearchQuery) ||
-                          client.salary.toLowerCase().includes(lowerCaseSearchQuery);
+
+    // NEW: Added checks (e.g., client.name || '') to prevent errors if a property is missing.
+    const matchesSearch = 
+        (client.name || '').toLowerCase().includes(lowerCaseSearchQuery) ||
+        (client.skills || []).some(skill => (skill || '').toLowerCase().includes(lowerCaseSearchQuery)) ||
+        (client.experience || '').toLowerCase().includes(lowerCaseSearchQuery) ||
+        (client.email || '').toLowerCase().includes(lowerCaseSearchQuery) ||
+        (client.salary || '').toLowerCase().includes(lowerCaseSearchQuery);
+        
     return matchesPriority && matchesSearch;
   });
 
@@ -1106,23 +1162,29 @@ const ManagerWorkSheet = () => {
         client => client.id !== clientToProcess.id
       ));
 
+         // --- FIX IS HERE ---
+    // Safely access properties that might be different between client objects
+    const clientName = clientToProcess.name || `${clientToProcess.firstName || ''} ${clientToProcess.lastName || ''}`.trim();
+    const clientSkills = clientToProcess.skills || clientToProcess.technologySkills || []; // Safely get the skills array
+    const clientSalary = clientToProcess.salary || `$${clientToProcess.expectedSalary || 'N/A'}`;
+
       // 2. Add client to assignedClients
       const newAssignedClient = {
-        id: clientToProcess.id, // Reusing ID for simplicity, in real app might generate new
-        clientName: clientToProcess.name,
-        location: clientToProcess.remote ? 'Remote' : 'On-site', // Simplified location
-        position: clientToProcess.skills[0] || 'N/A', // Using first skill as position
-        salary: clientToProcess.salary,
-        company: 'Client Company', // Dummy company name
-        assignedTo: newAssignedEmployee.name,
-        priority: assignmentPriority,
-        status: 'applied', // Default status for new assignments
-        assignedDate: new Date().toISOString().slice(0, 10), // Current date
-        assignmentNotes: assignmentNotes, // Add assignmentNotes to new assigned client
-        platform: 'Manual Entry', // Default for new assignment
-        jobId: 'N/A', // Default for new assignment
-        appliedDate: new Date().toISOString().slice(0, 10), // Default for new assignment
-      };
+          id: clientToProcess.id, 
+      clientName: clientName,
+      location: clientToProcess.remote ? 'Remote' : 'On-site',
+      position: clientSkills[0] || 'N/A', // *** SAFELY access the first skill ***
+      salary: clientSalary,
+      company: 'Client Company',
+      assignedTo: newAssignedEmployee.name,
+      priority: assignmentPriority,
+      status: 'applied',
+      assignedDate: new Date().toISOString().slice(0, 10),
+      assignmentNotes: assignmentNotes,
+      platform: 'Manual Entry',
+      jobId: 'N/A',
+      appliedDate: new Date().toISOString().slice(0, 10),
+    };
       setAssignedClients(prevAssigned => [...prevAssigned, newAssignedClient]);
 
       // The useEffect for `employees` state will handle the count update automatically
@@ -1260,18 +1322,18 @@ const ManagerWorkSheet = () => {
 
 
   // NEW: Function to open Client Preview/Edit Modal
-  const openEditClientModal = (clientName) => {
+  const openEditClientModal = (clientObject) => {
     // Find the comprehensive client data
-    const client = mockDetailedClientsData.find(c => c.name === clientName || c.clientName === clientName);
+    // const client = mockDetailedClientsData.find(c => c.name === clientName || c.clientName === clientName);
 
-    if (client) {
-      setClientToEdit({ ...client }); // Create a copy for editing
+    if (clientObject) {
+      setClientToEdit({ ...clientObject }); // Create a copy for editing
       setIsEditingClient(false); // Set to read-only initially
       setIsEditClientModalOpen(true);
       setLlmResponse(''); // Clear previous LLM response
     } else {
-      console.warn(`Client with name "${clientName}" not found for editing.`);
-      alert(`Client details for "${clientName}" are not available for editing.`);
+      console.warn(`Client with name not found for editing.`);
+      alert(`Client details for are not available for editing.`);
     }
   };
 
@@ -4113,34 +4175,48 @@ Please provide a summary no longer than 150 words.`;
             <h4 className="modal-title" style={{marginBottom: '10px'}}>Available Clients</h4>
             <div className="modal-available-clients-list">
               {/* Render filtered clients */}
-              {filteredClients.map((client) => (
-                <div key={client.id} className="modal-client-card">
-                  <div className="modal-client-card-header">
-                    <span className="modal-client-name">{client.name}</span>
-                    <span className={`modal-client-priority-badge ${client.priority}`}>{client.priority} priority</span>
-                  </div>
-                  <div className="modal-client-skills">
-                    {client.skills.map((skill, index) => (
-                      <span key={index} className="modal-client-skill-tag">{skill}</span>
-                    ))}
-                  </div>
-                  <div className="modal-client-details">
-                    <span><i className="fas fa-briefcase"></i> {client.experience}</span>
-                    <span><i className="fas fa-map-marker-alt"></i> {client.remote ? 'Remote' : 'On-site'}</span>
-                    <span><i className="fas fa-envelope"></i> {client.email}</span>
-                    <span><i className="fas fa-money-bill-wave"></i> {client.salary}</span>
-                  </div>
-                  <div className="modal-client-actions">
-                    {/* Assign Employee button now opens the new modal */}
-                    <button className="modal-assign-button" onClick={() => openAssignClientModal(client)}>
-                      <i className="fas fa-user-plus"></i> Assign Employee
-                    </button>
-                    <button className="modal-view-profile-button" onClick={() => openEditClientModal(client.name)}>
-                      <i className="fas fa-eye"></i> View Profile
-                    </button>
-                  </div>    
-                </div>
-              ))}
+              {filteredClients.map((client) => {
+  // This logic safely handles both data structures
+  const clientName = client.name || `${client.firstName || ''} ${client.lastName || ''}`.trim();
+  
+  // THE FIX: Use .skills OR .technologySkills, and default to an empty array if neither exists
+  const clientSkills = client.skills || client.technologySkills || []; 
+  
+  const clientExperience = client.experience || `Experience not specified`;
+  const clientEmail = client.email || client.personalMail;
+  const clientSalary = client.salary || `$${client.expectedSalary || 'N/A'}`;
+
+  return (
+    <div key={client.id} className="modal-client-card">
+      <div className="modal-client-card-header">
+        <span className="modal-client-name">{clientName}</span>
+        {client.priority && (
+          <span className={`modal-client-priority-badge ${client.priority}`}>{client.priority} priority</span>
+        )}
+      </div>
+      <div className="modal-client-skills">
+        {/* This now safely maps over the clientSkills array, which is guaranteed to exist */}
+        {clientSkills.map((skill, index) => (
+          <span key={index} className="modal-client-skill-tag">{skill}</span>
+        ))}
+      </div>
+      <div className="modal-client-details">
+        <span><i className="fas fa-briefcase"></i> {clientExperience}</span>
+        <span><i className="fas fa-map-marker-alt"></i> {client.remote ? 'Remote' : 'On-site'}</span>
+        <span><i className="fas fa-envelope"></i> {clientEmail}</span>
+        <span><i className="fas fa-money-bill-wave"></i> {clientSalary}</span>
+      </div>
+      <div className="modal-client-actions">
+        <button className="modal-assign-button" onClick={() => openAssignClientModal(client)}>
+          <i className="fas fa-user-plus"></i> Assign Employee
+        </button>
+        <button className="modal-view-profile-button" onClick={() => openEditClientModal(client)}>
+          <i className="fas fa-eye"></i> View Profile
+        </button>
+      </div>
+    </div>
+  );
+})}
               {filteredClients.length === 0 && (
                 <p style={{textAlign: 'center', color: 'var(--text-color)'}}>No clients match the selected filter or search query.</p>
               )}
@@ -4168,7 +4244,7 @@ Please provide a summary no longer than 150 words.`;
               <label htmlFor="selectClient">Select Client</label>
               <select id="selectClient" value={selectedClientToAssign.id} disabled>
                 <option value={selectedClientToAssign.id}>
-                  {selectedClientToAssign.name} - {selectedClientToAssign.skills[0] || 'No Role'}
+                    {selectedClientToAssign.name || `${selectedClientToAssign.firstName} ${selectedClientToAssign.lastName}`} - {(selectedClientToAssign.skills || selectedClientToAssign.technologySkills || ['No Role'])[0]}
                 </option>
               </select>
             </div>
@@ -4361,7 +4437,7 @@ Please provide a summary no longer than 150 words.`;
                         <button className="modal-assign-button" onClick={() => openReassignClientModal(client)}>
                             <i className="fas fa-exchange-alt"></i> Change Employee
                         </button>
-                        <button className="modal-view-profile-button" onClick={() => openEditClientModal(client.clientName)}>
+                        <button className="modal-view-profile-button" onClick={() => openEditClientModal(client)}>
                             <i className="fas fa-eye"></i> View Profile
                         </button>
                     </div>

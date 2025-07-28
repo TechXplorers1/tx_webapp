@@ -48,7 +48,7 @@ const AdminWorksheet = () => {
 
   const [employees, setemployees] = useState([
         { 
-        id: 1, roles: ['admin', 'active', 'Management'],
+        id: 1,name: 'Admin employee', email: 'admin@techxplorers.in', roles: ['admin', 'active', 'Management'],
         firstName: "Admin", lastName: "employee", gender: "Male", dateOfBirth: "1985-05-20", maritalStatus: "Married",
         personalNumber: "9876543210", alternativeNumber: "8765432109", country: "India", state: "Telangana",
         city: "Hyderabad", address: "123 Tech Park, Hitech City", zipcode: "500081", dateOfJoin: "2020-01-15",
@@ -161,6 +161,47 @@ const AdminWorksheet = () => {
   // New state for service filter
   const [selectedServiceFilter, setSelectedServiceFilter] = useState('All');
 
+
+  // 1. UPDATE: Initialize state from 'admin_employees'
+const [employees2, setEmployees] = useState(() => {
+    try {
+        const savedEmployees = localStorage.getItem('admin_employees'); 
+        return savedEmployees ? JSON.parse(savedEmployees) : []; // Default to an empty array
+    } catch (error) {
+        console.error("Failed to parse admin employees from local storage", error); 
+        return [];
+    }
+});
+
+// 2. UPDATE: The first useEffect should save changes back to 'admin_employees'
+useEffect(() => { 
+    try {
+        localStorage.setItem('admin_employees', JSON.stringify(employees2)); 
+    } catch (error) {
+        console.error("Failed to save admin employees to local storage", error); 
+    }
+}, [employees]); 
+
+// 3. UPDATE: The second useEffect should listen for changes to 'admin_employees'
+useEffect(() => { 
+    const handleStorageChange = (event) => { 
+        if (event.key === 'admin_employees' && event.newValue) { 
+            try {
+                setEmployees(JSON.parse(event.newValue)); 
+            } catch (error) {
+                console.error("Failed to parse admin employees from storage event", error);
+            }
+        }
+    };
+
+    window.addEventListener('storage', handleStorageChange); 
+    return () => {
+        window.removeEventListener('storage', handleStorageChange); 
+    };
+}, []); 
+
+// 4. Set the default active tab to 'Review' to see the newly moved employees
+const [activeTab, setActiveTab] = useState('Review'); 
 
 
 
@@ -477,9 +518,7 @@ const AdminWorksheet = () => {
   }, []);
 
   const managers = [
-    { id: 1, firstName: 'Sarah', lastName: 'Wilson' },
-    { id: 2, firstName: 'Michael', lastName: 'Johnson' },
-    { id: 3, firstName: 'Emily', lastName: 'Davis' },
+    { id: 1, firstName: 'Sreenivasulu', lastName: 'Sake' },
   ];
 
 const employees1 = [
@@ -1279,21 +1318,39 @@ const employees1 = [
   };
 
 
-  const handleAssignClient = (clientId) => {
-    const clientToAssign = clients.find(c => c.id === clientId);
-    if (clientToAssign && clientToAssign.manager) { // Ensure manager is selected
-      console.log(`Assign client ${clientId} to manager ${clientToAssign.manager}`);
-      // Move client from 'unassigned' or 'restored' to 'active'
-      setClients(prevClients => prevClients.map(client =>
-        client.id === clientId ? { ...client, displayStatuses: ['active'], manager: clientToAssign.manager } : client
-      ));
-    } else {
-      alert('Please select a manager first.');
-      // Optionally, show a user-friendly message to the user that manager needs to be selected.
+// In AdminWorksheet.js
 
+const handleAssignClient = (clientId) => {
+  const clientToAssign = clients.find(c => c.id === clientId);
 
+  if (clientToAssign && clientToAssign.manager) {
+    console.log(`Assign client ${clientId} to manager ${clientToAssign.manager}`);
+
+    // 1. UPDATE THE LOCAL STATE TO MOVE THE CLIENT TO THE 'ACTIVE' TAB
+    const updatedClient = { ...clientToAssign, displayStatuses: ['active'] };
+    setClients(prevClients => prevClients.map(client =>
+      client.id === clientId ? updatedClient : client
+    ));
+
+    // 2. NEW: SEND THE ASSIGNED CLIENT TO THE MANAGER'S LOCAL STORAGE
+    try {
+      // Get the current list of clients waiting for the manager
+      const managerUnassignedClients = JSON.parse(localStorage.getItem('manager_unassigned_clients') || '[]');
+      
+      // Add the newly assigned client to the list
+      const updatedManagerList = [updatedClient, ...managerUnassignedClients];
+      
+      // Save the updated list back to local storage
+      localStorage.setItem('manager_unassigned_clients', JSON.stringify(updatedManagerList));
+      
+    } catch (error) {
+      console.error("Failed to update manager's local storage", error);
     }
-  };
+
+  } else {
+    alert('Please select a manager first.');
+  }
+};
 
   const handleRestoreClient = (clientId) => {
     console.log(`Restore client with ID: ${clientId}`);
@@ -1561,6 +1618,16 @@ const filteredEmployeesForAssignment = employees.filter(employee =>
     (employee.name || '').toLowerCase().includes(employeeSearchTermInModal.toLowerCase()) ||
     (employee.email || '').toLowerCase().includes(employeeSearchTermInModal.toLowerCase())
   );
+
+  useEffect(() => {
+    try {
+        // This saves the entire 'clients' list, including their current statuses,
+        // so the correct clients appear in the correct tabs on page reload.
+        localStorage.setItem('admin_clients', JSON.stringify(clients));
+    } catch (error) {
+        console.error("Failed to save admin clients to local storage", error);
+    }
+}, [clients]); // This runs whenever the 'clients' state changes
 
 
 
@@ -5248,8 +5315,8 @@ html.dark-mode {
                                         <div className="employee-card-left">
                                             <div className="employee-avatar">{getInitials(employee.name)}</div>
                                             <div className="employee-info">
-                                                <div className="employee-name">{employee.name}</div>
-                                                <div className="employee-email">{employee.email}</div>
+                                                <div className="employee-name">{`${employee.firstName} ${employee.lastName}`}</div>
+                                                <div className="employee-email">{employee.personalMail}</div>
                                                 <div className="employee-roles">
                                                     {(employee.roles || []).map(role => (
                                                         <span key={role} className="role-tag" style={{ backgroundColor: getRoleTagBg(role), color: getRoleTagText(role) }}>{role}</span>
