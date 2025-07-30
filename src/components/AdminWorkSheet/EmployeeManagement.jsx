@@ -1,297 +1,1273 @@
-import React, { useState, useEffect } from 'react';
-import { Modal } from 'react-bootstrap';
-import { Country, State, City } from 'country-state-city';
+import React, {useState, useEffect } from 'react';
 
 const EmployeeManagement = () => {
-    const initialEmployees = [
-        { id: 1, firstName: 'John', lastName: 'Doe', gender: 'Male', dateOfBirth: '1990-05-15', personalNumber: '1234567890', alternativeNumber: '', personalMail: 'john.doe@example.com', dateOfJoin: '2023-09-01', country: 'US', state: 'NY', city: 'New York', zipcode: '10001', address: '123 Main St', submittedOn: '2025-06-26 at 12:31:22 PM', status: 'Awaiting', designations: '', maritalStatus: 'Married' },
-        { id: 2, firstName: 'Jane', lastName: 'Smith', gender: 'Female', dateOfBirth: '1988-11-22', personalNumber: '9876543210', alternativeNumber: '9988776655', personalMail: 'jane.smith@example.com', dateOfJoin: '2023-10-15', country: 'US', state: 'CA', city: 'Los Angeles', zipcode: '90001', address: '456 Oak Ave', submittedOn: '2025-06-26 at 12:31:22 PM', status: 'Awaiting', designations: '', maritalStatus: 'Married' },
-        { id: 3, firstName: 'Alice', lastName: 'Johnson', gender: 'Female', dateOfBirth: '1992-03-10', personalNumber: '5555555555', alternativeNumber: '', personalMail: 'alice.johnson@example.com', dateOfJoin: '2023-11-01', country: 'US', state: 'IL', city: 'Chicago', zipcode: '60601', address: '789 Pine Ln', submittedOn: '2025-06-26 at 12:31:22 PM', status: 'Awaiting', designations: '', maritalStatus: 'Married' },
-    ];
+  // --- Employee Management States ---
+  const [employees, setemployees] = useState([
+  { 
+        id: 1, name: 'Admin employee', workEmail: 'admin@techxplorers.in', roles: ['admin', 'active', 'Management'],
+        firstName: "Admin", lastName: "employee", gender: "Male", dateOfBirth: "1985-05-20", maritalStatus: "Married",
+        personalNumber: "9876543210", alternativeNumber: "8765432109", country: "India", state: "Telangana",
+        city: "Hyderabad", address: "123 Tech Park, Hitech City", zipcode: "500081", dateOfJoin: "2020-01-15",
+        personalEmail: "admin.personal@email.com"
+    },
+    { 
+        id: 2, name: 'Sarah Wilson', workEmail: 'manager@techxplorers.in', roles: ['manager', 'active', 'Management'],
+        firstName: "Sarah", lastName: "Wilson", gender: "Female", dateOfBirth: "1988-11-10", maritalStatus: "Single",
+        personalNumber: "9123456780", alternativeNumber: "", country: "USA", state: "California",
+        city: "San Francisco", address: "456 Bay Area", zipcode: "94105", dateOfJoin: "2021-03-22",
+        personalEmail: "sarah.wilson@email.com"
+    },
+    { 
+        id: 3, name: 'Michael Johnson', workEmail: 'teamlead@techxplorers.in', roles: ['team lead', 'active', 'Tech Placement'],
+        firstName: "Michael", lastName: "Johnson", gender: "Male", dateOfBirth: "1992-02-25", maritalStatus: "Single",
+        personalNumber: "8123456789", alternativeNumber: "7123456789", country: "UK", state: "London",
+        city: "London", address: "789 Tech Street", zipcode: "SW1A 0AA", dateOfJoin: "2022-07-01",
+        personalEmail: "michael.j@email.com"
+    },
+    { 
+        id: 4, name: 'Asset Manager', workEmail: 'assets@techxplorers.in', roles: ['asset manager', 'active', 'Operations'],
+        firstName: "Asset", lastName: "Manager", gender: "Other", dateOfBirth: "1990-01-01", maritalStatus: "Single",
+        personalNumber: "1234509876", alternativeNumber: "", country: "Canada", state: "Ontario",
+        city: "Toronto", address: "101 Operations Ave", zipcode: "M5H 2N2", dateOfJoin: "2021-06-18",
+        personalEmail: "asset.mgr@email.com"
+    },
+    { 
+        id: 5, name: 'John Employee', workEmail: 'employee@techxplorers.in', roles: ['employee', 'active', 'Development'],
+        firstName: "John", lastName: "Employee", gender: "Male", dateOfBirth: "1995-09-15", maritalStatus: "Married",
+        personalNumber: "7890123456", alternativeNumber: "", country: "Australia", state: "New South Wales",
+        city: "Sydney", address: "22 Dev Lane", zipcode: "2000", dateOfJoin: "2023-01-20",
+        personalEmail: "john.emp@email.com"
+    },
+  ]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false);
+  const [isEditEmployeeModalOpen, setIsEditEmployeeModalOpen] = useState(false);
+  const [isDeleteConfirmModalOpen, setIsDeleteConfirmModalOpen] = useState(false);
+  const [employeeToDeleteId, setEmployeeToDeleteId] = useState(null);
+  const [currentEmployeeToEdit, setCurrentEmployeeToEdit] = useState(null);
+  const [newemployee, setNewemployee] = useState({
+    workEmail: '',
+    role: 'employee',
+    department: 'No department assigned',
+    accountStatus: 'Active',
+    temporaryPassword: '',
+    firstName: '',
+    lastName: '',
+    gender: '',
+    dateOfBirth: '',
+    maritalStatus: '',
+    personalNumber: '',
+    alternativeNumber: '',
+    country: '',
+    state: '',
+    city: '',
+    address: '',
+    zipcode: '',
+    dateOfJoin: '',
+    personalEmail: '',
+  });
+  const [isConfirmUpdateModalOpen, setIsConfirmUpdateModalOpen] = useState(false);
+  const [confirmUpdateMessage, setConfirmUpdateMessage] = useState('');
+  const [confirmActionType, setConfirmActionType] = useState(null);
+  const [pendingEmployeeUpdate, setPendingEmployeeUpdate] = useState(null);
+  const [employeeToDeleteDetails, setEmployeeToDeleteDetails] = useState(null);
 
-    const [employees, setEmployees] = useState(() => {
-        try {
-            const savedEmployees = localStorage.getItem('employees');
-            if (savedEmployees) {
-                return JSON.parse(savedEmployees);
-            }
-        } catch (error) {
-            console.error("Failed to parse employees from local storage", error);
-        }
-        return initialEmployees;
+  // Mock department data for dropdowns
+  // Department Management States
+   const [departments, setDepartments] = useState([
+     { id: 1, name: 'Management', description: 'Executive and senior management team', head: 'Sarah Wilson', employees: 5, status: 'active', createdDate: '15/01/2023' },
+     { id: 2, name: 'Development', description: 'Software development and engineering', head: 'Michael Johnson', employees: 12, status: 'active', createdDate: '15/01/2023' },
+     { id: 3, name: 'Design', description: 'UI/UX design and creative services', head: 'Not assigned', employees: 6, status: 'active', createdDate: '15/01/2023' },
+     { id: 4, name: 'Marketing', description: 'Marketing and brand management', head: 'Not assigned', employees: 8, status: 'active', createdDate: '15/01/2023' },
+     { id: 5, name: 'Sales', description: 'Sales and business development', head: 'Not assigned', employees: 10, status: 'active', createdDate: '15/01/2023' },
+     { id: 6, name: 'Operations', description: 'Operations and process management', head: 'Not assigned', employees: 7, status: 'active', createdDate: '15/01/2023' },
+     { id: 7, name: 'Finance', description: 'Financial planning and accounting', head: 'Not assigned', employees: 4, status: 'active', createdDate: '15/01/2023' },
+     { id: 8, name: 'Support', description: 'Customer support and service', head: 'Not assigned', employees: 9, status: 'active', createdDate: '15/01/2023' },
+     { id: 9, name: 'Quality Assurance', description: 'Quality testing and assurance', head: 'Not assigned', employees: 5, status: 'active', createdDate: '15/01/2023' },
+     { id: 10, name: 'Tech Placement', description: 'Technology recruitment and placement', head: 'Michael Johnson', employees: 8, status: 'active', createdDate: '15/01/2023' },
+     { id: 11, name: 'HR', description: 'Human resources and talent management', head: 'Not assigned', employees: 3, status: 'active', createdDate: '15/01/2023' },
+     { id: 12, name: 'External', description: 'External clients and partners', head: 'Not assigned', employees: 0, status: 'active', createdDate: '15/01/2023' },
+   ]);
+  const departmentOptions = departments.map(d => d.name);
+  departmentOptions.unshift('No department assigned');
+  
+  const roleOptions = [
+    { value: 'Administrator', label: 'Administrator', description: 'Full system access and employee management' },
+    { value: 'Manager', label: 'Manager', description: 'Manages teams and oversees operations' },
+    { value: 'Team Lead', label: 'Team Lead', description: 'Leads a team and monitors activities' },
+    { value: 'Employee', label: 'Employee', description: 'Standard employee access for job processing' },
+  ];
+  const accountStatusOptions = ['Active', 'Inactive', 'Pending'];
+  const genderOptions = ['Male', 'Female', 'Other'];
+  const maritalStatusOptions = ['Single', 'Married', 'Divorced', 'Widowed'];
+
+  // --- Employee Management Handlers ---
+  const handleSearchChange = (event) => {
+    setSearchTerm(event.target.value);
+  };
+
+  const filteredEmployees = employees.filter(employee =>
+    (employee.firstName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (employee.lastName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (employee.personalEmail || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (employee.roles || []).some(role => (role || '').toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  const handleAddEmployeeClick = () => {
+    setIsAddEmployeeModalOpen(true);
+  };
+
+  const handleCloseAddEmployeeModal = () => {
+    setIsAddEmployeeModalOpen(false);
+    setNewemployee({
+          role: 'employee',
+      workEmail: '',
+      department: 'No department assigned',
+      accountStatus: 'Active',
+      temporaryPassword: '',
+      firstName: '',
+      lastName: '',
+      gender: '',
+      dateOfBirth: '',
+      maritalStatus: '',
+      personalNumber: '',
+      alternativeNumber: '',
+      country: '',
+      state: '',
+      city: '',
+      address: '',
+      zipcode: '',
+      dateOfJoin: '',
+      personalEmail: '',
     });
+  };
 
-    const [activeEmployeeTab, setActiveEmployeeTab] = useState('Awaiting');
-    const [showDetailsModal, setShowDetailsModal] = useState(false);
-    const [selectedEmployee, setSelectedEmployee] = useState(null);
-    const [showEditForm, setShowEditForm] = useState(false);
-    const [editFormData, setEditFormData] = useState({});
-    const [showDesignationModal, setShowDesignationModal] = useState(false);
-    const [selectedDesignations, setSelectedDesignations] = useState([]);
+   const handleNewemployeeChange = (e) => {
+    const { name, value } = e.target;
+    setNewemployee(prevemployee => ({
+      ...prevemployee,
+      [name]: value
+    }));
+  };
 
-    const allCountries = Country.getAllCountries();
-    const [editFormStates, setEditFormStates] = useState([]);
-    const [editFormCities, setEditFormCities] = useState([]);
-    
-    const personalNumberCountryCode = 91;
-    const alternativeNumberCountryCode = 91;
+  const generateTemporaryPassword = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()';
+    let password = '';
+    for (let i = 0; i < 12; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setNewEmployee(prev => ({ ...prev, temporaryPassword: password }));
+  };
 
-    const availableDesignations = ['Admin', 'Job Application Specialist', 'Manager', 'Asset Manager', 'Team Lead'];
 
-    useEffect(() => {
-        try {
-            localStorage.setItem('employees', JSON.stringify(employees));
-        } catch (error) {
-            console.error("Failed to save employees to local storage", error);
+
+  const handleCreateemployeeAccount = (e) => {
+    e.preventDefault();
+    const newemployeeId = employees.length > 0 ? Math.max(...employees.map(u => u.id)) + 1 : 1;
+    const newRoles = [newemployee.role.toLowerCase()];
+    if (newemployee.accountStatus.toLowerCase() === 'active') {
+      newRoles.push('active');
+    } else if (newemployee.accountStatus.toLowerCase() === 'inactive') {
+      newRoles.push('inactive');
+    } else if (newemployee.accountStatus.toLowerCase() === 'pending') {
+      newRoles.push('pending');
+    }
+    if (newemployee.department !== 'No department assigned') {
+      newRoles.push(newemployee.department.toLowerCase());
+    }
+    setemployees(prevemployees => [
+      ...prevemployees,
+       {
+        id: newemployeeId,
+    firstName: newemployee.firstName,
+    lastName: newemployee.lastName,
+    gender: newemployee.gender,
+    dateOfBirth: newemployee.dateOfBirth,
+    maritalStatus: newemployee.maritalStatus,
+    personalNumber: newemployee.personalNumber,
+    alternativeNumber: newemployee.alternativeNumber,
+    personalEmail: newemployee.personalEmail,
+    workEmail: newemployee.workEmail,
+    country: newemployee.country,
+    state: newemployee.state,
+    city: newemployee.city,
+    address: newemployee.address,
+    zipcode: newemployee.zipcode,
+    role: newemployee.role || 'employee',
+    department: newemployee.department || 'No department assigned',
+    accountStatus: newemployee.accountStatus || 'Active',
+    dateOfJoin: newemployee.dateOfJoin || '',
+    temporaryPassword: newemployee.temporaryPassword || '',
+    roles: newRoles,
+      }
+    ]);
+    handleCloseAddEmployeeModal();
+  };
+
+  const getEmployeeChanges = (original, updated) => {
+    const changes = [];
+    if (original.firstName !== updated.firstName) {
+      changes.push(`Name from '${original.firstName}' to '${updated.firstName}'`);
+    }
+    if (original.personalEmail !== updated.personalEmail) {
+      changes.push(`Email from '${original.personalEmail}' to '${updated.personalEmail}'`);
+    }
+    // Extract original role and department from roles array for comparison
+    const originalRole = roleOptions.find(opt => original.roles.includes(opt.value.toLowerCase()))?.value || 'employee';
+    const originalDepartment = departmentOptions.find(dept => original.roles.includes(dept.toLowerCase())) || 'No department assigned';
+    const originalAccountStatus = accountStatusOptions.find(status => original.roles.includes(status.toLowerCase())) || 'Active';
+
+    if (originalRole !== updated.role) {
+      changes.push(`Role from '${originalRole}' to '${updated.role}'`);
+    }
+    if (originalDepartment !== updated.department) {
+      changes.push(`Department from '${originalDepartment}' to '${updated.department}'`);
+    }
+    if (originalAccountStatus !== updated.accountStatus) {
+      changes.push(`Account Status from '${originalAccountStatus}' to '${updated.accountStatus}'`);
+    }
+    return changes.length > 0 ? changes.join(', ') : 'no changes';
+  };
+
+  const handleEditEmployeeClick = (employeeId) => {
+    const employee = employees.find(u => u.id === employeeId);
+    if (employee) {
+      const employeeDepartment = departmentOptions.find(dept => (employee.roles || []).includes(dept.toLowerCase())) || 'No department assigned';
+      const employeeAccountStatus = accountStatusOptions.find(status => (employee.roles || []).includes(status.toLowerCase())) || 'Active';
+      const employeeRole = roleOptions.find(role => (employee.roles || []).includes(role.value.toLowerCase()))?.value || 'Employee';
+
+      setCurrentEmployeeToEdit({
+         id: employee.id,
+        role: employeeRole,
+        department: employeeDepartment,
+        accountStatus: employeeAccountStatus,
+        firstName: employee.firstName || '',
+        lastName: employee.lastName || '',
+        gender: employee.gender || '',
+        dateOfBirth: employee.dateOfBirth || '',
+        maritalStatus: employee.maritalStatus || '',
+        personalNumber: employee.personalNumber || '',
+        alternativeNumber: employee.alternativeNumber || '',
+        country: employee.country || '',
+        state: employee.state || '',
+        city: employee.city || '',
+        address: employee.address || '',
+        zipcode: employee.zipcode || '',
+        dateOfJoin: employee.dateOfJoin || '',
+        personalEmail: employee.personalEmail || '',
+        workEmail: employee.workEmail || '',
+
+      });
+      setIsEditEmployeeModalOpen(true);
+    }
+  };
+
+  const handleCloseEditEmployeeModal = () => {
+    setIsEditEmployeeModalOpen(false);
+    setCurrentEmployeeToEdit(null);
+  };
+
+ const handleEditemployeeChange = (e) => {
+    const { name, value } = e.target;
+    setCurrentEmployeeToEdit(prevemployee => ({
+      ...prevemployee,
+      [name]: value
+    }));
+  };
+  
+  const handleUpdateEmployeeAccount = (e) => {
+      e.preventDefault();
+
+        const originalEmployee = employees.find(emp => emp.id === currentEmployeeToEdit.id);
+    const changes = getEmployeeChanges(originalEmployee, currentEmployeeToEdit);
+
+    if (changes === 'no changes') {
+      setConfirmUpdateMessage('No changes were made to the employee details.');
+      setIsConfirmUpdateModalOpen(true);
+      setConfirmActionType(null); // No action needed
+      return;
+    }
+      setPendingEmployeeUpdate(currentEmployeeToEdit);
+      setConfirmUpdateMessage(`Are you sure you want to update this employee's details?`);
+      setIsConfirmUpdateModalOpen(true);
+      setConfirmActionType('employeeUpdate');
+  };
+
+  const confirmEmployeeUpdate = () => {
+    setemployees(prev => prev.map(employee => {
+      if (employee.id === pendingEmployeeUpdate.id) {
+        const updatedRoles = [
+            pendingEmployeeUpdate.role.toLowerCase(), 
+            pendingEmployeeUpdate.accountStatus.toLowerCase()
+        ];
+        if (pendingEmployeeUpdate.department && pendingEmployeeUpdate.department !== 'No department assigned') {
+            updatedRoles.push(pendingEmployeeUpdate.department.toLowerCase());
         }
-    }, [employees]);
-    
-    useEffect(() => {
-        const handleStorageChange = (event) => {
-            if (event.key === 'employees' && event.newValue) {
-                 try {
-                    setEmployees(JSON.parse(event.newValue));
-                } catch (error) {
-                    console.error("Failed to parse employees from storage event", error);
-                }
-            }
+        
+       
+
+        return {
+              ...employee,
+          roles: updatedRoles,
+          firstName: pendingEmployeeUpdate.firstName,
+          lastName: pendingEmployeeUpdate.lastName,
+          gender: pendingEmployeeUpdate.gender,
+          dateOfBirth: pendingEmployeeUpdate.dateOfBirth,
+          maritalStatus: pendingEmployeeUpdate.maritalStatus,
+          personalNumber: pendingEmployeeUpdate.personalNumber,
+          alternativeNumber: pendingEmployeeUpdate.alternativeNumber,
+          country: pendingEmployeeUpdate.country,
+          state: pendingEmployeeUpdate.state,
+          city: pendingEmployeeUpdate.city,
+          address: pendingEmployeeUpdate.address,
+          zipcode: pendingEmployeeUpdate.zipcode,
+          dateOfJoin: pendingEmployeeUpdate.dateOfJoin,
+          personalEmail: pendingEmployeeUpdate.personalEmail,
+          workEmail: pendingEmployeeUpdate.workEmail,
+
         };
+      }
+      return employee;
+    }));
+    handleCloseEditEmployeeModal();
+    setIsConfirmUpdateModalOpen(false);
+    setPendingEmployeeUpdate(null);
+    setConfirmActionType(null);
+  };
+  
+  const handleDeleteEmployeeClick = (employeeId) => {
+      const employee = employees.find(emp => emp.id === employeeId);
+      setEmployeeToDeleteDetails(employee);
+      setConfirmUpdateMessage(`Are you sure you want to delete employee '${employee.name}'? This action cannot be undone.`);
+      setIsConfirmUpdateModalOpen(true);
+      setConfirmActionType('employeeDelete');
+  };
+  
+  const handleConfirmDelete = () => {
+      setemployees(employees.filter(employee => employee.id !== employeeToDeleteDetails.id));
+      setIsConfirmUpdateModalOpen(false);
+      setEmployeeToDeleteDetails(null);
+  };
 
-        window.addEventListener('storage', handleStorageChange);
-        return () => {
-            window.removeEventListener('storage', handleStorageChange);
-        };
-    }, []);
+  const getInitials = (name) => {
+    if (!name) return '';
+    const nameParts = (name || '').split(' ').filter(part => part.length > 0);
+    if (nameParts.length === 1) return nameParts[0].charAt(0).toUpperCase();
+    if (nameParts.length >= 2) return (nameParts[0].charAt(0) + nameParts[nameParts.length - 1].charAt(0)).toUpperCase();
+    return '';
+  };
 
+ 
 
-    useEffect(() => {
-        if (selectedEmployee) {
-            setEditFormData({
-                firstName: selectedEmployee.firstName, lastName: selectedEmployee.lastName,
-                gender: selectedEmployee.gender, dateOfBirth: selectedEmployee.dateOfBirth,
-                personalNumber: selectedEmployee.personalNumber, alternativeNumber: selectedEmployee.alternativeNumber,
-                personalMail: selectedEmployee.personalMail, dateOfJoin: selectedEmployee.dateOfJoin,
-                country: selectedEmployee.country, state: selectedEmployee.state, city: selectedEmployee.city,
-                zipcode: selectedEmployee.zipcode, address: selectedEmployee.address,
-            });
-            const states = State.getStatesOfCountry(selectedEmployee.country);
-            setEditFormStates(states);
-            if (selectedEmployee.country && selectedEmployee.state) {
-                const cities = City.getCitiesOfState(selectedEmployee.country, selectedEmployee.state);
-                setEditFormCities(cities);
+  const getRoleTagBg = (role) => {
+    switch (role.toLowerCase()) {
+      case 'admin': return '#fee2e2';
+      case 'manager': return '#E0F7FA';
+      case 'team lead': return '#F3E5F5';
+      case 'employee': return '#E1F5FE';
+      case 'active': return '#E8F5E9';
+      case 'inactive': return '#FFEBEE';
+      case 'management': return '#E3F2FD';
+      case 'tech placement': return '#FCE4EC';
+      default: return '#f3f4f6';
+    }
+  };
+
+  const getRoleTagText = (role) => {
+    switch (role.toLowerCase()) {
+      case 'admin': return '#991b1b';
+      case 'manager': return '#00BCD4';
+      case 'team lead': return '#9C27B0';
+      case 'employee': return '#2196F3';
+      case 'active': return '#4CAF50';
+      case 'inactive': return '#F44336';
+      case 'management': return '#2196F3';
+      case 'tech placement': return '#E91E63';
+      default: return '#6b7280';
+    }
+  };
+
+  return (
+    <div className="ad-body-container">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        :root {
+          --bg-body: #f3f4f6;
+          --bg-card: #ffffff;
+          --text-primary: #1f2937;
+          --text-secondary: #6b7280;
+          --border-color: #e5e7eb;
+          --shadow-color-1: rgba(0, 0, 0, 0.05);
+          --shadow-color-3: rgba(0, 0, 0, 0.04);
+          --add-employee-btn-bg: #2563EB;
+          --add-employee-btn-hover-bg: #1D4ED8;
+          --add-employee-btn-text: #ffffff;
+          --search-input-border: #d1d5db;
+          --search-input-bg: #ffffff;
+          --search-input-text: #1f2937;
+          --search-placeholder-color: #9ca3af;
+          --employee-card-bg: #ffffff;
+          --employee-card-border: #e5e7eb;
+          --employee-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+          --employee-avatar-bg: #E0F2FE;
+          --employee-avatar-icon: #2563EB;
+          --employee-name-color: #1f2937;
+          --employee-email-color: #6b7280;
+          --action-btn-border: #e5e7eb;
+          --action-btn-text: #4b5563;
+          --action-btn-hover-bg: #f9fafb;
+          --delete-btn-bg: #EF4444;
+          --delete-btn-hover-bg: #DC2626;
+          --delete-btn-text: #ffffff;
+          --modal-overlay-bg: rgba(0, 0, 0, 0.5);
+          --modal-bg: #ffffff;
+          --modal-border: #e5e7eb;
+          --modal-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+          --modal-title-color: #1f2937;
+          --modal-subtitle-color: #6b7280;
+          --modal-close-btn-color: #6b7280;
+          --modal-close-btn-hover: #1f2937;
+          --modal-input-bg: #ffffff;
+          --modal-input-border: #d1d5db;
+          --modal-input-text: #1f2937;
+          --modal-input-placeholder: #9ca3af;
+          --modal-focus-border: #2563eb;
+          --modal-label-color: #374151;
+          --modal-generate-btn-bg: #e0e7ff;
+          --modal-generate-btn-text: #3b82f6;
+          --modal-generate-btn-hover: #c7d2fe;
+          --modal-create-btn-bg: #2563eb;
+          --modal-create-btn-text: #ffffff;
+          --modal-create-btn-hover: #1d4ed8;
+          --confirm-modal-danger-btn-bg: #EF4444;
+          --confirm-modal-danger-btn-hover: #DC2626;
+          --confirm-modal-cancel-btn-bg: #e5e7eb;
+          --confirm-modal-cancel-btn-text: #4b5563;
+          --confirm-modal-cancel-btn-hover: #d1d5db;
+        }
+        .ad-body-container {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-body);
+            min-height: 100vh;
+            color: var(--text-primary);
+        }
+        .employee-management-container {
+            padding: 1.5rem;
+        }
+        .employee-management-box {
+            background-color: var(--bg-card);
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px var(--shadow-color-1), 0 2px 4px -1px var(--shadow-color-3);
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+        }
+        .employee-management-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .employee-management-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .employee-search-add {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-grow: 1;
+            max-width: 400px;
+        }
+        .employee-search-input {
+            flex-grow: 1;
+            padding: 0.6rem 1rem;
+            border: 1px solid var(--search-input-border);
+            border-radius: 0.5rem;
+            background-color: var(--search-input-bg);
+            color: var(--search-input-text);
+            font-size: 0.9rem;
+        }
+        .add-employee-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 1rem;
+            background-color: var(--add-employee-btn-bg);
+            color: var(--add-employee-btn-text);
+            border-radius: 0.5rem;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+        }
+        .employee-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .employee-card {
+            background-color: var(--employee-card-bg);
+            border-radius: 0.75rem;
+            box-shadow: var(--employee-card-shadow);
+            border: 1px solid var(--employee-card-border);
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .employee-card-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-grow: 1;
+        }
+        .employee-avatar {
+            width: 3rem;
+            height: 3rem;
+            border-radius: 9999px;
+            background-color: var(--employee-avatar-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            color: var(--employee-avatar-icon);
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        .employee-info {
+            display: flex;
+            flex-direction: column;
+        }
+        .employee-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--employee-name-color);
+        }
+        .employee-email {
+            font-size: 0.875rem;
+            color: var(--employee-email-color);
+        }
+        .employee-roles {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        .role-tag {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        .employee-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+        .action-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--action-btn-border);
+            border-radius: 0.5rem;
+            background-color: transparent;
+            color: var(--action-btn-text);
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .delete-btn {
+            background-color: var(--delete-btn-bg);
+            color: var(--delete-btn-text);
+            border-color: var(--delete-btn-bg);
+        }
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--modal-overlay-bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .modal-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-content {
+            background-color: var(--modal-bg);
+            border-radius: 0.75rem;
+            box-shadow: var(--modal-shadow);
+            border: 1px solid var(--modal-border);
+            width: 90%;
+            max-width: 600px;
+            padding: 1.5rem;
+            position: relative;
+        }
+        .employee-edit-modal-content {
+            max-width: 850px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+          .employee-add-modal-content {
+  background: #fff;
+  border-radius: 12px;
+  max-width: 850px;
+  width: 95%;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 24px 32px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+        }
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--modal-title-color);
+        }
+        .modal-subtitle {
+            font-size: 0.875rem;
+            color: var(--modal-subtitle-color);
+            margin-top: 0.25rem;
+        }
+        .modal-close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--modal-close-btn-color);
+            cursor: pointer;
+        }
+        .modal-form {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+        @media (min-width: 640px) {
+            .modal-form {
+                grid-template-columns: 1fr 1fr;
+            }
+            .modal-form-full-width {
+                grid-column: 1 / -1;
             }
         }
-    }, [selectedEmployee]);
-
-    const handleViewDetails = (employee) => {
-        setSelectedEmployee(employee);
-        setShowDetailsModal(true);
-    };
-
-    const handleEditDetails = () => {
-        setShowDetailsModal(false);
-        setShowEditForm(true);
-    };
-
-    const handleCancelEdit = () => {
-        setShowEditForm(false);
-        setSelectedEmployee(null);
-        setEditFormData({});
-    };
-
-    const handleSaveEditedDetails = (e) => {
-        e.preventDefault();
-        setEmployees(employees.map(emp =>
-            emp.id === selectedEmployee.id ? { ...emp, ...editFormData } : emp
-        ));
-        setShowEditForm(false);
-        setSelectedEmployee(null);
-        setEditFormData({});
-    };
-
-    const handleEditFormChange = (e) => {
-        const { name, value } = e.target;
-        setEditFormData(prevData => ({ ...prevData, [name]: value }));
-    };
-
-    const handleEditFormCountryChange = (e) => {
-        const countryIsoCode = e.target.value;
-        setEditFormData(prevData => ({ ...prevData, country: countryIsoCode, state: '', city: '' }));
-        setEditFormStates(State.getStatesOfCountry(countryIsoCode));
-        setEditFormCities([]);
-    };
-
-    const handleEditFormStateChange = (e) => {
-        const stateIsoCode = e.target.value;
-        setEditFormData(prevData => ({ ...prevData, state: stateIsoCode, city: '' }));
-        setEditFormCities(City.getCitiesOfState(editFormData.country, stateIsoCode));
-    };
-
-    const handleEditFormCityChange = (e) => {
-        const cityName = e.target.value;
-        setEditFormData(prevData => ({ ...prevData, city: cityName }));
-    };
-
-    const getDisplayName = (type, isoCode, countryIsoCode = '') => {
-        if (!isoCode) return 'N/A';
-        if (type === 'country') {
-            const country = allCountries.find(c => c.isoCode === isoCode);
-            return country ? country.name : isoCode;
-        } else if (type === 'state') {
-            if(!countryIsoCode) return isoCode;
-            const state = State.getStatesOfCountry(countryIsoCode).find(s => s.isoCode === isoCode);
-            return state ? state.name : isoCode;
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
         }
-        return isoCode;
-    };
+        .form-label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--modal-label-color);
+        }
+        .form-input, .form-select {
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--modal-input-border);
+            border-radius: 0.5rem;
+            background-color: var(--modal-input-bg);
+            color: var(--modal-input-text);
+            font-size: 0.9rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .password-input-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .generate-password-btn {
+            padding: 0.75rem 1rem;
+            background-color: var(--modal-generate-btn-bg);
+            color: var(--modal-generate-btn-text);
+            border-radius: 0.5rem;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+        }
+        .role-description {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+        .modal-footer {
+            margin-top: 1.5rem;
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+        }
+        .create-employee-btn {
+            padding: 0.75rem 1.5rem;
+            background-color: var(--modal-create-btn-bg);
+            color: var(--modal-create-btn-text);
+            border-radius: 0.5rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+        }
+        .confirm-modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+        }
+        .confirm-cancel-btn, .confirm-delete-btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+        }
+        .confirm-cancel-btn {
+            background-color: var(--confirm-modal-cancel-btn-bg);
+            color: var(--confirm-modal-cancel-btn-text);
+        }
+        .confirm-delete-btn {
+            background-color: var(--confirm-modal-danger-btn-bg);
+            color: var(--delete-btn-text);
+        }
+        .details-grid.form-layout {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+        }
+        .section-title {
+            grid-column: 1 / -1;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 16px 0 4px;
+            color: #2b3e50;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 4px;
+        }
+        .form-item {
+            display: flex;
+            flex-direction: column;
+        }
+        .form-item label {
+            font-weight: 500;
+            margin-bottom: 4px;
+            font-size: 0.92rem;
+            color: #34495e;
+        }
+        .form-item input, .form-item select, .form-item textarea {
+            padding: 8px 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 0.95rem;
+        }
+        .modal-footer.modal-form-full-width {
+            grid-column: 1 / -1;
+        }
+        .confirm-save-btn {
+            padding: 8px 16px;
+            font-size: 0.95rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            background-color: #2e7d32;
+            color: #fff;
+        }
+      `}
+      </style>
+      <main className="ad-main-content">
+        <div className="employee-management-container">
+          <div className="employee-management-box">
+            <div className="employee-management-header">
+              <h2 className="employee-management-title">Employee Management</h2>
+              <div className="employee-search-add">
+                <input type="text" placeholder="Search employees..." className="employee-search-input" value={searchTerm} onChange={handleSearchChange} />
+                <button className="add-employee-btn" onClick={handleAddEmployeeClick}>Add Employee</button>
+              </div>
+            </div>
+            <div className="employee-list">
+              {filteredEmployees.map(employee => (
+                <div className="employee-card" key={employee.id}>
+                  <div className="employee-card-left">
+                    <div className="employee-avatar">{getInitials(`${employee.firstName} ${employee.lastName}`)}</div>
+                    <div className="employee-info">
+                      <div className="employee-name">{`${employee.firstName} ${employee.lastName}`}</div>
+                      <div className="employee-email">{employee.personalEmail}</div>
+                      <div className="employee-roles">
+                        {(employee.roles || []).map(role => (
+                          <span key={role} className="role-tag" style={{ backgroundColor: getRoleTagBg(role), color: getRoleTagText(role) }}>{role}</span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="employee-actions">
+                    <button className="action-btn" onClick={() => handleEditEmployeeClick(employee.id)}>Edit</button>
+                    <button className="action-btn delete-btn" onClick={() => handleDeleteEmployeeClick(employee.id)}>Delete</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </main>
 
-    const handleDesignationChange = (designation) => {
-        setSelectedDesignations(prevSelected =>
-            prevSelected.includes(designation)
-                ? prevSelected.filter(d => d !== designation)
-                : [...prevSelected, designation]
-        );
-    };
+      {/* Create New employee Account Modal */}
+      {isAddEmployeeModalOpen && (
+        <div className="modal-overlay open">
+          <div className="modal-content employee-add-modal-content">
+            <div className="modal-header">
+              <div>
+                <h3 className="modal-title">Create New employee Account</h3>
+                <p className="modal-subtitle">Create a new employee account for the TechXplorers platform. Select the appropriate role and fill in all required information.</p>
+              </div>
+              <button className="modal-close-btn" onClick={handleCloseAddEmployeeModal}>&times;</button>
+            </div>
+            <form className="modal-form" onSubmit={handleCreateemployeeAccount}>
+              {/* Personal Info */}
+              <div className="section-title">Personal Information</div>
+              <div className="form-group">
+                <label htmlFor="firstName" className="form-label">First Name *</label>
+                <input
+                  type="text"
+                  id="firstName"
+                  name="firstName"
+                  className="form-input"
+                  placeholder="Enter first name"
+                  value={newemployee.firstName}
+                  onChange={handleNewemployeeChange}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="lastName" className="form-label">Last Name *</label>
+                <input
+                  type="text"
+                  id="lastName"
+                  name="lastName"
+                  className="form-input"
+                  placeholder="Enter first name"
+                  value={newemployee.lastName}
+                  onChange={handleNewemployeeChange}
+                  required
+                />
+              </div>
 
-    const handleSaveDesignations = () => {
-        setEmployees(employees.map(emp =>
-            emp.id === selectedEmployee.id
-                ? { ...emp, designations: selectedDesignations.join(', ') }
-                : emp
-        ));
-        setShowDesignationModal(false);
-        setSelectedEmployee(prev => ({ ...prev, designations: selectedDesignations.join(', ') }));
-    };
+              <div className="form-group">
+                <label htmlFor="date" className="form-label">Date of Birth *</label>
+                <input
+                  type="date"
+                  id="date"
+                  name="dateOfBirth"
+                  className="form-input"
+                  placeholder="Enter Your DOB"
+                  value={newemployee.dateOfBirth}
+                  onChange={handleNewemployeeChange}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="gender" className="form-label">Gender</label>
+                <select
+                  id="gender"
+                  name="gender"
+                  className="form-select"
+                  value={newemployee.gender}
+                  onChange={handleNewemployeeChange}
+                >
+                  <option value="">Select...</option>
+                  {genderOptions.map(option => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label htmlFor="maritalStatus" className="form-label">Marital Status</label>
+                <select
+                  id="maritalStatus"
+                  name="maritalStatus"
+                  className="form-select"
+                  value={newemployee.maritalStatus}
+                  onChange={handleNewemployeeChange}
+                >
+                  <option value="">Select...</option>
+                  {maritalStatusOptions.map(option => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {/* Contact Info */}
+              <div className="section-title">Contact Details</div>
+              <div className="form-group">
+                <label htmlFor="personalNumber" className="form-label">Personal Phone</label>
+                <input
+                  type="tel"
+                  id="personalNumber"
+                  name="personalNumber"
+                  className="form-input"
+                  placeholder="Enter personal phone"
+                  value={newemployee.personalNumber}
+                  onChange={handleNewemployeeChange}
+                />
+              </div>
 
-    const handleCloseDesignationModal = () => setShowDesignationModal(false);
+              <div className="form-group">
+                <label htmlFor="alternativeNumber" className="form-label">Alternative Phone</label>
+                <input
+                  type="tel"
+                  id="alternativeNumber"
+                  name="alternativeNumber"
+                  className="form-input"
+                  placeholder="Enter alternative phone"
+                  value={newemployee.alternativeNumber}
+                  onChange={handleNewemployeeChange}
+                />
+              </div>
 
-    const handleApprove = (employeeId) => {
-        setEmployees(employees.map(emp =>
-            emp.id === employeeId ? { ...emp, status: 'Review' } : emp
-        ));
-        setShowDetailsModal(false);
-        setSelectedEmployee(null);
-    };
+              <div className="form-group">
+                <label htmlFor="personalEmail" className="form-label">Personal Email</label>
+                <input
+                  type="email"
+                  id="personalEmail"
+                  name="personalEmail"
+                  className="form-input"
+                  placeholder="Enter personal email"
+                  value={newemployee.personalEmail}
+                  onChange={handleNewemployeeChange}
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="workEmail" className="form-label">Work Email</label>
+                <input
+                  type="email"
+                  id="workEmail"
+                  name="workEmail"
+                  className="form-input"
+                  placeholder="Enter work email"
+                  value={newemployee.workEmail}
+                  onChange={handleNewemployeeChange}
+                />
+              </div>
 
-    const filteredEmployees = employees.filter(emp => emp.status === activeEmployeeTab);
+              <div className="form-group">
+                <label htmlFor="address" className="form-label">Address</label>
+                <textarea
+                  id="address"
+                  name="address"
+                  className="form-input"
+                  placeholder="Enter address"
+                  rows="2"
+                  value={newemployee.address}
+                  onChange={handleNewemployeeChange}
+                />
+              </div>
 
-    const tableContainerStyle = { backgroundColor: '#fff', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', overflowX: 'auto' };
-    const tableStyle = { width: '100%', borderCollapse: 'collapse', marginTop: '20px' };
-    const thStyle = { padding: '12px 15px', borderBottom: '2px solid #dee2e6', textAlign: 'left', backgroundColor: '#f8f9fa', color: '#495057', fontSize: '0.9em', textTransform: 'uppercase' };
-    const tdStyle = { padding: '12px 15px', borderBottom: '1px solid #dee2e6', textAlign: 'left', color: '#343a40', fontSize: '0.9em' };
-    const statusBadgeStyle = { padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.8em', display: 'inline-flex', alignItems: 'center', gap: '5px' };
-    const awaitingStatusStyle = { backgroundColor: '#fff3cd', color: '#856404', border: '1px solid #ffeeba' };
-    const reviewStatusStyle = { backgroundColor: '#d1ecf1', color: '#0c5460', border: '1px solid #bee5eb' };
-    const actionButtonStyle = { backgroundColor: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.1em', margin: '0 5px', color: '#007bff', transition: 'color 0.2s ease' };
-    const actionButtonHoverStyle = { color: '#0056b3' };
-    const detailsModalTitleStyle = { fontSize: '1.8em', fontWeight: 'bold', color: '#333', marginBottom: '10px', textAlign: 'center' };
-    const detailsModalSubtitleStyle = { fontSize: '0.9em', color: '#666', marginBottom: '20px', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' };
-    const detailsSectionStyle = { marginBottom: '20px', padding: '15px', backgroundColor: '#f9f9f9', borderRadius: '8px', border: '1px solid #e9e9e9' };
-    const detailsSectionTitleStyle = { fontSize: '1.2em', fontWeight: 'bold', color: '#555', marginBottom: '15px', borderBottom: '1px solid #eee', paddingBottom: '10px' };
-    const detailLabelStyle = { fontSize: '0.85em', color: '#777', marginBottom: '5px', fontWeight: 'bold' };
-    const detailValueStyle = { fontSize: '1em', color: '#333', wordBreak: 'break-word' };
-    const assignDesignationsButtonStyle = { backgroundColor: '#e7f0fd', color: '#007bff', padding: '10px 15px', borderRadius: '5px', border: '1px solid #007bff', cursor: 'pointer', fontSize: '0.9em', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', transition: 'background-color 0.2s ease, color 0.2s ease' };
-    const assignDesignationsButtonHoverStyle = { backgroundColor: '#007bff', color: '#fff' };
-    const editDetailsButtonStyle = { backgroundColor: '#ffc107', color: '#343a40', padding: '12px 25px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '1em', fontWeight: 'bold', transition: 'background-color 0.2s ease' };
-    const editDetailsButtonHoverStyle = { backgroundColor: '#e0a800' };
-    const approveOnboardingButtonStyle = { backgroundColor: '#28a745', color: '#fff', padding: '12px 25px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '1em', fontWeight: 'bold', transition: 'background-color 0.2s ease' };
-    const approveOnboardingButtonHoverStyle = { backgroundColor: '#218838' };
-    const rejectApplicationButtonStyle = { backgroundColor: '#dc3545', color: '#fff', padding: '12px 25px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '1em', fontWeight: 'bold', transition: 'background-color 0.2s ease' };
-    const rejectApplicationButtonHoverStyle = { backgroundColor: '#c82333' };
-    const editFormHeaderStyle = { fontSize: '1.5em', fontWeight: 'bold', color: '#333' };
-    const editFormSectionTitleStyle = { fontSize: '1.3em', color: '#007bff', marginBottom: '15px', borderBottom: '1px solid #e9e9e9', paddingBottom: '8px', marginTop: '20px' };
-    const labelStyle = { display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#555', fontSize: '0.9em' };
-    const fieldStyle = { width: '100%', padding: '10px', border: '1px solid #ced4da', borderRadius: '5px', fontSize: '1em', boxSizing: 'border-box' };
-    const selectStyle = { width: '100%', padding: '10px', border: '1px solid #ced4da', borderRadius: '5px', fontSize: '1em', boxSizing: 'border-box', backgroundColor: '#fff' };
-    const textareaStyle = { width: '100%', padding: '10px', border: '1px solid #ced4da', borderRadius: '5px', fontSize: '1em', minHeight: '80px', resize: 'vertical', boxSizing: 'border-box' };
-    const saveButtonEditStyle = { backgroundColor: '#2ecc71', color: '#fff', padding: '12px 25px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '1em', fontWeight: 'bold', transition: 'background-color 0.2s ease', marginRight: '10px' };
-    const cancelButtonEditStyle = { backgroundColor: '#6c757d', color: '#fff', padding: '12px 25px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '1em', fontWeight: 'bold', transition: 'background-color 0.2s ease' };
+              <div className="form-group">
+                <label htmlFor="city" className="form-label">City</label>
+                <input
+                  type="text"
+                  id="city"
+                  name="city"
+                  className="form-input"
+                  placeholder="Enter city"
+                  value={newemployee.city}
+                  onChange={handleNewemployeeChange}
+                />
+              </div>
 
-    return (
-        <div>
-            <div style={tableContainerStyle}>
-                <h3 style={{ color: '#333', marginBottom: '20px' }}>{activeEmployeeTab} Employees</h3>
-                <table style={tableStyle}>
-                    <thead><tr><th style={thStyle}>Employee</th><th style={thStyle}>Contact</th><th style={thStyle}>Email</th><th style={thStyle}>Location</th><th style={thStyle}>Join Date</th><th style={thStyle}>Status</th><th style={thStyle}>Designations</th><th style={thStyle}>Actions</th></tr></thead>
-                    <tbody>
-                        {filteredEmployees.length === 0 ? (<tr><td colSpan="8" style={{ ...tdStyle, textAlign: 'center', padding: '20px' }}>No {activeEmployeeTab.toLowerCase()} employees found.</td></tr>) : (
-                            filteredEmployees.map((employee) => (
-                                <tr key={employee.id}>
-                                    <td style={tdStyle}><div style={{ fontWeight: 'bold' }}>{`${employee.firstName} ${employee.lastName}`}</div><div style={{ fontSize: '0.8em', color: '#777' }}>{employee.gender}</div></td>
-                                    <td style={tdStyle}>{employee.personalNumber}</td><td style={tdStyle}>{employee.personalMail}</td>
-                                    <td style={tdStyle}>{`${employee.city}, ${getDisplayName('state', employee.state, employee.country)}, ${getDisplayName('country', employee.country)}`}</td>
-                                    <td style={tdStyle}>{employee.dateOfJoin}</td>
-                                    <td style={tdStyle}><span style={{ ...statusBadgeStyle, ...(employee.status === 'Awaiting' ? awaitingStatusStyle : reviewStatusStyle) }}><span style={{ fontSize: '18px', lineHeight: '1', marginRight: '4px' }}>&#x25CF;</span>{employee.status}</span></td>
-                                    <td style={tdStyle}>{employee.designations || 'No designations assigned'}</td>
-                                    <td style={tdStyle}>
-                                        <button style={actionButtonStyle} onMouseEnter={(e) => Object.assign(e.target.style, actionButtonStyle, actionButtonHoverStyle)} onMouseLeave={(e) => Object.assign(e.target.style, actionButtonStyle)} onClick={() => handleViewDetails(employee)}>&#128065;</button>
-                                        <button style={actionButtonStyle} onMouseEnter={(e) => Object.assign(e.target.style, actionButtonStyle, actionButtonHoverStyle)} onMouseLeave={(e) => Object.assign(e.target.style, actionButtonStyle)} onClick={() => handleApprove(employee.id)}>&#10003;</button>
-                                        <button style={actionButtonStyle} onMouseEnter={(e) => Object.assign(e.target.style, actionButtonStyle, actionButtonHoverStyle)} onMouseLeave={(e) => Object.assign(e.target.style, actionButtonStyle)}>&#10060;</button>
-                                    </td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
+              <div className="form-group">
+                <label htmlFor="state" className="form-label">State</label>
+                <input
+                  type="text"
+                  id="state"
+                  name="state"
+                  className="form-input"
+                  placeholder="Enter state"
+                  value={newemployee.state}
+                  onChange={handleNewemployeeChange}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="zipcode" className="form-label">Zip Code</label>
+                <input
+                  type="text"
+                  id="zipcode"
+                  name="zipcode"
+                  className="form-input"
+                  placeholder="Enter zip code"
+                  value={newemployee.zipcode}
+                  onChange={handleNewemployeeChange}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="country" className="form-label">Country</label>
+                <input
+                  type="text"
+                  id="country"
+                  name="country"
+                  className="form-input"
+                  placeholder="Enter country"
+                  value={newemployee.country}
+                  onChange={handleNewemployeeChange}
+                />
+              </div>
+              {/* Company Info */}
+              <div className="section-title">Company Details</div>
+
+              <div className="form-group modal-form-full-width">
+                <label htmlFor="role" className="form-label">Role *</label>
+                <select
+                  id="role"
+                  name="role"
+                  className="form-select"
+                  value={newemployee.role}
+                  onChange={handleNewemployeeChange}
+                  required
+                >
+                  {roleOptions.map(option => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="role-description">
+                  {roleOptions.find(option => option.value === newemployee.role)?.description}
+                </p>
+              </div>
+              <div className="form-group">
+                <label htmlFor="department" className="form-label">Department</label>
+                <select
+                  id="department"
+                  name="department"
+                  className="form-select"
+                  value={newemployee.department}
+                  onChange={handleNewemployeeChange}
+                >
+                  {departmentOptions.map(option => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label htmlFor="accountStatus" className="form-label">Account Status</label>
+                <select
+                  id="accountStatus"
+                  name="accountStatus"
+                  className="form-select"
+                  value={newemployee.accountStatus}
+                  onChange={handleNewemployeeChange}
+                >
+                  {accountStatusOptions.map(option => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group modal-form-full-width">
+                <label htmlFor="temporaryPassword" className="form-label">Temporary Password *</label>
+                <div className="password-input-group">
+                  <input
+                    type="text"
+                    id="temporaryPassword"
+                    name="temporaryPassword"
+                    className="form-input"
+                    placeholder="Enter temporary password"
+                    value={newemployee.temporaryPassword}
+                    onChange={handleNewemployeeChange}
+                    required
+                  />
+                  <button type="button" className="generate-password-btn" onClick={generateTemporaryPassword}>
+
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" fill="currentColor" style={{ width: '1rem', height: '1rem' }}>
+                      <path d="M288 80c-65.2 0-118.8 29.6-159.9 67.7C89.3 183.5 64 223.8 64 256c0 32.2 25.3 72.5 64.1 108.3C169.2 402.4 222.8 432 288 432s118.8-29.6 159.9-67.7C486.7 328.5 512 288.2 512 256c0-32.2-25.3-72.5-64.1-108.3C406.8 109.6 353.2 80 288 80zM96 256c0-10.8 2.8-21.6 7.9-31.7c17.5-35.3 47.6-64.7 85.8-84.3c15.2-7.8 31.5-12 48.3-12s33.1 4.2 48.3 12c38.2 19.6 68.3 49 85.8 84.3c5.1 10.1 7.9 20.9 7.9 31.7s-2.8 21.6-7.9 31.7c-17.5 35.3-47.6 64.7-85.8 84.3c-15.2 7.8-31.5 12-48.3 12c-38.2-19.6-68.3-49-85.8-84.3C98.8 277.6 96 266.8 96 256zm192 0a64 64 0 1 0 0-128 64 64 0 1 0 0 128z" />
+                    </svg>
+                    Generate
+                  </button>
+                </div>
+                <p className="role-description">The employee will be prompted to change this password on first login.</p>
+              </div>
+              <div className="modal-footer modal-form-full-width">
+                <button type="submit" className="create-employee-btn">Create employee Account</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit employee Account Modal */}
+      {isEditEmployeeModalOpen && currentEmployeeToEdit && (
+        <div className="modal-overlay open">
+          <div className="modal-content employee-edit-modal-content">
+            <div className="modal-header">
+              <div>
+                <h3 className="modal-title">Edit Employee Account</h3>
+                <p className="modal-subtitle">Update employee's personal and work details.</p>
+              </div>
+              <button className="modal-close-btn" onClick={handleCloseEditEmployeeModal}>&times;</button>
             </div>
 
-            {selectedEmployee && showDetailsModal && (
-                <Modal show={showDetailsModal} onHide={() => setShowDetailsModal(false)} size="lg" centered>
-                    <Modal.Header closeButton style={{ borderBottom: 'none', paddingBottom: '0' }}><button onClick={() => setShowDetailsModal(false)} style={{ background: 'none', border: 'none', color: '#007bff', cursor: 'pointer', fontSize: '1em', display: 'flex', alignItems: 'center', gap: '5px', paddingLeft: '10px' }}>&larr; Back to Worksheet</button></Modal.Header>
-                    <Modal.Body style={{ paddingTop: '0' }}>
-                        <h5 style={detailsModalTitleStyle}>Employee Onboarding Details</h5>
-                        <p style={detailsModalSubtitleStyle}>Submitted on {selectedEmployee.submittedOn || 'N/A'}<span style={{ ...statusBadgeStyle, ...awaitingStatusStyle, marginLeft: '10px' }}><span style={{ fontSize: '18px', lineHeight: '1', marginRight: '4px' }}>&#x25CF;</span>{selectedEmployee.status || 'Awaiting'}</span></p>
-                        <div style={detailsSectionStyle}><h6 style={detailsSectionTitleStyle}>Personal Information</h6><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}><div style={{ marginBottom: '10px' }}><div style={detailLabelStyle}>Full Name</div><div style={detailValueStyle}>{`${selectedEmployee.firstName} ${selectedEmployee.lastName}`}</div></div><div style={{ marginBottom: '10px' }}><div style={detailLabelStyle}>Gender</div><div style={detailValueStyle}>{selectedEmployee.gender}</div></div><div style={{ marginBottom: '10px' }}><div style={detailLabelStyle}>Date of Birth</div><div style={detailValueStyle}>{selectedEmployee.dateOfBirth}</div></div><div style={{ marginBottom: '10px' }}><div style={detailLabelStyle}>Marital Status</div><div style={detailValueStyle}>{selectedEmployee.maritalStatus}</div></div></div></div>
-                        <div style={detailsSectionStyle}><h6 style={detailsSectionTitleStyle}>Contact Information</h6><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}><div style={{ marginBottom: '10px' }}><div style={detailLabelStyle}>Personal Number</div><div style={detailValueStyle}>{selectedEmployee.personalNumber}</div></div><div style={{ marginBottom: '10px' }}><div style={detailLabelStyle}>Alternative Number</div><div style={detailValueStyle}>{selectedEmployee.alternativeNumber || '-'}</div></div><div style={{ marginBottom: '10px' }}><div style={detailLabelStyle}>Personal Mail</div><div style={detailValueStyle}>{selectedEmployee.personalMail}</div></div><div style={{ marginBottom: '10px' }}><div style={detailLabelStyle}>Date of Join</div><div style={detailValueStyle}>{selectedEmployee.dateOfJoin}</div></div><div style={{ marginBottom: '10px' }}><div style={detailLabelStyle}>Password Status</div><div style={{ ...detailValueStyle, display: 'flex', alignItems: 'center', gap: '5px' }}><span style={{ fontSize: '16px' }}>&#128274;</span> {selectedEmployee.passwordStatus || 'Password Created'}</div></div></div></div>
-                        <div style={detailsSectionStyle}><h6 style={detailsSectionTitleStyle}>Address Information</h6><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}><div style={{ marginBottom: '10px' }}><div style={detailLabelStyle}>Country</div><div style={detailValueStyle}>{getDisplayName('country', selectedEmployee.country)}</div></div><div style={{ marginBottom: '10px' }}><div style={detailLabelStyle}>State</div><div style={detailValueStyle}>{getDisplayName('state', selectedEmployee.state, selectedEmployee.country)}</div></div><div style={{ marginBottom: '10px' }}><div style={detailLabelStyle}>City</div><div style={detailValueStyle}>{selectedEmployee.city}</div></div><div style={{ marginBottom: '10px' }}><div style={detailLabelStyle}>Zipcode</div><div style={detailValueStyle}>{selectedEmployee.zipcode}</div></div><div style={{ marginBottom: '10px' }}><div style={detailLabelStyle}>Full Address</div><div style={{ ...detailValueStyle, gridColumn: '1 / span 2' }}>{selectedEmployee.address}</div></div></div></div>
-                        <div style={detailsSectionStyle}><h6 style={detailsSectionTitleStyle}>Assigned Designations</h6><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div style={detailValueStyle}>{selectedEmployee.designations || 'No designations assigned'}</div><button style={assignDesignationsButtonStyle} onMouseEnter={(e) => Object.assign(e.target.style, assignDesignationsButtonStyle, assignDesignationsButtonHoverStyle)} onMouseLeave={(e) => Object.assign(e.target.style, assignDesignationsButtonStyle)} onClick={() => { setSelectedDesignations(selectedEmployee?.designations?.split(", ").filter(d => d) || []); setShowDesignationModal(true); }}><span style={{ fontSize: '18px' }}>&#128100;</span> Assign Designations</button></div></div>
-                    </Modal.Body>
-                    <Modal.Footer style={{ borderTop: 'none', paddingTop: '0', display: 'flex', justifyContent: 'center', gap: '20px' }}>
-                        <button style={editDetailsButtonStyle} onMouseEnter={(e) => Object.assign(e.target.style, editDetailsButtonStyle, editDetailsButtonHoverStyle)} onMouseLeave={(e) => Object.assign(e.target.style, editDetailsButtonStyle)} onClick={handleEditDetails}>&#9998; Edit Details</button>
-                        <button style={approveOnboardingButtonStyle} onMouseEnter={(e) => Object.assign(e.target.style, approveOnboardingButtonStyle, approveOnboardingButtonHoverStyle)} onMouseLeave={(e) => Object.assign(e.target.style, approveOnboardingButtonStyle)} onClick={() => handleApprove(selectedEmployee.id)}>&#10003; Approve Onboarding</button>
-                        <button style={rejectApplicationButtonStyle} onMouseEnter={(e) => Object.assign(e.target.style, rejectApplicationButtonStyle, rejectApplicationButtonHoverStyle)} onMouseLeave={(e) => Object.assign(e.target.style, rejectApplicationButtonStyle)}>&#10060; Reject Application</button>
-                    </Modal.Footer>
-                </Modal>
-            )}
+            <div className="details-grid form-layout">
+              {/* Personal Info */}
+              <div className="section-title">Personal Information</div>
+              <div className="form-item">
+                <label>First Name *</label>
+                <input type="text" name="firstName" value={currentEmployeeToEdit.firstName} onChange={handleEditemployeeChange} required />
+              </div>
+              <div className="form-item">
+                <label>Last Name *</label>
+                <input type="text" name="lastName" value={currentEmployeeToEdit.lastName} onChange={handleEditemployeeChange} required />
+              </div>
+              <div className="form-item">
+                <label>Date of Birth</label>
+                <input type="date" name="dateOfBirth" value={currentEmployeeToEdit.dateOfBirth} onChange={handleEditemployeeChange} />
+              </div>
+              <div className="form-item">
+                <label>Gender</label>
+                <select name="gender" value={currentEmployeeToEdit.gender} onChange={handleEditemployeeChange}>
+                  <option value="">Select...</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div className="form-item">
+                <label>Marital Status</label>
+                <select name="maritalStatus" value={currentEmployeeToEdit.maritalStatus} onChange={handleEditemployeeChange}>
+                  <option value="">Select...</option>
+                  <option value="Single">Single</option>
+                  <option value="Married">Married</option>
+                  <option value="Divorced">Divorced</option>
+                  <option value="Widowed">Widowed</option>
+                </select>
+              </div>
 
-            {selectedEmployee && showEditForm && (
-                <Modal show={showEditForm} onHide={handleCancelEdit} size="lg" centered>
-                    <Modal.Header closeButton><Modal.Title style={editFormHeaderStyle}>Edit Employee Details</Modal.Title></Modal.Header>
-                    <Modal.Body>
-                        <form onSubmit={handleSaveEditedDetails}>
-                            <h3 style={editFormSectionTitleStyle}>Personal Information</h3>
-                            <div style={{ display: 'flex', gap: '20px', marginBottom: '10px' }}><div style={{ flex: 1 }}><label htmlFor="firstName" style={labelStyle}>First Name <span style={{ color: 'red' }}>*</span></label><input type="text" id="firstName" name="firstName" value={editFormData.firstName || ""} onChange={handleEditFormChange} required style={fieldStyle}/></div><div style={{ flex: 1 }}><label htmlFor="lastName" style={labelStyle}>Last Name <span style={{ color: 'red' }}>*</span></label><input type="text" id="lastName" name="lastName" value={editFormData.lastName || ""} onChange={handleEditFormChange} required style={fieldStyle}/></div></div>
-                            <div style={{ display: 'flex', gap: '20px', marginBottom: '10px' }}><div style={{ flex: 1 }}><label htmlFor="gender" style={labelStyle}>Gender <span style={{ color: 'red' }}>*</span></label><select id="gender" name="gender" value={editFormData.gender || ""} onChange={handleEditFormChange} required style={selectStyle}><option value="">Select Gender</option><option value="Male">Male</option><option value="Female">Female</option><option value="Other">Other</option></select></div><div style={{ flex: 1 }}><label htmlFor="dateOfBirth" style={labelStyle}>Date of Birth <span style={{ color: 'red' }}>*</span></label><input type="date" id="dateOfBirth" name="dateOfBirth" value={editFormData.dateOfBirth || ""} onChange={handleEditFormChange} required style={fieldStyle}/></div></div>
-                            <h3 style={editFormSectionTitleStyle}>Contact Information</h3>
-                            <div style={{ display: 'flex', gap: '20px', marginBottom: '10px' }}><div style={{ flex: 1 }}><label htmlFor="personalNumber" style={labelStyle}>Personal Number <span style={{ color: 'red' }}>*</span></label><div style={{ display: 'flex', alignItems: 'center' }}><span style={{ marginRight: '10px' }}>+{personalNumberCountryCode}</span><input type="text" id="personalNumber" name="personalNumber" value={editFormData.personalNumber || ""} onChange={handleEditFormChange} required style={fieldStyle}/></div></div><div style={{ flex: 1 }}><label htmlFor="alternativeNumber" style={labelStyle}>Alternative Number</label><div style={{ display: 'flex', alignItems: 'center' }}><span style={{ marginRight: '10px' }}>+{alternativeNumberCountryCode}</span><input type="text" id="alternativeNumber" name="alternativeNumber" value={editFormData.alternativeNumber || ""} onChange={handleEditFormChange} style={fieldStyle}/></div></div></div>
-                            <div style={{ display: 'flex', gap: '20px', marginBottom: '10px' }}><div style={{ flex: 1 }}><label htmlFor="personalMail" style={labelStyle}>Personal Mail <span style={{ color: 'red' }}>*</span></label><input type="email" id="personalMail" name="personalMail" value={editFormData.personalMail || ""} onChange={handleEditFormChange} required style={fieldStyle}/></div></div>
-                            <h3 style={editFormSectionTitleStyle}>Address Information</h3>
-                            <div style={{ display: 'flex', gap: '20px', marginBottom: '10px' }}><div style={{ flex: 1 }}><label htmlFor="address" style={labelStyle}>Address <span style={{ color: 'red' }}>*</span></label><textarea id="address" name="address" value={editFormData.address || ""} onChange={handleEditFormChange} required style={textareaStyle}/></div></div>
-                            <div style={{ display: 'flex', gap: '20px', marginBottom: '10px' }}><div style={{ flex: 1 }}><label htmlFor="country" style={labelStyle}>Country <span style={{ color: 'red' }}>*</span></label><select id="country" name="country" value={editFormData.country || ""} onChange={(e) => {handleEditFormChange(e); handleEditFormCountryChange(e);}} required style={selectStyle}><option value="">Select Country</option>{allCountries.map((country) => (<option key={country.isoCode} value={country.isoCode}>{country.name}</option>))}</select></div><div style={{ flex: 1 }}><label htmlFor="state" style={labelStyle}>State <span style={{ color: 'red' }}>*</span></label><select id="state" name="state" value={editFormData.state || ""} onChange={(e) => {handleEditFormChange(e); handleEditFormStateChange(e);}} required style={selectStyle}><option value="">Select State</option>{editFormStates.map((state) => (<option key={state.isoCode} value={state.isoCode}>{state.name}</option>))}</select></div></div>
-                            <div style={{ display: 'flex', gap: '20px', marginBottom: '10px' }}><div style={{ flex: 1 }}><label htmlFor="city" style={labelStyle}>City <span style={{ color: 'red' }}>*</span></label><select id="city" name="city" value={editFormData.city || ""} onChange={handleEditFormCityChange} required style={selectStyle}><option value="">Select City</option>{editFormCities.map((city) => (<option key={city.name} value={city.name}>{city.name}</option>))}</select></div><div style={{ flex: 1 }}><label htmlFor="zipcode" style={labelStyle}>Zipcode <span style={{ color: 'red' }}>*</span></label><input type="text" id="zipcode" name="zipcode" value={editFormData.zipcode || ""} onChange={handleEditFormChange} required style={fieldStyle}/></div></div>
-                            <h3 style={editFormSectionTitleStyle}>Employment Information</h3>
-                            <div style={{ display: 'flex', gap: '20px', marginBottom: '10px' }}><div style={{ flex: 1 }}><label htmlFor="dateOfJoin" style={labelStyle}>Date of Join <span style={{ color: 'red' }}>*</span></label><input type="date" id="dateOfJoin" name="dateOfJoin" value={editFormData.dateOfJoin || ""} onChange={handleEditFormChange} required style={fieldStyle}/></div></div>
-                            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '30px' }}><button type="submit" style={saveButtonEditStyle} onMouseEnter={(e) => (e.target.style.backgroundColor = '#27ae60')} onMouseLeave={(e) => (e.target.style.backgroundColor = '#2ecc71')}>Save Changes</button><button type="button" onClick={handleCancelEdit} style={cancelButtonEditStyle} onMouseEnter={(e) => (e.target.style.backgroundColor = '#5a6268')} onMouseLeave={(e) => (e.target.style.backgroundColor = '#6c757d')}>Cancel</button></div>
-                        </form>
-                    </Modal.Body>
-                </Modal>
-            )}
+              {/* Contact Info */}
+              <div className="section-title">Contact Details</div>
+              <div className="form-item">
+                <label>Personal Phone</label>
+                <input type="tel" name="personalNumber" value={currentEmployeeToEdit.personalNumber} onChange={handleEditemployeeChange} />
+              </div>
+              <div className="form-item">
+                <label>Alternative Phone</label>
+                <input type="tel" name="alternativeNumber" value={currentEmployeeToEdit.alternativeNumber} onChange={handleEditemployeeChange} />
+              </div>
+              <div className="form-item">
+                <label>Personal Email</label>
+                <input type="email" name="personalEmail" value={currentEmployeeToEdit.personalEmail} onChange={handleEditemployeeChange} />
+              </div>
+              <div className="form-item">
+                <label>Work Email *</label>
+                <input type="email" name="workEmail" value={currentEmployeeToEdit.workEmail} onChange={handleEditemployeeChange} required />
+              </div>
+              <div className="form-item">
+                <label>Address</label>
+                <textarea name="address" value={currentEmployeeToEdit.address} onChange={handleEditemployeeChange}></textarea>
+              </div>
+              <div className="form-item">
+                <label>City</label>
+                <input type="text" name="city" value={currentEmployeeToEdit.city} onChange={handleEditemployeeChange} />
+              </div>
+              <div className="form-item">
+                <label>State</label>
+                <input type="text" name="state" value={currentEmployeeToEdit.state} onChange={handleEditemployeeChange} />
+              </div>
+              <div className="form-item">
+                <label>Zip Code</label>
+                <input type="text" name="zipcode" value={currentEmployeeToEdit.zipcode} onChange={handleEditemployeeChange} />
+              </div>
+              <div className="form-item">
+                <label>Country</label>
+                <input type="text" name="country" value={currentEmployeeToEdit.country} onChange={handleEditemployeeChange} />
+              </div>
 
-            <Modal show={showDesignationModal} onHide={handleCloseDesignationModal} size="md" centered>
-                <Modal.Header closeButton><Modal.Title style={{ fontSize: '1.5em', fontWeight: 'bold' }}>Assign Designations</Modal.Title></Modal.Header>
-                <Modal.Body>
-                    <p style={{ marginBottom: '20px', color: '#555' }}>Assign designations to {selectedEmployee?.firstName} {selectedEmployee?.lastName}</p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        {availableDesignations.map((designation) => (<div key={designation} style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}><input type="checkbox" id={designation} value={designation} checked={selectedDesignations.includes(designation)} onChange={() => handleDesignationChange(designation)} style={{ marginRight: '10px', width: '20px', height: '20px' }}/><label htmlFor={designation} style={{ fontSize: '1.1em', color: '#333', cursor: 'pointer' }}>{designation}</label></div>))}
-                    </div>
-                </Modal.Body>
-                <Modal.Footer style={{ borderTop: 'none', paddingTop: '0', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                    <button style={{ backgroundColor: '#6c757d', color: '#fff', padding: '12px 25px', borderRadius: '8px', border: 'none', cursor: 'pointer', marginRight: '10px', transition: 'background-color 0.2s ease' }} onMouseEnter={(e) => (e.target.style.backgroundColor = '#5a6268')} onMouseLeave={(e) => (e.target.style.backgroundColor = '#6c757d')} onClick={handleCloseDesignationModal}>Cancel</button>
-                    <button style={{ backgroundColor: '#007bff', color: '#fff', padding: '12px 25px', borderRadius: '8px', border: 'none', cursor: 'pointer', transition: 'background-color 0.2s ease' }} onMouseEnter={(e) => (e.target.style.backgroundColor = '#0056b3')} onMouseLeave={(e) => (e.target.style.backgroundColor = '#007bff')} onClick={handleSaveDesignations}>Save Designations</button>
-                </Modal.Footer>
-            </Modal>
+              {/* Company Info */}
+              <div className="section-title">Company Details</div>
+              <div className="form-item">
+                <label>Date of Joining</label>
+                <input type="date" name="dateOfJoin" value={currentEmployeeToEdit.dateOfJoin} onChange={handleEditemployeeChange} />
+              </div>
+              <div className="form-item">
+                <label>Role *</label>
+                <select name="role" value={currentEmployeeToEdit.role} onChange={handleEditemployeeChange} required>
+                  {roleOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+              <div className="form-item">
+                <label>Department</label>
+                <select name="department" value={currentEmployeeToEdit.department} onChange={handleEditemployeeChange}>
+                  {departmentOptions.map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
+              <div className="form-item">
+                <label>Account Status</label>
+                <select name="accountStatus" value={currentEmployeeToEdit.accountStatus} onChange={handleEditemployeeChange}>
+                  {accountStatusOptions.map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div className="modal-footer modal-form-full-width">
+              <button type="button" className="confirm-cancel-btn" onClick={handleCloseEditEmployeeModal}>Cancel</button>
+              <button type="button" className="confirm-save-btn" onClick={handleUpdateEmployeeAccount}>Update Account</button>
+            </div>
+          </div>
         </div>
-    );
+      )}
+
+
+      {/* Delete employee Confirmation Modal */}
+      {isDeleteConfirmModalOpen && (
+        <div className="modal-overlay open">
+          <div className="modal-content">
+            <div className="modal-header" style={{ marginBottom: '1rem' }}>
+              <div>
+                <h3 className="modal-title">Confirm Deletion</h3>
+                <p className="modal-subtitle">Are you sure you want to delete this employee? This action cannot be undone.</p>
+              </div>
+              <button className="modal-close-btn" onClick={handleCancelDelete}>&times;</button>
+            </div>
+            <div className="confirm-modal-buttons">
+              <button type="button" className="confirm-cancel-btn" onClick={handleCancelDelete}>Cancel</button>
+              <button type="button" className="confirm-delete-btn" onClick={handleConfirmDelete}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Confirmation Modal */}
+      {isConfirmUpdateModalOpen && (
+        <div className="modal-overlay open">
+          <div className="modal-content">
+            <div className="modal-header">
+                <h3 className="modal-title">Confirm Action</h3>
+                <button className="modal-close-btn" onClick={() => setIsConfirmUpdateModalOpen(false)}>&times;</button>
+            </div>
+            <p>{confirmUpdateMessage}</p>
+            <div className="confirm-modal-buttons">
+              <button type="button" className="confirm-cancel-btn" onClick={() => setIsConfirmUpdateModalOpen(false)}>Cancel</button>
+              {confirmActionType === 'employeeUpdate' && <button type="button" className="create-employee-btn" onClick={confirmEmployeeUpdate}>Confirm Update</button>}
+              {confirmActionType === 'employeeDelete' && <button type="button" className="confirm-delete-btn" onClick={handleConfirmDelete}>Confirm Delete</button>}
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
 };
+
 
 export default EmployeeManagement;

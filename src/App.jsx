@@ -31,6 +31,9 @@ import ServicesForm from './components/services/ServicesForm';
 import AdminWorksheet from './components/AdminWorksheet';
 import ManagerWorksheet from './components/ManagerWorksheet';
 
+import AdminPage from './components/AdminWorkSheet/AdminPage';
+
+
 
 
 
@@ -70,6 +73,7 @@ const App = () => {
         <Route path="/teamleads" element={<TeamLeadData />} />
         <Route path="/employees" element={<EmployeeData />} />
         <Route path="/workgroups" element={<WorkGroups />} />
+        <Route path="/adminpage" element={<AdminPage/>} />
         <Route path="/adminworksheet" element={<AdminWorksheet/>} />
         <Route path="/managerworksheet" element={<ManagerWorksheet/>} />
         <Route path="/employee-registration-form" element={<EmployeeRegistrationForm />} />
