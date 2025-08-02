@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import img1 from '../../assets/MobileDev.png';
-import '../../styles/Services/MobileAppDev.css';
+import img1 from '../../assets/WebDev.png';
+import '../../styles/Services/WebAppDev.css';
 import { useNavigate } from 'react-router-dom';
 import CustomNavbar from '../Navbar';
 import { Modal, Button, Form } from 'react-bootstrap';
+import { useAuth } from '../../components/AuthContext'; // Corrected the import path
 
-const MobileAppDev = () => {
+const WebAppDev = () => {
   const navigate = useNavigate();
+  const { isLoggedIn } = useAuth(); // Step 2: Get auth status
 
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
@@ -20,51 +22,64 @@ const MobileAppDev = () => {
 
   const cardsData = [
     {
-      title: 'Android App Development',
+      title: 'Our Web Application Development Services',
       description: (
         <p>
-Android, developed by Google, powers millions of smartphones globally. At TechXplorers Pvt Ltd, we specialize in expert Android app development, delivering high-quality, custom mobile solutions that align with your unique business goals. From user-friendly interfaces to robust backend integration, our apps are designed to perform seamlessly across Android devices, helping you engage users effectively and drive business growth.
+        We provide comprehensive end-to-end web application development solutions tailored to meet your business needs. Our team ensures that every web platform we build is fully responsive across devices, highly secure, scalable, and optimized for performance. From initial planning and UI/UX design to full-stack development and post-launch support, we align every aspect of your web application with your strategic goals and user expectations.
         </p>
       ),
     },
     {
-      title: 'Android App Development Services',
+      title: 'Custom Web App Development',
       description: (
-       <p>TechXplorers specializes in developing a wide range of applications tailored to diverse user needs. These include Bluetooth Low Energy (BLE) powered devices, music and video apps, health and fitness applications, security apps, and location-based services. The team also builds GPS tracking and dispatch apps, social media platforms, and offers custom Android app development to suit unique client requirements.</p>
+        <ul className="flip-card-list">
+          <li>We create web applications that align with your business needs, industry standards, and customer expectations.</li>
+          <li><b>Modern Tech Stack</b> – We utilize React.js, Angular, Vue.js, Node.js, Python, Laravel, and PHP for scalable and efficient development.</li>
+          <li><b>Full-Stack Development</b> – From front-end design to back-end architecture, we deliver complete web solutions.</li>
+          <li><b>Fast & Responsive</b> – Optimized performance for quick loading times.</li>
+        </ul>
       ),
     },
     {
-      title: 'iOS App Development',
+      title: 'Web Application Development Process',
       description: (
-        <p>
-          Apple's iOS platform is known for its seamless hardware-software integration, setting high benchmarks for mobile operating systems. TechXplorers Pvt Ltd specializes in custom iPhone app development for iOS 15/iOS 16, delivering end-to-end solutions.
-        </p>
-      ),
-    },
-    {
-      title: 'iOS App Development Services',
-      description: (
-       <p>
-
-TechXplorers specializes in a wide range of mobile solutions including Bluetooth Low Energy (BLE) powered devices, music and video apps, health and fitness applications, security apps, and location-based services. We also develop GPS tracking and dispatch systems, social media applications, and offer custom iOS app development tailored to specific business needs.
-</p>
+        <ul className="flip-card-list">
+          <li><b>Requirement Analysis & Planning</b> – Understanding your business goals and project requirements.</li>
+          <li><b>UI/UX Design & Prototyping</b> – Crafting intuitive and engaging interfaces for a seamless user experience.</li>
+          <li><b>Development & Testing</b> – Coding, integration, and rigorous testing to ensure flawless functionality.</li>
+          <li><b>Deployment & Launch</b> – Ensuring a smooth launch with cloud hosting, domain setup, and database configurations.</li>
+          <li><b>Ongoing Maintenance & Upgrades</b> – Continuous monitoring, bug fixes, security updates, and feature enhancements.</li>
+        </ul>
       ),
     },
     {
       title: 'Why Choose TechXplorers Pvt Ltd',
       description: (
         <ul className="flip-card-list">
-          <li><b>Expert Developers:</b> Talented professionals skilled in both Android and iOS app development.</li>
-          <li><b>User-Centric Design:</b> Focus on seamless user experience and beautiful, functional designs.</li>
-          <li><b>Quality Assurance:</b> Rigorous testing to ensure flawless app performance.</li>
+          <li><b>Expert Developers:</b> Talented professionals skilled in full-stack web development.</li><br />
+          <li><b>User-Centric Design:</b> Focus on seamless user experience and beautiful, functional designs.</li><br />
+          <li><b>Quality Assurance:</b> Rigorous testing to ensure flawless app performance.</li><br />
           <li><b>Confidentiality:</b> Full protection of your business idea with NDAs.</li>
         </ul>
       ),
     },
+    {
+      title: 'Industries We Serve',
+      description: (
+        <ul className="flip-card-list">
+          TechXplorers proudly serves a wide range of industries including E-Commerce & Retail, Healthcare & Pharmaceuticals, Finance & Banking, Real Estate & Construction, Education & Training, and Technology & SaaS. Our tailored solutions are designed to meet the unique needs of each sector, empowering businesses to innovate, streamline operations, and drive sustainable growth in a competitive digital landscape.
+        </ul>
+      ),
+    }
   ];
 
+  // Step 3: Update the handler to check for login status
   const handleApplyNow = () => {
-    navigate('/services/servicesForm', { state: { service: 'Mobile Development' } });
+    if (isLoggedIn) {
+      navigate('/services/servicesForm', { state: { service: 'Web Development' } });
+    } else {
+      navigate('/login');
+    }
   };
 
   const handleChange = (e) => {
@@ -83,8 +98,9 @@ TechXplorers specializes in a wide range of mobile solutions including Bluetooth
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log('Form submitted:', formData);
-    alert('Form submitted successfully!');
+    // Using a custom modal or toast notification is better than alert()
     setShowModal(false);
+    // Reset form
     setFormData({
       firstName: '',
       lastName: '',
@@ -96,19 +112,20 @@ TechXplorers specializes in a wide range of mobile solutions including Bluetooth
   };
 
   return (
-    <div className="mobile-app-dev-container">
+    <div className="web-app-dev-container">
       <CustomNavbar />
+
       {/* Header Section */}
       <header className="header-section">
         <div className="image-with-text-overlay">
-          <img src={img1} alt="Mobile Application Development" className="header-image" />
-          <div className="overlay-text">Mobile App Development</div>
+          <img src={img1} alt="Web Application Development" className="header-image" />
+          <div className="overlay-text">Web App Development</div>
         </div>
       </header>
 
       {/* Flip Cards Section */}
       <section className="cards-section">
-        <h2 className="section-title">Explore Our Services</h2>
+        <h2 className="section-title">Explore Our Web Services</h2>
         <div className="cards-wrapper">
           {cardsData.map((card, index) => (
             <div key={index} className="flip-card">
@@ -131,7 +148,8 @@ TechXplorers specializes in a wide range of mobile solutions including Bluetooth
           <h2 className="headline mb-3">Want to know more or work with us?</h2>
           <button onClick={() => navigate('/contactus')} className="contact-button btn-lg btn-primary">
             Contact Us
-          </button>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;------or------ &nbsp; &nbsp; &nbsp;
+          </button>
+          &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;------or------ &nbsp; &nbsp; &nbsp;
           <button onClick={handleApplyNow} className="contact-button btn-lg btn-primary mb-5">
             Register Now
           </button>
@@ -140,9 +158,8 @@ TechXplorers specializes in a wide range of mobile solutions including Bluetooth
 
       {/* Modal Form */}
       <Modal show={showModal} onHide={() => setShowModal(false)} centered>
-        <div className=''>
-        <Modal.Header className=" modal-service " closeButton>
-          <Modal.Title>Mobile App Development</Modal.Title>
+        <Modal.Header closeButton>
+          <Modal.Title>Web App Development</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form onSubmit={handleSubmit}>
@@ -186,7 +203,6 @@ TechXplorers specializes in a wide range of mobile solutions including Bluetooth
                 required
               />
             </div>
-
             <div className="mb-3">
               <Form.Label className="fw-bold">
                 Email <span className="text-danger">*</span>
@@ -204,13 +220,13 @@ TechXplorers specializes in a wide range of mobile solutions including Bluetooth
             <div className="mb-3">
               <label><strong>What service do you want?</strong></label>
               <div className="d-flex flex-wrap gap-2 mt-2">
-                {[1, 2, 3, 4, 5, 6].map(num => (
+                {['Service 1', 'Service 2', 'Service 3', 'Service 4', 'Service 5', 'Service 6'].map(service => (
                   <Button
-                    key={num}
-                    variant={formData.service === `Service ${num}` ? 'primary' : 'outline-primary'}
-                    onClick={() => handleServiceSelect(`Service ${num}`)}
+                    key={service}
+                    variant={formData.service === service ? 'primary' : 'outline-primary'}
+                    onClick={() => handleServiceSelect(service)}
                   >
-                    Service {num}
+                    {service}
                   </Button>
                 ))}
               </div>
@@ -236,10 +252,9 @@ TechXplorers specializes in a wide range of mobile solutions including Bluetooth
             </Button>
           </Form>
         </Modal.Body>
-        </div>
       </Modal>
     </div>
   );
 };
 
-export default MobileAppDev;
+export default WebAppDev;

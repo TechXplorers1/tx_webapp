@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react"; // Import useEffect
+import React, { useState } from "react";
 import { useNavigate } from 'react-router-dom';
 import { FcGoogle } from "react-icons/fc";
 import { MdEmail } from "react-icons/md";
@@ -16,7 +16,7 @@ export default function SignupPage() {
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
-  const [showSuccessModal, setShowSuccessModal] = useState(false); // State for success modal
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const validatePassword = (value) => {
     if (value.length < 8) return 'Password must be at least 8 characters';
@@ -27,6 +27,7 @@ export default function SignupPage() {
     return null;
   };
 
+  // Updated handleSubmit to save user data to localStorage
   const handleSubmit = (e) => {
     e.preventDefault();
     setEmailError("");
@@ -51,17 +52,27 @@ export default function SignupPage() {
     }
 
     if (!hasError) {
-      console.log("User Registered with Email:", email);
+      // Create a new user object
+      const newUser = { email, password };
+
+      // Retrieve existing users from localStorage or initialize an empty array
+      const existingUsers = JSON.parse(localStorage.getItem('registeredUsers')) || [];
+
+      // Add the new user to the array
+      existingUsers.push(newUser);
+
+      // Save the updated array back to localStorage
+      localStorage.setItem('registeredUsers', JSON.stringify(existingUsers));
+
+      console.log("User Registered and saved to localStorage:", newUser);
       setShowSuccessModal(true);
 
-      // Automatically redirect after 3 seconds
       setTimeout(() => {
         handleCloseSuccessModal();
-      }, 3000); // 3000 milliseconds = 3 seconds
+      }, 3000);
     }
   };
 
-  // Function to close success modal and navigate
   const handleCloseSuccessModal = () => {
     setShowSuccessModal(false);
     navigate('/login');
@@ -90,12 +101,6 @@ export default function SignupPage() {
     cursor: 'pointer',
   };
 
-  const successIconStyle = {
-    color: '#28a745', // Green color for success
-    fontSize: '3rem',
-    marginBottom: '1rem',
-  };
-
   return (
     <div style={{ minHeight: "100vh", marginBottom: "3rem" }}>
       <JsNavbar />
@@ -118,7 +123,6 @@ export default function SignupPage() {
             <div className="text-center mb-3">OR</div>
 
             <Form onSubmit={handleSubmit}>
-              {/* Email Field */}
               <Form.Group className="mb-3">
                 <Form.Label style={{ fontWeight: "600", marginBottom: "6px" }}>Email</Form.Label>
                 <InputGroup>
@@ -135,7 +139,6 @@ export default function SignupPage() {
                 <Form.Control.Feedback type="invalid">{emailError}</Form.Control.Feedback>
               </Form.Group>
 
-              {/* Password Field */}
               <Form.Group className="mb-3">
                 <Form.Label style={{ fontWeight: "600", marginBottom: "6px" }}>Password</Form.Label>
                 <InputGroup>
@@ -161,7 +164,6 @@ export default function SignupPage() {
                 <Form.Control.Feedback type="invalid">{passwordError}</Form.Control.Feedback>
               </Form.Group>
 
-              {/* Confirm Password Field */}
               <Form.Group className="mb-3">
                 <Form.Label style={{ fontWeight: "600", marginBottom: "6px" }}>Confirm Password</Form.Label>
                 <InputGroup>
@@ -213,13 +215,13 @@ export default function SignupPage() {
         </Card>
       </div>
 
-      {/* Account Successfully Created Modal */}
       <Modal show={showSuccessModal} onHide={handleCloseSuccessModal} centered>
         <Modal.Body className="text-center p-4">
                   <img
                     src="https://cdn-icons-png.flaticon.com/512/845/845646.png"
                     alt="Success"
                     style={{ width: '80px' }}
+                    onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/80x80/28a745/white?text=OK'; }}
                   />
                   <h5 className="mt-3 text-success">Account successfully created!</h5>
                 </Modal.Body>

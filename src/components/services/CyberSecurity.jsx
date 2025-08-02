@@ -4,10 +4,11 @@ import '../../styles/Services/CyberSecurity.css';
 import { useNavigate } from 'react-router-dom';
 import CustomNavbar from '../Navbar';
 import { Modal, Button, Form } from 'react-bootstrap';
+import { useAuth } from '../../components/AuthContext'; // Step 1: Import useAuth
 
 const CyberSecurity = () => {
   const navigate = useNavigate();
-
+  const { isLoggedIn } = useAuth(); // Step 2: Get auth status
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
     firstName: '',
@@ -18,11 +19,14 @@ const CyberSecurity = () => {
     userType: '',
   });
 
-   const handleApplyNow = () => {
-    navigate('/services/servicesForm', { state: { service: 'Cyber Security' } });
+  // Step 3: Update the handler to check for login status
+  const handleApplyNow = () => {
+    if (isLoggedIn) {
+      navigate('/services/servicesForm', { state: { service: 'Cyber Security' } });
+    } else {
+      navigate('/login');
+    }
   };
-
-
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -40,7 +44,7 @@ const CyberSecurity = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log('Form submitted:', formData);
-    alert('Form submitted successfully!');
+    // A custom modal or toast is better than alert()
     setShowModal(false);
     setFormData({
       firstName: '',
@@ -71,7 +75,7 @@ const CyberSecurity = () => {
     {
       title: 'Our Cyber Security Process',
       description: (
-  <p>Our approach begins with a thorough <b>Security Assessment</b> to understand your current posture. This is followed by <b>Risk Analysis & Planning</b> to prioritize threats and define mitigation strategies. Next, we move to <b>Implementation & Hardening</b> of systems and policies, ensuring robust protection. Continuous <b>Monitoring, Detection & Response</b> keeps your environment secure, supported by regular <b>Audits & Compliance Reporting</b> to meet industry standards.
+        <p>Our approach begins with a thorough <b>Security Assessment</b> to understand your current posture. This is followed by <b>Risk Analysis & Planning</b> to prioritize threats and define mitigation strategies. Next, we move to <b>Implementation & Hardening</b> of systems and policies, ensuring robust protection. Continuous <b>Monitoring, Detection & Response</b> keeps your environment secure, supported by regular <b>Audits & Compliance Reporting</b> to meet industry standards.
 
 </p>
       ),
@@ -158,13 +162,13 @@ const CyberSecurity = () => {
             <div className="mb-3">
               <label><strong>What service do you want?</strong></label>
               <div className="d-flex flex-wrap gap-2 mt-2">
-                {[1, 2, 3, 4, 5, 6].map(num => (
+                {['Service 1', 'Service 2', 'Service 3', 'Service 4', 'Service 5', 'Service 6'].map(service => (
                   <Button
-                    key={num}
-                    variant={formData.service === `Service ${num}` ? 'primary' : 'outline-primary'}
-                    onClick={() => handleServiceSelect(`Service ${num}`)}
+                    key={service}
+                    variant={formData.service === service ? 'primary' : 'outline-primary'}
+                    onClick={() => handleServiceSelect(service)}
                   >
-                    Service {num}
+                    {service}
                   </Button>
                 ))}
               </div>

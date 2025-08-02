@@ -3,9 +3,11 @@ import img1 from '../../assets/JobApply.png';
 import '../../styles/Services/MobileAppDev.css'; // Reusing MobileAppDev styles
 import { useNavigate } from 'react-router-dom';
 import CustomNavbar from '../Navbar';
+import { useAuth } from '../../components/AuthContext'; // Step 1: Import useAuth
 
 const JobSupport = () => {
   const navigate = useNavigate();
+  const { isLoggedIn } = useAuth(); // Step 2: Get auth status
 
   const cardsData = [
     {
@@ -63,9 +65,13 @@ Our comprehensive job support services are designed to assist IT professionals i
     }
   ];
 
-    // This function correctly navigates to the JobSupportContactForm.
+  // Step 3: Update the handler to check for login status
   const handleRegisterNow = () => {
-    navigate('/services/job-contact-form');
+    if (isLoggedIn) {
+      navigate('/services/job-contact-form');
+    } else {
+      navigate('/login');
+    }
   };
 
   return (
@@ -97,9 +103,6 @@ Our comprehensive job support services are designed to assist IT professionals i
           ))}
         </div>
       
-
-   
-
         {/* Embedded YouTube video */}
         <div className="contact-container">
           <h2 className="headline">To know more - Watch the video</h2>
