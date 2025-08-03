@@ -70,13 +70,14 @@ const ServicesForm = () => {
         };
 
         // Retrieve existing clients from localStorage, or initialize an empty array
-        const existingClients = JSON.parse(localStorage.getItem('registeredClients')) || [];
+        const existingClients = JSON.parse(localStorage.getItem('clients')) || [];
         
+        const updatedClients = [...existingClients, newClient];
         // Add the new client
-        existingClients.push(newClient);
+        
         
         // Save back to localStorage
-        localStorage.setItem('registeredClients', JSON.stringify(existingClients));
+        localStorage.setItem('clients', JSON.stringify(updatedClients));
 
         console.log('Form submitted and saved to localStorage:', newClient);
         setShowSuccessModal(true);

@@ -2,50 +2,16 @@ import React, {useState, useEffect } from 'react';
 
 const EmployeeManagement = () => {
   // --- Employee Management States ---
-  const [employees, setemployees] = useState([
-  { 
-        id: 1, name: 'Admin employee', workEmail: 'admin@techxplorers.in', roles: ['admin', 'active', 'Management'],
-        firstName: "Admin", lastName: "employee", gender: "Male", dateOfBirth: "1985-05-20", maritalStatus: "Married",
-        personalNumber: "9876543210", alternativeNumber: "8765432109", country: "India", state: "Telangana",
-        city: "Hyderabad", address: "123 Tech Park, Hitech City", zipcode: "500081", dateOfJoin: "2020-01-15",
-        personalEmail: "admin.personal@email.com"
-    },
-    { 
-        id: 2, name: 'Sarah Wilson', workEmail: 'manager@techxplorers.in', roles: ['manager', 'active', 'Management'],
-        firstName: "Sarah", lastName: "Wilson", gender: "Female", dateOfBirth: "1988-11-10", maritalStatus: "Single",
-        personalNumber: "9123456780", alternativeNumber: "", country: "USA", state: "California",
-        city: "San Francisco", address: "456 Bay Area", zipcode: "94105", dateOfJoin: "2021-03-22",
-        personalEmail: "sarah.wilson@email.com"
-    },
-    { 
-        id: 3, name: 'Michael Johnson', workEmail: 'teamlead@techxplorers.in', roles: ['team lead', 'active', 'Tech Placement'],
-        firstName: "Michael", lastName: "Johnson", gender: "Male", dateOfBirth: "1992-02-25", maritalStatus: "Single",
-        personalNumber: "8123456789", alternativeNumber: "7123456789", country: "UK", state: "London",
-        city: "London", address: "789 Tech Street", zipcode: "SW1A 0AA", dateOfJoin: "2022-07-01",
-        personalEmail: "michael.j@email.com"
-    },
-    { 
-        id: 4, name: 'Asset Manager', workEmail: 'assets@techxplorers.in', roles: ['asset manager', 'active', 'Operations'],
-        firstName: "Asset", lastName: "Manager", gender: "Other", dateOfBirth: "1990-01-01", maritalStatus: "Single",
-        personalNumber: "1234509876", alternativeNumber: "", country: "Canada", state: "Ontario",
-        city: "Toronto", address: "101 Operations Ave", zipcode: "M5H 2N2", dateOfJoin: "2021-06-18",
-        personalEmail: "asset.mgr@email.com"
-    },
-    { 
-        id: 5, name: 'John Employee', workEmail: 'employee@techxplorers.in', roles: ['employee', 'active', 'Development'],
-        firstName: "John", lastName: "Employee", gender: "Male", dateOfBirth: "1995-09-15", maritalStatus: "Married",
-        personalNumber: "7890123456", alternativeNumber: "", country: "Australia", state: "New South Wales",
-        city: "Sydney", address: "22 Dev Lane", zipcode: "2000", dateOfJoin: "2023-01-20",
-        personalEmail: "john.emp@email.com"
-    },
-  ]);
+  const [employees, setEmployees] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false);
   const [isEditEmployeeModalOpen, setIsEditEmployeeModalOpen] = useState(false);
   const [isDeleteConfirmModalOpen, setIsDeleteConfirmModalOpen] = useState(false);
   const [employeeToDeleteId, setEmployeeToDeleteId] = useState(null);
   const [currentEmployeeToEdit, setCurrentEmployeeToEdit] = useState(null);
-  const [newemployee, setNewemployee] = useState({
+  const [newEmployee, setNewEmployee] = useState({
     workEmail: '',
     role: 'employee',
     department: 'No department assigned',
@@ -72,25 +38,25 @@ const EmployeeManagement = () => {
   const [pendingEmployeeUpdate, setPendingEmployeeUpdate] = useState(null);
   const [employeeToDeleteDetails, setEmployeeToDeleteDetails] = useState(null);
 
-  // Mock department data for dropdowns
-  // Department Management States
-   const [departments, setDepartments] = useState([
-     { id: 1, name: 'Management', description: 'Executive and senior management team', head: 'Sarah Wilson', employees: 5, status: 'active', createdDate: '15/01/2023' },
-     { id: 2, name: 'Development', description: 'Software development and engineering', head: 'Michael Johnson', employees: 12, status: 'active', createdDate: '15/01/2023' },
-     { id: 3, name: 'Design', description: 'UI/UX design and creative services', head: 'Not assigned', employees: 6, status: 'active', createdDate: '15/01/2023' },
-     { id: 4, name: 'Marketing', description: 'Marketing and brand management', head: 'Not assigned', employees: 8, status: 'active', createdDate: '15/01/2023' },
-     { id: 5, name: 'Sales', description: 'Sales and business development', head: 'Not assigned', employees: 10, status: 'active', createdDate: '15/01/2023' },
-     { id: 6, name: 'Operations', description: 'Operations and process management', head: 'Not assigned', employees: 7, status: 'active', createdDate: '15/01/2023' },
-     { id: 7, name: 'Finance', description: 'Financial planning and accounting', head: 'Not assigned', employees: 4, status: 'active', createdDate: '15/01/2023' },
-     { id: 8, name: 'Support', description: 'Customer support and service', head: 'Not assigned', employees: 9, status: 'active', createdDate: '15/01/2023' },
-     { id: 9, name: 'Quality Assurance', description: 'Quality testing and assurance', head: 'Not assigned', employees: 5, status: 'active', createdDate: '15/01/2023' },
-     { id: 10, name: 'Tech Placement', description: 'Technology recruitment and placement', head: 'Michael Johnson', employees: 8, status: 'active', createdDate: '15/01/2023' },
-     { id: 11, name: 'HR', description: 'Human resources and talent management', head: 'Not assigned', employees: 3, status: 'active', createdDate: '15/01/2023' },
-     { id: 12, name: 'External', description: 'External clients and partners', head: 'Not assigned', employees: 0, status: 'active', createdDate: '15/01/2023' },
-   ]);
-  const departmentOptions = departments.map(d => d.name);
+    // Department Management States
+    const [departments, setDepartments] = useState([
+      { id: 1, name: 'Management', description: 'Executive and senior management team', head: 'Sarah Wilson', employees: 5, status: 'active', createdDate: '15/01/2023' },
+      { id: 2, name: 'Development', description: 'Software development and engineering', head: 'Michael Johnson', employees: 12, status: 'active', createdDate: '15/01/2023' },
+      { id: 3, name: 'Design', description: 'UI/UX design and creative services', head: 'Not assigned', employees: 6, status: 'active', createdDate: '15/01/2023' },
+      { id: 4, name: 'Marketing', description: 'Marketing and brand management', head: 'Not assigned', employees: 8, status: 'active', createdDate: '15/01/2023' },
+      { id: 5, name: 'Sales', description: 'Sales and business development', head: 'Not assigned', employees: 10, status: 'active', createdDate: '15/01/2023' },
+      { id: 6, name: 'Operations', description: 'Operations and process management', head: 'Not assigned', employees: 7, status: 'active', createdDate: '15/01/2023' },
+      { id: 7, name: 'Finance', description: 'Financial planning and accounting', head: 'Not assigned', employees: 4, status: 'active', createdDate: '15/01/2023' },
+      { id: 8, name: 'Support', description: 'Customer support and service', head: 'Not assigned', employees: 9, status: 'active', createdDate: '15/01/2023' },
+      { id: 9, name: 'Quality Assurance', description: 'Quality testing and assurance', head: 'Not assigned', employees: 5, status: 'active', createdDate: '15/01/2023' },
+      { id: 10, name: 'Tech Placement', description: 'Technology recruitment and placement', head: 'Michael Johnson', employees: 8, status: 'active', createdDate: '15/01/2023' },
+      { id: 11, name: 'HR', description: 'Human resources and talent management', head: 'Not assigned', employees: 3, status: 'active', createdDate: '15/01/2023' },
+      { id: 12, name: 'External', description: 'External clients and partners', head: 'Not assigned', employees: 0, status: 'active', createdDate: '15/01/2023' },
+    ]);
+
+    const departmentOptions = departments.map(d => d.name);
   departmentOptions.unshift('No department assigned');
-  
+
   const roleOptions = [
     { value: 'Administrator', label: 'Administrator', description: 'Full system access and employee management' },
     { value: 'Manager', label: 'Manager', description: 'Manages teams and oversees operations' },
@@ -113,13 +79,59 @@ const EmployeeManagement = () => {
     (employee.roles || []).some(role => (role || '').toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+   useEffect(() => {
+          const loadEmployees = async () => {
+              try {
+                  const savedEmployees = localStorage.getItem('employees');
+                  if (savedEmployees && JSON.parse(savedEmployees).length > 0) {
+                      setEmployees(JSON.parse(savedEmployees));
+                  } else {
+                      const response = await fetch('/employees.json');
+                      if (!response.ok) {
+                          throw new Error('Network response was not ok');
+                      }
+                      const data = await response.json();
+                      setEmployees(data);
+                  }
+              } catch (err) {
+                  setError(err.message);
+                  console.error("Failed to load employees:", err);
+              } finally {
+                  setLoading(false);
+              }
+          };
+          loadEmployees();
+      }, []);
+  
+      useEffect(() => {
+          if (!loading && employees.length > 0) {
+              localStorage.setItem('employees', JSON.stringify(employees));
+          }
+      }, [employees, loading]);
+  
+      useEffect(() => {
+          const handleStorageChange = (event) => {
+              if (event.key === 'employees' && event.newValue) {
+                  try {
+                      setEmployees(JSON.parse(event.newValue));
+                  } catch (error) {
+                      console.error("Failed to parse employees from storage event", error);
+                  }
+              }
+          };
+          window.addEventListener('storage', handleStorageChange);
+          return () => {
+              window.removeEventListener('storage', handleStorageChange);
+          };
+      }, []);
+
   const handleAddEmployeeClick = () => {
     setIsAddEmployeeModalOpen(true);
   };
 
   const handleCloseAddEmployeeModal = () => {
     setIsAddEmployeeModalOpen(false);
-    setNewemployee({
+    setNewEmployee({
           role: 'employee',
       workEmail: '',
       department: 'No department assigned',
@@ -144,7 +156,7 @@ const EmployeeManagement = () => {
 
    const handleNewemployeeChange = (e) => {
     const { name, value } = e.target;
-    setNewemployee(prevemployee => ({
+    setNewEmployee(prevemployee => ({
       ...prevemployee,
       [name]: value
     }));
@@ -161,43 +173,44 @@ const EmployeeManagement = () => {
 
 
 
-  const handleCreateemployeeAccount = (e) => {
+  const handleCreateEmployeeAccount = (e) => {
     e.preventDefault();
-    const newemployeeId = employees.length > 0 ? Math.max(...employees.map(u => u.id)) + 1 : 1;
-    const newRoles = [newemployee.role.toLowerCase()];
-    if (newemployee.accountStatus.toLowerCase() === 'active') {
+    const newEmployeeId = employees.length > 0 ? Math.max(...employees.map(u => u.id)) + 1 : 1;
+    const newRoles = [newEmployee.role.toLowerCase()];
+    if (newEmployee.accountStatus.toLowerCase() === 'active') {
       newRoles.push('active');
-    } else if (newemployee.accountStatus.toLowerCase() === 'inactive') {
+    } else if (newEmployee.accountStatus.toLowerCase() === 'inactive') {
       newRoles.push('inactive');
-    } else if (newemployee.accountStatus.toLowerCase() === 'pending') {
+    } else if (newEmployee.accountStatus.toLowerCase() === 'pending') {
       newRoles.push('pending');
     }
-    if (newemployee.department !== 'No department assigned') {
-      newRoles.push(newemployee.department.toLowerCase());
+    if (newEmployee.department !== 'No department assigned') {
+      newRoles.push(newEmployee.department.toLowerCase());
     }
-    setemployees(prevemployees => [
+    setEmployees(prevemployees => [
       ...prevemployees,
        {
-        id: newemployeeId,
-    firstName: newemployee.firstName,
-    lastName: newemployee.lastName,
-    gender: newemployee.gender,
-    dateOfBirth: newemployee.dateOfBirth,
-    maritalStatus: newemployee.maritalStatus,
-    personalNumber: newemployee.personalNumber,
-    alternativeNumber: newemployee.alternativeNumber,
-    personalEmail: newemployee.personalEmail,
-    workEmail: newemployee.workEmail,
-    country: newemployee.country,
-    state: newemployee.state,
-    city: newemployee.city,
-    address: newemployee.address,
-    zipcode: newemployee.zipcode,
-    role: newemployee.role || 'employee',
-    department: newemployee.department || 'No department assigned',
-    accountStatus: newemployee.accountStatus || 'Active',
-    dateOfJoin: newemployee.dateOfJoin || '',
-    temporaryPassword: newemployee.temporaryPassword || '',
+        id: newEmployeeId,
+    firstName: newEmployee.firstName,
+    lastName: newEmployee.lastName,
+    gender: newEmployee.gender,
+    dateOfBirth: newEmployee.dateOfBirth,
+    maritalStatus: newEmployee.maritalStatus,
+    personalNumber: newEmployee.personalNumber,
+    alternativeNumber: newEmployee.alternativeNumber,
+    personalEmail: newEmployee.personalEmail,
+    workEmail: newEmployee.workEmail,
+    country: newEmployee.country,
+    state: newEmployee.state,
+    city: newEmployee.city,
+    address: newEmployee.address,
+    zipcode: newEmployee.zipcode,
+    status: 'Awaiting',
+    role: newEmployee.role || 'employee',
+    department: newEmployee.department || 'No department assigned',
+    accountStatus: newEmployee.accountStatus || 'Active',
+    dateOfJoin: newEmployee.dateOfJoin || '',
+    temporaryPassword: newEmployee.temporaryPassword || '',
     roles: newRoles,
       }
     ]);
@@ -294,7 +307,7 @@ const EmployeeManagement = () => {
   };
 
   const confirmEmployeeUpdate = () => {
-    setemployees(prev => prev.map(employee => {
+    setEmployees(prev => prev.map(employee => {
       if (employee.id === pendingEmployeeUpdate.id) {
         const updatedRoles = [
             pendingEmployeeUpdate.role.toLowerCase(), 
@@ -344,10 +357,11 @@ const EmployeeManagement = () => {
   };
   
   const handleConfirmDelete = () => {
-      setemployees(employees.filter(employee => employee.id !== employeeToDeleteDetails.id));
+      setEmployees(employees.filter(employee => employee.id !== employeeToDeleteDetails.id));
       setIsConfirmUpdateModalOpen(false);
       setEmployeeToDeleteDetails(null);
   };
+  
 
   const getInitials = (name) => {
     if (!name) return '';
@@ -827,7 +841,7 @@ const EmployeeManagement = () => {
               </div>
               <button className="modal-close-btn" onClick={handleCloseAddEmployeeModal}>&times;</button>
             </div>
-            <form className="modal-form" onSubmit={handleCreateemployeeAccount}>
+            <form className="modal-form" onSubmit={handleCreateEmployeeAccount}>
               {/* Personal Info */}
               <div className="section-title">Personal Information</div>
               <div className="form-group">
@@ -838,7 +852,7 @@ const EmployeeManagement = () => {
                   name="firstName"
                   className="form-input"
                   placeholder="Enter first name"
-                  value={newemployee.firstName}
+                  value={newEmployee.firstName}
                   onChange={handleNewemployeeChange}
                   required
                 />
@@ -851,7 +865,7 @@ const EmployeeManagement = () => {
                   name="lastName"
                   className="form-input"
                   placeholder="Enter first name"
-                  value={newemployee.lastName}
+                  value={newEmployee.lastName}
                   onChange={handleNewemployeeChange}
                   required
                 />
@@ -865,7 +879,7 @@ const EmployeeManagement = () => {
                   name="dateOfBirth"
                   className="form-input"
                   placeholder="Enter Your DOB"
-                  value={newemployee.dateOfBirth}
+                  value={newEmployee.dateOfBirth}
                   onChange={handleNewemployeeChange}
                   required
                 />
@@ -876,7 +890,7 @@ const EmployeeManagement = () => {
                   id="gender"
                   name="gender"
                   className="form-select"
-                  value={newemployee.gender}
+                  value={newEmployee.gender}
                   onChange={handleNewemployeeChange}
                 >
                   <option value="">Select...</option>
@@ -893,7 +907,7 @@ const EmployeeManagement = () => {
                   id="maritalStatus"
                   name="maritalStatus"
                   className="form-select"
-                  value={newemployee.maritalStatus}
+                  value={newEmployee.maritalStatus}
                   onChange={handleNewemployeeChange}
                 >
                   <option value="">Select...</option>
@@ -914,7 +928,7 @@ const EmployeeManagement = () => {
                   name="personalNumber"
                   className="form-input"
                   placeholder="Enter personal phone"
-                  value={newemployee.personalNumber}
+                  value={newEmployee.personalNumber}
                   onChange={handleNewemployeeChange}
                 />
               </div>
@@ -927,7 +941,7 @@ const EmployeeManagement = () => {
                   name="alternativeNumber"
                   className="form-input"
                   placeholder="Enter alternative phone"
-                  value={newemployee.alternativeNumber}
+                  value={newEmployee.alternativeNumber}
                   onChange={handleNewemployeeChange}
                 />
               </div>
@@ -940,7 +954,7 @@ const EmployeeManagement = () => {
                   name="personalEmail"
                   className="form-input"
                   placeholder="Enter personal email"
-                  value={newemployee.personalEmail}
+                  value={newEmployee.personalEmail}
                   onChange={handleNewemployeeChange}
                 />
               </div>
@@ -952,7 +966,7 @@ const EmployeeManagement = () => {
                   name="workEmail"
                   className="form-input"
                   placeholder="Enter work email"
-                  value={newemployee.workEmail}
+                  value={newEmployee.workEmail}
                   onChange={handleNewemployeeChange}
                 />
               </div>
@@ -965,7 +979,7 @@ const EmployeeManagement = () => {
                   className="form-input"
                   placeholder="Enter address"
                   rows="2"
-                  value={newemployee.address}
+                  value={newEmployee.address}
                   onChange={handleNewemployeeChange}
                 />
               </div>
@@ -978,7 +992,7 @@ const EmployeeManagement = () => {
                   name="city"
                   className="form-input"
                   placeholder="Enter city"
-                  value={newemployee.city}
+                  value={newEmployee.city}
                   onChange={handleNewemployeeChange}
                 />
               </div>
@@ -991,7 +1005,7 @@ const EmployeeManagement = () => {
                   name="state"
                   className="form-input"
                   placeholder="Enter state"
-                  value={newemployee.state}
+                  value={newEmployee.state}
                   onChange={handleNewemployeeChange}
                 />
               </div>
@@ -1004,7 +1018,7 @@ const EmployeeManagement = () => {
                   name="zipcode"
                   className="form-input"
                   placeholder="Enter zip code"
-                  value={newemployee.zipcode}
+                  value={newEmployee.zipcode}
                   onChange={handleNewemployeeChange}
                 />
               </div>
@@ -1017,7 +1031,7 @@ const EmployeeManagement = () => {
                   name="country"
                   className="form-input"
                   placeholder="Enter country"
-                  value={newemployee.country}
+                  value={newEmployee.country}
                   onChange={handleNewemployeeChange}
                 />
               </div>
@@ -1030,7 +1044,7 @@ const EmployeeManagement = () => {
                   id="role"
                   name="role"
                   className="form-select"
-                  value={newemployee.role}
+                  value={newEmployee.role}
                   onChange={handleNewemployeeChange}
                   required
                 >
@@ -1041,7 +1055,7 @@ const EmployeeManagement = () => {
                   ))}
                 </select>
                 <p className="role-description">
-                  {roleOptions.find(option => option.value === newemployee.role)?.description}
+                  {roleOptions.find(option => option.value === newEmployee.role)?.description}
                 </p>
               </div>
               <div className="form-group">
@@ -1050,7 +1064,7 @@ const EmployeeManagement = () => {
                   id="department"
                   name="department"
                   className="form-select"
-                  value={newemployee.department}
+                  value={newEmployee.department}
                   onChange={handleNewemployeeChange}
                 >
                   {departmentOptions.map(option => (
@@ -1066,7 +1080,7 @@ const EmployeeManagement = () => {
                   id="accountStatus"
                   name="accountStatus"
                   className="form-select"
-                  value={newemployee.accountStatus}
+                  value={newEmployee.accountStatus}
                   onChange={handleNewemployeeChange}
                 >
                   {accountStatusOptions.map(option => (
@@ -1085,7 +1099,7 @@ const EmployeeManagement = () => {
                     name="temporaryPassword"
                     className="form-input"
                     placeholder="Enter temporary password"
-                    value={newemployee.temporaryPassword}
+                    value={newEmployee.temporaryPassword}
                     onChange={handleNewemployeeChange}
                     required
                   />

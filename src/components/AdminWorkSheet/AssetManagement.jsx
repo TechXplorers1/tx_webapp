@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const AssetManagement = () => {
   // --- Asset Management States ---
@@ -16,14 +16,47 @@ const AssetManagement = () => {
     { id: 3, assetId: 3, employeeId: 3, assignedDate: '2024-05-04', reason: 'Team lead mobile device' },
   ]);
 
-  // Employee state is needed for assignment dropdowns
-  const [employees, setEmployees] = useState([
-    { id: 1, name: 'Admin employee', email: 'admin@techxplorers.in', roles: ['admin', 'active', 'management'] },
-    { id: 2, name: 'Sarah Wilson', email: 'sarah.wilson@example.com', roles: ['manager', 'active', 'management'] },
-    { id: 3, name: 'Michael Johnson', email: 'michael.j@example.com', roles: ['team lead', 'active', 'tech placement'] },
-    { id: 4, name: 'Asset Manager', email: 'asset.mgr@email.com', roles: ['asset manager', 'active', 'operations'] },
-    { id: 5, name: 'John Employee', email: 'john.emp@email.com', roles: ['employee', 'active', 'development'] },
-  ]);
+   // MODIFIED: Initialize employees state as empty. It will be loaded from localStorage or JSON.
+  const [employees, setEmployees] = useState([]);
+  
+  // NEW: Add loading and error states for the data fetch.
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+ // NEW: useEffect to load employees from localStorage or fetch from employees.json
+  useEffect(() => {
+    const loadEmployees = async () => {
+      try {
+        const savedEmployees = localStorage.getItem('employees');
+        if (savedEmployees && JSON.parse(savedEmployees).length > 0) {
+          setEmployees(JSON.parse(savedEmployees));
+        } else {
+          const response = await fetch('/employees.json'); // Assumes employees.json is in the /public folder
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          const data = await response.json();
+          setEmployees(data);
+        }
+      } catch (err) {
+        setError(err.message);
+        console.error("Failed to load employees:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadEmployees();
+  }, []);
+
+  // NEW: useEffect to save employee data to localStorage whenever it changes
+  useEffect(() => {
+    if (!loading && employees.length > 0) {
+      localStorage.setItem('employees', JSON.stringify(employees));
+    }
+  }, [employees, loading]);
+
+
 
   // Modal and Search States
   const [isAssignAssetModalOpen, setIsAssignAssetModalOpen] = useState(false);
@@ -460,7 +493,7 @@ const AssetManagement = () => {
                 <select id="employeeId" name="employeeId" className="form-select" value={newAssignment.employeeId} onChange={handleNewAssignmentChange} required>
                   <option value="">Choose a user</option>
                   {employees.map(employee => (
-                    <option key={employee.id} value={employee.id}>{employee.name} ({employee.email})</option>
+                    <option key={employee.id} value={employee.id}>{employee.firstName} ({employee.personalEmail})</option>
                   ))}
                 </select>
               </div>

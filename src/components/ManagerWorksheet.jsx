@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react'; // Import useRef
+import { useNavigate } from 'react-router-dom';
+import { Modal,Button } from 'react-bootstrap'; // Using react-bootstrap Modal
+
 
 const ManagerWorkSheet = () => {
+
+   const navigate = useNavigate();
   // State to manage the current theme: 'light' or 'dark'
   const [theme, setTheme] = useState(() => {
     // Initialize theme from local storage or default to 'light'
@@ -12,7 +17,7 @@ const ManagerWorkSheet = () => {
   const [activeTab, setActiveTab] = useState('Assignments'); // Default to 'Assignments'
 
   // State for logged-in user's name and avatar initial
-  const [userName, setUserName] = useState('Sreenivasulu'); // Changed from Balaji to Chaveen
+  const [userName, setUserName] = useState('Manager'); // Changed from Balaji to Chaveen
   const [userAvatarLetter, setUserAvatarLetter] = useState('C'); // Derived from userName
 
   // NEW STATE: State to control the visibility of the profile dropdown
@@ -32,12 +37,65 @@ const ManagerWorkSheet = () => {
   // NEW STATE: For User Profile Edit Modal
   const [isUserProfileModalOpen, setIsUserProfileModalOpen] = useState(false);
   const [userProfile, setUserProfile] = useState({
-    name: 'Sreenivasulu',
+    name: 'Manager',
     employeeId: 'MNG001',
-    email: 'sreenivasulu@techxplorers.com',
+    email: 'manager@techxplorers.com',
     mobile: '+91 98765 43210',
     lastLogin: '2025-07-15 10:30 AM',
   });
+
+   // NEW: useEffect to get logged-in user data from sessionStorage
+    useEffect(() => {
+      const loggedInUserData = sessionStorage.getItem('loggedInEmployee');
+      if (loggedInUserData) {
+          const userData = JSON.parse(loggedInUserData);
+          // Update the state with the details of the logged-in employee
+          setUserName(userData.name);
+          setUserProfile(prevDetails => ({
+              ...prevDetails, // Keep other default details if needed
+              name: userData.name,
+              email: userData.email,
+          }));
+      } else {
+          // Optional: If no user data is found, you can redirect to the login page
+          // This prevents users from accessing this page directly without logging in.
+          // Uncomment the line below to enable redirection.
+          // navigate('/'); 
+      }
+    }, [navigate]);
+
+  useEffect(() => {
+        const loadAllEmployees = async () => {
+            try {
+                const savedEmployees = localStorage.getItem('employees');
+                if (savedEmployees && JSON.parse(savedEmployees).length > 0) {
+                    setAllEmployees(JSON.parse(savedEmployees));
+                } else {
+                    // Fallback to fetch if localStorage is empty
+                    const response = await fetch('/employees.json');
+                    if (!response.ok) throw new Error("Could not fetch employees");
+                    const data = await response.json();
+                    setAllEmployees(data);
+                }
+            } catch (error) {
+                console.error("Failed to load employees:", error);
+            }
+        };
+        loadAllEmployees();
+    }, []);
+
+    useEffect(() => {
+    // ... (existing code for loading loggedInUserData and allEmployees) ...
+
+    // MODIFIED: Load both unassigned AND assigned clients from localStorage
+    const savedAssignedClients = JSON.parse(localStorage.getItem('manager_assigned_clients')) || initialAssignedClientsData;
+    const savedUnassignedClients = JSON.parse(localStorage.getItem('manager_unassigned_clients')) || initialUnassignedClientsData; // Assuming initial data for both for now
+    
+    setAssignedClients(savedAssignedClients);
+    setUnassignedClients(savedUnassignedClients);
+
+  }, []);
+
   // State to manage editable profile fields
   const [editableProfile, setEditableProfile] = useState({});
   // NEW: State to control if user profile fields are editable
@@ -103,6 +161,10 @@ const ManagerWorkSheet = () => {
   const [clientToEdit, setClientToEdit] = useState(null);
   // NEW: State to control if user profile fields are editable
   const [isEditingClient, setIsEditingClient] = useState(false);
+
+  // Add these states near your other useState declarations
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   // NEW: State for LLM response and loading status
   const [llmResponse, setLlmResponse] = useState('');
@@ -203,6 +265,15 @@ const ManagerWorkSheet = () => {
   ];
 
 
+// Add this helper function inside your ManagerWorkSheet component
+  const getInitials = (name) => {
+    if (!name || typeof name !== 'string') return ''; // Safety check
+    const parts = name.split(' ').filter(Boolean); // Filter out empty strings
+    if (parts.length === 0) return '';
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0].charAt(0) + (parts[parts.length - 1].charAt(0) || '')).toUpperCase();
+  };
+
   // State variables for dynamic data
 // 2. REPLACE your 'useState' for unassignedClients with this new logic
 const [unassignedClients, setUnassignedClients] = useState(() => {
@@ -223,6 +294,7 @@ const [unassignedClients, setUnassignedClients] = useState(() => {
 }); 
  const [assignedClients, setAssignedClients] = useState(initialAssignedClientsData);
   const [employees, setEmployees] = useState(baseDummyEmployees); // Initialize with base, counts will be updated
+  const [allEmployees, setAllEmployees] = useState([]);
   const [interviewData, setInterviewData] = useState(initialInterviewData);
   const [applicationData, setApplicationData] = useState([]); // Initialize as empty, will be populated by useEffect
 
@@ -1110,93 +1182,81 @@ useEffect(() => {
   };
 
 
-  // Handler for "Assign Client" or "Reassign Client" button submission
+ // Handler for "Assign Client" or "Reassign Client" button submission
   const handleAssignmentSubmit = () => {
-    // Determine if it's a new assignment or a reassignment
     const isReassignment = !!clientToReassign;
     const clientToProcess = isReassignment ? clientToReassign : selectedClientToAssign;
 
     if (!clientToProcess || !selectedEmployee) {
-      console.error('Please select both a client and an employee before assigning/reassigning.');
+      alert('Please select an employee.');
       return;
     }
 
-    // Find the selected new employee
-    const newAssignedEmployee = employees.find(emp => emp.id === parseInt(selectedEmployee));
-
-    if (!newAssignedEmployee) {
-      console.error('Selected employee not found.');
+    const employeeInfo = allEmployees.find(emp => emp.id === parseInt(selectedEmployee));
+    if (!employeeInfo) {
+      alert('Selected employee not found.');
       return;
     }
+    const employeeFullName = `${employeeInfo.firstName} ${employeeInfo.lastName}`;
+    const assignmentDate = new Date().toISOString().slice(0, 10);
+
+    // --- LOGIC for Manager's own state and localStorage ---
+    let updatedAssignedClients;
+    let updatedUnassignedClients;
+
+    // Create a comprehensive client object with all necessary fields for the manager's view
+    const newAssignedClient = {
+        ...clientToProcess,
+        assignedTo: employeeFullName,
+        status: 'assigned', // Status for the manager's "Total assigned Clients" view
+        assignedDate: assignmentDate,
+        priority: assignmentPriority, // Add priority from the modal's state
+        // Add additional fields for consistent display in the "Total assigned Clients" table
+        clientName: clientToProcess.name || `${clientToProcess.firstName} ${clientToProcess.lastName}`,
+        position: clientToProcess.jobsApplyFor || 'Not specified',
+        salary: clientToProcess.expectedSalary ? `$${clientToProcess.currentSalary} - $${clientToProcess.expectedSalary}`: 'Not specified',
+        company: clientToProcess.currentCompany || 'Not specified',
+        location: clientToProcess.address ? clientToProcess.address.split(',').slice(-2).join(', ').trim() : 'Not specified',
+    };
 
     if (isReassignment) {
       // Reassignment Logic
-      const originalAssignedToName = clientToProcess.assignedTo;
-      // No need to find originalEmployee here, as the useEffect will handle count updates.
-
-      // 1. Update assignedClients state: change assignedTo, priority, notes
-      setAssignedClients(prevAssigned => prevAssigned.map(client =>
+      updatedAssignedClients = assignedClients.map(client =>
         client.id === clientToProcess.id
-          ? {
-              ...client,
-              assignedTo: newAssignedEmployee.name,
-              priority: assignmentPriority,
-              assignmentNotes: assignmentNotes, // Add assignmentNotes to assigned client
-              assignedDate: new Date().toISOString().slice(0, 10), // Update date on reassignment
-            }
+          ? { ...client, assignedTo: employeeFullName, assignedDate: assignmentDate, priority: assignmentPriority }
           : client
-      ));
-
-      // The useEffect for `employees` state will handle the count update automatically
-      // based on the new `assignedClients` state.
-
-      console.log('Reassigned Client:', clientToProcess.clientName);
-      console.log('From Employee:', originalAssignedToName);
-      console.log('To Employee:', newAssignedEmployee.name);
+      );
+      setSuccessMessage(`Successfully reassigned ${clientToProcess.clientName} to ${employeeFullName}.`);
       closeReassignClientModal();
-
     } else {
       // New Assignment Logic
-      // 1. Remove client from unassignedClients
-      setUnassignedClients(prevClients => prevClients.filter(
-        client => client.id !== clientToProcess.id
-      ));
-
-         // --- FIX IS HERE ---
-    // Safely access properties that might be different between client objects
-    const clientName = clientToProcess.name || `${clientToProcess.firstName || ''} ${clientToProcess.lastName || ''}`.trim();
-    const clientSkills = clientToProcess.skills || clientToProcess.technologySkills || []; // Safely get the skills array
-    const clientSalary = clientToProcess.salary || `$${clientToProcess.expectedSalary || 'N/A'}`;
-
-      // 2. Add client to assignedClients
-      const newAssignedClient = {
-          id: clientToProcess.id, 
-      clientName: clientName,
-      location: clientToProcess.remote ? 'Remote' : 'On-site',
-      position: clientSkills[0] || 'N/A', // *** SAFELY access the first skill ***
-      salary: clientSalary,
-      company: 'Client Company',
-      assignedTo: newAssignedEmployee.name,
-      priority: assignmentPriority,
-      status: 'applied',
-      assignedDate: new Date().toISOString().slice(0, 10),
-      assignmentNotes: assignmentNotes,
-      platform: 'Manual Entry',
-      jobId: 'N/A',
-      appliedDate: new Date().toISOString().slice(0, 10),
-    };
-      setAssignedClients(prevAssigned => [...prevAssigned, newAssignedClient]);
-
-      // The useEffect for `employees` state will handle the count update automatically
-      // based on the new `assignedClients` state.
-
-      console.log('Assigning Client:', clientToProcess.name);
-      console.log('To Employee:', newAssignedEmployee.name);
-      console.log('Priority:', assignmentPriority);
-      console.log('Notes:', assignmentNotes);
-
+      updatedAssignedClients = [...assignedClients, newAssignedClient];
+      updatedUnassignedClients = unassignedClients.filter(c => c.id !== clientToProcess.id);
+      
+      setUnassignedClients(updatedUnassignedClients);
+      localStorage.setItem('manager_unassigned_clients', JSON.stringify(updatedUnassignedClients));
+      
+      setSuccessMessage(`Successfully assigned ${newAssignedClient.clientName} to ${employeeFullName}.`);
       closeAssignClientModal();
     }
+
+    setAssignedClients(updatedAssignedClients);
+    localStorage.setItem('manager_assigned_clients', JSON.stringify(updatedAssignedClients));
+    
+    // --- LOGIC to send client to EmployeeData page ---
+    const employeeNewClients = JSON.parse(localStorage.getItem('employee_new_clients')) || [];
+    if (!employeeNewClients.some(c => c.id === clientToProcess.id)) {
+      // Use the newly created comprehensive 'newAssignedClient' object
+      // but set the status to 'new' for the employee's perspective.
+      const clientForEmployee = { 
+        ...newAssignedClient, 
+        status: 'new', // This status is for the "New Clients" tab in EmployeeData
+        initials: getInitials(newAssignedClient.clientName) 
+      };
+      localStorage.setItem('employee_new_clients', JSON.stringify([...employeeNewClients, clientForEmployee]));
+    }
+
+    setShowSuccessModal(true);
   };
 
   // Handler for "Quick Assign" button
@@ -1314,11 +1374,17 @@ useEffect(() => {
   };
 
   // Filtered employees for the "Assigned" tab
-  const filteredEmployees = employees.filter(employee => {
-    const lowerCaseSearchQuery = assignedEmployeeSearchQuery.toLowerCase();
-    return employee.name.toLowerCase().includes(lowerCaseSearchQuery) ||
-           employee.role.toLowerCase().includes(lowerCaseSearchQuery);
-  });
+ const filteredEmployees = allEmployees.filter(employee => {
+        const hasEmployeeRole = employee.roles && employee.roles.includes('employee');
+        const fullName = `${employee.firstName || ''} ${employee.lastName || ''}`.toLowerCase();
+        const lowerCaseSearchQuery = assignedEmployeeSearchQuery.toLowerCase();
+        const matchesSearch = fullName.includes(lowerCaseSearchQuery);
+        return hasEmployeeRole && matchesSearch;
+    });
+
+     const employeesForAssignment = allEmployees.filter(employee => 
+        employee.roles && employee.roles.includes('employee')
+    );
 
 
   // NEW: Function to open Client Preview/Edit Modal
@@ -4257,12 +4323,12 @@ Please provide a summary no longer than 150 words.`;
                 onChange={(e) => setSelectedEmployee(e.target.value)}
               >
                 <option value="">Choose employee</option>
-                {employees.map((employee) => (
-                  <option key={employee.id} value={employee.id}>
-                    {employee.name} - {employee.role}
-                  </option>
-                ))}
-              </select>
+                {employeesForAssignment.map((employee) => (
+                <option key={employee.id} value={employee.id}>
+                  {employee.firstName} {employee.lastName}
+                </option>
+              ))}
+            </select>
             </div>
 
             <div className="assign-form-group">
@@ -4337,8 +4403,7 @@ Please provide a summary no longer than 150 words.`;
                       <td>
                         <div className="employee-cell"> {/* Reusing employee-cell for client avatar/name layout */}
                           <div className="employee-avatar">
-                            {client.clientName.split(' ').map(n => n[0]).join('').toUpperCase()}
-                          </div>
+                             {getInitials(client.clientName)}</div>
                           <div className="client-info">
                             <div className="main-text">{client.clientName}</div>
                             <div className="sub-text">{client.location}</div>
@@ -4355,14 +4420,14 @@ Please provide a summary no longer than 150 words.`;
                       <td>
                         <div className="employee-cell">
                           <div className="employee-avatar">
-                            {client.assignedTo.split(' ').map(n => n[0]).join('').toUpperCase()}
+                            {getInitials(client.assignedTo)}
                           </div>
                           {client.assignedTo}
                         </div>
                       </td>
                       <td>
                         <span className={`modal-client-priority-badge ${client.priority}`}>
-                          {client.priority.charAt(0).toUpperCase() + client.priority.slice(1)}
+                          {(client.priority || '').charAt(0).toUpperCase() + (client.priority || '').slice(1)}
                         </span>
                       </td>
                       {/* REMOVED:
@@ -4927,6 +4992,20 @@ Please provide a summary no longer than 150 words.`;
           </div>
         </div>
       )}
+      {/* NEW: Success Confirmation Modal */}
+      <Modal show={showSuccessModal} onHide={() => setShowSuccessModal(false)} centered>
+          <Modal.Header closeButton>
+              <Modal.Title>Success!</Modal.Title>
+          </Modal.Header>
+          <Modal.Body style={{ textAlign: 'center', padding: '20px' }}>
+              <p style={{ fontSize: '1.1rem' }}>{successMessage}</p>
+          </Modal.Body>
+          <Modal.Footer>
+              <Button variant="primary" onClick={() => setShowSuccessModal(false)}>
+                  Close
+              </Button>
+          </Modal.Footer>
+      </Modal>
     </div>
   );
 };

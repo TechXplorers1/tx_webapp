@@ -190,7 +190,8 @@ const EmployeeRegistrationForm = ({ onFormSubmit }) => {
     address: '',
     zipcode: '',
     dateOfJoin: '',
-    personalMail: '',
+    personalEmail: '',
+    workEmail: '',
   });
 
   const [allCountries, setAllCountries] = useState([]);
@@ -264,7 +265,8 @@ const EmployeeRegistrationForm = ({ onFormSubmit }) => {
       maritalStatus: formData.maritalStatus,
       personalNumber: formData.personalNumber,
       alternativeNumber: formData.alternativeNumber,
-      personalMail: formData.personalMail,
+      personalEmail: formData.personalEmail,
+      workEmail: formData.workEmail,
       address: formData.address,
       country: formData.country,
       state: formData.state,
@@ -298,7 +300,7 @@ const EmployeeRegistrationForm = ({ onFormSubmit }) => {
       setFormData({
         firstName: "", lastName: "", gender: "", dateOfBirth: "", maritalStatus: "",
         personalNumber: "", alternativeNumber: "", country: india ? india.isoCode : "",
-        state: "", city: "", address: "", zipcode: "", dateOfJoin: "", personalMail: "",
+        state: "", city: "", address: "", zipcode: "", dateOfJoin: "", personalEmail: "",workEmail:"",
       });
       if (india) {
         setPersonalNumberCountryCode(india.phonecode);
@@ -402,10 +404,16 @@ const EmployeeRegistrationForm = ({ onFormSubmit }) => {
                     </div>
                 </div>
             </div>
-            <div style={{ ...formGroupStyle, marginBottom: '25px' }}>
+            <div style={{ display: 'flex', gap: '20px', ...formGroupStyle }}>
               <div style={{ flex: 1 }}>
-                <label htmlFor="personalMail" style={labelStyle}>Personal Mail <span style={{color: 'red'}}>*</span></label>
-                <input type="email" id="personalMail" name="personalMail" value={formData.personalMail} onChange={handleChange} placeholder="Enter your personal email" required style={inputStyle} onFocus={(e) => Object.assign(e.target.style, inputFocusStyle)} onBlur={(e) => Object.assign(e.target.style, inputStyle)} />
+                <label htmlFor="personalEmail" style={labelStyle}>Personal Mail <span style={{color: 'red'}}>*</span></label>
+                <input type="email" id="personalEmail" name="personalEmail" value={formData.personalEmail} onChange={handleChange} placeholder="Enter your personal email" required style={inputStyle} onFocus={(e) => Object.assign(e.target.style, inputFocusStyle)} onBlur={(e) => Object.assign(e.target.style, inputStyle)} />
+              </div>
+           
+            
+              <div style={{ flex: 1 }}>
+                <label htmlFor="workEmail" style={labelStyle}>Work Mail </label>
+                <input type="email" id="workEmail" name="workEmail" value={formData.workEmail} onChange={handleChange} placeholder="Enter your work email"  style={inputStyle} onFocus={(e) => Object.assign(e.target.style, inputFocusStyle)} onBlur={(e) => Object.assign(e.target.style, inputStyle)} />
               </div>
             </div>
 
@@ -479,7 +487,7 @@ const EmployeeRegistrationForm = ({ onFormSubmit }) => {
                     <div style={formGroupStyle}>
                         <div style={labelValueContainerStyle}><span style={labelStyle}>Personal Number</span><span style={valueStyle}>{formData.personalNumber ? `+${personalNumberCountryCode} ${formData.personalNumber}`: '-'}</span></div>
                         <div style={labelValueContainerStyle}><span style={labelStyle}>Alternative Number</span><span style={valueStyle}>{formData.alternativeNumber ? `+${alternativeNumberCountryCode} ${formData.alternativeNumber}`: '-'}</span></div>
-                        <div style={labelValueContainerStyle}><span style={labelStyle}>Personal Mail</span><span style={valueStyle}>{formData.personalMail || '-'}</span></div>
+                        <div style={labelValueContainerStyle}><span style={labelStyle}>Personal Mail</span><span style={valueStyle}>{formData.personalEmail || '-'}</span></div>
                     </div>
                 </div>
                 <div style={formSectionStyle}>

@@ -400,8 +400,28 @@ const EmployeeData = () => {
     employeeId: "EMP001",
     mobile: "+1 (555) 123-4567",
     email: "employee.user@techxplorers.com", // Added email
-    lastLogin: "2025-07-15 10:30 AM"
+    lastLogin: new Date().toLocaleString(),
   });
+
+  // NEW: useEffect to get logged-in user data from sessionStorage
+  useEffect(() => {
+    const loggedInUserData = sessionStorage.getItem('loggedInEmployee');
+    if (loggedInUserData) {
+        const userData = JSON.parse(loggedInUserData);
+        // Update the state with the details of the logged-in employee
+        setEmployeeDetails(prevDetails => ({
+            ...prevDetails, // Keep other default details if needed
+            name: userData.name,
+            email: userData.email
+        }));
+    } else {
+        // Optional: If no user data is found, you can redirect to the login page
+        // This prevents users from accessing this page directly without logging in.
+        // Uncomment the line below to enable redirection.
+        // navigate('/'); 
+    }
+  }, [navigate]); // Add navigate to dependency array
+
   // NEW: Temporary state for editing profile
   const [editedEmployeeDetails, setEditedEmployeeDetails] = useState({});
 
@@ -538,57 +558,41 @@ const EmployeeData = () => {
   const [editedFileFormData, setEditedFileFormData] = useState(null);
 
   // NEW: State for new clients awaiting acceptance
-  const [newClients, setNewClients] = useState([
-    {
-      id: 4,
-      initials: 'JD',
-      name: 'John Doe',
-      mobile: '123-456-7890',
-      email: 'john.doe@example.com',
-      jobsApplyFor: 'Software Engineer',
-      registeredDate: '2023-01-15',
-      country: 'USA',
-      visaStatus: 'H1B',
-      status: 'new', // New status for new clients
-      priority: 'high', // Default priority for new clients
-      role: 'Software Engineer', // Default role for new clients
-      location: 'New York, NY', // Default location for new clients
-      salaryRange: '$90,000 - $120,000',
-      lastActivity: 'N/A',
-      applicationsCount: 0,
-      filesCount: 0,
-      resumeUpdates: [],
-      jobApplications: [],
-      files: [],
-    },
-    {
-      id: 5,
-      initials: 'AJ',
-      name: 'Alice Johnson',
-      mobile: '987-654-3210',
-      email: 'alice.j@example.com',
-      jobsApplyFor: 'Data Scientist',
-      registeredDate: '2023-02-01',
-      country: 'Canada',
-      visaStatus: 'PR',
-      status: 'new',
-      priority: 'medium',
-      role: 'Data Scientist',
-      location: 'Toronto, ON',
-      salaryRange: '$80,000 - $110,000',
-      lastActivity: 'N/A',
-      applicationsCount: 0,
-      filesCount: 0,
-      resumeUpdates: [],
-      jobApplications: [],
-      files: [],
-    },
-  ]);
+  const [newClients, setNewClients] = useState([]);
+
+   // Add this useEffect to load the new clients from localStorage
+  useEffect(() => {
+    const loadNewClients = () => {
+      const clientsFromManager = JSON.parse(localStorage.getItem('employee_new_clients')) || [];
+      setNewClients(clientsFromManager);
+    };
+
+    loadNewClients();
+
+    // Also, listen for real-time changes
+    const handleStorageChange = (event) => {
+        if (event.key === 'employee_new_clients') {
+            setNewClients(JSON.parse(event.newValue || '[]'));
+        }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+        window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   // Mock data for employee's assigned clients (now only accepted clients)
-  const [activeClients, setActiveClients] = useState([
-    {
-      id: 1,
+  const [activeClients, setActiveClients] = useState(() => {
+    const savedActiveClients = localStorage.getItem('employee_active_clients');
+    if (savedActiveClients) {
+      return JSON.parse(savedActiveClients);
+    }
+    // Fallback to initial hardcoded data if nothing is in local storage
+    return [
+      {
+      id: 11,
       initials: 'JA',
       name: 'John Anderson',
       code: 'C001',
@@ -656,7 +660,7 @@ const EmployeeData = () => {
       jobPortalCredentials: 'encrypted_password_123',
     },
     {
-      id: 2,
+      id: 21,
       initials: 'SM',
       name: 'Sarah Mitchell',
       code: 'C002',
@@ -786,7 +790,16 @@ const EmployeeData = () => {
       jobPortalAccountName: 'michael.indeed',
       jobPortalCredentials: 'another_strong_password',
     },
-  ]);
+  ]});
+
+  // NEW: Add this useEffect to save the activeClients list to local storage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('employee_active_clients', JSON.stringify(activeClients));
+    } catch (error) {
+      console.error("Failed to save active clients to local storage", error);
+    }
+  }, [activeClients]);
 
   // NEW: State for inactive clients
   const [inactiveClients, setInactiveClients] = useState([
@@ -904,7 +917,7 @@ const EmployeeData = () => {
     const clientActivities = [];
 
     // Job application activities
-    client.jobApplications.forEach(app => {
+    (client.jobApplications || []).forEach(app => {
       clientActivities.push({
         clientId: client.id,
         initials: client.initials,
@@ -913,8 +926,7 @@ const EmployeeData = () => {
         type: 'job application',
         date: app.appliedDate,
         time: '4:00 PM', // Placeholder for time
-        status: app.status === 'Applied' ? 'Active' : (app.status === 'Interview' ? 'Active' : 'Completed'), // Simplified status
-      });
+         status: app.status === 'Interview' ? 'Active' : 'Completed',      });
       if (app.status === 'Interview') {
         clientActivities.push({
           clientId: client.id,
@@ -931,7 +943,7 @@ const EmployeeData = () => {
     });
 
     // File activities
-    client.files.forEach(file => {
+    (client.files || []).forEach(file => {
       clientActivities.push({
         clientId: client.id,
         initials: client.initials,
@@ -945,7 +957,7 @@ const EmployeeData = () => {
     });
 
     // Resume update activities
-    client.resumeUpdates.forEach(update => {
+    (client.resumeUpdates || []).forEach(update => {
       clientActivities.push({
         clientId: client.id,
         initials: client.initials,
@@ -1502,27 +1514,44 @@ const EmployeeData = () => {
     return filtered;
   };
 
-  // NEW: Handle accepting a new client
-  const handleAcceptClient = (clientId) => {
-    setNewClients(prevNewClients => {
-      const acceptedClient = prevNewClients.find(client => client.id === clientId);
-      if (acceptedClient) {
-        const updatedActiveClients = [...activeClients, { ...acceptedClient, status: 'active' }];
-        setActiveClients(updatedActiveClients);
-        setSelectedClient(updatedActiveClients.find(c => c.id === acceptedClient.id)); // Select the newly accepted client
-        setActiveTab('Active Clients'); // Switch to Active Clients tab
-        setActiveSubTab('Applications'); // Set default sub-tab
-        triggerNotification(`Client ${acceptedClient.name} accepted!`); // Trigger notification
-        return prevNewClients.filter(client => client.id !== clientId);
-      }
-      return prevNewClients;
-    });
-  };
+// NEW: Handle accepting a new client
+const handleAcceptClient = (clientId) => {
+    const clientToAccept = newClients.find(client => client.id === clientId);
+    if (!clientToAccept) return;
 
-  // NEW: Handle declining a new client
-  const handleDeclineClient = (clientId) => {
-    setNewClients(prevNewClients => prevNewClients.filter(client => client.id !== clientId));
-    triggerNotification("Client declined."); // Trigger notification
+    // Prevent adding a client if one with the same ID already exists
+    if (activeClients.some(client => client.id === clientToAccept.id)) {
+        alert(`Error: A client with ID ${clientToAccept.id} is already in the active list.`);
+        // Remove from localStorage to clear the duplicate from the queue
+        const updatedNewClients = newClients.filter(client => client.id !== clientId);
+        localStorage.setItem('employee_new_clients', JSON.stringify(updatedNewClients));
+        setNewClients(updatedNewClients);
+        return;
+    }
+    
+    // FIX: Prepare the client object for the active list, ensuring necessary arrays exist.
+    const newActiveClient = {
+        ...clientToAccept,
+        status: 'active',
+        // Initialize arrays if they don't exist to prevent rendering errors
+        jobApplications: clientToAccept.jobApplications || [],
+        files: clientToAccept.files || [],
+        resumeUpdates: clientToAccept.resumeUpdates || [],
+    };
+
+    // Move client from new to active in state
+    const updatedNewClientsList = newClients.filter(client => client.id !== clientId);
+    setNewClients(updatedNewClientsList);
+    setActiveClients(prev => [...prev, newActiveClient]); // Use the prepared object
+    
+    // Update localStorage to remove the accepted client from the "new" list
+    localStorage.setItem('employee_new_clients', JSON.stringify(updatedNewClientsList));
+    
+    // Select the newly accepted client and switch tabs
+    setSelectedClient(newActiveClient); // Use the prepared object
+    setActiveTab('Active Clients');
+    setActiveSubTab('Applications');
+    triggerNotification(`Client ${clientToAccept.name} accepted!`);
   };
 
 
@@ -2176,14 +2205,14 @@ const EmployeeData = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {getFilteredAndSortedApplications(selectedClient.jobApplications).length === 0 ? (
+                          {getFilteredAndSortedApplications(selectedClient.jobApplications || []).length === 0 ? (
                             <tr>
                               <td colSpan="9" style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>
                                 No applications found for this client.
                               </td>
                             </tr>
                           ) : (
-                            getFilteredAndSortedApplications(selectedClient.jobApplications).map((app, index) => (
+                            getFilteredAndSortedApplications(selectedClient.jobApplications || []).map((app, index) => (
                               <tr key={app.id}>
                                 <td style={applicationTableDataCellStyle}>
                                   {getFilteredAndSortedApplications(selectedClient.jobApplications).length - index}
@@ -3073,14 +3102,14 @@ const EmployeeData = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {getFilteredAndSortedApplications(selectedClient.jobApplications).length === 0 ? (
+                          {getFilteredAndSortedApplications(selectedClient.jobApplications || []).length === 0 ? (
                             <tr>
                               <td colSpan="9" style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>
                                 No applications found for this client.
                               </td>
                             </tr>
                           ) : (
-                            getFilteredAndSortedApplications(selectedClient.jobApplications).map((app, index) => (
+                            getFilteredAndSortedApplications(selectedClient.jobApplications || []).map((app, index) => (
                               <tr key={app.id}>
                                 <td style={applicationTableDataCellStyle}>
                                   {getFilteredAndSortedApplications(selectedClient.jobApplications).length - index}
@@ -3134,10 +3163,11 @@ const EmployeeData = () => {
                                       <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
                                     </svg>
                                   </button>
-                                  <button onClick={() => handleDeleteApplication(selectedClient.id, app.id)} style={deleteButtonAppStyle}>
+                                   <button onClick={() => handleDeleteApplication(selectedClient.id, app.id)} style={deleteButtonAppStyle}>
+                                    {/* FIX: Replaced malformed SVG with a standard trash icon */}
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                      <polyline points="3 6 5 6 21 6"></polyline>
-                                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                      <polyline points="3 6 21 6"></polyline>
+                                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                                       <line x1="10" y1="11" x2="10" y2="17"></line>
                                       <line x1="14" y1="11" x2="14" y2="17"></line>
                                     </svg>
@@ -5458,945 +5488,3 @@ const clientDataDetailStyle = {
 
 export default EmployeeData;
 
-  
-
-						
-				   
-					
-				   
-				  
-  
-
-						   
-					 
-				   
-			
-  
-
-						   
-					 
-					
-				   
-					   
-														  
-  
-
-						  
-				  
-															  
-			  
-  
-
-						 
-						
-					   
-				  
-										  
-							  
-				  
-						  
-			  
-																									   
-  
-
-							   
-				  
-					   
-			  
-					   
-						
-									
-  
-
-							 
-				
-				 
-					  
-							 
-				   
-				  
-					   
-						   
-					 
-					
-  
-
-						 
-					   
-					
-				   
-			
-  
-
-						 
-					   
-				   
-			
-  
-
-						  
-					  
-					   
-					  
-					
-							 
-  
-
-							
-					  
-					   
-					  
-					
-							 
-										  
-  
-
-						   
-				  
-					   
-					 
-				   
-			
-  
-
-							   
-				   
-					 
-  
-
-							   
-				  
-										
-			  
-					
-					 
-								 
-  
-
-						 
-				  
-						  
-					   
-						   
-					  
-  
-
-							  
-					 
-				   
-					  
-  
-
-							  
-					  
-					
-				   
-					  
-  
-
-							 
-					  
-  
-
-						 
-						
-				   
-				 
-					  
-					  
-					 
-					
-					
-											   
-			   
-  
-
-							 
-						
-				   
-				 
-					  
-					  
-					 
-					
-					
-											   
-			   
-  
-
-										  
-								  
-						
-					   
-				  
-										  
-							  
-					   
-  
-
-					   
-				   
-				   
-						 
-  
-
-							  
-				  
-															  
-			  
-					   
-						
-									
-													  
-  
-
-						  
-				  
-						  
-			 
-  
-
-						  
-					   
-					
-				   
-  
-
-								  
-				  
-					   
-			 
-  
-
-						
-					  
-							  
-					  
-					 
-				   
-		  
-  
-
-						   
-					  
-							  
-					  
-					 
-				   
-							 
-											 
-							   
-																																																																																																																								   
-								
-										  
-						 
-																 
-														 
-  
-
-																				 
-					  
-							  
-					  
-					 
-				   
-							 
-											 
-																																																																																																																								   
-								
-										  
-						 
-															   
-  
-
-								 
-				  
-			 
-				   
-  
-
-								
-						
-				   
-				 
-					  
-					  
-					  
-					
-					
-												  
-  
-
-									  
-						
-				   
-  
-
-																	   
-				  
-						  
-			 
-										  
-															  
-														  
-  
-
-								 
-						
-				   
-							  
-					  
-					  
-					 
-					
-					
-																	 
-				  
-					   
-			 
-												
-						   
-					
-  
-
-										  
-						
-					   
-				  
-										  
-							  
-					   
-  
-
-									   
-				  
-					   
-			  
-					   
-						
-									
-														
-  
-
-							 
-				  
-			  
-					 
-				   
-												
-												 
-				   
-																	
-  
-
-								   
-						
-				   
-				 
-					   
-					  
-					 
-					
-					
-											   
-				  
-					   
-			 
-					
-						   
-  
-
-									   
-				  
-			  
-					   
-				   
-					   
-  
-
-						  
-			  
-					   
-							  
-					  
-					 
-				   
-												
-  
-
-								 
-					   
-							  
-					  
-					 
-				   
-							 
-					 
-							   
-																																																																																																																								   
-								
-										  
-						 
-					
-  
-
-									  
-																				  
-				
-  
-
-							   
-				
-							 
-					
-  
-
-										 
-					   
-					  
-							 
-				   
-					  
-					
-							 
-									
-  
-
-									   
-					   
-									
-					 
-				   
-						  
-  
-
-									 
-					  
-					   
-					  
-					
-							  
-						  
-  
-
-											   
-				   
-				   
-															  
-					 
-															  
-					
-															  
-				   
-															  
-			
-															  
-   
-  
-
-							  
-					 
-				 
-				 
-					  
-					
-				   
-					 
-												  
-  
-
-							
-						
-				   
-				 
-					  
-					  
-					 
-					
-					
-											   
-  
-
-							  
-					 
-				 
-				 
-					  
-					
-				   
-												  
-  
-
-							
-				
-					 
-							  
-					  
-					 
-  
-
-							 
-				
-					 
-							  
-					  
-					 
-							 
-					 
-							   
-																																																																																																																								   
-								
-										 
-						
-  
-
-								   
-						
-				  
-															  
-			  
-					
-  
-
-					   
-															 
-					   
-				  
-										  
-							  
-				  
-						  
-			 
-																  
-  
-
-							 
-				  
-					   
-			  
-					  
-  
-
-					   
-				   
-  
-
-					   
-				   
-					
-				   
-			
-														 
-  
-
-					   
-					  
-				   
-			
-  
-
-							
-					 
-					   
-					 
-					
-							 
-					 
-					   
-  
-
-										 
-				 
-				  
-															  
-						
-															  
-								
-															  
-					 
-															  
-				  
-															  
-								  
-															  
-			
-															  
-   
-  
-
-
-						 
-					  
-				   
-			
-  
-
-							 
-					  
-				   
-			
-  
-
-						
-					  
-				   
-				  
-					  
-								  
-					 
-  
-
-						  
-				  
-							 
-			 
-												  
-					 
-								 
-  
-
-								  
-					   
-							  
-					  
-					  
-							 
-					 
-							   
-																																																																																																																								   
-								
-										 
-						
-  
-
-									  
-										
-						
-					   
-				  
-										  
-							  
-					   
-				  
-						  
-			  
-  
-
-						   
-				  
-						   
-			  
-				  
-					   
-						
-							  
-										  
-  
-
-									
-				
-  
-
-								  
-				
-				 
-					  
-							 
-				   
-				  
-					   
-						   
-					 
-					
-  
-
-							  
-			  
-  
-
-								  
-					  
-				   
-					  
-					
-  
-
-						   
-					 
-				   
-			
-  
-
-							
-					  
-					   
-					  
-					
-							  
-					   
-				
-  
-
-										 
-				 
-						   
-															  
-					   
-															  
-							   
-															  
-						 
-															  
-						 
-															  
-			
-															  
-   
-  
-
-								  
-					  
-					   
-					  
-					
-							  
-					   
-				
-															  
-  
-
-											
-				   
-				  
-															  
-					 
-															  
-			
-															  
-   
-  
-
-															
-						  
-					   
-						
-					  
-  
-
-						 
-					 
-					
-				   
-  
-
-						
-					   
-					
-				
-  
-
-							
-				  
-								 
-			  
-  
-
-								  
-				  
-						  
-			 
-  
-
-						 
-					 
-					
-				   
-  
-
-						 
-					   
-							  
-					  
-					 
-				   
-				
-  
-
-						  
-					 
-					 
-							   
-																																																																																																																								   
-								
-										  
-						 
-  
-
-							
-					 
-					
-					 
-  
-
-						  
-					
-					 
-				  
-														   
-			  
-  
-
-								
-						
-				   
-				 
-					   
-					  
-					 
-					
-					
-											   
-  
-
-									
-						
-				   
-				 
-					   
-					  
-					 
-					
-					
-											   
-  
-
-								   
-														   
-					 
-									
-				   
-					  
-				
-  
-
-								  
-			
-				   
-  
-
-								 
-							 
-				  
-															  
-			  
-					
-  
-
-							
-						
-					   
-				  
-										  
-							  
-				  
-						  
-			  
-  
-
-								  
-				  
-					   
-			  
-					   
-						
-									
-  
-
-							
-					   
-					
-				   
-			
-  
-
-							  
-				  
-					   
-					 
-				   
-			
-  
-
-								   
-				  
-			  
-					
-							 
-  
-
-						   
-						
-				   
-				 
-					  
-					  
-					 
-					
-					
-											   
-  
-
-							
-						
-				   
-				 
-					  
-					  
-					 
-					
-					
-											   
-  
-
-									
-				  
-					   
-			  
-					   
-				   
-																 
-  
-
-										 
-							 
-				  
-															  
-			  
-					
-  
-
-								
-						
-					   
-				  
-										  
-							  
-  
-
-									 
-					 
-					
-				   
-					   
-									
-						
-  
-
-							   
-					  
-				   
-				  
-					
-  
-
-							

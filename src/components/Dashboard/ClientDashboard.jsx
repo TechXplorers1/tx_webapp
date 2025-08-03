@@ -1717,7 +1717,9 @@ const Applications = ({
                     }}
                   >
                     <td style={{ padding: '12px' }}>{index + 1}</td>
-                    <td style={{ padding: '12px' }}>{app.dateAdded}</td> {/* Display Applied Date */}
+                    <td style={{ padding: '12px' }}>
+                      {app.dateAdded} {/* Display Applied Date */}
+                    </td>
                     <td style={{ padding: '12px' }}>{app.website}</td>
                     <td style={{ padding: '12px' }}>{app.position}</td>
                     <td style={{ padding: '12px' }}>{app.jobId}</td>
@@ -2462,6 +2464,8 @@ const WorksheetView = ({ setActiveTab, activeWorksheetTab, setActiveWorksheetTab
 const ClientDashboard = () => {
   const navigate = useNavigate();
 
+  const [applicationsData, setApplicationsData] = useState({});
+
   // Initialize activeTab from localStorage, default to "Dashboard" if not found
   const [activeTab, setActiveTab] = useState(() => {
     const savedTab = localStorage.getItem('activeClientDashboardTab');
@@ -2628,6 +2632,65 @@ const ClientDashboard = () => {
     }, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  // ... other states ...
+
+  // NEW: Add this useEffect to load and transform application data from local storage
+  useEffect(() => {
+    const loadApplicationData = () => {
+      // Load the clients that the employee has accepted from the other component
+      const employeeClients = JSON.parse(localStorage.getItem('employee_active_clients')) || [];
+
+      // Transform the data into the structure ClientDashboard expects: { 'DD-MM-YYYY': [apps] }
+      const groupedApplications = {};
+
+      employeeClients.forEach(client => {
+        if (client.jobApplications && Array.isArray(client.jobApplications)) {
+          client.jobApplications.forEach(app => {
+            // EmployeeData stores appliedDate as YYYY-MM-DD. We need to convert it to DD-MM-YYYY for the key.
+            const dateParts = app.appliedDate.split('-');
+            const formattedDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`; // DD-MM-YYYY
+
+            if (!groupedApplications[formattedDate]) {
+              groupedApplications[formattedDate] = [];
+            }
+
+            // Recreate the application object to match the structure expected by ClientDashboard
+            const appForDashboard = {
+              id: app.id,
+              jobId: app.jobId || 'N/A',
+              website: app.platform || 'N/A',
+              position: app.jobTitle || 'N/A',
+              company: app.company || 'N/A',
+              link: app.jobUrl || '#',
+              dateAdded: formattedDate,
+              jobDescription: app.notes || 'No description provided.'
+            };
+
+            groupedApplications[formattedDate].push(appForDashboard);
+          });
+        }
+      });
+
+      setApplicationsData(groupedApplications);
+    };
+
+    loadApplicationData();
+
+    // Add a listener for storage changes to see real-time updates
+    const handleStorageChange = (event) => {
+      if (event.key === 'employee_active_clients') {
+        loadApplicationData();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []); // Empty dependency array ensures this runs on mount
+
 
   const profilePlaceholder = "https://imageio.forbes.com/specials-images/imageserve/5c7d7829a7ea434b351ba0b6/0x0.jpg?format=jpg&crop=1837,1839,x206,y250,safe&height=416&width=416&fit=bounds";
 

@@ -6,6 +6,7 @@ import { FcGoogle } from "react-icons/fc";
 import { MdEmail } from "react-icons/md";
 import { RiLockPasswordFill } from "react-icons/ri";
 import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
+import { useAuth } from '../components/AuthContext';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -15,6 +16,10 @@ export default function LoginPage() {
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [loginError, setLoginError] = useState("");
+  const { login } = useAuth();
+  const [modalAlert, setModalAlert] = useState("");
+
+  const [employees, setEmployees] = useState([]);
 
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
@@ -33,6 +38,8 @@ export default function LoginPage() {
   const [confirmPasswordError, setConfirmPasswordError] = useState(""); // New state for confirm password error
 
   const [showSuccess, setShowSuccess] = useState(false);
+
+
 
   // Effect for OTP timer
   useEffect(() => {
@@ -56,299 +63,407 @@ export default function LoginPage() {
     return null;
   };
 
+  useEffect(() => {
+    const loadEmployees = async () => {
+      try {
+        // --- MODIFIED LOGIC ---
+        // 1. Try to load employees from localStorage first
+        const savedEmployees = localStorage.getItem('employees');
+        if (savedEmployees && JSON.parse(savedEmployees).length > 0) {
+          setEmployees(JSON.parse(savedEmployees));
+        } else {
+          // 2. Fallback to fetching from the JSON file if localStorage is empty
+          const response = await fetch('/employees.json');
+          if (!response.ok) {
+            throw new Error('Failed to fetch employee data');
+          }
+          const data = await response.json();
+          setEmployees(data);
+          localStorage.setItem('employees', JSON.stringify(data)); // Save initial data to localStorage
+        }
+      } catch (error) {
+        console.error(error);
+        setLoginError("Could not load employee data. Please try again later.");
+      }
+    };
+    loadEmployees();
+  }, []); // This hook still only runs once on component mount, which is correct.
+
+
+
   const handleSubmit = (e) => {
     e.preventDefault();
     setEmailError("");
     setPasswordError("");
     setLoginError("");
 
-    let hasError = false;
-    if (!email.includes("@") || !email.includes(".")) {
-      setEmailError("Please enter a valid email");
-      hasError = true;
-    }
-
-    const passError = validatePassword(password);
-    if (passError) {
-      setPasswordError(passError);
-      hasError = true;
-    }
-
-    if (hasError) return;
-
-    if (password === 'Password@123') {
-      if (email === 'admin@gmail.com') navigate('/adminworksheet');
-      else if (email === 'client@gmail.com') navigate('/clientdashboard');
-      else if (email === 'manager@gmail.com') navigate('/managerworksheet');
-      else if (email === 'assets@gmail.com') navigate('/assetworksheet');
-      else if (email.includes('.tx')) navigate('/employees');
-      else setLoginError("Invalid email or password.");
-    } else {
-      setLoginError("Invalid email or password.");
-    }
-  };
-
-  const sendOtp = () => {
-    if (!forgotEmail.includes("@")) {
-      // Using a custom alert/message box instead of browser's alert()
-      alert("Please enter a valid email address."); // Placeholder for a custom message box
+    if (!email || !password) {
+      if (!email) setEmailError("Please enter a valid email");
+      if (!password) setPasswordError("Password is required");
       return;
     }
-    // Simulate OTP generation
-    const otp = Math.floor(1000 + Math.random() * 9000).toString();
-    setGeneratedOtp(otp);
-    // Using a custom alert/message box instead of browser's alert()
-    alert(`OTP sent to ${forgotEmail}: ${otp}`); // Placeholder for a custom message box
-    setOtpSent(true);
-    setOtpTimer(60); // Reset timer
-    setIsResendingOtp(true); // Disable resend button immediately
-    setOtpError(""); // Clear any previous OTP errors
-  };
 
-  const verifyOtp = () => {
-    if (enteredOtp === generatedOtp) {
-      setOtpVerified(true);
-      setOtpError("");
-      setShowForgotModal(false); // Close the OTP modal
-      setShowNewPasswordModal(true); // Open the new password modal
-    } else {
-      setOtpError("Invalid OTP. Please try again.");
-    }
-  };
+    // --- UNIFIED LOGIN LOGIC ---
+    const employee = employees.find(
+      (emp) => emp.workEmail === email && emp.temporaryPassword === password
+    );
 
-  const createNewPassword = () => {
-    setNewPasswordError("");
-    setConfirmPasswordError("");
+    if (employee && employee.roles) {
+      // Store user info in sessionStorage for the target page to use
+      sessionStorage.setItem('loggedInEmployee', JSON.stringify({
+        name: `${employee.firstName} ${employee.lastName}`,
+        email: employee.workEmail,
+        roles: employee.roles,
+      }));
 
-    let hasError = false;
-    const passError = validatePassword(newPassword);
-    if (passError) {
-      setNewPasswordError(passError);
-      hasError = true;
-    }
 
-    if (newPassword !== confirmPassword) {
-      setConfirmPasswordError("Passwords do not match.");
-      hasError = true;
-    }
+      if (!email.includes("@") || !email.includes(".")) {
+        setEmailError("Please enter a valid email");
+        return;
+      }
 
-    if (hasError) return;
+      // Retrieve users from localStorage
+      const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers')) || [];
 
-    // Simulate password update
-    console.log("New password set:", newPassword);
+      // Find the user with the matching email
+      const user = registeredUsers.find(u => u.email === email);
 
-    setShowNewPasswordModal(false);
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 4000);
-    // Reset all forgot password states
-    setForgotEmail("");
-    setOtpSent(false);
-    setEnteredOtp("");
-    setGeneratedOtp("");
-    setOtpVerified(false);
-    setNewPassword("");
-    setConfirmPassword("");
-  };
+      if (user && user.password === password) {
+        // If user is found and password matches, log them in
+        const baseUsername = email.split('@')[0];
+        const userData = {
+          name: baseUsername, // Or a default name
+          email: user.email,
+          avatar: `https://placehold.co/40x40/007bff/white?text=${baseUsername.charAt(0).toUpperCase()}`
+        };
 
-  return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontFamily: "'Segoe UI', sans-serif",
-      padding: '1rem'
-    }}>
-      <JsNavbar />
+        login(userData);
+        navigate('/'); // Redirect to a default page after login
+      } else {
+        // Handle hardcoded admin/special users
+        let userRole = null;
+        let redirectPath = null;
+        const baseUsername = email.split('@')[0];
 
-      <div style={{
-        width: '100%',
-        maxWidth: '500px',
-        padding: '2rem',
-        border: '2px solid white',
-        borderRadius: '12px',
-        boxShadow: '0 0 10px rgba(0,0,0,0.1)'
-      }}>
-        <h3 className="text-center text-primary fw-bold mb-4">Login to Your Account</h3>
+        if (password === 'Password@123') {
+          if (email === 'admin@gmail.com') {
+            userRole = 'Admin';
+            redirectPath = '/adminworksheet';
+          } else if (email === 'client@gmail.com') {
+            userRole = 'Client';
+            redirectPath = '/';
+          } else if (email === 'manager@gmail.com') {
+            userRole = 'Manager';
+            redirectPath = '/managerworksheet';
+          } else if (email === 'assets@gmail.com') {
+            userRole = 'Assets';
+            redirectPath = '/assetworksheet';
+          } else if (email.includes('.tx')) {
+            userRole = 'Employee';
+            redirectPath = '/employees';
+          }
+        }
 
-        <button
-          type="button"
-          className="btn btn-outline-secondary w-100 p-2 mb-3 d-flex align-items-center justify-content-center gap-2"
-        >
-          <FcGoogle size={22} /> Continue with Google
-        </button>
+        if (userRole && redirectPath) {
+          const userData = {
+            name: userRole,
+            email: email,
+            avatar: `https://placehold.co/40x40/007bff/white?text=${baseUsername.charAt(0).toUpperCase()}`
+          };
+          login(userData);
+          navigate(redirectPath);
 
-        <div className="text-center mb-3">OR</div>
+          // Role-based redirection
+          if (employee.roles.includes('admin')) {
+            navigate('/adminpage');
+          } else if (employee.roles.includes('manager')) {
+            navigate('/managerworksheet');
+          } else if (employee.roles.includes('employee')) {
+            navigate('/employees');
+          } else {
+            // Fallback for an employee with no recognized designation
+            setLoginError("You do not have a role assigned to access the system.");
+          }
+        } else {
+          setLoginError("Invalid email or password.");
+        }
+      };
 
-        <Form onSubmit={handleSubmit}>
-          {/* Email */}
-          <Form.Group className="mb-3">
-            <Form.Label>Email</Form.Label>
-            <div className="input-group">
-              <span className="input-group-text"><MdEmail /></span>
-              <Form.Control
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                isInvalid={!!emailError}
-                placeholder="Enter your email"
-              />
-            </div>
-            <Form.Control.Feedback type="invalid">{emailError}</Form.Control.Feedback>
-          </Form.Group>
 
-          {/* Password */}
-          <Form.Group className="mb-3">
-            <Form.Label>Password</Form.Label>
-            <div className="input-group">
-              <span className="input-group-text"><RiLockPasswordFill /></span>
-              <Form.Control
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                isInvalid={!!passwordError}
-                placeholder="Enter your password"
-              />
-              <span
-                className="input-group-text"
-                style={{ cursor: "pointer" }}
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? <AiFillEye /> : <AiFillEyeInvisible />}
-              </span>
-            </div>
-            <Form.Control.Feedback type="invalid">{passwordError}</Form.Control.Feedback>
-          </Form.Group>
+      const sendOtp = () => {
+        if (!forgotEmail.includes("@")) {
+          setModalAlert("Please enter a valid email address.");
+          return;
+        }
+        setModalAlert("");
+        const otp = Math.floor(1000 + Math.random() * 9000).toString();
+        setGeneratedOtp(otp);
 
-          <div className="text-end mb-3">
-            <span
-              style={{ color: '#007bff', fontWeight: 600, cursor: 'pointer' }}
-              onClick={() => {
-                setShowForgotModal(true);
-                setOtpSent(false); // Reset OTP sent state when opening modal
-                setOtpVerified(false); // Reset OTP verified state
-                setForgotEmail(""); // Clear previous email
-                setEnteredOtp(""); // Clear previous OTP
-                setOtpError(""); // Clear OTP error
-                setNewPassword(""); // Clear new password fields
-                setConfirmPassword("");
-                setNewPasswordError("");
-                setConfirmPasswordError("");
-                setOtpTimer(60); // Reset timer
-                setIsResendingOtp(false); // Reset resend state
-              }}
+        console.log(`Generated OTP for ${forgotEmail}: ${otp}`);
+        setModalAlert(`An OTP has been sent to ${forgotEmail}. (For demo, OTP is ${otp})`);
+        setOtpSent(true);
+        setOtpTimer(60); // Reset timer
+        setIsResendingOtp(true); // Disable resend button immediately
+        setOtpError(""); // Clear any previous OTP errors
+      };
+
+      const verifyOtp = () => {
+        if (enteredOtp === generatedOtp) {
+          setOtpVerified(true);
+          setOtpError("");
+          setShowForgotModal(false); // Close the OTP modal
+          setShowNewPasswordModal(true); // Open the new password modal
+        } else {
+          setOtpError("Invalid OTP. Please try again.");
+        }
+      };
+
+      const createNewPassword = () => {
+        setNewPasswordError("");
+        setConfirmPasswordError("");
+
+        let hasError = false;
+        const passError = validatePassword(newPassword);
+        if (passError) {
+          setNewPasswordError(passError);
+          hasError = true;
+        }
+
+        if (newPassword !== confirmPassword) {
+          setConfirmPasswordError("Passwords do not match.");
+          hasError = true;
+        }
+
+        if (hasError) return;
+
+        // Simulate password update
+        console.log("New password set:", newPassword);
+
+        setShowNewPasswordModal(false);
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 4000);
+        // Reset all forgot password states
+        setForgotEmail("");
+        setOtpSent(false);
+        setEnteredOtp("");
+        setGeneratedOtp("");
+        setOtpVerified(false);
+        setNewPassword("");
+        setConfirmPassword("");
+      };
+
+      return (
+        <div style={{
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontFamily: "'Segoe UI', sans-serif",
+          padding: '1rem'
+        }}>
+          <JsNavbar />
+
+          <div style={{
+            width: '100%',
+            maxWidth: '500px',
+            padding: '2rem',
+            border: '2px solid white',
+            borderRadius: '12px',
+            boxShadow: '0 0 10px rgba(0,0,0,0.1)'
+          }}>
+            <h3 className="text-center text-primary fw-bold mb-4">Login to Your Account</h3>
+
+            <button
+              type="button"
+              className="btn btn-outline-secondary w-100 p-2 mb-3 d-flex align-items-center justify-content-center gap-2"
             >
-              Forgot Password?
-            </span>
+              <FcGoogle size={22} /> Continue with Google
+            </button>
+
+            <div className="text-center mb-3">OR</div>
+
+            <Form onSubmit={handleSubmit}>
+              {/* Email */}
+              <Form.Group className="mb-3">
+                <Form.Label>Email</Form.Label>
+                <div className="input-group">
+                  <span className="input-group-text"><MdEmail /></span>
+                  <Form.Control
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    isInvalid={!!emailError}
+                    placeholder="Enter your email"
+                    autoComplete="username"
+                  />
+                </div>
+                {emailError && <Form.Text className="text-danger">{emailError}</Form.Text>}
+                <Form.Control.Feedback type="invalid">{emailError}</Form.Control.Feedback>
+              </Form.Group>
+
+              {/* Password */}
+              <Form.Group className="mb-3">
+                <Form.Label>Password</Form.Label>
+                <div className="input-group">
+                  <span className="input-group-text"><RiLockPasswordFill /></span>
+                  <Form.Control
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    isInvalid={!!passwordError}
+                    placeholder="Enter your password"
+                    autoComplete="current-password"
+                  />
+                  <span
+                    className="input-group-text"
+                    style={{ cursor: "pointer" }}
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <AiFillEye /> : <AiFillEyeInvisible />}
+                  </span>
+                </div>
+                {passwordError && <Form.Text className="text-danger">{passwordError}</Form.Text>}
+                <Form.Control.Feedback type="invalid">{passwordError}</Form.Control.Feedback>
+              </Form.Group>
+
+              <div className="text-end mb-3">
+                <span
+                  style={{ color: '#007bff', fontWeight: 600, cursor: 'pointer' }}
+                  onClick={() => {
+                    setShowForgotModal(true);
+                    setOtpSent(false); // Reset OTP sent state when opening modal
+                    setOtpVerified(false); // Reset OTP verified state
+                    setForgotEmail(""); // Clear previous email
+                    setEnteredOtp(""); // Clear previous OTP
+                    setOtpError(""); // Clear OTP error
+                    setNewPassword(""); // Clear new password fields
+                    setConfirmPassword("");
+                    setNewPasswordError("");
+                    setConfirmPasswordError("");
+                    setOtpTimer(60); // Reset timer
+                    setIsResendingOtp(false); // Reset resend state
+                    setModalAlert("");
+                  }}
+                >
+                  Forgot Password?
+                </span>
+              </div>
+
+              {loginError && <div className="alert alert-danger py-2">{loginError}</div>}
+
+              <Button type="submit" className="w-100 btn btn-primary text-white fw-bold">Log In</Button>
+
+              <div className="text-center mt-3">
+                <span>Don't have an account?</span>
+                <span
+                  style={{ color: '#007bff', fontWeight: 600, marginLeft: '0.5rem', cursor: 'pointer' }}
+                  onClick={() => navigate('/signup')}
+                >
+                  Sign Up
+                </span>
+              </div>
+            </Form>
           </div>
 
-          {loginError && <div className="alert alert-danger py-2">{loginError}</div>}
+          {/* Forgot Password (Send OTP / Enter OTP) Modal */}
+          <Modal show={showForgotModal} onHide={() => setShowForgotModal(false)} centered>
+            <Modal.Header closeButton><Modal.Title>Reset Password</Modal.Title></Modal.Header>
+            <Modal.Body>
+              {!otpSent ? (
+                <Form.Group>
+                  <Form.Label>Enter your registered email</Form.Label>
+                  <Form.Control
+                    type="email"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    placeholder="Email address"
+                    autoComplete="username"
+                  />
+                </Form.Group>
+              ) : (
+                <Form.Group>
+                  <Form.Label>Enter OTP sent to {forgotEmail}</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={enteredOtp}
+                    onChange={(e) => setEnteredOtp(e.target.value)}
+                    placeholder="Enter 4-digit OTP"
+                    isInvalid={!!otpError}
+                    autoComplete="one-time-code"
+                  />
+                  <Form.Control.Feedback type="invalid">{otpError}</Form.Control.Feedback>
+                </Form.Group>
+              )}
+            </Modal.Body>
+            <Modal.Footer>
+              {!otpSent ? (
+                <Button variant="primary" onClick={sendOtp}>Send OTP</Button>
+              ) : (
+                <>
+                  <Button variant="primary" onClick={verifyOtp} disabled={enteredOtp.length !== 4}>Verify OTP</Button>
+                  <Button
+                    variant="secondary"
+                    onClick={sendOtp}
+                    disabled={isResendingOtp && otpTimer > 0}
+                  >
+                    {isResendingOtp && otpTimer > 0 ? `Resend OTP (${otpTimer}s)` : 'Resend OTP'}
+                  </Button>
+                </>
+              )}
+            </Modal.Footer>
+          </Modal>
 
-          <Button type="submit" className="w-100 btn btn-primary text-white fw-bold">Log In</Button>
+          {/* Create New Password Modal */}
+          <Modal show={showNewPasswordModal} onHide={() => setShowNewPasswordModal(false)} centered>
+            <Modal.Header closeButton><Modal.Title>Create New Password</Modal.Title></Modal.Header>
+            <Modal.Body>
+              {modalAlert && <p className="text-info small">{modalAlert}</p>}
+              <Form.Group className="mb-2">
+                <Form.Label>New Password</Form.Label>
+                <Form.Control
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="New Password"
+                  isInvalid={!!newPasswordError}
+                  autoComplete="new-password"
+                />
+                <Form.Control.Feedback type="invalid">{newPasswordError}</Form.Control.Feedback>
+              </Form.Group>
+              <Form.Group>
+                <Form.Label>Confirm Password</Form.Label>
+                <Form.Control
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm Password"
+                  isInvalid={!!confirmPasswordError}
+                  autoComplete="confirm-password"
+                />
+                <Form.Control.Feedback type="invalid">{confirmPasswordError}</Form.Control.Feedback>
+              </Form.Group>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button variant="success" onClick={createNewPassword}>Set New Password</Button>
+            </Modal.Footer>
+          </Modal>
 
-          <div className="text-center mt-3">
-            <span>Don't have an account?</span>
-            <span
-              style={{ color: '#007bff', fontWeight: 600, marginLeft: '0.5rem', cursor: 'pointer' }}
-              onClick={() => navigate('/signup')}
-            >
-              Sign Up
-            </span>
-          </div>
-        </Form>
-      </div>
-
-      {/* Forgot Password (Send OTP / Enter OTP) Modal */}
-      <Modal show={showForgotModal} onHide={() => setShowForgotModal(false)} centered>
-        <Modal.Header closeButton><Modal.Title>Reset Password</Modal.Title></Modal.Header>
-        <Modal.Body>
-          {!otpSent ? (
-            <Form.Group>
-              <Form.Label>Enter your registered email</Form.Label>
-              <Form.Control
-                type="email"
-                value={forgotEmail}
-                onChange={(e) => setForgotEmail(e.target.value)}
-                placeholder="Email address"
+          {/* Success Confirmation */}
+          <Modal show={showSuccess} onHide={() => setShowSuccess(false)} centered>
+            <Modal.Body className="text-center p-4">
+              <img
+                src="https://cdn-icons-png.flaticon.com/512/845/845646.png"
+                alt="Success"
+                style={{ width: '80px' }}
+                onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/80x80/28a745/white?text=OK'; }}
               />
-            </Form.Group>
-          ) : (
-            <Form.Group>
-              <Form.Label>Enter OTP sent to {forgotEmail}</Form.Label>
-              <Form.Control
-                type="text"
-                value={enteredOtp}
-                onChange={(e) => setEnteredOtp(e.target.value)}
-                placeholder="Enter 4-digit OTP"
-                isInvalid={!!otpError}
-              />
-              <Form.Control.Feedback type="invalid">{otpError}</Form.Control.Feedback>
-            </Form.Group>
-          )}
-        </Modal.Body>
-        <Modal.Footer>
-          {!otpSent ? (
-            <Button variant="primary" onClick={sendOtp}>Send OTP</Button>
-          ) : (
-            <>
-              <Button variant="primary" onClick={verifyOtp} disabled={enteredOtp.length !== 4}>Verify OTP</Button>
-              <Button
-                variant="secondary"
-                onClick={sendOtp}
-                disabled={isResendingOtp && otpTimer > 0}
-              >
-                {isResendingOtp && otpTimer > 0 ? `Resend OTP (${otpTimer}s)` : 'Resend OTP'}
-              </Button>
-            </>
-          )}
-        </Modal.Footer>
-      </Modal>
-
-      {/* Create New Password Modal */}
-      <Modal show={showNewPasswordModal} onHide={() => setShowNewPasswordModal(false)} centered>
-        <Modal.Header closeButton><Modal.Title>Create New Password</Modal.Title></Modal.Header>
-        <Modal.Body>
-          <Form.Group className="mb-2">
-            <Form.Label>New Password</Form.Label>
-            <Form.Control
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="New Password"
-              isInvalid={!!newPasswordError}
-            />
-            <Form.Control.Feedback type="invalid">{newPasswordError}</Form.Control.Feedback>
-          </Form.Group>
-          <Form.Group>
-            <Form.Label>Confirm Password</Form.Label>
-            <Form.Control
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Confirm Password"
-              isInvalid={!!confirmPasswordError}
-            />
-            <Form.Control.Feedback type="invalid">{confirmPasswordError}</Form.Control.Feedback>
-          </Form.Group>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="success" onClick={createNewPassword}>Set New Password</Button>
-        </Modal.Footer>
-      </Modal>
-
-      {/* Success Confirmation */}
-      <Modal show={showSuccess} onHide={() => setShowSuccess(false)} centered>
-        <Modal.Body className="text-center p-4">
-          <img
-            src="https://cdn-icons-png.flaticon.com/512/845/845646.png"
-            alt="Success"
-            style={{ width: '80px' }}
-          />
-          <h5 className="mt-3 text-success">Password successfully created!</h5>
-        </Modal.Body>
-      </Modal>
-    </div>
-  );
+              <h5 className="mt-3 text-success">Password successfully created!</h5>
+            </Modal.Body>
+          </Modal>
+        </div>
+      );
+    }
+  }
 }
 
