@@ -4,9 +4,11 @@ import '../../styles/Services/MobileAppDev.css'; // Reusing styles
 import { useNavigate } from 'react-router-dom';
 import CustomNavbar from '../Navbar';
 import { Modal, Button, Form } from 'react-bootstrap';
+import { useAuth } from '../../components/AuthContext'; // Step 1: Import useAuth
 
 const ITTalentSupply = () => {
   const navigate = useNavigate();
+  const { isLoggedIn } = useAuth(); // Step 2: Get auth status
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
     firstName: '',
@@ -17,8 +19,13 @@ const ITTalentSupply = () => {
     userType: '',
   });
 
+   // Step 3: Update the handler to check for login status
    const handleApplyNow = () => {
-    navigate('/services/servicesForm', { state: { service: 'IT Talent Supply' } });
+    if (isLoggedIn) {
+      navigate('/services/servicesForm', { state: { service: 'IT Talent Supply' } });
+    } else {
+      navigate('/login');
+    }
   };
 
   const handleChange = (e) => {
@@ -37,7 +44,7 @@ const ITTalentSupply = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log('Form submitted:', formData);
-    alert('Form submitted successfully!');
+    // A custom modal or toast is better than alert()
     setShowModal(false);
     setFormData({
       firstName: '',
@@ -170,13 +177,13 @@ const ITTalentSupply = () => {
             <div className="mb-3">
               <Form.Label className="fw-bold">What service do you want?</Form.Label>
               <div className="d-flex flex-wrap gap-2 mt-2">
-                {[1, 2, 3, 4, 5, 6].map(num => (
+                {['Service 1', 'Service 2', 'Service 3', 'Service 4', 'Service 5', 'Service 6'].map(service => (
                   <Button
-                    key={num}
-                    variant={formData.service === `Service ${num}` ? 'primary' : 'outline-primary'}
-                    onClick={() => handleServiceSelect(`Service ${num}`)}
+                    key={service}
+                    variant={formData.service === service ? 'primary' : 'outline-primary'}
+                    onClick={() => handleServiceSelect(service)}
                   >
-                    Service {num}
+                    {service}
                   </Button>
                 ))}
               </div>

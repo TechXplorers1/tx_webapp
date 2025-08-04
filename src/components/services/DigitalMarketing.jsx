@@ -4,10 +4,11 @@ import '../../styles/Services/DigitalMarketing.css';
 import { useNavigate } from 'react-router-dom';
 import CustomNavbar from '../Navbar';
 import { Modal, Button, Form } from 'react-bootstrap';
+import { useAuth } from '../../components/AuthContext'; // Step 1: Import useAuth
 
 const DigitalMarketing = () => {
   const navigate = useNavigate();
-
+  const { isLoggedIn } = useAuth(); // Step 2: Get auth status
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
     firstName: '',
@@ -18,11 +19,14 @@ const DigitalMarketing = () => {
     userType: '',
   });
 
-   const handleApplyNow = () => {
-    navigate('/services/servicesForm', { state: { service: 'Digital Marketing' } });
+  // Step 3: Update the handler to check for login status
+  const handleApplyNow = () => {
+    if (isLoggedIn) {
+      navigate('/services/servicesForm', { state: { service: 'Digital Marketing' } });
+    } else {
+      navigate('/login');
+    }
   };
-
-
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -40,7 +44,7 @@ const DigitalMarketing = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log('Form submitted:', formData);
-    alert('Form submitted successfully!');
+    // A custom modal or toast is better than alert()
     setShowModal(false);
     setFormData({
       firstName: '',
@@ -71,7 +75,7 @@ const DigitalMarketing = () => {
     {
       title: 'Our Digital Marketing Process',
       description: (
-  <p>The process includes <b>Market Research & Analysis</b>, followed by Strategy Development to outline a clear roadmap. Once the strategy is in place, focus shifts to **Implementation & Execution**, ensuring all plans are put into action effectively. This is supported by continuous **Monitoring & Optimization** to enhance performance, and culminates in comprehensive **Reporting & Insights** that inform future decisions.
+        <p>The process includes <b>Market Research & Analysis</b>, followed by Strategy Development to outline a clear roadmap. Once the strategy is in place, focus shifts to **Implementation & Execution**, ensuring all plans are put into action effectively. This is supported by continuous **Monitoring & Optimization** to enhance performance, and culminates in comprehensive **Reporting & Insights** that inform future decisions.
 </p>
       ),
     },
@@ -157,13 +161,13 @@ const DigitalMarketing = () => {
             <div className="mb-3">
               <label><strong>What service do you want?</strong></label>
               <div className="d-flex flex-wrap gap-2 mt-2">
-                {[1, 2, 3, 4, 5, 6].map(num => (
+                {['Service 1', 'Service 2', 'Service 3', 'Service 4', 'Service 5', 'Service 6'].map(service => (
                   <Button
-                    key={num}
-                    variant={formData.service === `Service ${num}` ? 'primary' : 'outline-primary'}
-                    onClick={() => handleServiceSelect(`Service ${num}`)}
+                    key={service}
+                    variant={formData.service === service ? 'primary' : 'outline-primary'}
+                    onClick={() => handleServiceSelect(service)}
                   >
-                    Service {num}
+                    {service}
                   </Button>
                 ))}
               </div>

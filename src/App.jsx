@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import { ThemeProvider } from './context/ThemeContext';
+import { AuthProvider } from './components/AuthContext';
 
 import LandingPage from './components/LandingPage';
 import AboutUs from './components/AboutUs';
@@ -45,6 +46,7 @@ import AdminPage from './components/AdminWorkSheet/AdminPage';
 const App = () => {
   return (
     <div>
+      <AuthProvider>
       <ThemeProvider>
     <Routes>
         <Route path="/" element={<LandingPage />} />
@@ -83,6 +85,7 @@ const App = () => {
 
     </Routes>
     </ThemeProvider>
+    </AuthProvider>
     </div>
   );
 };

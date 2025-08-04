@@ -187,9 +187,9 @@ const JobSupportContactForm = () => {
       jobPortalAccountName: formData.jobPortalAccountNameandCredentials,
     };
     try {
-      const existingClients = JSON.parse(localStorage.getItem('registeredClients')) || [];
-      existingClients.push(newClient);
-      localStorage.setItem('registeredClients', JSON.stringify(existingClients));
+      const existingClients = JSON.parse(localStorage.getItem('clients')) || [];
+      const updatedClients = [...existingClients, newClient];
+      localStorage.setItem('clients', JSON.stringify(updatedClients));
       console.log("Form data saved to localStorage:", newClient);
       setSubmitStatus({ success: true, message: 'Form submitted successfully!' });
       setFormData(initialFormData);
@@ -260,15 +260,15 @@ const JobSupportContactForm = () => {
           {/* Employment Information */}
           <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Employment Information</h4>
           <Row className="mb-3">
-            <Form.Group as={Col} controlId="formSecurityClearance"><Form.Label>Security Clearance <span className="text-danger">*</span></Form.Label><Form.Select name="securityClearance" value={formData.securityClearance} onChange={handleChange} required style={inputControlStyle}><option value="">Select Option</option><option value="yes">Yes</option><option value="no">No</option></Form.Select></Form.Group>
-            {formData.securityClearance === 'yes' && (<Form.Group as={Col} controlId="formClearanceLevel"><Form.Label>Clearance Level <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="clearanceLevel" value={formData.clearanceLevel} onChange={handleChange} required style={inputControlStyle} /></Form.Group>)}
-            <Form.Group as={Col} controlId="formWillingToRelocate"><Form.Label>Willing to Relocate <span className="text-danger">*</span></Form.Label><Form.Select name="willingToRelocate" value={formData.willingToRelocate} onChange={handleChange} required style={inputControlStyle}><option value="">Select Option</option><option value="yes">Yes</option><option value="no">No</option></Form.Select></Form.Group>
+            <Form.Group as={Col} controlId="formSecurityClearance"><Form.Label>Security Clearance <span className="text-danger">*</span></Form.Label><Form.Select name="securityClearance" value={formData.securityClearance} onChange={handleChange}  style={inputControlStyle}><option value="">Select Option</option><option value="yes">Yes</option><option value="no">No</option></Form.Select></Form.Group>
+            {formData.securityClearance === 'yes' && (<Form.Group as={Col} controlId="formClearanceLevel"><Form.Label>Clearance Level <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="clearanceLevel" value={formData.clearanceLevel} onChange={handleChange}  style={inputControlStyle} /></Form.Group>)}
+            <Form.Group as={Col} controlId="formWillingToRelocate"><Form.Label>Willing to Relocate <span className="text-danger">*</span></Form.Label><Form.Select name="willingToRelocate" value={formData.willingToRelocate} onChange={handleChange}  style={inputControlStyle}><option value="">Select Option</option><option value="yes">Yes</option><option value="no">No</option></Form.Select></Form.Group>
           </Row>
           <Row className="mb-3">
-            <Form.Group as={Col} md={6} controlId="formWorkPreference"><Form.Label>Work Preference <span className="text-danger">*</span></Form.Label><Form.Select name="workPreference" value={formData.workPreference} onChange={handleChange} required style={inputControlStyle}><option value="">Select Preference</option><option value="remote">Remote</option><option value="onsite">On-site</option><option value="hybrid">Hybrid</option></Form.Select></Form.Group>
+            <Form.Group as={Col} md={6} controlId="formWorkPreference"><Form.Label>Work Preference <span className="text-danger">*</span></Form.Label><Form.Select name="workPreference" value={formData.workPreference} onChange={handleChange}  style={inputControlStyle}><option value="">Select Preference</option><option value="remote">Remote</option><option value="onsite">On-site</option><option value="hybrid">Hybrid</option></Form.Select></Form.Group>
             <Form.Group as={Col} md={6} controlId="formYearsOfExperience">
                 <Form.Label>Years of Experience <span className="text-danger">*</span></Form.Label>
-                <Form.Control type="text" name="yearsOfExperience" placeholder="Experience in years" value={formData.yearsOfExperience} onChange={handleChange} required style={inputControlStyle} />
+                <Form.Control type="text" name="yearsOfExperience" placeholder="Experience in years" value={formData.yearsOfExperience} onChange={handleChange}  style={inputControlStyle} />
             </Form.Group>
           </Row>
            <Row className="mb-3">
@@ -278,8 +278,8 @@ const JobSupportContactForm = () => {
           {/* Job Preferences */}
           <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Job Preferences</h4>
           <Row className="mb-3">
-             <Form.Group as={Col} controlId="formJobsToApply"><Form.Label>Jobs to Apply For <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="jobsToApply" onChange={handleChange} required style={inputControlStyle} /></Form.Group>
-            <Form.Group as={Col} controlId="formTechnologySkills"><Form.Label>Technology Skills <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="technologySkills" onChange={handleChange} required style={inputControlStyle} /></Form.Group>
+             <Form.Group as={Col} controlId="formJobsToApply"><Form.Label>Jobs to Apply For <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="jobsToApply" onChange={handleChange}  style={inputControlStyle} /></Form.Group>
+            <Form.Group as={Col} controlId="formTechnologySkills"><Form.Label>Technology Skills <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="technologySkills" onChange={handleChange}  style={inputControlStyle} /></Form.Group>
           </Row>
           <Row className="mb-3">
             <Form.Group as={Col} controlId="formCurrentSalary"><Form.Label>Current Salary <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="currentSalary" onChange={handleChange} required style={inputControlStyle} /></Form.Group>
@@ -291,25 +291,25 @@ const JobSupportContactForm = () => {
           {/* Education */}
           <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Education</h4>
           <Row className="mb-3">
-            <Form.Group as={Col} controlId="formUniversityName"><Form.Label>University Name <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="universityName" onChange={handleChange} required style={inputControlStyle} /></Form.Group>
-            <Form.Group as={Col} controlId="formUniversityAddress"><Form.Label>University Address <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="universityAddress" onChange={handleChange} required style={inputControlStyle} /></Form.Group>
-            <Form.Group as={Col} controlId="formCourseOfStudy"><Form.Label>Course of Study <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="courseOfStudy" onChange={handleChange} required style={inputControlStyle} /></Form.Group>
+            <Form.Group as={Col} controlId="formUniversityName"><Form.Label>University Name <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="universityName" onChange={handleChange}  style={inputControlStyle} /></Form.Group>
+            <Form.Group as={Col} controlId="formUniversityAddress"><Form.Label>University Address <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="universityAddress" onChange={handleChange}  style={inputControlStyle} /></Form.Group>
+            <Form.Group as={Col} controlId="formCourseOfStudy"><Form.Label>Course of Study <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="courseOfStudy" onChange={handleChange}  style={inputControlStyle} /></Form.Group>
           </Row>
           <Row className="mb-3">
-            <Form.Group as={Col} controlId="formGraduationFromDate"><Form.Label>Graduation From Date <span className="text-danger">*</span></Form.Label><Form.Control type="date" name="graduationFromDate" onChange={handleChange} required style={inputControlStyle} /></Form.Group>
-            <Form.Group as={Col} controlId="formGraduationToDate"><Form.Label>Graduation To Date <span className="text-danger">*</span></Form.Label><Form.Control type="date" name="graduationToDate" onChange={handleChange} required style={inputControlStyle} /></Form.Group>
+            <Form.Group as={Col} controlId="formGraduationFromDate"><Form.Label>Graduation From Date <span className="text-danger">*</span></Form.Label><Form.Control type="date" name="graduationFromDate" onChange={handleChange}  style={inputControlStyle} /></Form.Group>
+            <Form.Group as={Col} controlId="formGraduationToDate"><Form.Label>Graduation To Date <span className="text-danger">*</span></Form.Label><Form.Control type="date" name="graduationToDate" onChange={handleChange}  style={inputControlStyle} /></Form.Group>
           </Row>
 
           {/* Current Employment */}
           <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Current Employment</h4>
           <Row className="mb-3">
-            <Form.Group as={Col} controlId="formCurrentCompany"><Form.Label>Current Company <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="currentCompany" onChange={handleChange} required style={inputControlStyle} /></Form.Group>
-            <Form.Group as={Col} controlId="formCurrentDesignation"><Form.Label>Current Designation <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="currentDesignation" onChange={handleChange} required style={inputControlStyle} /></Form.Group>
+            <Form.Group as={Col} controlId="formCurrentCompany"><Form.Label>Current Company <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="currentCompany" onChange={handleChange}  style={inputControlStyle} /></Form.Group>
+            <Form.Group as={Col} controlId="formCurrentDesignation"><Form.Label>Current Designation <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="currentDesignation" onChange={handleChange}  style={inputControlStyle} /></Form.Group>
           </Row>
           <Row className="mb-3">
-            <Form.Group as={Col} controlId="formPreferredInterviewTime"><Form.Label>Preferred Interview Time <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="preferredInterviewTime" onChange={handleChange} required style={inputControlStyle} /></Form.Group>
-            <Form.Group as={Col} controlId="formEarliestJoiningDate"><Form.Label>Earliest Joining Date <span className="text-danger">*</span></Form.Label><Form.Control type="date" name="earliestJoiningDate" onChange={handleChange} required style={inputControlStyle} /></Form.Group>
-            <Form.Group as={Col} controlId="formRelievingDate"><Form.Label>Relieving Date <span className="text-danger">*</span></Form.Label><Form.Control type="date" name="relievingDate" onChange={handleChange} required style={inputControlStyle} /></Form.Group>
+            <Form.Group as={Col} controlId="formPreferredInterviewTime"><Form.Label>Preferred Interview Time <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="preferredInterviewTime" onChange={handleChange}  style={inputControlStyle} /></Form.Group>
+            <Form.Group as={Col} controlId="formEarliestJoiningDate"><Form.Label>Earliest Joining Date <span className="text-danger">*</span></Form.Label><Form.Control type="date" name="earliestJoiningDate" onChange={handleChange}  style={inputControlStyle} /></Form.Group>
+            <Form.Group as={Col} controlId="formRelievingDate"><Form.Label>Relieving Date <span className="text-danger">*</span></Form.Label><Form.Control type="date" name="relievingDate" onChange={handleChange}  style={inputControlStyle} /></Form.Group>
           </Row>
 
           {/* References (Optional) */}

@@ -9,25 +9,55 @@ import 'aos/dist/aos.css';
 const ContactPage = () => {
     const [formSubmitted, setFormSubmitted] = useState(false);
 
-    const handleSubmit = (e) => {
+    useEffect(() => {
+        // Initialize the animation library only when the form is visible.
+        if (!formSubmitted) {
+            AOS.init({ duration: 1000 });
+        }
+    }, [formSubmitted]);
+
+   const handleSubmit = (e) => {
         e.preventDefault();
+        
+        // --- NEW: Capture form data and save to local storage ---
+        const formData = new FormData(e.target);
+        const submission = {
+            id: Date.now(), // Unique ID for the submission
+            firstName: formData.get('firstName'),
+            lastName: formData.get('lastName'),
+            email: formData.get('email'),
+            phone: formData.get('phone'),
+            message: formData.get('message'),
+            receivedDate: new Date().toISOString().split('T')[0], // 'YYYY-MM-DD' format
+
+        };
+              // Get existing submissions from local storage or create a new array
+        const existingSubmissions = JSON.parse(localStorage.getItem('contact_submissions')) || [];
+        
+        // Prepend the new submission
+        const updatedSubmissions = [submission, ...existingSubmissions];
+        
+        // Save back to local storage
+        localStorage.setItem('contact_submissions', JSON.stringify(updatedSubmissions));
+        
+        // --- End of new logic ---
+
         setFormSubmitted(true);
-    };
+        };
 
     if (formSubmitted) {
         return (
             <div style={{ color: 'black', height: '100vh' }} className="d-flex flex-column justify-content-center align-items-center text-center px-3">
                 <h1 className="fw-bold display-4 mb-3">THANK YOU</h1>
-                <hr style={{ width: '80px', borderTop: '2px solid white' }} />
+                {/* Note: Border color changed from white to black for visibility */}
+                <hr style={{ width: '80px', borderTop: '2px solid black' }} />
                 <p className="fs-5">For showing interest in our products and services. Our team will be in contact with you shortly.</p>
                 <p className="fs-5 mt-4">TechXplorers – Celebrating 5+ years of industrial experience and a strong brand value our team has created!</p>
             </div>
         );
     }
 
-    useEffect(() => {
-        AOS.init({ duration: 1000 });
-    }, []);
+   
 
     return (
         <div className="contact-us-page">
@@ -95,6 +125,7 @@ const ContactPage = () => {
                                         <Col md={6} data-aos="zoom-in">
                                             <Form.Control
                                                 type="email"
+                                                name="email"
                                                 placeholder="Email*"
                                                 className="p-3 bg-light border-info"
                                                 style={{ borderRadius: '20px' }}
@@ -104,6 +135,7 @@ const ContactPage = () => {
                                         <Col md={6} data-aos="zoom-in">
                                             <Form.Control
                                                 type="text"
+                                                name="phone"
                                                 placeholder="Phone Number*"
                                                 className="p-3 bg-light border-info"
                                                 style={{ borderRadius: '20px' }}
@@ -116,6 +148,7 @@ const ContactPage = () => {
                                         <Col md={6} data-aos="zoom-in">
                                             <Form.Control
                                                 type="text"
+                                                name="firstName"
                                                 placeholder="First name*"
                                                 className="p-3 bg-light border-info"
                                                 style={{ borderRadius: '20px' }}
@@ -125,6 +158,7 @@ const ContactPage = () => {
                                         <Col md={6} data-aos="zoom-in">
                                             <Form.Control
                                                 type="text"
+                                                name="lastName"
                                                 placeholder="Last name"
                                                 className="p-3 bg-light border-info"
                                                 style={{ borderRadius: '20px' }}
@@ -136,6 +170,7 @@ const ContactPage = () => {
                                         <Col data-aos="zoom-in">
                                             <Form.Control
                                                 as="textarea"
+                                                name="message"
                                                 rows={3}
                                                 placeholder="Message"
                                                 className="p-3 bg-light border-info"
@@ -207,10 +242,8 @@ const ContactPage = () => {
                 <footer className=" py-5">
                     <Container className="d-flex justify-content-center align-items-center flex-wrap gap-3">
                         <p className="mb-2 mb-md-0">© {new Date().getFullYear()} TechXplorers Pvt. Ltd. All rights reserved.</p>
-                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                        <div>
-                            <a href="#" style={{ color: 'black' }} className="me-2 text-decoration-none">Privacy & Legal</a>
-                            &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+                        <div className="d-flex gap-3">
+                            <a href="#" style={{ color: 'black' }} className="text-decoration-none">Privacy & Legal</a>
                             <a href="/contactus" style={{ color: 'black' }} className="text-decoration-none">Contact</a>
                         </div>
                     </Container>

@@ -107,15 +107,7 @@ const ClientManagement = () => {
     }
   }, [employees, loading]);
 
-  useEffect(() => {
-    try {
-      // This saves the entire 'clients' list, including their current statuses,
-      // so the correct clients appear in the correct tabs on page reload.
-      localStorage.setItem('admin_clients', JSON.stringify(clients));
-    } catch (error) {
-      console.error("Failed to save admin clients to local storage", error);
-    }
-  }, [clients]); // This runs whenever the 'clients' state changes
+
 
 // REMOVED: Hardcoded managers array is no longer needed
   // const managers = [ ... ];

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const RequestManagement = () => {
   // --- Request Management States ---
@@ -15,23 +15,40 @@ const RequestManagement = () => {
   const [selectedServiceRequest, setSelectedServiceRequest] = useState(null);
 
   // Mock data for Career Submissions
-  const [careerSubmissions, setCareerSubmissions] = useState([
+const initialCareerSubmissions = [
     { id: 1, firstName: 'John', lastName: 'Doe', email: 'john.d@example.com', mobile: '1234567890', role: 'Data Analyst', experience: 3, currentSalary: '70000', expectedSalary: '85000', resume: 'john_doe_resume.pdf', status: 'Pending' },
     { id: 2, firstName: 'Jane', lastName: 'Smith', email: 'jane.s@example.com', mobile: '0987654321', role: 'Scrum Master', experience: 5, currentSalary: '90000', expectedSalary: '110000', resume: 'jane_smith_cv.docx', status: 'Pending' },
     { id: 3, firstName: 'Peter', lastName: 'Jones', email: 'peter.j@example.com', mobile: '1122334455', role: 'Cyber Security', experience: 2, currentSalary: '65000', expectedSalary: '75000', resume: 'peter_jones_resume.pdf', status: 'Accepted' },
-  ]);
+  ];
+
+   const [careerSubmissions, setCareerSubmissions] = useState(() => {
+    const savedSubmissions = localStorage.getItem('career_submissions');
+    return savedSubmissions ? JSON.parse(savedSubmissions) : initialCareerSubmissions;
+  });
 
   // Mock data for Contact Us Submissions
-  const [contactSubmissions, setContactSubmissions] = useState([
-    { id: 1, firstName: 'Alice', lastName: 'Williams', email: 'alice.w@example.com', phone: '5551234567', message: 'I am interested in your web development services. Can we schedule a call?', date: '2024-07-20' },
-    { id: 2, firstName: 'Bob', lastName: 'Brown', email: 'bob.b@example.com', phone: '5559876543', message: 'Question about pricing for digital marketing packages.', date: '2024-07-21' },
-  ]);
+   const initialContactSubmissions = [
+    { id: 1, firstName: 'Alice', lastName: 'Williams', email: 'alice.w@example.com', phone: '5551234567', message: 'I am interested in your web development services. Can we schedule a call?', receivedDate: '2024-07-20' },
+    { id: 2, firstName: 'Bob', lastName: 'Brown', email: 'bob.b@example.com', phone: '5559876543', message: 'Question about pricing for digital marketing packages.', receivedDate: '2024-07-21' },
+  ];
 
+   const [contactSubmissions, setContactSubmissions] = useState(() => {
+    const savedSubmissions = localStorage.getItem('contact_submissions');
+    return savedSubmissions ? JSON.parse(savedSubmissions) : initialContactSubmissions;
+  });   
+
+const initialServiceSubmissions = [
   // Mock data for Service Request Submissions
-  const [serviceRequests, setServiceRequests] = useState([
     { id: 1, email: 'service.user1@example.com', message: 'I need help setting up my new software.', receivedDate: '2024-07-23' },
     { id: 2, email: 'service.user2@example.com', message: 'There is an issue with my account billing.', receivedDate: '2024-07-22' },
-  ]);
+];
+
+ const [serviceRequests, setServiceRequests] = useState(() => {
+    const savedSubmissions = localStorage.getItem('service_submissions');
+    return savedSubmissions ? JSON.parse(savedSubmissions) : initialServiceSubmissions;
+  });
+
+
 
   // --- Request Management Handlers ---
   const handleViewCareerDetails = (submission) => {
@@ -117,6 +134,28 @@ const RequestManagement = () => {
       default: return '#374151';
     }
   };
+
+
+  useEffect(() => {
+    const handleStorageChange = (event) => {
+      if (event.key === 'career_submissions' && event.newValue) {
+        setCareerSubmissions(JSON.parse(event.newValue));
+      }
+      if (event.key === 'contact_submissions' && event.newValue) {
+        setContactSubmissions(JSON.parse(event.newValue));
+      }
+       if (event.key === 'service_submissions' && event.newValue) {
+        setContactSubmissions(JSON.parse(event.newValue));
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    // Cleanup the event listener when the component unmounts
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []); 
 
 
   return (
@@ -411,7 +450,7 @@ const RequestManagement = () => {
                       <div style={{color: 'var(--text-secondary)', fontSize: '0.8rem'}}>{sub.phone}</div>
                     </td>
                     <td className="message-cell" title={sub.message} onClick={() => handleViewContactDetails(sub)}>{sub.message}</td>
-                    <td>{sub.date}</td>
+                    <td>{sub.receivedDate}</td>
                     <td>
                       <div className="action-buttons">
                         <button className="action-button view" onClick={() => handleViewContactDetails(sub)}>View</button>
@@ -503,7 +542,7 @@ const RequestManagement = () => {
                   <div className="detail-item"><span className="detail-label">From:</span> <span>{selectedContactSubmission.firstName} {selectedContactSubmission.lastName}</span></div>
                   <div className="detail-item"><span className="detail-label">Email:</span> <span>{selectedContactSubmission.email}</span></div>
                   <div className="detail-item"><span className="detail-label">Phone:</span> <span>{selectedContactSubmission.phone}</span></div>
-                  <div className="detail-item"><span className="detail-label">Received On:</span> <span className="detail-value">{selectedContactSubmission.date}</span></div>
+                  <div className="detail-item"><span className="detail-label">Received On:</span> <span className="detail-value">{selectedContactSubmission.receivedDate}</span></div>
                   <div className="message-content">
                     <h5 className="detail-label">Message:</h5>
                     <p>{selectedContactSubmission.message}</p>

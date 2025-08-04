@@ -48,6 +48,68 @@ function Careers() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const navigate = useNavigate();
 
+   const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    mobile: '',
+    currentSalary: '',
+    expectedSalary: '',
+    experience: '',
+    resume: null,
+  });
+
+    const handleFormChange = (e) => {
+    const { name, value, files } = e.target;
+    if (name === 'resume') {
+      // For file input, store the file object
+      setFormData((prev) => ({ ...prev, resume: files[0] }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
+  };
+
+
+   // Handler for form submission
+  const handleFormSubmit = (e) => {
+    e.preventDefault();
+    if (!selectedJob) return;
+
+    // 1. Create the new submission object in the desired format
+    const newSubmission = {
+      id: Date.now(), // Use a timestamp for a unique ID
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      email: formData.email,
+      mobile: formData.mobile,
+      role: selectedJob.title,
+      experience: Number(formData.experience),
+      currentSalary: formData.currentSalary,
+      expectedSalary: formData.expectedSalary,
+      resume: formData.resume ? formData.resume.name : 'N/A', // Save only the file name
+      status: 'Pending',
+    };
+
+    // 2. Get existing submissions from local storage, or initialize an empty array
+    const existingSubmissions = JSON.parse(localStorage.getItem('career_submissions')) || [];
+
+    // 3. Prepend the new submission to the beginning of the array
+    const updatedSubmissions = [newSubmission, ...existingSubmissions];
+
+    // 4. Save the updated array back to local storage
+    localStorage.setItem('career_submissions', JSON.stringify(updatedSubmissions));
+
+    // 5. Close the form modal and show the success message
+    handleModalClose();
+    setShowSuccessModal(true);
+    
+    // 6. Reset the form for the next application
+    setFormData({
+      firstName: '', lastName: '', email: '', mobile: '',
+      currentSalary: '', expectedSalary: '', experience: '', resume: null,
+    });
+  };
+
   const filteredJobs = jobs.filter((job) =>
     job.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -145,82 +207,57 @@ function Careers() {
           <Modal.Title>Apply for {selectedJob?.title}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <Form onSubmit={(e) => {
-            e.preventDefault();
-            setShowSuccessModal(true);
-            handleModalClose();
-          }}>
+          {/* The onSubmit handler is now linked to our new function */}
+          <Form onSubmit={handleFormSubmit}>
             <Form.Group className="mb-3">
               <div className="d-flex flex-column gap-2">
                 <div className="d-flex justify-content-between align-items-start gap-2">
                   <div style={{ flex: 1 }}>
                     <Form.Label className="form-label-custom">First Name <span style={{ color: 'red' }}>*</span></Form.Label>
-                    <Form.Control type="text" placeholder="First Name" required style={{ width: '100%' }} />
+                    <Form.Control type="text" name="firstName" value={formData.firstName} onChange={handleFormChange} placeholder="First Name" required style={{ width: '100%' }} />
                   </div>
-
                   <div style={{ flex: 1 }}>
                     <Form.Label className="form-label-custom">Last Name <span style={{ color: 'red' }}>*</span></Form.Label>
-                    <Form.Control type="text" placeholder="Last Name" required style={{ width: '100%' }} />
+                    <Form.Control type="text" name="lastName" value={formData.lastName} onChange={handleFormChange} placeholder="Last Name" required style={{ width: '100%' }} />
                   </div>
                 </div>
               </div>
-
               <br />
-
               <div className="d-flex flex-column gap-2">
-
                 <div className="d-flex justify-content-between align-items-start gap-2">
-
                   <div style={{ flex: 1 }}>
-
                     <Form.Label className="form-label-custom">Email <span style={{ color: 'red' }}>*</span></Form.Label>
-
-                    <Form.Control type="email" placeholder="Enter your email" required style={{ width: '100%' }} />
-
+                    <Form.Control type="email" name="email" value={formData.email} onChange={handleFormChange} placeholder="Enter your email" required style={{ width: '100%' }} />
                   </div>
-
-
-
                   <div style={{ flex: 1 }}>
-
                     <Form.Label className="form-label-custom">Mobile Number<span style={{ color: 'red' }}>*</span></Form.Label>
-
-                    <Form.Control type="text" inputMode="numeric" pattern="[0-9]*" maxLength={10} placeholder="Enter your mobile number" required style={{ width: '100%' }} />
-
+                    <Form.Control type="text" name="mobile" value={formData.mobile} onChange={handleFormChange} inputMode="numeric" pattern="[0-9]*" maxLength={10} placeholder="Enter your mobile number" required style={{ width: '100%' }} />
                   </div>
-
                 </div>
-
               </div>
-
               <br />
-
               <div className="d-flex flex-column gap-2">
                 <div className="d-flex justify-content-between align-items-start gap-2">
                   <div style={{ flex: 1 }}>
                     <Form.Label className="form-label-custom">Current Salary<span style={{ color: 'red' }}>*</span></Form.Label>
-                    <Form.Control type="text" inputMode="numeric" pattern="[0-9]*" placeholder="Enter your Current Salary" required style={{ width: '100%' }} />
+                    <Form.Control type="text" name="currentSalary" value={formData.currentSalary} onChange={handleFormChange} inputMode="numeric" pattern="[0-9]*" placeholder="Enter your Current Salary" required style={{ width: '100%' }} />
                   </div>
-
                   <div style={{ flex: 1 }}>
                     <Form.Label className="form-label-custom">Expected Salary<span style={{ color: 'red' }}>*</span></Form.Label>
-                    <Form.Control type="text" inputMode="numeric" pattern="[0-9]*" maxLength={10} placeholder="Enter your mobile number" required style={{ width: '100%' }} />
+                    <Form.Control type="text" name="expectedSalary" value={formData.expectedSalary} onChange={handleFormChange} inputMode="numeric" pattern="[0-9]*" placeholder="Enter your Expected Salary" required style={{ width: '100%' }} />
                   </div>
                 </div>
               </div>
-
               <br />
-
               <div className="d-flex flex-column gap-2">
                 <div className="d-flex justify-content-between align-items-start gap-2">
                   <div style={{ flex: 1 }}>
                     <Form.Label className="form-label-custom">How Many Years Of Experience in {selectedJob?.title} <span style={{ color: 'red' }}>*</span></Form.Label>
-                    <Form.Control type="number" placeholder="Enter years of experience" required style={{ width: '100%' }} />
+                    <Form.Control type="number" name="experience" value={formData.experience} onChange={handleFormChange} placeholder="Enter years of experience" required style={{ width: '100%' }} />
                   </div>
-
                   <div style={{ flex: 1 }}>
                     <Form.Label className="form-label-custom">Resume/CV (Upload File)<span style={{ color: 'red' }}>*</span></Form.Label>
-                    <Form.Control type="file" accept=".pdf,.doc,.docx" required style={{ width: '100%' }} />
+                    <Form.Control type="file" name="resume" onChange={handleFormChange} accept=".pdf,.doc,.docx" required style={{ width: '100%' }} />
                   </div>
                 </div>
               </div>

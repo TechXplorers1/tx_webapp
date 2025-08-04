@@ -4,9 +4,11 @@ import '../../styles/Services/WebAppDev.css';
 import { useNavigate } from 'react-router-dom';
 import CustomNavbar from '../Navbar';
 import { Modal, Button, Form } from 'react-bootstrap';
+import { useAuth } from '../../components/AuthContext'; // Corrected the import path
 
 const WebAppDev = () => {
   const navigate = useNavigate();
+  const { isLoggedIn } = useAuth(); // Step 2: Get auth status
 
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
@@ -24,7 +26,6 @@ const WebAppDev = () => {
       description: (
         <p>
         We provide comprehensive end-to-end web application development solutions tailored to meet your business needs. Our team ensures that every web platform we build is fully responsive across devices, highly secure, scalable, and optimized for performance. From initial planning and UI/UX design to full-stack development and post-launch support, we align every aspect of your web application with your strategic goals and user expectations.
-
         </p>
       ),
     },
@@ -67,14 +68,18 @@ const WebAppDev = () => {
       description: (
         <ul className="flip-card-list">
           TechXplorers proudly serves a wide range of industries including E-Commerce & Retail, Healthcare & Pharmaceuticals, Finance & Banking, Real Estate & Construction, Education & Training, and Technology & SaaS. Our tailored solutions are designed to meet the unique needs of each sector, empowering businesses to innovate, streamline operations, and drive sustainable growth in a competitive digital landscape.
-
         </ul>
       ),
     }
   ];
 
+  // Step 3: Update the handler to check for login status
   const handleApplyNow = () => {
-    navigate('/services/servicesForm', { state: { service: 'Web Development' } });
+    if (isLoggedIn) {
+      navigate('/services/servicesForm', { state: { service: 'Web Development' } });
+    } else {
+      navigate('/login');
+    }
   };
 
   const handleChange = (e) => {
@@ -93,7 +98,7 @@ const WebAppDev = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log('Form submitted:', formData);
-    alert('Form submitted successfully!');
+    // Using a custom modal or toast notification is better than alert()
     setShowModal(false);
     // Reset form
     setFormData({
@@ -215,13 +220,13 @@ const WebAppDev = () => {
             <div className="mb-3">
               <label><strong>What service do you want?</strong></label>
               <div className="d-flex flex-wrap gap-2 mt-2">
-                {[1, 2, 3, 4, 5, 6].map(num => (
+                {['Service 1', 'Service 2', 'Service 3', 'Service 4', 'Service 5', 'Service 6'].map(service => (
                   <Button
-                    key={num}
-                    variant={formData.service === `Service ${num}` ? 'primary' : 'outline-primary'}
-                    onClick={() => handleServiceSelect(`Service ${num}`)}
+                    key={service}
+                    variant={formData.service === service ? 'primary' : 'outline-primary'}
+                    onClick={() => handleServiceSelect(service)}
                   >
-                    Service {num}
+                    {service}
                   </Button>
                 ))}
               </div>

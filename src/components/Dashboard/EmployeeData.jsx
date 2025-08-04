@@ -1551,7 +1551,7 @@ const handleAcceptClient = (clientId) => {
     setSelectedClient(newActiveClient); // Use the prepared object
     setActiveTab('Active Clients');
     setActiveSubTab('Applications');
-    triggerNotification(`Client ${clientToAccept.name} accepted!`);
+triggerNotification(`Client ${newActiveClient.name} accepted!`);
   };
 
 
@@ -1863,7 +1863,7 @@ const handleAcceptClient = (clientId) => {
             >
               <option value="">Select a Client</option>
               {activeClients.map(client => (
-                <option key={client.id} value={client.id}>{client.name}</option>
+                <option key={client.id} value={client.id}>{`${client.firstName} ${client.lastName}`}</option>
               ))}
             </select>
           </div>
@@ -1871,7 +1871,7 @@ const handleAcceptClient = (clientId) => {
             <>
               <div style={{ marginTop: '20px', padding: '15px', background: '#e0effe', borderRadius: '8px', border: '1px solid #c4e0ff' }}>
                 <p style={{ fontSize: '1.1rem', fontWeight: '600', color: '#3b82f6', margin: '0 0 10px 0' }}>
-                  Currently viewing data for: {selectedClient.name}
+                  Currently viewing data for: {`${selectedClient.firstName} ${selectedClient.lastName}`}
                 </p>
                 <p style={{ fontSize: '0.9rem', color: '#475569', margin: 0 }}>
                   Role: {selectedClient.role} | Location: {selectedClient.location} | Salary: {selectedClient.salaryRange}
@@ -2147,8 +2147,8 @@ const handleAcceptClient = (clientId) => {
                     <div style={clientApplicationsHeaderStyle}>
                       <div style={initialsCircleStyle}>{selectedClient.initials}</div>
                       <div style={{ flexGrow: 1 }}>
-                        <p style={clientNameStyle}>{selectedClient.name} <span style={{ ...priorityBadgeStyle, backgroundColor: selectedClient.priority === 'high' ? '#fee2e2' : selectedClient.priority === 'medium' ? '#fef3c7' : '#e0f2fe', color: selectedClient.priority === 'high' ? '#dc2626' : selectedClient.priority === 'medium' ? '#d97706' : '#2563eb' }}>{selectedClient.priority}</span></p>
-                        <p style={clientCodeStyle}>{selectedClient.role} - {selectedClient.location}</p>
+                        <p style={clientNameStyle}>{`${selectedClient.firstName} ${selectedClient.lastName}`} <span style={{ ...priorityBadgeStyle, backgroundColor: selectedClient.priority === 'high' ? '#fee2e2' : selectedClient.priority === 'medium' ? '#fef3c7' : '#e0f2fe', color: selectedClient.priority === 'high' ? '#dc2626' : selectedClient.priority === 'medium' ? '#d97706' : '#2563eb' }}>{selectedClient.priority}</span></p>
+                        <p style={clientCodeStyle}>{selectedClient.role || selectedClient.position } - {selectedClient.location}</p>
                       </div>
                       <div style={clientAppStatsStyle}>
                         <span>Showing: <strong>{getFilteredAndSortedApplications(selectedClient.jobApplications).length}</strong></span>
