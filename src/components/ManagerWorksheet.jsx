@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react'; // Import useRef
 import { useNavigate } from 'react-router-dom';
-import { Modal,Button } from 'react-bootstrap'; // Using react-bootstrap Modal
+import { Modal, Button } from 'react-bootstrap'; // Using react-bootstrap Modal
 
 
 const ManagerWorkSheet = () => {
 
-   const navigate = useNavigate();
+  const navigate = useNavigate();
   // State to manage the current theme: 'light' or 'dark'
   const [theme, setTheme] = useState(() => {
     // Initialize theme from local storage or default to 'light'
@@ -44,53 +44,56 @@ const ManagerWorkSheet = () => {
     lastLogin: '2025-07-15 10:30 AM',
   });
 
-   // NEW: useEffect to get logged-in user data from sessionStorage
-    useEffect(() => {
-      const loggedInUserData = sessionStorage.getItem('loggedInEmployee');
-      if (loggedInUserData) {
-          const userData = JSON.parse(loggedInUserData);
-          // Update the state with the details of the logged-in employee
-          setUserName(userData.name);
-          setUserProfile(prevDetails => ({
-              ...prevDetails, // Keep other default details if needed
-              name: userData.name,
-              email: userData.email,
-          }));
-      } else {
-          // Optional: If no user data is found, you can redirect to the login page
-          // This prevents users from accessing this page directly without logging in.
-          // Uncomment the line below to enable redirection.
-          // navigate('/'); 
-      }
-    }, [navigate]);
+  const [displayEmployees, setDisplayEmployees] = useState([]);
+
+
+  // NEW: useEffect to get logged-in user data from sessionStorage
+  useEffect(() => {
+    const loggedInUserData = sessionStorage.getItem('loggedInEmployee');
+    if (loggedInUserData) {
+      const userData = JSON.parse(loggedInUserData);
+      // Update the state with the details of the logged-in employee
+      setUserName(userData.name);
+      setUserProfile(prevDetails => ({
+        ...prevDetails, // Keep other default details if needed
+        name: userData.name,
+        email: userData.email,
+      }));
+    } else {
+      // Optional: If no user data is found, you can redirect to the login page
+      // This prevents users from accessing this page directly without logging in.
+      // Uncomment the line below to enable redirection.
+      // navigate('/'); 
+    }
+  }, [navigate]);
 
   useEffect(() => {
-        const loadAllEmployees = async () => {
-            try {
-                const savedEmployees = localStorage.getItem('employees');
-                if (savedEmployees && JSON.parse(savedEmployees).length > 0) {
-                    setAllEmployees(JSON.parse(savedEmployees));
-                } else {
-                    // Fallback to fetch if localStorage is empty
-                    const response = await fetch('/employees.json');
-                    if (!response.ok) throw new Error("Could not fetch employees");
-                    const data = await response.json();
-                    setAllEmployees(data);
-                }
-            } catch (error) {
-                console.error("Failed to load employees:", error);
-            }
-        };
-        loadAllEmployees();
-    }, []);
+    const loadAllEmployees = async () => {
+      try {
+        const savedEmployees = localStorage.getItem('employees');
+        if (savedEmployees && JSON.parse(savedEmployees).length > 0) {
+          setAllEmployees(JSON.parse(savedEmployees));
+        } else {
+          // Fallback to fetch if localStorage is empty
+          const response = await fetch('/employees.json');
+          if (!response.ok) throw new Error("Could not fetch employees");
+          const data = await response.json();
+          setAllEmployees(data);
+        }
+      } catch (error) {
+        console.error("Failed to load employees:", error);
+      }
+    };
+    loadAllEmployees();
+  }, []);
 
-    useEffect(() => {
+  useEffect(() => {
     // ... (existing code for loading loggedInUserData and allEmployees) ...
 
     // MODIFIED: Load both unassigned AND assigned clients from localStorage
     const savedAssignedClients = JSON.parse(localStorage.getItem('manager_assigned_clients')) || initialAssignedClientsData;
     const savedUnassignedClients = JSON.parse(localStorage.getItem('manager_unassigned_clients')) || initialUnassignedClientsData; // Assuming initial data for both for now
-    
+
     setAssignedClients(savedAssignedClients);
     setUnassignedClients(savedUnassignedClients);
 
@@ -180,8 +183,8 @@ const ManagerWorkSheet = () => {
         // If it's not a valid date, try to parse it as DD/MM/YYYY if it already is
         const parts = dateString.split('/');
         if (parts.length === 3) {
-            const [day, month, year] = parts;
-            return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+          const [day, month, year] = parts;
+          return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
         }
         return dateString; // Return original if invalid and not DD/MM/YYYY
       }
@@ -265,7 +268,7 @@ const ManagerWorkSheet = () => {
   ];
 
 
-// Add this helper function inside your ManagerWorkSheet component
+  // Add this helper function inside your ManagerWorkSheet component
   const getInitials = (name) => {
     if (!name || typeof name !== 'string') return ''; // Safety check
     const parts = name.split(' ').filter(Boolean); // Filter out empty strings
@@ -275,24 +278,24 @@ const ManagerWorkSheet = () => {
   };
 
   // State variables for dynamic data
-// 2. REPLACE your 'useState' for unassignedClients with this new logic
-const [unassignedClients, setUnassignedClients] = useState(() => {
+  // 2. REPLACE your 'useState' for unassignedClients with this new logic
+  const [unassignedClients, setUnassignedClients] = useState(() => {
     // Get clients assigned from the Admin worksheet
     const clientsFromAdmin = JSON.parse(localStorage.getItem('manager_unassigned_clients') || '[]');
-    
+
     // Combine the new clients with your initial list, avoiding duplicates by checking IDs
     const combinedClients = [...clientsFromAdmin];
     const existingIds = new Set(clientsFromAdmin.map(c => c.id));
-    
+
     initialUnassignedClientsData.forEach(initialClient => {
-        if (!existingIds.has(initialClient.id)) {
-            combinedClients.push(initialClient);
-        }
+      if (!existingIds.has(initialClient.id)) {
+        combinedClients.push(initialClient);
+      }
     });
 
     return combinedClients;
-}); 
- const [assignedClients, setAssignedClients] = useState(initialAssignedClientsData);
+  });
+  const [assignedClients, setAssignedClients] = useState(initialAssignedClientsData);
   const [employees, setEmployees] = useState(baseDummyEmployees); // Initialize with base, counts will be updated
   const [allEmployees, setAllEmployees] = useState([]);
   const [interviewData, setInterviewData] = useState(initialInterviewData);
@@ -304,7 +307,7 @@ const [unassignedClients, setUnassignedClients] = useState(() => {
   // NEW: Comprehensive dummy data for client details (from EmployeeData.txt structure)
   // This data will be the source of truth for detailed client profiles
   const [mockDetailedClientsData, setMockDetailedClientsData] = useState([
-   {
+    {
       id: 1, // Corresponds to David Wilson in unassignedClientsData
       name: 'David Wilson',
       firstName: 'David',
@@ -687,7 +690,7 @@ const [unassignedClients, setUnassignedClients] = useState(() => {
       name: 'John Anderson',
       firstName: 'John',
       middleName: '',
-            lastName: 'Anderson',
+      lastName: 'Anderson',
       dob: '1990-05-15',
       gender: 'Male',
       ethnicity: 'Caucasian',
@@ -1009,22 +1012,22 @@ const [unassignedClients, setUnassignedClients] = useState(() => {
   // NEW: Effect to dynamically populate applicationData based on assignedClients
   useEffect(() => {
     const updatedApplicationData = assignedClients.map(client => {
-        // Find the employee to get their avatar initial
-        const employee = employees.find(emp => emp.name === client.assignedTo);
-        // Use employee.avatar if available, otherwise generate from name
-        const employeeAvatar = employee ? employee.avatar : (client.assignedTo ? client.assignedTo.split(' ').map(n => n[0]).join('').toUpperCase() : '');
+      // Find the employee to get their avatar initial
+      const employee = employees.find(emp => emp.name === client.assignedTo);
+      // Use employee.avatar if available, otherwise generate from name
+      const employeeAvatar = employee ? employee.avatar : (client.assignedTo ? client.assignedTo.split(' ').map(n => n[0]).join('').toUpperCase() : '');
 
-        return {
-            id: client.id,
-            employeeName: client.assignedTo,
-            employeeAvatar: employeeAvatar,
-            clientName: client.clientName,
-            jobTitle: client.position,
-            company: client.company,
-            platform: client.platform, // New field
-            jobId: client.jobId,       // New field
-            appliedDate: client.appliedDate, // New field
-        };
+      return {
+        id: client.id,
+        employeeName: client.assignedTo,
+        employeeAvatar: employeeAvatar,
+        clientName: client.clientName,
+        jobTitle: client.position,
+        company: client.company,
+        platform: client.platform, // New field
+        jobId: client.jobId,       // New field
+        appliedDate: client.appliedDate, // New field
+      };
     });
     setApplicationData(updatedApplicationData);
   }, [assignedClients, employees]); // Depend on assignedClients and employees
@@ -1033,69 +1036,85 @@ const [unassignedClients, setUnassignedClients] = useState(() => {
   useEffect(() => {
     const counts = {};
     applicationData.forEach(app => {
-        counts[app.clientName] = (counts[app.clientName] || 0) + 1;
+      counts[app.clientName] = (counts[app.clientName] || 0) + 1;
     });
     setClientApplicationCounts(counts);
   }, [applicationData]);
 
 
   // NEW: Effect to update employee assigned client counts whenever assignedClients changes
+  // ADD THIS NEW useEffect TO PROCESS AND COMBINE ALL EMPLOYEE DATA
   useEffect(() => {
-    setEmployees(prevEmployees => {
-      const newCounts = {};
-      assignedClients.forEach(client => {
-        newCounts[client.assignedTo] = (newCounts[client.assignedTo] || 0) + 1;
-      });
+    // 1. Create a map of client counts for efficient lookup
+    const clientCounts = assignedClients.reduce((acc, client) => {
+      acc[client.assignedTo] = (acc[client.assignedTo] || 0) + 1;
+      return acc;
+    }, {});
 
-      return prevEmployees.map(employee => ({
-        ...employee,
-        assignedClients: newCounts[employee.name] || 0
-      }));
+    // 2. Enrich the master employee list with the calculated data
+    const enrichedEmployees = allEmployees.map(emp => {
+      const fullName = `${emp.firstName} ${emp.lastName}`;
+
+      // 3. Provide a fallback success rate if one doesn't exist
+      const successRate = emp.successRate || Math.floor(75 + Math.random() * 20); // Random rate between 75-95
+
+      return {
+        ...emp,
+        fullName: fullName,
+        assignedClients: clientCounts[fullName] || 0, // Get count from the map
+        successRate: successRate,
+        avatar: emp.avatar || getInitials(fullName), // Use existing avatar or fallback to initials
+      };
     });
-  }, [assignedClients]); // Recalculate when assignedClients changes
 
+    setDisplayEmployees(enrichedEmployees);
+
+  }, [allEmployees, assignedClients]); // This effect re-runs when the source data changes
+
+  // Add this new state variable for the employee selection modal
+  const [isEmployeeSelectModalOpen, setIsEmployeeSelectModalOpen] = useState(false);
 
   // In ManagerWorkSheet.js, add these two new useEffect hooks
 
-// This effect listens for new clients being assigned from the Admin worksheet
-useEffect(() => {
+  // This effect listens for new clients being assigned from the Admin worksheet
+  useEffect(() => {
     const handleStorageChange = (event) => {
-        if (event.key === 'manager_unassigned_clients' && event.newValue) {
-            const clientsFromAdmin = JSON.parse(event.newValue);
-            
-            // Re-create the list by combining with initial data
-            const combinedClients = [...clientsFromAdmin];
-            const existingIds = new Set(clientsFromAdmin.map(c => c.id));
+      if (event.key === 'manager_unassigned_clients' && event.newValue) {
+        const clientsFromAdmin = JSON.parse(event.newValue);
 
-            initialUnassignedClientsData.forEach(initialClient => {
-                if (!existingIds.has(initialClient.id)) {
-                    combinedClients.push(initialClient);
-                }
-            });
-            
-            setUnassignedClients(combinedClients);
-        }
+        // Re-create the list by combining with initial data
+        const combinedClients = [...clientsFromAdmin];
+        const existingIds = new Set(clientsFromAdmin.map(c => c.id));
+
+        initialUnassignedClientsData.forEach(initialClient => {
+          if (!existingIds.has(initialClient.id)) {
+            combinedClients.push(initialClient);
+          }
+        });
+
+        setUnassignedClients(combinedClients);
+      }
     };
 
     window.addEventListener('storage', handleStorageChange);
 
     return () => {
-        window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('storage', handleStorageChange);
     };
-}, []); // Empty array ensures this runs only once on mount
+  }, []); // Empty array ensures this runs only once on mount
 
-// This effect saves changes made within the ManagerWorkSheet back to local storage
-useEffect(() => {
+  // This effect saves changes made within the ManagerWorkSheet back to local storage
+  useEffect(() => {
     try {
-        // Filter out the initial hardcoded clients to only save the dynamic ones
-        const initialIds = new Set(initialUnassignedClientsData.map(c => c.id));
-        const clientsToSave = unassignedClients.filter(client => !initialIds.has(client.id));
-        
-        localStorage.setItem('manager_unassigned_clients', JSON.stringify(clientsToSave));
+      // Filter out the initial hardcoded clients to only save the dynamic ones
+      const initialIds = new Set(initialUnassignedClientsData.map(c => c.id));
+      const clientsToSave = unassignedClients.filter(client => !initialIds.has(client.id));
+
+      localStorage.setItem('manager_unassigned_clients', JSON.stringify(clientsToSave));
     } catch (error) {
-        console.error("Failed to save manager's unassigned clients", error);
+      console.error("Failed to save manager's unassigned clients", error);
     }
-}, [unassignedClients]); // This runs whenever the manager's list changes
+  }, [unassignedClients]); // This runs whenever the manager's list changes
 
   // Function to toggle between light and dark themes
   const toggleTheme = () => {
@@ -1137,13 +1156,13 @@ useEffect(() => {
     const lowerCaseSearchQuery = unassignedSearchQuery.toLowerCase();
 
     // NEW: Added checks (e.g., client.name || '') to prevent errors if a property is missing.
-    const matchesSearch = 
-        (client.name || '').toLowerCase().includes(lowerCaseSearchQuery) ||
-        (client.skills || []).some(skill => (skill || '').toLowerCase().includes(lowerCaseSearchQuery)) ||
-        (client.experience || '').toLowerCase().includes(lowerCaseSearchQuery) ||
-        (client.email || '').toLowerCase().includes(lowerCaseSearchQuery) ||
-        (client.salary || '').toLowerCase().includes(lowerCaseSearchQuery);
-        
+    const matchesSearch =
+      (client.name || '').toLowerCase().includes(lowerCaseSearchQuery) ||
+      (client.skills || []).some(skill => (skill || '').toLowerCase().includes(lowerCaseSearchQuery)) ||
+      (client.experience || '').toLowerCase().includes(lowerCaseSearchQuery) ||
+      (client.email || '').toLowerCase().includes(lowerCaseSearchQuery) ||
+      (client.salary || '').toLowerCase().includes(lowerCaseSearchQuery);
+
     return matchesPriority && matchesSearch;
   });
 
@@ -1182,7 +1201,7 @@ useEffect(() => {
   };
 
 
- // Handler for "Assign Client" or "Reassign Client" button submission
+  // Handler for "Assign Client" or "Reassign Client" button submission
   const handleAssignmentSubmit = () => {
     const isReassignment = !!clientToReassign;
     const clientToProcess = isReassignment ? clientToReassign : selectedClientToAssign;
@@ -1206,17 +1225,17 @@ useEffect(() => {
 
     // Create a comprehensive client object with all necessary fields for the manager's view
     const newAssignedClient = {
-        ...clientToProcess,
-        assignedTo: employeeFullName,
-        status: 'assigned', // Status for the manager's "Total assigned Clients" view
-        assignedDate: assignmentDate,
-        priority: assignmentPriority, // Add priority from the modal's state
-        // Add additional fields for consistent display in the "Total assigned Clients" table
-        clientName: clientToProcess.name || `${clientToProcess.firstName} ${clientToProcess.lastName}`,
-        position: clientToProcess.jobsApplyFor || 'Not specified',
-        salary: clientToProcess.expectedSalary ? `$${clientToProcess.currentSalary} - $${clientToProcess.expectedSalary}`: 'Not specified',
-        company: clientToProcess.currentCompany || 'Not specified',
-        location: clientToProcess.address ? clientToProcess.address.split(',').slice(-2).join(', ').trim() : 'Not specified',
+      ...clientToProcess,
+      assignedTo: employeeFullName,
+      status: 'assigned', // Status for the manager's "Total assigned Clients" view
+      assignedDate: assignmentDate,
+      priority: assignmentPriority, // Add priority from the modal's state
+      // Add additional fields for consistent display in the "Total assigned Clients" table
+      clientName: clientToProcess.name || `${clientToProcess.firstName} ${clientToProcess.lastName}`,
+      position: clientToProcess.jobsApplyFor || 'Not specified',
+      salary: clientToProcess.expectedSalary ? `$${clientToProcess.currentSalary} - $${clientToProcess.expectedSalary}` : 'Not specified',
+      company: clientToProcess.currentCompany || 'Not specified',
+      location: clientToProcess.address ? clientToProcess.address.split(',').slice(-2).join(', ').trim() : 'Not specified',
     };
 
     if (isReassignment) {
@@ -1232,26 +1251,26 @@ useEffect(() => {
       // New Assignment Logic
       updatedAssignedClients = [...assignedClients, newAssignedClient];
       updatedUnassignedClients = unassignedClients.filter(c => c.id !== clientToProcess.id);
-      
+
       setUnassignedClients(updatedUnassignedClients);
       localStorage.setItem('manager_unassigned_clients', JSON.stringify(updatedUnassignedClients));
-      
+
       setSuccessMessage(`Successfully assigned ${newAssignedClient.clientName} to ${employeeFullName}.`);
       closeAssignClientModal();
     }
 
     setAssignedClients(updatedAssignedClients);
     localStorage.setItem('manager_assigned_clients', JSON.stringify(updatedAssignedClients));
-    
+
     // --- LOGIC to send client to EmployeeData page ---
     const employeeNewClients = JSON.parse(localStorage.getItem('employee_new_clients')) || [];
     if (!employeeNewClients.some(c => c.id === clientToProcess.id)) {
       // Use the newly created comprehensive 'newAssignedClient' object
       // but set the status to 'new' for the employee's perspective.
-      const clientForEmployee = { 
-        ...newAssignedClient, 
+      const clientForEmployee = {
+        ...newAssignedClient,
         status: 'new', // This status is for the "New Clients" tab in EmployeeData
-        initials: getInitials(newAssignedClient.clientName) 
+        initials: getInitials(newAssignedClient.clientName)
       };
       localStorage.setItem('employee_new_clients', JSON.stringify([...employeeNewClients, clientForEmployee]));
     }
@@ -1302,9 +1321,9 @@ useEffect(() => {
   // Filtered interview data based on search and round filter
   const filteredInterviewData = initialInterviewData.filter(interview => { // Use initialInterviewData here
     const matchesSearch = interview.employeeName.toLowerCase().includes(interviewSearchQuery.toLowerCase()) ||
-                          interview.clientName.toLowerCase().includes(interviewSearchQuery.toLowerCase()) ||
-                          interview.jobTitle.toLowerCase().includes(interviewSearchQuery.toLowerCase()) ||
-                          interview.company.toLowerCase().includes(interviewSearchQuery.toLowerCase());
+      interview.clientName.toLowerCase().includes(interviewSearchQuery.toLowerCase()) ||
+      interview.jobTitle.toLowerCase().includes(interviewSearchQuery.toLowerCase()) ||
+      interview.company.toLowerCase().includes(interviewSearchQuery.toLowerCase());
     const matchesRound = interviewFilterRound === 'All Rounds' || interview.round === interviewFilterRound;
     return matchesSearch && matchesRound;
   });
@@ -1340,12 +1359,12 @@ useEffect(() => {
     const end = endDateFilter ? new Date(endDateFilter) : null;
 
     const matchesSearch = app.employeeName.toLowerCase().includes(applicationSearchQuery.toLowerCase()) ||
-                          app.clientName.toLowerCase().includes(applicationSearchQuery.toLowerCase()) ||
-                          app.jobTitle.toLowerCase().includes(applicationSearchQuery.toLowerCase()) ||
-                          app.company.toLowerCase().includes(applicationSearchQuery.toLowerCase()) ||
-                          app.platform.toLowerCase().includes(applicationSearchQuery.toLowerCase()) ||
-                          app.jobId.toLowerCase().includes(applicationSearchQuery.toLowerCase()) ||
-                          app.appliedDate.toLowerCase().includes(applicationSearchQuery.toLowerCase());
+      app.clientName.toLowerCase().includes(applicationSearchQuery.toLowerCase()) ||
+      app.jobTitle.toLowerCase().includes(applicationSearchQuery.toLowerCase()) ||
+      app.company.toLowerCase().includes(applicationSearchQuery.toLowerCase()) ||
+      app.platform.toLowerCase().includes(applicationSearchQuery.toLowerCase()) ||
+      app.jobId.toLowerCase().includes(applicationSearchQuery.toLowerCase()) ||
+      app.appliedDate.toLowerCase().includes(applicationSearchQuery.toLowerCase());
     const matchesEmployee = applicationFilterEmployee === '' || app.employeeName === applicationFilterEmployee;
     const matchesClient = applicationFilterClient === '' || app.clientName === applicationFilterClient;
     const matchesDateRange = (!start || appDate >= start) && (!end || appDate <= end);
@@ -1374,17 +1393,17 @@ useEffect(() => {
   };
 
   // Filtered employees for the "Assigned" tab
- const filteredEmployees = allEmployees.filter(employee => {
-        const hasEmployeeRole = employee.roles && employee.roles.includes('employee');
-        const fullName = `${employee.firstName || ''} ${employee.lastName || ''}`.toLowerCase();
-        const lowerCaseSearchQuery = assignedEmployeeSearchQuery.toLowerCase();
-        const matchesSearch = fullName.includes(lowerCaseSearchQuery);
-        return hasEmployeeRole && matchesSearch;
-    });
+  const filteredEmployees = displayEmployees.filter(employee => {
+    const hasEmployeeRole = employee.roles && employee.roles.includes('employee');
+    const fullName = employee.fullName.toLowerCase();
+    const lowerCaseSearchQuery = assignedEmployeeSearchQuery.toLowerCase();
+    const matchesSearch = fullName.includes(lowerCaseSearchQuery);
+    return hasEmployeeRole && matchesSearch;
+  });
 
-     const employeesForAssignment = allEmployees.filter(employee => 
-        employee.roles && employee.roles.includes('employee')
-    );
+  const employeesForAssignment = displayEmployees.filter(employee =>
+    employee.roles && employee.roles.includes('employee')
+  );
 
 
   // NEW: Function to open Client Preview/Edit Modal
@@ -1505,8 +1524,8 @@ Please provide a summary no longer than 150 words.`;
 
       const result = await response.json();
       if (result.candidates && result.candidates.length > 0 &&
-          result.candidates[0].content && result.candidates[0].content.parts &&
-          result.candidates[0].content.parts.length > 0) {
+        result.candidates[0].content && result.candidates[0].content.parts &&
+        result.candidates[0].content.parts.length > 0) {
         const text = result.candidates[0].content.parts[0].text;
         setLlmResponse(text);
       } else {
@@ -1531,7 +1550,7 @@ Please provide a summary no longer than 150 words.`;
   const totalClientsCount = assignedClients.length;
 
   // Calculate total assigned clients from employees data for the "Assigned" tab header
-  const totalAssignedClientsByEmployee = employees.reduce((sum, emp) => sum + (emp.assignedClients || 0), 0); // Ensure it handles undefined assignedClients
+  const totalAssignedClientsByEmployee = displayEmployees.reduce((sum, emp) => sum + (emp.assignedClients || 0), 0);; // Ensure it handles undefined assignedClients
 
 
   // Profile dropdown handlers
@@ -1967,6 +1986,24 @@ Please provide a summary no longer than 150 words.`;
             color: var(--card-icon-blue-color);
         }
 
+        .selected-employee-details {
+            background-color: var(--client-preview-section-bg);
+            border: 1px solid var(--client-preview-section-border);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .selected-employee-details h4 {
+            margin-top: 0;
+            color: var(--client-preview-section-title-color);
+        }
+
+        .selected-employee-details p {
+            margin: 5px 0;
+            color: var(--text-color);
+        }
+
         .header-actions {
           display: flex;
           align-items: center;
@@ -2159,6 +2196,64 @@ Please provide a summary no longer than 150 words.`;
             margin-bottom: 20px;
             gap: 5px;
             transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        /* Style for the new clickable field that replaces the dropdown */
+        .pseudo-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--form-input-border);
+            border-radius: 8px;
+            background-color: var(--form-input-bg);
+            color: var(--form-input-text);
+            font-size: 14px;
+            cursor: pointer;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
+
+        .pseudo-input:hover {
+            border-color: var(--form-input-focus-border);
+        }
+
+        /* Styles for the list of employees in the new modal */
+        .employee-select-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .employee-select-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border: 1px solid var(--header-border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+        }
+
+        .employee-select-item:hover {
+            background-color: var(--button-hover-bg);
+            border-color: var(--card-icon-blue-color);
+        }
+
+        .employee-select-info {
+            color: var(--text-color);
+        }
+
+        .employee-select-info strong {
+            font-weight: 600;
+        }
+
+        .employee-select-info span {
+            display: block;
+            font-size: 0.9rem;
+            color: var(--subtitle-color);
+            margin-top: 2px;
         }
 
         .radio-option {
@@ -2599,7 +2694,7 @@ Please provide a summary no longer than 150 words.`;
         .employee-name {
             font-size: 18px;
             font-weight: 600;
-            color: var(--text-color);
+            color: var(--main-title-color); /* ADJUSTED: For better contrast */
         }
 
         .employee-role {
@@ -3934,7 +4029,7 @@ Please provide a summary no longer than 150 words.`;
             </div>
 
             {/* NEW: Search bar for employees in Assigned tab */}
-            <div className="applications-filters assigned-employee-search-bar" style={{marginBottom: '20px'}}> {/* Reusing styles and added new class */}
+            <div className="applications-filters assigned-employee-search-bar" style={{ marginBottom: '20px' }}> {/* Reusing styles and added new class */}
               <div className="search-input-wrapper">
                 <i className="fas fa-search"></i>
                 <input
@@ -3946,23 +4041,21 @@ Please provide a summary no longer than 150 words.`;
               </div>
             </div>
 
-            <div className="employee-cards-grid"> {/* New grid container */}
+            <div className="employee-cards-grid">
               {filteredEmployees.map((employee) => (
                 <div key={employee.id} className="employee-card">
                   <div className="employee-card-header">
                     <div className="employee-avatar-large">{employee.avatar}</div>
                     <div className="employee-info">
-                      <div className="employee-name">{employee.name}</div>
+                      <div className="employee-name">{employee.fullName}</div>
                       <div className="employee-role">{employee.role}</div>
                     </div>
-                    {/* Display employee's individual assigned client count */}
                     <div className="clients-count-badge">
                       {employee.assignedClients} clients
                     </div>
                   </div>
                   <div className="employee-card-details">
                     <div className="success-rate">Success Rate: <span className="success-rate-value">{employee.successRate}%</span></div>
-                    {/* Eye icon to open modal for this employee's clients */}
                     <button className="view-employee-details-button" onClick={() => openEmployeeClientsModal(employee)}>
                       <i className="fas fa-eye"></i>
                     </button>
@@ -4029,25 +4122,25 @@ Please provide a summary no longer than 150 words.`;
                 <i className="fas fa-chevron-down"></i>
               </div>
               {/* NEW: Start Date Filter */}
-              <div className="assign-form-group" style={{flex: '1 1 150px', minWidth: '150px'}}>
-                <label htmlFor="startDateFilter" style={{fontSize: '14px', marginBottom: '4px', color: 'var(--form-label-color)'}}>Start Date</label>
+              <div className="assign-form-group" style={{ flex: '1 1 150px', minWidth: '150px' }}>
+                <label htmlFor="startDateFilter" style={{ fontSize: '14px', marginBottom: '4px', color: 'var(--form-label-color)' }}>Start Date</label>
                 <input
                   type="date"
                   id="startDateFilter"
                   value={startDateFilter}
                   onChange={handleStartDateFilterChange}
-                  style={{padding: '10px 12px', border: '1px solid var(--form-input-border)', borderRadius: '8px', backgroundColor: 'var(--form-input-bg)', color: 'var(--form-input-text)', fontSize: '14px'}}
+                  style={{ padding: '10px 12px', border: '1px solid var(--form-input-border)', borderRadius: '8px', backgroundColor: 'var(--form-input-bg)', color: 'var(--form-input-text)', fontSize: '14px' }}
                 />
               </div>
               {/* NEW: End Date Filter */}
-              <div className="assign-form-group" style={{flex: '1 1 150px', minWidth: '150px'}}>
-                <label htmlFor="endDateFilter" style={{fontSize: '14px', marginBottom: '4px', color: 'var(--form-label-color)'}}>End Date</label>
+              <div className="assign-form-group" style={{ flex: '1 1 150px', minWidth: '150px' }}>
+                <label htmlFor="endDateFilter" style={{ fontSize: '14px', marginBottom: '4px', color: 'var(--form-label-color)' }}>End Date</label>
                 <input
                   type="date"
                   id="endDateFilter"
                   value={endDateFilter}
                   onChange={handleEndDateFilterChange}
-                  style={{padding: '10px 12px', border: '1px solid var(--form-input-border)', borderRadius: '8px', backgroundColor: 'var(--form-input-bg)', color: 'var(--form-input-text)', fontSize: '14px'}}
+                  style={{ padding: '10px 12px', border: '1px solid var(--form-input-border)', borderRadius: '8px', backgroundColor: 'var(--form-input-bg)', color: 'var(--form-input-text)', fontSize: '14px' }}
                 />
               </div>
             </div>
@@ -4153,7 +4246,7 @@ Please provide a summary no longer than 150 words.`;
                         <span className="round-badge">{interview.round}</span>
                       </td>
                       <td className="date-cell">
-                         {formatDateToDDMMYYYY(interview.date)}
+                        {formatDateToDDMMYYYY(interview.date)}
                       </td>
                       <td>
                         {interview.status} {/* Display the new status */}
@@ -4238,53 +4331,53 @@ Please provide a summary no longer than 150 words.`;
               </button>
             </div>
 
-            <h4 className="modal-title" style={{marginBottom: '10px'}}>Available Clients</h4>
+            <h4 className="modal-title" style={{ marginBottom: '10px' }}>Available Clients</h4>
             <div className="modal-available-clients-list">
               {/* Render filtered clients */}
               {filteredClients.map((client) => {
-  // This logic safely handles both data structures
-  const clientName = client.name || `${client.firstName || ''} ${client.lastName || ''}`.trim();
-  
-  // THE FIX: Use .skills OR .technologySkills, and default to an empty array if neither exists
-  const clientSkills = client.skills || client.technologySkills || []; 
-  
-  const clientExperience = client.experience || `Experience not specified`;
-  const clientEmail = client.email || client.personalMail;
-  const clientSalary = client.salary || `$${client.expectedSalary || 'N/A'}`;
+                // This logic safely handles both data structures
+                const clientName = client.name || `${client.firstName || ''} ${client.lastName || ''}`.trim();
 
-  return (
-    <div key={client.id} className="modal-client-card">
-      <div className="modal-client-card-header">
-        <span className="modal-client-name">{clientName}</span>
-        {client.priority && (
-          <span className={`modal-client-priority-badge ${client.priority}`}>{client.priority} priority</span>
-        )}
-      </div>
-      <div className="modal-client-skills">
-        {/* This now safely maps over the clientSkills array, which is guaranteed to exist */}
-        {clientSkills.map((skill, index) => (
-          <span key={index} className="modal-client-skill-tag">{skill}</span>
-        ))}
-      </div>
-      <div className="modal-client-details">
-        <span><i className="fas fa-briefcase"></i> {clientExperience}</span>
-        <span><i className="fas fa-map-marker-alt"></i> {client.remote ? 'Remote' : 'On-site'}</span>
-        <span><i className="fas fa-envelope"></i> {clientEmail}</span>
-        <span><i className="fas fa-money-bill-wave"></i> {clientSalary}</span>
-      </div>
-      <div className="modal-client-actions">
-        <button className="modal-assign-button" onClick={() => openAssignClientModal(client)}>
-          <i className="fas fa-user-plus"></i> Assign Employee
-        </button>
-        <button className="modal-view-profile-button" onClick={() => openEditClientModal(client)}>
-          <i className="fas fa-eye"></i> View Profile
-        </button>
-      </div>
-    </div>
-  );
-})}
+                // THE FIX: Use .skills OR .technologySkills, and default to an empty array if neither exists
+                const clientSkills = client.skills || client.technologySkills || [];
+
+                const clientExperience = client.experience || `Experience not specified`;
+                const clientEmail = client.email || client.personalMail;
+                const clientSalary = client.salary || `$${client.expectedSalary || 'N/A'}`;
+
+                return (
+                  <div key={client.id} className="modal-client-card">
+                    <div className="modal-client-card-header">
+                      <span className="modal-client-name">{clientName}</span>
+                      {client.priority && (
+                        <span className={`modal-client-priority-badge ${client.priority}`}>{client.priority} priority</span>
+                      )}
+                    </div>
+                    <div className="modal-client-skills">
+                      {/* This now safely maps over the clientSkills array, which is guaranteed to exist */}
+                      {clientSkills.map((skill, index) => (
+                        <span key={index} className="modal-client-skill-tag">{skill}</span>
+                      ))}
+                    </div>
+                    <div className="modal-client-details">
+                      <span><i className="fas fa-briefcase"></i> {clientExperience}</span>
+                      <span><i className="fas fa-map-marker-alt"></i> {client.remote ? 'Remote' : 'On-site'}</span>
+                      <span><i className="fas fa-envelope"></i> {clientEmail}</span>
+                      <span><i className="fas fa-money-bill-wave"></i> {clientSalary}</span>
+                    </div>
+                    <div className="modal-client-actions">
+                      <button className="modal-assign-button" onClick={() => openAssignClientModal(client)}>
+                        <i className="fas fa-user-plus"></i> Assign Employee
+                      </button>
+                      <button className="modal-view-profile-button" onClick={() => openEditClientModal(client)}>
+                        <i className="fas fa-eye"></i> View Profile
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
               {filteredClients.length === 0 && (
-                <p style={{textAlign: 'center', color: 'var(--text-color)'}}>No clients match the selected filter or search query.</p>
+                <p style={{ textAlign: 'center', color: 'var(--text-color)' }}>No clients match the selected filter or search query.</p>
               )}
             </div>
           </div>
@@ -4292,75 +4385,95 @@ Please provide a summary no longer than 150 words.`;
       )}
 
       {/* Assign Client to Employee Modal (for NEW assignments) */}
+      {/* Assign Client to Employee Modal (for NEW assignments) */}
       {isAssignClientModalOpen && selectedClientToAssign && (
         <div className="modal-overlay">
           <div className="assign-modal-content">
             <div className="assign-modal-header">
-              <h3 className="assign-modal-title">Assign Client to Employee</h3>
+              <h3 className="assign-modal-title">
+                Assign Client: {selectedClientToAssign.name || `${selectedClientToAssign.firstName} ${selectedClientToAssign.lastName}`}
+              </h3>
               <button className="assign-modal-close-button" onClick={closeAssignClientModal}>
                 <i className="fas fa-times"></i>
               </button>
             </div>
 
-            <p style={{ fontSize: '14px', color: 'var(--subtitle-color)', margin: '0' }}>
-              Select a client and employee to create a new assignment
-            </p>
-
+            {/* MODIFIED: Replaced the <select> with a clickable <div> */}
             <div className="assign-form-group">
-              <label htmlFor="selectClient">Select Client</label>
-              <select id="selectClient" value={selectedClientToAssign.id} disabled>
-                <option value={selectedClientToAssign.id}>
-                    {selectedClientToAssign.name || `${selectedClientToAssign.firstName} ${selectedClientToAssign.lastName}`} - {(selectedClientToAssign.skills || selectedClientToAssign.technologySkills || ['No Role'])[0]}
-                </option>
-              </select>
+              <label>Select Employee</label>
+              <div className="pseudo-input" onClick={() => setIsEmployeeSelectModalOpen(true)}>
+                {selectedEmployee
+                  ? employeesForAssignment.find(e => e.id === parseInt(selectedEmployee))?.fullName
+                  : "Click to choose an employee..."
+                }
+              </div>
             </div>
 
-            <div className="assign-form-group">
-              <label htmlFor="selectEmployee">Select Employee</label>
-              <select
-                id="selectEmployee"
-                value={selectedEmployee}
-                onChange={(e) => setSelectedEmployee(e.target.value)}
-              >
-                <option value="">Choose employee</option>
-                {employeesForAssignment.map((employee) => (
-                <option key={employee.id} value={employee.id}>
-                  {employee.firstName} {employee.lastName}
-                </option>
-              ))}
-            </select>
-            </div>
+            {/* The confirmation box still works perfectly! */}
+            {selectedEmployee && (() => {
+              const employeeDetails = employeesForAssignment.find(e => e.id === parseInt(selectedEmployee));
+              if (!employeeDetails) return null;
 
+              return (
+                <div className="selected-employee-details">
+                  <h4>Selected Employee Details</h4>
+                  <p><strong>Name:</strong> {employeeDetails.fullName}</p>
+                  <p><strong>Role:</strong> {employeeDetails.role}</p>
+                  <p><strong>Current Workload:</strong> {employeeDetails.assignedClients} assigned clients</p>
+                </div>
+              );
+            })()}
+
+            {/* --- The rest of the form remains the same --- */}
             <div className="assign-form-group">
               <label htmlFor="priorityLevel">Priority Level</label>
-              <select
-                id="priorityLevel"
-                value={assignmentPriority}
-                onChange={(e) => setAssignmentPriority(e.target.value)}
-              >
+              <select id="priorityLevel" value={assignmentPriority} onChange={(e) => setAssignmentPriority(e.target.value)}>
                 <option value="high">High Priority</option>
                 <option value="medium">Medium Priority</option>
                 <option value="low">Low Priority</option>
               </select>
             </div>
-
             <div className="assign-form-group">
               <label htmlFor="assignmentNotes">Assignment Notes</label>
-              <textarea
-                id="assignmentNotes"
-                placeholder="Any specific instructions or requirements..."
-                value={assignmentNotes}
-                onChange={(e) => setAssignmentNotes(e.target.value)}
-              ></textarea>
+              <textarea id="assignmentNotes" placeholder="Any specific instructions or requirements..." value={assignmentNotes} onChange={(e) => setAssignmentNotes(e.target.value)}></textarea>
             </div>
-
             <div className="assign-form-actions">
-              <button className="assign-form-button cancel" onClick={handleAssignmentSubmit}>
-                Cancel
+              <button className="assign-form-button cancel" onClick={closeAssignClientModal}>Cancel</button>
+              <button className="assign-form-button assign" onClick={handleAssignmentSubmit}>Confirm Assignment</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* NEW: Modal Popup for Selecting an Employee */}
+      {isEmployeeSelectModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '500px' }}>
+            <div className="modal-header">
+              <h3 className="modal-title">Select an Employee</h3>
+              <button className="modal-close-button" onClick={() => setIsEmployeeSelectModalOpen(false)}>
+                <i className="fas fa-times"></i>
               </button>
-              <button className="assign-form-button assign" onClick={handleAssignmentSubmit}>
-                Assign Client
-              </button>
+            </div>
+            <div className="employee-select-list">
+              {employeesForAssignment.map(employee => (
+                <div
+                  key={employee.id}
+                  className="employee-select-item"
+                  onClick={() => {
+                    setSelectedEmployee(employee.id); // Set the selected employee's ID
+                    setIsEmployeeSelectModalOpen(false); // Close this modal
+                  }}
+                >
+                  <div className="employee-select-info">
+                    <strong>{employee.fullName}</strong>
+                    <span>{employee.role}</span>
+                  </div>
+                  <div className="clients-count-badge">
+                    {employee.assignedClients} clients
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -4403,7 +4516,7 @@ Please provide a summary no longer than 150 words.`;
                       <td>
                         <div className="employee-cell"> {/* Reusing employee-cell for client avatar/name layout */}
                           <div className="employee-avatar">
-                             {getInitials(client.clientName)}</div>
+                            {getInitials(client.clientName)}</div>
                           <div className="client-info">
                             <div className="main-text">{client.clientName}</div>
                             <div className="sub-text">{client.location}</div>
@@ -4439,7 +4552,7 @@ Please provide a summary no longer than 150 words.`;
                       */}
                       <td>
                         <div className="employee-cell">
-                           <i className="fas fa-calendar-alt" style={{marginRight: '5px'}}></i>{formatDateToDDMMYYYY(client.assignedDate)}
+                          <i className="fas fa-calendar-alt" style={{ marginRight: '5px' }}></i>{formatDateToDDMMYYYY(client.assignedDate)}
                         </div>
                       </td>
                     </tr>
@@ -4464,7 +4577,8 @@ Please provide a summary no longer than 150 words.`;
           <div className="employee-clients-modal-content">
             <div className="employee-clients-modal-header">
               <h3 className="employee-clients-modal-title">
-                Clients Assigned to {selectedEmployeeForClients.name}
+                {/* FIX: Changed .name to .fullName */}
+                Clients Assigned to {selectedEmployeeForClients.fullName}
               </h3>
               <button className="modal-close-button" onClick={closeEmployeeClientsModal}>
                 <i className="fas fa-times"></i>
@@ -4472,7 +4586,8 @@ Please provide a summary no longer than 150 words.`;
             </div>
             <div className="employee-clients-list">
               {assignedClients
-                .filter(client => client.assignedTo === selectedEmployeeForClients.name)
+                // FIX: Changed .name to .fullName for correct filtering
+                .filter(client => client.assignedTo === selectedEmployeeForClients.fullName)
                 .map(client => (
                   <div key={client.id} className="employee-client-card">
                     <div className="employee-client-card-header">
@@ -4498,19 +4613,21 @@ Please provide a summary no longer than 150 words.`;
                         <i className="fas fa-info-circle"></i> Status: {client.status.charAt(0).toUpperCase() + client.status.slice(1)}
                       </span>
                     </div>
-                    <div className="modal-client-actions" style={{justifyContent: 'flex-start'}}> {/* Align left */}
-                        <button className="modal-assign-button" onClick={() => openReassignClientModal(client)}>
-                            <i className="fas fa-exchange-alt"></i> Change Employee
-                        </button>
-                        <button className="modal-view-profile-button" onClick={() => openEditClientModal(client)}>
-                            <i className="fas fa-eye"></i> View Profile
-                        </button>
+                    <div className="modal-client-actions" style={{ justifyContent: 'flex-start' }}>
+                      <button className="modal-assign-button" onClick={() => openReassignClientModal(client)}>
+                        <i className="fas fa-exchange-alt"></i> Change Employee
+                      </button>
+                      <button className="modal-view-profile-button" onClick={() => openEditClientModal(client)}>
+                        <i className="fas fa-eye"></i> View Profile
+                      </button>
                     </div>
                   </div>
                 ))}
-              {assignedClients.filter(client => client.assignedTo === selectedEmployeeForClients.name).length === 0 && (
+              {/* FIX: Changed .name to .fullName for correct filtering */}
+              {assignedClients.filter(client => client.assignedTo === selectedEmployeeForClients.fullName).length === 0 && (
                 <p style={{ textAlign: 'center', color: 'var(--text-color)' }}>
-                  No clients currently assigned to {selectedEmployeeForClients.name}.
+                  {/* FIX: Changed .name to .fullName */}
+                  No clients currently assigned to {selectedEmployeeForClients.fullName}.
                 </p>
               )}
             </div>
@@ -4864,7 +4981,7 @@ Please provide a summary no longer than 150 words.`;
             {/* Skills section for editing */}
             {clientToEdit.skills && (
               <div className="client-preview-skills-section">
-                <h4 className="assign-modal-title" style={{marginBottom: '10px', fontSize: '18px'}}>Skills (Comma Separated)</h4>
+                <h4 className="assign-modal-title" style={{ marginBottom: '10px', fontSize: '18px' }}>Skills (Comma Separated)</h4>
                 <div className="assign-form-group">
                   <textarea
                     id="skills"
@@ -4994,17 +5111,17 @@ Please provide a summary no longer than 150 words.`;
       )}
       {/* NEW: Success Confirmation Modal */}
       <Modal show={showSuccessModal} onHide={() => setShowSuccessModal(false)} centered>
-          <Modal.Header closeButton>
-              <Modal.Title>Success!</Modal.Title>
-          </Modal.Header>
-          <Modal.Body style={{ textAlign: 'center', padding: '20px' }}>
-              <p style={{ fontSize: '1.1rem' }}>{successMessage}</p>
-          </Modal.Body>
-          <Modal.Footer>
-              <Button variant="primary" onClick={() => setShowSuccessModal(false)}>
-                  Close
-              </Button>
-          </Modal.Footer>
+        <Modal.Header closeButton>
+          <Modal.Title>Success!</Modal.Title>
+        </Modal.Header>
+        <Modal.Body style={{ textAlign: 'center', padding: '20px' }}>
+          <p style={{ fontSize: '1.1rem' }}>{successMessage}</p>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="primary" onClick={() => setShowSuccessModal(false)}>
+            Close
+          </Button>
+        </Modal.Footer>
       </Modal>
     </div>
   );
