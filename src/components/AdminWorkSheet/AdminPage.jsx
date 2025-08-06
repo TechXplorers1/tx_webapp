@@ -94,7 +94,7 @@ const AdminPage = () => {
   ];
 
   return (
-    <div className="ad-body-container1">
+    <div className="ad-body-container">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         :root {
@@ -109,25 +109,126 @@ const AdminPage = () => {
             --radio-item-text-checked: #1f2937; --radio-item-hover-bg: #f9fafb;
             --bg-nav-link-hover: #f9fafb;
         }
-        .ad-body-container1 { font-family: 'Inter', sans-serif; background-color: var(--bg-body); min-height: 100vh; color: var(--text-primary); }
+
+
+
+
+        .ad-dashboard-header {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0; /* Adjusted for radio buttons */
+  padding: 0 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .ad-dashboard-header {
+    flex-direction: row;
+    align-items: center; /* This centers items vertically in a row, but we want text-align left for content */
+  }
+}
+
+.ad-title {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-align: left; /* Ensure title text starts from left */
+}
+
+.ad-subtitle {
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+  margin-bottom: 0.95rem;
+  text-align: left; /* Ensure subtitle text starts from left */
+}
+
+
+        .ad-body-container { font-family: 'Inter', sans-serif; background-color: var(--bg-body); min-height: 100vh; color: var(--text-primary); }
         .ad-header { background-color: var(--bg-header); box-shadow: 0 1px 2px 0 var(--shadow-color-1); padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
         .ad-logo { display: flex; align-items: center; color: var(--text-primary); font-size: 1.5rem; font-weight: 700; }
         .ad-logo-x { color: var(--logo-x-color); }
         .ad-header-right { display: flex; align-items: center; gap: 1rem; }
+        .ad-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
         .ad-employee-info { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
-        .ad-employee-info-text { display: none; }
-        @media (min-width: 768px) { .ad-employee-info-text { display: flex; flex-direction: column; align-items: flex-end; } }
-        .ad-employee-name { font-size: 0.875rem; font-weight: 600; }
+        .ad-employee-info-text { display: none;flex-direction: column;
+  align-items: flex-end;
+  gap: 0.125rem;de }
+        @media (min-width: 768px) { .ad-employee-info-text { display: flex; } }
+        .ad-employee-name { font-size: 0.875rem; font-weight: 600;margin: 0;
+  padding: 0;
+  line-height: 1.2; }
         .ad-admin-tag { background-color: var(--admin-tag-bg); color: var(--admin-tag-text); padding: 0.125rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
         .ad-initials-avatar { width: 2.5rem; height: 2.5rem; border-radius: 9999px; background-color: var(--admin-avatar-bg); color: var(--admin-avatar-text); display: flex; align-items: center; justify-content: center; font-weight: 600; }
-        .ad-main-content { padding: 1.5rem; }
-        .custom-radio-group-container { display: flex; flex-wrap: wrap; border-radius: 9999px; background-color: var(--radio-group-bg); box-shadow: var(--radio-group-shadow); padding: 0.5rem; margin-bottom: 1.5rem; }
-        .custom-radio-item { flex: 1 1 auto; text-align: center; }
+        .ad-main-content {flex: 1; padding: 1.5rem; }
+        @media (min-width: 768px) {
+  .ad-main-content {
+    padding: 2rem;
+  }
+}
+/* Custom Radio Button Tabs Styles (Matching Screenshot) */
+.custom-radio-group-container {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  border-radius: 9999px; /* Fully rounded pill shape */
+  background-color: var(--radio-group-bg);
+  box-sizing: border-box;
+  box-shadow: var(--radio-group-shadow); /* Soft shadow */
+  padding: 0.5rem; /* Padding inside the container */
+  font-size: 1rem; /* Base font size */
+  font-family: 'Inter', sans-serif;
+  color: var(--radio-item-color); /* Default text color for inactive items */
+  min-width: 250px; /* Ensure it doesn't get too small */
+  margin-bottom: 1.5rem; /* Space below the tabs, consistent with old style */
+  margin-left: 1.5rem; /* Align with padding of dashboard header */
+  margin-right: 1.5rem; /* Align with padding of dashboard header */
+}
+
+.custom-radio-group-container .custom-radio-item {
+  flex: 1 1 auto; /* Distribute items evenly */
+  text-align: center;
+  position: relative; /* For z-index if needed */
+}
+
+.custom-radio-group-container .custom-radio-item input[type="radio"] {
+  display: none; /* Hide the actual radio button */
+}
+
+.custom-radio-group-container .custom-radio-item .custom-radio-label {
+  display: flex;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px; /* Fully rounded for the active pill */
+  border: none;
+  padding: 0.75rem 1.5rem; /* Padding inside the tab button */
+  transition: all 0.2s ease-in-out;
+  white-space: nowrap; /* Prevent text wrapping */
+  font-weight: 500; /* Medium font weight */
+  line-height: 1; /* Ensure consistent height */
+}
+
+.custom-radio-group-container .custom-radio-item input[type="radio"]:checked + .custom-radio-label {
+  background-color: var(--radio-item-bg-checked); /* Light blue background for active tab */
+  color: var(--radio-item-text-checked); /* Blue text for active tab */
+  font-weight: 600; /* Bolder text for active tab */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); /* Subtle shadow for active tab */
+}
+
+.custom-radio-group-container .custom-radio-item .custom-radio-label:hover:not(.custom-radio-group-container .custom-radio-item input[type="radio"]:checked + .custom-radio-label) {
+  background-color: var(--radio-item-hover-bg); /* Subtle hover background for inactive tabs */
+}        .custom-radio-item { flex: 1 1 auto; text-align: center; }
         .custom-radio-item input[type="radio"] { display: none; }
         .custom-radio-label { display: flex; cursor: pointer; align-items: center; justify-content: center; border-radius: 9999px; padding: 0.75rem 1.5rem; transition: all 0.2s ease-in-out; font-weight: 500; color: var(--radio-item-color); }
         .custom-radio-item input[type="radio"]:checked + .custom-radio-label { background-color: var(--radio-item-bg-checked); color: var(--radio-item-text-checked); font-weight: 600; }
         
-        .profile-dropdown-container { position: relative; }
+        .profile-dropdown-container { position: relative; cursor: pointer;
+  z-index: 60; }
         .profile-dropdown-menu { position: absolute; top: calc(100% + 0.5rem); right: 0; background-color: var(--bg-header); border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 1px solid var(--border-color); min-width: 12rem; padding: 0.5rem 0; list-style: none; margin: 0; z-index: 60; }
         .profile-dropdown-item { padding: 0.75rem 1rem; color: var(--text-primary); font-size: 0.9rem; font-weight: 500; display: flex; align-items: center; gap: 0.75rem; transition: background-color 0.15s ease; }
         .profile-dropdown-item:hover { background-color: var(--bg-nav-link-hover); }
@@ -148,6 +249,15 @@ const AdminPage = () => {
         .edit-button, .close-button { padding: 0.5rem 1rem; border-radius: 0.375rem; border: 1px solid transparent; font-weight: 500; cursor: pointer; }
         .edit-button { background-color: #3b82f6; color: white; }
         .close-button { background-color: #e5e7eb; color: #374151; }
+   
+             /* Responsive adjustments */
+         @media (max-width: 768px) {
+        .ad-dashboard-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+      }
       `}
       </style>
       <header className="ad-header">
@@ -179,6 +289,14 @@ const AdminPage = () => {
         </div>
       </header>
       <main className="ad-main-content">
+        <div className="ad-content-wrapper">
+          <div className="ad-dashboard-header">
+            <div>
+
+              <h2 className="ad-title">Admin Worksheet</h2>
+              <p className="ad-subtitle">System administration and Employee management</p>
+            </div>
+          </div>
         <div className="custom-radio-group-container">
           {adminViewOptions.map((option) => (
             <label className="custom-radio-item" key={option.value}>
@@ -193,6 +311,7 @@ const AdminPage = () => {
             {currentView === 'employeeManagement' && <EmployeeManagement />}
             {currentView === 'assetManagement' && <AssetManagement />}
             {currentView === 'requestManagement' && <RequestManagement />}
+        </div>
         </div>
       </main>
 

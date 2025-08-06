@@ -446,7 +446,7 @@ const ClientManagement = () => {
   };
 
   return (
-    <div className="ad-body-container2">
+    <div className="ad-body-container">
       <style>{`
         /* Import Inter font from Google Fonts */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -506,16 +506,17 @@ const ClientManagement = () => {
           --client-filter-tab-badge-restored: #6A40EE;
         }
 
-        .ad-body-container2 {
+        .ad-body-container {
             font-family: 'Inter', sans-serif;
             background-color: var(--bg-body);
             min-height: 100vh;
+            flex-direction: column;
             color: var(--text-primary);
         }
 
         /* Client Management Styles */
         .client-management-container {
-            padding: 1.5rem;
+           padding: 0 1.5rem 1.5rem;
         }
 
         .client-management-box {
@@ -524,10 +525,14 @@ const ClientManagement = () => {
             box-shadow: 0 4px 6px -1px var(--shadow-color-1), 0 2px 4px -1px var(--shadow-color-3);
             border: 1px solid var(--border-color);
             padding: 1.5rem;
+             margin-top: 2.9rem;
         }
 
         .client-management-header-section {
-            margin-bottom: 1.5rem;
+            display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
         }
 
         .client-management-title {
@@ -535,6 +540,7 @@ const ClientManagement = () => {
             font-weight: 600;
             color: var(--text-primary);
             margin-bottom: 0.5rem;
+            
         }
 
         .client-filter-tabs {
@@ -585,7 +591,7 @@ const ClientManagement = () => {
             width: 100%;
             height: 100%;
             border-radius: 0.5rem;
-            padding: 0.5rem 0.75rem;
+            padding: 0.3rem;
         }
 
         .client-filter-tab-item .badge {
@@ -604,7 +610,7 @@ const ClientManagement = () => {
             transition: background-color 0.15s ease;
         }
 
-        .client-filter-tab-item.registered input[type="radio"]:checked ~ .client-filter-tab-label { background-color: var(--client-filter-tab-bg-active-registered); color: var(--client-filter-tab-text-active-registered); }
+        .client-filter-tab-item.registered input[type="radio"]:checked + .client-filter-tab-label { background-color: var(--client-filter-tab-bg-active-registered); color: var(--client-filter-tab-text-active-registered); }
         .client-filter-tab-item.registered .badge { background-color: var(--client-filter-tab-badge-registered); }
         .client-filter-tab-item.unassigned input[type="radio"]:checked ~ .client-filter-tab-label { background-color: var(--client-filter-tab-bg-active-unassigned); color: var(--client-filter-tab-text-active-unassigned); }
         .client-filter-tab-item.unassigned .badge { background-color: var(--client-filter-tab-badge-unassigned); }
@@ -685,10 +691,6 @@ const ClientManagement = () => {
 
         .client-table-container {
             overflow-x: auto;
-            border-radius: 0.75rem;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-            margin-bottom: 1.5rem;
         }
 
         .client-table {
@@ -1212,7 +1214,7 @@ const ClientManagement = () => {
       `}
       </style>
 
-      <main className="ad-main-content">
+      <main >
          <div className="client-management-container">
               <div className="client-management-box">
                 <div className="client-management-header-section">

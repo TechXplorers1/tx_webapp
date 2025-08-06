@@ -425,7 +425,7 @@ const DepartmentManagement = () => {
         .employee-list-item-manage button.remove { background-color: #EF4444; }
       `}
       </style>
-      <main className="ad-main-content">
+      <main>
         <div className="department-management-container">
           <div className="department-management-box">
             <div className="department-header">

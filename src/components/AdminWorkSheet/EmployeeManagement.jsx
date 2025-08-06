@@ -794,7 +794,7 @@ const EmployeeManagement = () => {
         }
       `}
       </style>
-      <main className="ad-main-content">
+      <main>
         <div className="employee-management-container">
           <div className="employee-management-box">
             <div className="employee-management-header">

@@ -4850,7 +4850,7 @@ html.dark-mode {
           <div className="ad-dashboard-header">
             <div>
 
-              <h1 className="ad-title">Admin Worksheet</h1>
+              <h2 className="ad-title">Admin Worksheet</h2>
               <p className="ad-subtitle">System administration and Employee management</p>
             </div>
           </div>
