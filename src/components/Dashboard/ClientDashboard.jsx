@@ -25,6 +25,14 @@ ChartJS.register(
   Tooltip
 );
 
+   const documentTypes = {
+  Resumes: 'resume',
+  CoverLetters: 'cover letter',
+  Interviews: 'interview screenshot',
+  Offers: 'portfolio', // Assuming 'Offers' corresponds to 'portfolio' type
+  Others: 'other'
+};
+
 // --- Styled Components for Radio ---
 const StyledWrapper = styled.div`
   .glass-radio-group {
@@ -1868,401 +1876,97 @@ const Applications = ({
 };
 
 // --- Documents Tab Content ---
-const Documents = ({ activeSubTab, handleSubTabChange, setActiveWorksheetTab }) => { // setActiveWorksheetTab prop added
+const Documents = ({ activeSubTab, handleSubTabChange, clientFiles = [] }) => {
+  // Filter files based on the active sub-tab
+  const filesForSubTab = clientFiles.filter(file => file.type === documentTypes[activeSubTab]);
+  const otherFiles = clientFiles.filter(file => !Object.values(documentTypes).includes(file.type) || file.type === 'other');
+  
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "20px",
-        fontFamily: 'Arial, sans-serif',
-        maxWidth: '1200px',
-        margin: '0 auto',
-        padding: '20px',
-        backgroundColor: '#f8f9fa',
-        borderRadius: '8px',
-        boxShadow: '0 4px 8px rgba(0,0,0,0.05)'
-      }}
-    >
-      <h3
-        style={{
-          fontSize: "20px",
-          fontWeight: "bold",
-          color: "#333",
-          marginBottom: "16px",
-          textAlign: 'center'
-        }}
-      >
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", fontFamily: 'Arial, sans-serif', maxWidth: '1200px', margin: '0 auto', padding: '20px', backgroundColor: '#f8f9fa', borderRadius: '8px', boxShadow: '0 4px 8px rgba(0,0,0,0.05)' }}>
+      <h3 style={{ fontSize: "20px", fontWeight: "bold", color: "#333", marginBottom: "16px", textAlign: 'center' }}>
         My Documents
       </h3>
       {/* Sub-Tabs */}
-      <div
-        style={{
-          display: "flex",
-          gap: "10px",
-          justifyContent: 'center', // Center the sub-tabs
-          flexWrap: 'wrap', // Allow wrapping
-        }}
-      >
-        <button
-          style={{
-            padding: "8px 12px",
-            border: "1px solid #ccc",
-            borderRadius: "4px",
-            backgroundColor:
-              activeSubTab === "Resumes" ? "#007bff" : "#f0f0f0",
-            color: activeSubTab === "Resumes" ? "#fff" : "#333",
-            cursor: "pointer",
-          }}
-          onClick={() => handleSubTabChange("Resumes")}
-        >
-          Resumes (3)
-        </button>
-        <button
-          style={{
-            padding: "8px 12px",
-            border: "1px solid #ccc",
-            borderRadius: "4px",
-            backgroundColor:
-              activeSubTab === "CoverLetters" ? "#007bff" : "#f0f0f0",
-            color: activeSubTab === "CoverLetters" ? "#fff" : "#333",
-            cursor: "pointer",
-          }}
-          onClick={() => handleSubTabChange("CoverLetters")}
-        >
-          Cover Letters (3)
-        </button>
-        <button
-          style={{
-            padding: "8px 12px",
-            border: "1px solid #ccc",
-            borderRadius: "4px",
-            backgroundColor:
-              activeSubTab === "Interviews" ? "#007bff" : "#f0f0f0",
-            color: activeSubTab === "Interviews" ? "#fff" : "#333",
-            cursor: "pointer",
-          }}
-          onClick={() => handleSubTabChange("Interviews")}
-        >
-          Interviews (3)
-        </button>
-        <button
-          style={{
-            padding: "8px 12px",
-            border: "1px solid #ccc",
-            borderRadius: "4px",
-            backgroundColor:
-              activeSubTab === "Offers" ? "#007bff" : "#f0f0f0",
-            color: activeSubTab === "Offers" ? "#fff" : "#333",
-            cursor: "pointer",
-          }}
-          onClick={() => handleSubTabChange("Offers")}
-        >
-          Offers (2)
-        </button>
+      <div style={{ display: "flex", gap: "10px", justifyContent: 'center', flexWrap: 'wrap' }}>
+        {Object.keys(documentTypes).map(tabName => (
+           <button key={tabName} style={{ padding: "8px 12px", border: "1px solid #ccc", borderRadius: "4px", backgroundColor: activeSubTab === tabName ? "#007bff" : "#f0f0f0", color: activeSubTab === tabName ? "#fff" : "#333", cursor: "pointer" }} onClick={() => handleSubTabChange(tabName)}>
+             {tabName} ({tabName === 'Others' ? otherFiles.length : clientFiles.filter(f => f.type === documentTypes[tabName]).length})
+           </button>
+        ))}
       </div>
 
       {/* Sub-Tab Content */}
       <div>
-        {activeSubTab === "Resumes" && <Resumes />}
-        {activeSubTab === "CoverLetters" && <CoverLetters />}
-        {activeSubTab === "Interviews" && <Interviews />}
-        {activeSubTab === "Offers" && <Offers />}
+        {activeSubTab === "Resumes" && <Resumes files={filesForSubTab} />}
+        {activeSubTab === "CoverLetters" && <CoverLetters files={filesForSubTab} />}
+        {activeSubTab === "Interviews" && <Interviews files={filesForSubTab} />}
+        {activeSubTab === "Offers" && <Offers files={filesForSubTab} />}
+        {activeSubTab === "Others" && <Others files={otherFiles} />}
       </div>
     </div>
   );
 };
-
 // Resumes Sub-Tab Content
-const Resumes = () => {
+const Resumes = ({ files }) => {
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "row",
-        gap: "20px",
-        flexWrap: 'wrap', // Allow wrapping for responsiveness
-        marginTop: '20px',
-        justifyContent: 'center' // Center the document cards
-      }}
-    >
-      <div
-        style={{
-          padding: "40px",
-          border: "1px solid #ccc",
-          borderRadius: "8px",
-          width: "350px",
-          textAlign: "center",
-          boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-          backgroundColor: '#fff',
-        }}
-      >
-        📄
-        john_anderson_resume_2025.pdf
-      </div>
-      <div
-        style={{
-          padding: "20px",
-          border: "1px solid #ccc",
-          borderRadius: "8px",
-          width: "350px",
-          textAlign: "center",
-          boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-          backgroundColor: '#fff',
-        }}
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          style={{ width: "24px", height: "24px", marginRight: "10px" }}
-        >
-          <path d="M13 10H11v4H9v2h6v-2h-2v-4h2zm8-2h-8l-5.4 6-3.4-4-4 5H5v2h14v-2H13l4-5-3.4 4L17 8z" />
-        </svg>
-        john_anderson_resume_tech_focused.pdf
-      </div>
-      <div
-        style={{
-          padding: "20px",
-          border: "1px solid #ccc",
-          borderRadius: "8px",
-          width: "350px",
-          textAlign: "center",
-          boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-          backgroundColor: '#fff',
-        }}
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          style={{ width: "24px", height: "24px", marginRight: "10px" }}
-        >
-          <path d="M13 10H11v4H9v2h6v-2h-2v-4h2zm8-2h-8l-5.4 6-3.4-4-4 5H5v2h14v-2H13l4-5-3.4 4L17 8z" />
-        </svg>
-        john_anderson_resume_senior_level.pdf
-      </div>
+    <div style={{ display: "flex", flexDirection: "row", gap: "20px", flexWrap: 'wrap', marginTop: '20px', justifyContent: 'center' }}>
+      {files.length > 0 ? files.map(file => (
+        <div key={file.id} style={{ padding: "40px", border: "1px solid #ccc", borderRadius: "8px", width: "350px", textAlign: "center", boxShadow: '0 2px 4px rgba(0,0,0,0.05)', backgroundColor: '#fff' }}>
+          📄 {file.name}
+        </div>
+      )) : <p>No resumes found.</p>}
     </div>
   );
 };
 
 
 // Cover Letters Sub-Tab Content
-const CoverLetters = () => {
+const CoverLetters = ({ files }) => {
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "row",
-        gap: "20px",
-        flexWrap: 'wrap', // Allow wrapping for responsiveness
-        marginTop: '20px',
-        justifyContent: 'center' // Center the document cards
-      }}
-    >
-      <div
-        style={{
-          padding: "40px",
-          border: "1px solid #ccc",
-          borderRadius: "8px",
-          width: "350px",
-          textAlign: "center",
-          boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-          backgroundColor: '#fff',
-        }}
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          style={{ width: "24px", height: "24px", marginRight: "10px" }}
-        >
-          <path d="M13 10H11v4H9v2h6v-2h-2v-4h2zm8-2h-8l-5.4 6-3.4-4-4 5H5v2h14v-2H13l4-5-3.4 4L17 8z" />
-        </svg>
-        cover_letter_techflow.pdf
-      </div>
-      <div
-        style={{
-          padding: "40px",
-          border: "1px solid #ccc",
-          borderRadius: "8px",
-          width: "350px",
-          textAlign: "center",
-          boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-          backgroundColor: '#fff',
-        }}
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          style={{ width: "24px", height: "24px", marginRight: "10px" }}
-        >
-          <path d="M13 10H11v4H9v2h6v-2h-2v-4h2zm8-2h-8l-5.4 6-3.4-4-4 5H5v2h14v-2H13l4-5-3.4 4L17 8z" />
-        </svg>
-        cover_letter_startupxyz.pdf
-      </div>
-      <div
-        style={{
-          padding: "30px",
-          border: "1px solid #ccc",
-          borderRadius: "8px",
-          width: "350px",
-          textAlign: "center",
-          boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-          backgroundColor: '#fff',
-        }}
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          style={{ width: "24px", height: "24px", marginRight: "10px" }}
-        >
-          <path d="M13 10H11v4H9v2h6v-2h-2v-4h2zm8-2h-8l-5.4 6-3.4-4-4 5H5v2h14v-2H13l4-5-3.4 4L17 8z" />
-        </svg>
-        generic_cover_letter_template.pdf
-      </div>
+    <div style={{ display: "flex", flexDirection: "row", gap: "20px", flexWrap: 'wrap', marginTop: '20px', justifyContent: 'center' }}>
+      {files.length > 0 ? files.map(file => (
+        <div key={file.id} style={{ padding: "40px", border: "1px solid #ccc", borderRadius: "8px", width: "350px", textAlign: "center", boxShadow: '0 2px 4px rgba(0,0,0,0.05)', backgroundColor: '#fff' }}>
+          📄 {file.name}
+        </div>
+      )) : <p>No cover letters found.</p>}
     </div>
   );
 };
 
 // Interviews Sub-Tab Content
-const Interviews = () => {
+const Interviews = ({ files }) => {
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "row",
-        gap: "20px",
-        flexWrap: 'wrap', // Allow wrapping for responsiveness
-        marginTop: '20px',
-        justifyContent: 'center' // Center the document cards
-      }}
-    >
-      <div
-        style={{
-          padding: "40px",
-          border: "1px solid #ccc",
-          borderRadius: "8px",
-          width: "350px",
-          textAlign: "center",
-          boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-          backgroundColor: '#fff',
-        }}
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          style={{ width: "24px", height: "24px", marginRight: "10px" }}
-        >
-          <path d="M13 10H11v4H9v2h6v-2h-2v-4h2zm8-2h-8l-5.4 6-3.4-4-4 5H5v2h14v-2H13l4-5-3.4 4L17 8z" />
-        </svg>
-        techflow_interview_invitation.png
-      </div>
-      <div
-        style={{
-          padding: "30px",
-          border: "1px solid #ccc",
-          borderRadius: "8px",
-          width: "350px",
-          textAlign: "center",
-          boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-          backgroundColor: '#fff',
-        }}
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          style={{ width: "24px", height: "24px", marginRight: "10px" }}
-        >
-          <path d="M13 10H11v4H9v2h6v-2h-2v-4h2zm8-2h-8l-5.4 6-3.4-4-4 5H5v2h14v-2H13l4-5-3.4 4L17 8z" />
-        </svg>
-        webtech_interview_confirmation.pdf
-      </div>
-      <div
-        style={{
-          padding: "20px",
-          border: "1px solid #ccc",
-          borderRadius: "8px",
-          width: "350px",
-          textAlign: "center",
-          boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-          backgroundColor: '#fff',
-        }}
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          style={{ width: "24px", height: "24px", marginRight: "10px" }}
-        >
-          <path d="M13 10H11v4H9v2h6v-2h-2v-4h2zm8-2h-8l-5.4 6-3.4-4-4 5H5v2h14v-2H13l4-5-3.4 4L17 8z" />
-        </svg>
-        innovation_labs_interview_feedback.png
-      </div>
+    <div style={{ display: "flex", flexDirection: "row", gap: "20px", flexWrap: 'wrap', marginTop: '20px', justifyContent: 'center' }}>
+       {files.length > 0 ? files.map(file => (
+        <div key={file.id} style={{ padding: "40px", border: "1px solid #ccc", borderRadius: "8px", width: "350px", textAlign: "center", boxShadow: '0 2px 4px rgba(0,0,0,0.05)', backgroundColor: '#fff' }}>
+          📄 {file.name}
+        </div>
+      )) : <p>No interview documents found.</p>}
     </div>
   );
 };
 
 // Offers Sub-Tab Content
-const Offers = () => {
+const Offers = ({ files }) => {
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "row",
-        gap: "20px",
-        flexWrap: 'wrap', // Allow wrapping for responsiveness
-        marginTop: '20px',
-        justifyContent: 'center' // Center the document cards
-      }}
-    >
-      <div
-        style={{
-          padding: "30px",
-          border: "1px solid #ccc",
-          borderRadius: "8px",
-          width: "350px",
-          textAlign: "center",
-          boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-          backgroundColor: '#fff',
-        }}
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          style={{ width: "24px", height: "24px", marginRight: "10px" }}
-        >
-          <path d="M13 10H11v4H9v2h6v-2h-2v-4h2zm8-2h-8l-5.4 6-3.4-4-4 5H5v2h14v-2H13l4-5-3.4 4L17 8z" />
-        </svg>
-        techflow_joboffer_senior_frontend.pdf
-      </div>
-      <div
-        style={{
-          padding: "30px",
-          border: "1px solid #ccc",
-          borderRadius: "8px",
-          width: "350px",
-          textAlign: "center",
-          boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-          backgroundColor: '#fff',
-        }}
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          style={{ width: "24px", height: "24px", marginRight: "10px" }}
-        >
-          <path d="M13 10H11v4H9v2h6v-2h-2v-4h2zm8-2h-8l-5.4 6-3.4-4-4 5H5v2h14v-2H13l4-5-3.4 4L17 8z" />
-        </svg>
-        startupxyz_offer_letter_react_dev.pdf
-      </div>
+    <div style={{ display: "flex", flexDirection: "row", gap: "20px", flexWrap: 'wrap', marginTop: '20px', justifyContent: 'center' }}>
+       {files.length > 0 ? files.map(file => (
+        <div key={file.id} style={{ padding: "40px", border: "1px solid #ccc", borderRadius: "8px", width: "350px", textAlign: "center", boxShadow: '0 2px 4px rgba(0,0,0,0.05)', backgroundColor: '#fff' }}>
+          📄 {file.name}
+        </div>
+      )) : <p>No offers found.</p>}
+    </div>
+  );
+};
 
+const Others = ({ files }) => {
+  return (
+    <div style={{ display: "flex", flexDirection: "row", gap: "20px", flexWrap: 'wrap', marginTop: '20px', justifyContent: 'center' }}>
+      {files.length > 0 ? files.map(file => (
+        <div key={file.id} style={{ padding: "40px", border: "1px solid #ccc", borderRadius: "8px", width: "350px", textAlign: "center", boxShadow: '0 2px 4px rgba(0,0,0,0.05)', backgroundColor: '#fff' }}>
+          📄 {file.name}
+        </div>
+      )) : <p>No other documents found.</p>}
     </div>
   );
 };
@@ -2284,7 +1988,7 @@ const WorksheetView = ({ setActiveTab, activeWorksheetTab, setActiveWorksheetTab
   handleWebsiteCheckboxChange, handlePositionCheckboxChange, handleCompanyCheckboxChange,
   isGlobalFilterActive, clearAllFilters, getApplicationsSectionTitle, filteredApplicationsForDisplay,
   downloadApplicationsData, applicationsData, allApplicationsFlattened,
-  activeSubTab, setActiveSubTab, // New prop to pass sub-tab state for Documents
+  activeSubTab, setActiveSubTab, clientData, // New prop to pass sub-tab state for Documents
   setIsInWorksheetView // New prop to allow WorksheetView to set its own visibility
 }) => {
   return (
@@ -2452,7 +2156,7 @@ const WorksheetView = ({ setActiveTab, activeWorksheetTab, setActiveWorksheetTab
         <Documents
           activeSubTab={activeSubTab}
           handleSubTabChange={setActiveSubTab}
-          setActiveWorksheetTab={setActiveWorksheetTab} // Pass down
+          clientFiles={clientData ? clientData.files : []}
         />
       )}
     </div>
@@ -2465,12 +2169,45 @@ const ClientDashboard = () => {
   const navigate = useNavigate();
 
   const [applicationsData, setApplicationsData] = useState({});
+  const [scheduledInterviews, setScheduledInterviews] = useState([]);
+  const [clientData, setClientData] = useState(null);
+
 
   // Initialize activeTab from localStorage, default to "Dashboard" if not found
   const [activeTab, setActiveTab] = useState(() => {
     const savedTab = localStorage.getItem('activeClientDashboardTab');
     return savedTab || "Dashboard";
   });
+
+
+
+
+
+useEffect(() => {
+    const loadClientData = () => {
+      // In a real app, you might get the client's ID from URL params or auth context.
+      // Here, we'll just load the first active client as an example.
+      const allClients = JSON.parse(localStorage.getItem('employee_active_clients')) || [];
+      if (allClients.length > 0) {
+        setClientData(allClients[0]);
+      }
+    };
+    loadClientData();
+
+    // Listen for changes from other tabs/windows
+    const handleStorageChange = (event) => {
+      if (event.key === 'scheduled_interviews' && event.newValue) {
+        setScheduledInterviews(JSON.parse(event.newValue));
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+
+    // Cleanup listener
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+
 
   // Effect to save activeTab to localStorage whenever it changes
   useEffect(() => {
@@ -2816,16 +2553,16 @@ const ClientDashboard = () => {
   };
 
   // Mock data for Scheduled Interviews (UPDATED with attachment field)
-  const scheduledInterviews = [
-    { id: 1, date: '2025-06-15', jobId: 'TX101', time: '10:00 AM', company: 'Innovate Solutions', role: 'Software Developer', recruiterMailId: 'alice.j@innovate.com', round: 'Round 1', attachments: ['https://placehold.co/200x150/FFD700/000000?text=Screenshot+1'] },
-    { id: 2, date: '2025-06-18', jobId: 'TX102', time: '02:30 PM', company: 'Global Tech Corp', role: 'UX Designer', recruiterMailId: 'bob.w@globaltech.com', round: 'Round 2', attachments: ['https://placehold.co/200x150/ADD8E6/000000?text=Design+Brief', 'https://placehold.co/200x150/90EE90/000000?text=Wireframes'] },
-    { id: 3, date: '2025-06-20', jobId: 'TX103', time: '11:00 AM', company: 'Data Insights Ltd.', role: 'Data Analyst', recruiterMailId: 'charlie.b@datainsights.com', round: 'Final Round', attachments: [] },
-    { id: 4, date: '2025-06-22', jobId: 'TX104', time: '09:00 AM', company: 'FutureTech Inc.', role: 'Project Manager', recruiterMailId: 'david.l@futuretech.net', round: 'Round 1', attachments: ['https://placehold.co/200x150/FFC0CB/000000?text=Project+Spec'] },
-    { id: 5, date: '2025-06-25', jobId: 'TX105', time: '01:00 PM', company: 'Digital Innovators', role: 'DevOps Engineer', recruiterMailId: 'eve.d@digitalinnov.io', round: 'Round 3', attachments: [] },
-    { id: 6, date: '2025-06-28', jobId: 'TX106', time: '03:45 PM', company: 'Quant Computing', role: 'Machine Learning Scientist', recruiterMailId: 'frank.w@quantcomp.ai', round: 'Round 2', attachments: ['https://placehold.co/200x150/DDA0DD/000000?text=Algorithm+Flow'] },
-    { id: 7, date: '2025-07-01', jobId: 'TX107', time: '10:30 AM', company: 'CyberSec Solutions', role: 'Cybersecurity Analyst', recruiterMailId: 'grace.k@cybersec.com', round: 'Round 1', attachments: ['https://placehold.co/200x150/F08080/000000?text=Security+Report'] },
-    { id: 8, date: '2025-07-03', jobId: 'TX108', time: '04:00 PM', company: 'HealthTech Connect', role: 'Mobile App Developer', recruiterMailId: 'henry.g@healthtech.org', round: 'Final Round', attachments: [] },
-  ];
+  // const scheduledInterviews = [
+  //   { id: 1, date: '2025-06-15', jobId: 'TX101', time: '10:00 AM', company: 'Innovate Solutions', role: 'Software Developer', recruiterMailId: 'alice.j@innovate.com', round: 'Round 1', attachments: ['https://placehold.co/200x150/FFD700/000000?text=Screenshot+1'] },
+  //   { id: 2, date: '2025-06-18', jobId: 'TX102', time: '02:30 PM', company: 'Global Tech Corp', role: 'UX Designer', recruiterMailId: 'bob.w@globaltech.com', round: 'Round 2', attachments: ['https://placehold.co/200x150/ADD8E6/000000?text=Design+Brief', 'https://placehold.co/200x150/90EE90/000000?text=Wireframes'] },
+  //   { id: 3, date: '2025-06-20', jobId: 'TX103', time: '11:00 AM', company: 'Data Insights Ltd.', role: 'Data Analyst', recruiterMailId: 'charlie.b@datainsights.com', round: 'Final Round', attachments: [] },
+  //   { id: 4, date: '2025-06-22', jobId: 'TX104', time: '09:00 AM', company: 'FutureTech Inc.', role: 'Project Manager', recruiterMailId: 'david.l@futuretech.net', round: 'Round 1', attachments: ['https://placehold.co/200x150/FFC0CB/000000?text=Project+Spec'] },
+  //   { id: 5, date: '2025-06-25', jobId: 'TX105', time: '01:00 PM', company: 'Digital Innovators', role: 'DevOps Engineer', recruiterMailId: 'eve.d@digitalinnov.io', round: 'Round 3', attachments: [] },
+  //   { id: 6, date: '2025-06-28', jobId: 'TX106', time: '03:45 PM', company: 'Quant Computing', role: 'Machine Learning Scientist', recruiterMailId: 'frank.w@quantcomp.ai', round: 'Round 2', attachments: ['https://placehold.co/200x150/DDA0DD/000000?text=Algorithm+Flow'] },
+  //   { id: 7, date: '2025-07-01', jobId: 'TX107', time: '10:30 AM', company: 'CyberSec Solutions', role: 'Cybersecurity Analyst', recruiterMailId: 'grace.k@cybersec.com', round: 'Round 1', attachments: ['https://placehold.co/200x150/F08080/000000?text=Security+Report'] },
+  //   { id: 8, date: '2025-07-03', jobId: 'TX108', time: '04:00 PM', company: 'HealthTech Connect', role: 'Mobile App Developer', recruiterMailId: 'henry.g@healthtech.org', round: 'Final Round', attachments: [] },
+  // ];
 
   // Mock data for Resume & Job Portal Updates
   const resumeUpdates = [
@@ -4995,6 +4732,7 @@ const ClientDashboard = () => {
                 applicationsData={applicationsData}
                 allApplicationsFlattened={allApplicationsFlattened}
                 setActiveSubTab={setActiveSubTab}
+                clientData={clientData}
                 setIsInWorksheetView={setIsInWorksheetView}
               />
             )}

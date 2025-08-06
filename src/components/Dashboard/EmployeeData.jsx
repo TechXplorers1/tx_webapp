@@ -1147,6 +1147,30 @@ const EmployeeData = () => {
   const handleSaveEditedApplication = () => {
     if (!editedApplicationFormData || !selectedClientForApplication) return;
 
+
+    if (editedApplicationFormData.status === 'Interview') {
+      const newInterview = {
+        id: editedApplicationFormData.id, // Use application ID for uniqueness
+        date: editedApplicationFormData.interviewDate,
+        jobId: editedApplicationFormData.jobId,
+        time: editedApplicationFormData.interviewTime || 'TBD', // Add a default time if not provided
+        company: editedApplicationFormData.company,
+        role: editedApplicationFormData.jobTitle,
+        recruiterMailId: editedApplicationFormData.recruiterMail,
+        round: editedApplicationFormData.round,
+        // Add client's name for display in the ClientDashboard modal
+        clientName: `${selectedClientForApplication.firstName} ${selectedClientForApplication.lastName}`,
+        attachments: [], // You can add logic to handle attachments if needed
+      };
+      
+      // Get existing interviews, prepend the new one, and save
+      const existingInterviews = JSON.parse(localStorage.getItem('scheduled_interviews')) || [];
+      // Avoid duplicates by checking ID
+      const filteredInterviews = existingInterviews.filter(inv => inv.id !== newInterview.id);
+      const updatedInterviews = [newInterview, ...filteredInterviews];
+      localStorage.setItem('scheduled_interviews', JSON.stringify(updatedInterviews));
+    }
+
     const updateClientList = (prevClients) => {
       return prevClients.map(client =>
         client.id === selectedClientForApplication.id
@@ -1154,13 +1178,7 @@ const EmployeeData = () => {
             ...client,
             jobApplications: client.jobApplications.map(app =>
               app.id === editedApplicationFormData.id ? {
-                ...editedApplicationFormData,
-                attachments: editedApplicationFormData.attachments.map(file => ({
-                  name: file.name,
-                  size: file.size,
-                  type: file.type,
-                  uploadDate: file.uploadDate
-                }))
+                ...editedApplicationFormData
               } : app
             ),
           }
@@ -1323,15 +1341,9 @@ const EmployeeData = () => {
       setInactiveClients(updateClientList);
     }
 
-    // Update selectedClient to reference the newly updated client object
-    setSelectedClient(prevSelected => {
-      const updatedClient = updateClientList([prevSelected]).find(c => c.id === prevSelected.id);
-      return updatedClient || prevSelected;
-    });
+  
 
     setShowUploadFileModal(false);
-    setNewFileFormData({ clientId: '', fileType: '', fileName: '', notes: '' });
-    setSelectedClientForFile(null);
     triggerNotification("File uploaded successfully!"); // Trigger notification
   };
 
@@ -3922,16 +3934,6 @@ triggerNotification(`Client ${newActiveClient.name} accepted!`);
                     />
                   </div>
                   <div style={modalFormFieldGroupStyle}>
-                    <label style={modalLabelStyle}>Interview Date<span style={{ color: 'red' }}>*</span></label>
-                    <input
-                      type="date"
-                      name="interviewDate"
-                      value={editedApplicationFormData.interviewDate || ''}
-                      onChange={handleEditedApplicationFormChange}
-                      style={modalInputStyle}
-                    />
-                  </div>
-                   <div style={modalFormFieldGroupStyle}>
                     <label style={modalLabelStyle}>Recruiter Mail ID<span style={{ color: 'red' }}>*</span></label>
                     <input
                       type="email"
@@ -3941,6 +3943,27 @@ triggerNotification(`Client ${newActiveClient.name} accepted!`);
                       style={modalInputStyle}
                     />
                   </div>
+                  <div style={modalFormFieldGroupStyle}>
+                    <label style={modalLabelStyle}>Interview Date<span style={{ color: 'red' }}>*</span></label>
+                    <input
+                      type="date"
+                      name="interviewDate"
+                      value={editedApplicationFormData.interviewDate || ''}
+                      onChange={handleEditedApplicationFormChange}
+                      style={modalInputStyle}
+                    />
+                  </div>
+                  <div style={modalFormFieldGroupStyle}>
+        <label style={modalLabelStyle}>Interview Time<span style={{ color: 'red' }}>*</span></label>
+        <input
+          type="time"
+          name="interviewTime"
+          value={editedApplicationFormData.interviewTime || ''}
+          onChange={handleEditedApplicationFormChange}
+          style={modalInputStyle}
+        />
+      </div>
+                   
                 </>
               )}
 
@@ -4079,9 +4102,8 @@ triggerNotification(`Client ${newActiveClient.name} accepted!`);
                   <option value="resume">Resume</option>
                   <option value="cover letter">Cover Letter</option>
                   <option value="interview screenshot">Interview Screenshot</option>
-                  <option value="portfolio">Portfolio</option>
-                  <option value="report">Report</option>
-                  <option value="other">Other</option>
+                  <option value="portfolio">Offers</option>
+                  <option value="other">Others</option>
                 </select>
               </div>
               <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>

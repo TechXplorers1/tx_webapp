@@ -1,3 +1,4 @@
+// LoginPage.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
 import JsNavbar from './JsNavbar';
@@ -11,6 +12,7 @@ import { useAuth } from '../components/AuthContext';
 export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -18,6 +20,9 @@ export default function LoginPage() {
   const [passwordError, setPasswordError] = useState("");
   const [loginError, setLoginError] = useState("");
 
+  const [employees, setEmployees] = useState([]);
+
+  // Password Reset State
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [otpSent, setOtpSent] = useState(false);
@@ -27,28 +32,37 @@ export default function LoginPage() {
   const [otpTimer, setOtpTimer] = useState(60);
   const [isResendingOtp, setIsResendingOtp] = useState(false);
   const [modalAlert, setModalAlert] = useState("");
-
   const [otpVerified, setOtpVerified] = useState(false);
   const [showNewPasswordModal, setShowNewPasswordModal] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [newPasswordError, setNewPasswordError] = useState("");
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
-
   const [showSuccess, setShowSuccess] = useState(false);
 
+  // Fetch employees data on mount
+  useEffect(() => {
+    fetch('/employees.json')
+      .then(response => {
+        if (!response.ok) throw new Error('Network response was not ok');
+        return response.json();
+      })
+      .then(data => setEmployees(data))
+      .catch(error => console.error("Failed to fetch employees:", error));
+  }, []);
+
+  // OTP Timer
   useEffect(() => {
     let timerInterval;
     if (otpSent && otpTimer > 0) {
-      timerInterval = setInterval(() => {
-        setOtpTimer((prevTimer) => prevTimer - 1);
-      }, 1000);
+      timerInterval = setInterval(() => setOtpTimer(prev => prev - 1), 1000);
     } else if (otpTimer === 0) {
       setIsResendingOtp(false);
     }
     return () => clearInterval(timerInterval);
   }, [otpSent, otpTimer]);
 
+  // Password Validation
   const validatePassword = (value) => {
     if (value.length < 8) return 'Password must be at least 8 characters';
     if (!/[A-Z]/.test(value)) return 'Must contain uppercase';
@@ -58,74 +72,103 @@ export default function LoginPage() {
     return null;
   };
 
-  // Updated handleSubmit to use localStorage for authentication
+  // --- 🔐 Unified Login Handler ---
   const handleSubmit = (e) => {
     e.preventDefault();
     setEmailError("");
     setPasswordError("");
     setLoginError("");
 
-    if (!email.includes("@") || !email.includes(".")) {
+    // Email validation
+    if (!email || !email.includes("@") || !email.includes(".")) {
       setEmailError("Please enter a valid email");
       return;
     }
+    if (!password) {
+      setPasswordError("Password is required");
+      return;
+    }
 
-    // Retrieve users from localStorage
+    // 1. Check if it's a predefined employee
+    const employee = employees.find(
+      emp => emp.workEmail === email && emp.temporaryPassword === password
+    );
+
+    if (employee) {
+      const userData = {
+        name: `${employee.firstName} ${employee.lastName}`,
+        email: employee.workEmail,
+        roles: employee.roles,
+        avatar: `https://placehold.co/40x40/007bff/white?text=${employee.firstName.charAt(0).toUpperCase()}`
+      };
+
+      sessionStorage.setItem('loggedInEmployee', JSON.stringify(userData));
+      login(userData);
+
+      // Role-based navigation
+      if (employee.roles.includes('admin')) {
+        navigate('/adminpage');
+      } else if (employee.roles.includes('manager')) {
+        navigate('/managerworksheet');
+      } else if (employee.roles.includes('employee')) {
+        navigate('/employees');
+      } else {
+        setLoginError("Access denied. No valid role assigned.");
+      }
+      return;
+    }
+
+    // 2. Check if it's a self-registered user
     const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers')) || [];
-    
-    // Find the user with the matching email
-    const user = registeredUsers.find(u => u.email === email);
+    const registeredUser = registeredUsers.find(u => u.email === email && u.password === password);
 
-    if (user && user.password === password) {
-      // If user is found and password matches, log them in
+    if (registeredUser) {
       const baseUsername = email.split('@')[0];
       const userData = {
-        name: baseUsername, // Or a default name
-        email: user.email,
+        name: baseUsername,
+        email: registeredUser.email,
         avatar: `https://placehold.co/40x40/007bff/white?text=${baseUsername.charAt(0).toUpperCase()}`
       };
-      
-      login(userData);
-      navigate('/'); // Redirect to a default page after login
-    } else {
-      // Handle hardcoded admin/special users
-      let userRole = null;
-      let redirectPath = null;
-      const baseUsername = email.split('@')[0];
 
-      if (password === 'Password@123') {
-        if (email === 'admin@gmail.com') {
-          userRole = 'Admin';
-          redirectPath = '/adminworksheet';
-        } else if (email === 'client@gmail.com') {
-          userRole = 'Client';
-          redirectPath = '/';
-        } else if (email === 'manager@gmail.com') {
-          userRole = 'Manager';
-          redirectPath = '/managerworksheet';
-        } else if (email === 'assets@gmail.com') {
-          userRole = 'Assets';
-          redirectPath = '/assetworksheet';
-        } else if (email.includes('.tx')) {
-          userRole = 'Employee';
-          redirectPath = '/employees';
-        }
+      login(userData);
+      navigate('/');
+      return;
+    }
+
+    // 3. Check hardcoded fallback credentials
+    const baseUsername = email.split('@')[0];
+    if (password === 'Password@123') {
+      let redirectPath = null;
+
+      if (email === 'admin@gmail.com') {
+        redirectPath = '/adminworksheet';
+      } else if (email === 'client@gmail.com') {
+        redirectPath = '/';
+      } else if (email === 'manager@gmail.com') {
+        redirectPath = '/managerworksheet';
+      } else if (email === 'assets@gmail.com') {
+        redirectPath = '/assetworksheet';
+      } else if (email.endsWith('.tx')) {
+        redirectPath = '/employees';
       }
 
-      if (userRole && redirectPath) {
+      if (redirectPath) {
         const userData = {
-          name: userRole,
-          email: email,
+          name: baseUsername,
+          email,
           avatar: `https://placehold.co/40x40/007bff/white?text=${baseUsername.charAt(0).toUpperCase()}`
         };
         login(userData);
         navigate(redirectPath);
-      } else {
-        setLoginError("Invalid email or password.");
+        return;
       }
     }
+
+    // 4. If no match, show error
+    setLoginError("Invalid email or password.");
   };
 
+  // --- 🔁 Send OTP ---
   const sendOtp = () => {
     if (!forgotEmail.includes("@")) {
       setModalAlert("Please enter a valid email address.");
@@ -134,16 +177,15 @@ export default function LoginPage() {
     setModalAlert("");
     const otp = Math.floor(1000 + Math.random() * 9000).toString();
     setGeneratedOtp(otp);
-    
     console.log(`Generated OTP for ${forgotEmail}: ${otp}`);
     setModalAlert(`An OTP has been sent to ${forgotEmail}. (For demo, OTP is ${otp})`);
-
     setOtpSent(true);
     setOtpTimer(60);
     setIsResendingOtp(true);
     setOtpError("");
   };
 
+  // --- ✅ Verify OTP ---
   const verifyOtp = () => {
     if (enteredOtp === generatedOtp) {
       setOtpVerified(true);
@@ -155,29 +197,37 @@ export default function LoginPage() {
     }
   };
 
+  // --- 🆕 Create New Password ---
   const createNewPassword = () => {
     setNewPasswordError("");
     setConfirmPasswordError("");
-
     let hasError = false;
+
     const passError = validatePassword(newPassword);
     if (passError) {
       setNewPasswordError(passError);
       hasError = true;
     }
-
     if (newPassword !== confirmPassword) {
       setConfirmPasswordError("Passwords do not match.");
       hasError = true;
     }
-
     if (hasError) return;
 
-    console.log("New password set:", newPassword);
+    // Update in localStorage if user exists
+    const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers')) || [];
+    const userIndex = registeredUsers.findIndex(u => u.email === forgotEmail);
+    if (userIndex !== -1) {
+      registeredUsers[userIndex].password = newPassword;
+      localStorage.setItem('registeredUsers', JSON.stringify(registeredUsers));
+    }
 
+    console.log("New password set successfully!");
     setShowNewPasswordModal(false);
     setShowSuccess(true);
     setTimeout(() => setShowSuccess(false), 4000);
+
+    // Reset all reset-related states
     setForgotEmail("");
     setOtpSent(false);
     setEnteredOtp("");
@@ -198,7 +248,6 @@ export default function LoginPage() {
       padding: '1rem'
     }}>
       <JsNavbar />
-
       <div style={{
         width: '100%',
         maxWidth: '500px',
@@ -208,14 +257,12 @@ export default function LoginPage() {
         boxShadow: '0 0 10px rgba(0,0,0,0.1)'
       }}>
         <h3 className="text-center text-primary fw-bold mb-4">Login to Your Account</h3>
-
         <button
           type="button"
           className="btn btn-outline-secondary w-100 p-2 mb-3 d-flex align-items-center justify-content-center gap-2"
         >
           <FcGoogle size={22} /> Continue with Google
         </button>
-
         <div className="text-center mb-3">OR</div>
 
         <Form onSubmit={handleSubmit}>
@@ -229,6 +276,7 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 isInvalid={!!emailError}
                 placeholder="Enter your email"
+                autoComplete="email"
               />
             </div>
             {emailError && <Form.Text className="text-danger">{emailError}</Form.Text>}
@@ -244,6 +292,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 isInvalid={!!passwordError}
                 placeholder="Enter your password"
+                autoComplete="current-password"
               />
               <span
                 className="input-group-text"
@@ -295,6 +344,7 @@ export default function LoginPage() {
         </Form>
       </div>
 
+      {/* Forgot Password Modal */}
       <Modal show={showForgotModal} onHide={() => setShowForgotModal(false)} centered>
         <Modal.Header closeButton><Modal.Title>Reset Password</Modal.Title></Modal.Header>
         <Modal.Body>
@@ -307,6 +357,7 @@ export default function LoginPage() {
                 value={forgotEmail}
                 onChange={(e) => setForgotEmail(e.target.value)}
                 placeholder="Email address"
+                autoComplete="email"
               />
             </Form.Group>
           ) : (
@@ -341,6 +392,7 @@ export default function LoginPage() {
         </Modal.Footer>
       </Modal>
 
+      {/* New Password Modal */}
       <Modal show={showNewPasswordModal} onHide={() => setShowNewPasswordModal(false)} centered>
         <Modal.Header closeButton><Modal.Title>Create New Password</Modal.Title></Modal.Header>
         <Modal.Body>
@@ -352,6 +404,7 @@ export default function LoginPage() {
               onChange={(e) => setNewPassword(e.target.value)}
               placeholder="New Password"
               isInvalid={!!newPasswordError}
+              autoComplete="new-password"
             />
             <Form.Control.Feedback type="invalid">{newPasswordError}</Form.Control.Feedback>
           </Form.Group>
@@ -363,6 +416,7 @@ export default function LoginPage() {
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Confirm Password"
               isInvalid={!!confirmPasswordError}
+              autoComplete="new-password"
             />
             <Form.Control.Feedback type="invalid">{confirmPasswordError}</Form.Control.Feedback>
           </Form.Group>
@@ -372,13 +426,14 @@ export default function LoginPage() {
         </Modal.Footer>
       </Modal>
 
+      {/* Success Modal */}
       <Modal show={showSuccess} onHide={() => setShowSuccess(false)} centered>
         <Modal.Body className="text-center p-4">
           <img
             src="https://cdn-icons-png.flaticon.com/512/845/845646.png"
             alt="Success"
             style={{ width: '80px' }}
-            onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/80x80/28a745/white?text=OK'; }}
+            onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/80x80/28a745/white?text=OK'; }}
           />
           <h5 className="mt-3 text-success">Password successfully created!</h5>
         </Modal.Body>
