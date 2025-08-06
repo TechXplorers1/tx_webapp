@@ -138,5 +138,57 @@
     "status": "Awaiting",
     "designations": "Employee",
     "temporaryPassword": "Password@123"
+  },
+  {
+    "id": 7,
+    "workEmail": "prakash@techxplorers.in",
+    "roles": [
+      "employee",
+      "active",
+      "Development"
+    ],
+    "firstName": "Prakash",
+    "lastName": "S K",
+    "gender": "Male",
+    "dateOfBirth": "1995-09-15",
+    "maritalStatus": "Married",
+    "personalNumber": "7890123456",
+    "alternativeNumber": "",
+    "country": "Australia",
+    "state": "New South Wales",
+    "city": "Sydney",
+    "address": "22 Dev Lane",
+    "zipcode": "2000",
+    "dateOfJoin": "2023-01-20",
+    "personalEmail": "prakash@email.com",
+    "status": "Awaiting",
+    "designations": "Employee",
+    "temporaryPassword": "Password@123"
+  },
+  {
+    "id": 8,
+    "workEmail": "bharath@techxplorers.in",
+    "roles": [
+      "employee",
+      "active",
+      "Development"
+    ],
+    "firstName": "Bharath",
+    "lastName": "Kumar",
+    "gender": "Male",
+    "dateOfBirth": "1995-09-15",
+    "maritalStatus": "Married",
+    "personalNumber": "7890123456",
+    "alternativeNumber": "",
+    "country": "Australia",
+    "state": "New South Wales",
+    "city": "Sydney",
+    "address": "22 Dev Lane",
+    "zipcode": "2000",
+    "dateOfJoin": "2023-01-20",
+    "personalEmail": "bharath@email.com",
+    "status": "Awaiting",
+    "designations": "Employee",
+    "temporaryPassword": "Password@123"
   }
 ]

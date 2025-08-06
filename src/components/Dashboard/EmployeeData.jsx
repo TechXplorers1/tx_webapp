@@ -878,6 +878,9 @@ const EmployeeData = () => {
   // NEW: State for the currently selected client from the dropdown
   const [selectedClient, setSelectedClient] = useState(null);
 
+   const [isClientSelectModalOpen, setIsClientSelectModalOpen] = useState(false);
+  const [clientSearchTermInModal, setClientSearchTermInModal] = useState('');
+
   // Effect to set the first client as selected when component mounts or clients change
   // Also re-syncs selectedClient if activeClients changes
   useEffect(() => {
@@ -1305,6 +1308,21 @@ const EmployeeData = () => {
     } else {
       setNewFileFormData(prev => ({ ...prev, [name]: value }));
     }
+  };
+
+    const handleOpenClientSelectModal = () => {
+    setIsClientSelectModalOpen(true);
+  };
+
+  const handleCloseClientSelectModal = () => {
+    setIsClientSelectModalOpen(false);
+    setClientSearchTermInModal(''); // Reset search on close
+  };
+
+  const handleSelectClientFromModal = (client) => {
+    setSelectedClient(client);
+    setActiveSubTab('Applications'); // Reset sub-tab when a new client is selected
+    handleCloseClientSelectModal();
   };
 
   const handleSaveNewFile = () => {
@@ -1757,6 +1775,61 @@ triggerNotification(`Client ${newActiveClient.name} accepted!`);
           font-size: 0.8rem;
           color: #94a3b8;
         }
+
+        .client-select-search-container {
+            margin-bottom: 15px;
+        }
+        .client-select-search-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+        .client-select-list {
+            max-height: 40vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .client-select-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        .client-select-item:hover {
+            background-color: #f1f5f9;
+        }
+        .client-select-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #e0effe;
+            color: #3b82f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+        .client-select-info {
+            display: flex;
+            flex-direction: column;
+        }
+        .client-select-name {
+            font-weight: 600;
+            color: #1e293b;
+        }
+        .client-select-role {
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+
         `}
       </style>
 
@@ -1865,19 +1938,12 @@ triggerNotification(`Client ${newActiveClient.name} accepted!`);
           <p style={subLabelStyle}>Choose a client to view their specific data across other tabs.</p>
           <div style={clientSelectContainerStyle}>
             <label style={filterLabelStyle}>Select Client:</label>
-            <select
-              value={selectedClient ? selectedClient.id : ''}
-              onChange={(e) => {
-                setSelectedClient(activeClients.find(c => c.id === parseInt(e.target.value)));
-                setActiveSubTab('Applications'); // Reset sub-tab when a new client is selected
-              }}
-              style={selectClientDropdownStyle} /* Updated style here */
-            >
-              <option value="">Select a Client</option>
-              {activeClients.map(client => (
-                <option key={client.id} value={client.id}>{`${client.firstName} ${client.lastName}`}</option>
-              ))}
-            </select>
+           <button onClick={handleOpenClientSelectModal} style={selectClientButtonStyle}>
+              {selectedClient ? `${selectedClient.firstName} ${selectedClient.lastName}` : 'Select a Client'}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginLeft: '8px' }}>
+                  <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
           </div>
           {selectedClient && selectedClient.status === 'active' ? (
             <>
@@ -2763,19 +2829,12 @@ triggerNotification(`Client ${newActiveClient.name} accepted!`);
           <p style={subLabelStyle}>Choose an inactive client to view their specific data across other tabs.</p>
           <div style={clientSelectContainerStyle}>
             <label style={filterLabelStyle}>Select Client:</label>
-            <select
-              value={selectedClient ? selectedClient.id : ''}
-              onChange={(e) => {
-                setSelectedClient(inactiveClients.find(c => c.id === parseInt(e.target.value)));
-                setActiveSubTab('Applications'); // Reset sub-tab when a new client is selected
-              }}
-              style={selectClientDropdownStyle}
-            >
-              <option value="">Select an Inactive Client</option>
-              {inactiveClients.map(client => (
-                <option key={client.id} value={client.id}>{client.name}</option>
-              ))}
-            </select>
+            <button onClick={handleOpenClientSelectModal} style={selectClientButtonStyle}>
+          {selectedClient ? selectedClient.name : 'Select an Inactive Client'}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginLeft: '8px' }}>
+              <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
           </div>
           {selectedClient && selectedClient.status === 'inactive' ? (
             <>
@@ -4472,6 +4531,42 @@ triggerNotification(`Client ${newActiveClient.name} accepted!`);
         </Modal.Body>
       </Modal>
 
+      {isClientSelectModalOpen && (
+        <Modal show={isClientSelectModalOpen} onHide={handleCloseClientSelectModal} size="md" centered>
+          <Modal.Header closeButton style={modalHeaderStyle}>
+            <Modal.Title style={modalTitleStyle}>Select a Client</Modal.Title>
+          </Modal.Header>
+          <Modal.Body style={{ ...modalBodyStyle, padding: '15px 25px' }}>
+            <div className="client-select-search-container">
+              <input
+                type="text"
+                placeholder="Search clients by name..."
+                className="client-select-search-input"
+                value={clientSearchTermInModal}
+                onChange={(e) => setClientSearchTermInModal(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div className="client-select-list">
+              {(activeTab === 'Active Clients' ? activeClients : inactiveClients)
+                .filter(client =>
+                  `${client.firstName} ${client.lastName}`.toLowerCase().includes(clientSearchTermInModal.toLowerCase())
+                )
+                .map(client => (
+                  <div key={client.id} className="client-select-item" onClick={() => handleSelectClientFromModal(client)}>
+                    <div className="client-select-avatar">{client.initials}</div>
+                    <div className="client-select-info">
+                      <div className="client-select-name">{`${client.firstName} ${client.lastName}`}</div>
+                      <div className="client-select-role">{client.role}</div>
+                    </div>
+                  </div>
+                ))
+              }
+            </div>
+          </Modal.Body>
+        </Modal>
+      )}
+
     </div>
   );
 };
@@ -5507,6 +5602,22 @@ const clientDataDetailStyle = {
   margin: '8px 0',
   lineHeight: '1.4',
 };
+
+const selectClientButtonStyle = {
+          padding: '8px 16px',
+          border: '1px solid #cbd5e1',
+          borderRadius: '6px',
+          fontSize: '0.9rem',
+          color: '#1e293b',
+          backgroundColor: '#ffffff',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          minWidth: '250px',
+        };
+
+
 
 export default EmployeeData;
 

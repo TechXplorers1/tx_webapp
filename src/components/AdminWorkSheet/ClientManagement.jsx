@@ -25,6 +25,9 @@ const ClientManagement = () => {
     });
     const [generatedPaymentLink, setGeneratedPaymentLink] = useState('');
   
+      const [isManagerModalOpen, setIsManagerModalOpen] = useState(false);
+  const [clientForManagerSelection, setClientForManagerSelection] = useState(null);
+   const [managerSearchTerm, setManagerSearchTerm] = useState('');
 
  const [employees, setEmployees] = useState([]);
 
@@ -275,6 +278,26 @@ const ClientManagement = () => {
     setTempSelectedManager('');
   };
 
+    const handleOpenManagerModal = (client) => {
+    setClientForManagerSelection(client);
+    setIsManagerModalOpen(true);
+  };
+
+  const handleCloseManagerModal = () => {
+    setIsManagerModalOpen(false);
+    setClientForManagerSelection(null);
+    setManagerSearchTerm('');
+  };
+
+  const handleSelectManager = (managerName) => {
+    if (clientForManagerSelection) {
+      setClients(prevClients => prevClients.map(client =>
+        client.id === clientForManagerSelection.id ? { ...client, manager: managerName } : client
+      ));
+    }
+    handleCloseManagerModal();
+  };
+
   const handleClientSearchChange = (event) => {
     setClientSearchTerm(event.target.value);
   };
@@ -363,26 +386,14 @@ const ClientManagement = () => {
 
                   {(currentClientFilter === 'unassigned' || currentClientFilter === 'restored') && (
                     <td>
-                      <select className="manager-select" value={client.manager || ''} onChange={(e) => setClients(prev => prev.map(c => c.id === client.id ? { ...c, manager: e.target.value } : c))}>
-                        <option value="">Select Manager</option>
-                        {managerList.map((mgr) => <option key={mgr.id} value={`${mgr.firstName} ${mgr.lastName}`}>{mgr.firstName} {mgr.lastName}</option>)}
-                      </select>
+                      <button onClick={() => handleOpenManagerModal(client)} className="action-button select-manager">
+                          {client.manager || 'Select Manager'}
+                      </button>
                     </td>
                   )}
                   {currentClientFilter === 'active' && (
                     <td>
-                      {editingClientId === client.id ? (
-                        <select
-                          className="manager-select"
-                          value={tempSelectedManager}
-                          onChange={(e) => setTempSelectedManager(e.target.value)}
-                        >
-                          <option value="">Select Manager</option>
-                          {managerList.map((mgr) => <option key={mgr.id} value={`${mgr.firstName} ${mgr.lastName}`}>{mgr.firstName} {mgr.lastName}</option>)} 
-                        </select>
-                      ) : (
-                        client.manager || '-'
-                      )}
+                      {client.manager || '-'}
                     </td>
                   )}
                   <td><button onClick={() => handleViewClientDetails(client)} className="action-button view">View</button></td>
@@ -390,8 +401,7 @@ const ClientManagement = () => {
                     <div className="action-buttons">
                       {currentClientFilter === 'registered' && (<><button onClick={() => handleAcceptClient(client.id)} className="action-button accept">Accept</button><button onClick={() => handleDeclineClient(client.id)} className="action-button decline">Decline</button></>)}
                       {(currentClientFilter === 'unassigned' || currentClientFilter === 'restored') && <button onClick={() => handleAssignClient(client.id)} className="action-button assign" disabled={!client.manager}>Assign</button>}
-                      {currentClientFilter === 'active' && (editingClientId === client.id ? (<><button onClick={() => handleSaveManagerChange(client.id)} className="action-button save" disabled={!tempSelectedManager}>Save</button><button onClick={handleCancelEdit} className="action-button cancel">Cancel</button></>) : (<button onClick={() => handleEditManager(client)} className="action-button edit-manager">Edit Manager</button>))}
-                      {currentClientFilter === 'rejected' && (<><button onClick={() => handleRestoreClient(client.id)} className="action-button restore">Restore</button><button onClick={() => handleDeleteRejectedClient(client.id)} className="action-button delete-btn">Delete</button></>)}
+{currentClientFilter === 'active' && (<button onClick={() => handleOpenManagerModal(client)} className="action-button edit-manager">Edit Manager</button>)}                      {currentClientFilter === 'rejected' && (<><button onClick={() => handleRestoreClient(client.id)} className="action-button restore">Restore</button><button onClick={() => handleDeleteRejectedClient(client.id)} className="action-button delete-btn">Delete</button></>)}
                       {/* Send Payment Link Button */}
                                 <button
                                   onClick={() => handleOpenPaymentModal(client)}
@@ -792,6 +802,71 @@ const ClientManagement = () => {
             border: 1px solid var(--border-color);
             padding: 1.5rem;
             width: 100%;
+        }
+
+        .client-table .action-button.select-manager {
+            background-color: #f0f0f0;
+            color: #333;
+            border: 1px solid #ccc;
+        }
+        
+        /* Manager Select Modal Styles */
+        .manager-select-modal {
+            max-width: 450px;
+        }
+             .manager-search-container {
+            margin-top: 1rem;
+        }
+        .manager-search-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--modal-input-border);
+            border-radius: 0.5rem;
+            font-size: 1rem;
+        }
+        .manager-list {
+             display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-top: 1rem;
+            max-height: 300px; /* Add max-height for scrollability */
+            overflow-y: auto;
+        }
+        .manager-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        .manager-item:hover {
+            background-color: var(--dept-table-row-hover-bg);
+        }
+        .manager-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #007bff;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+        .manager-info {
+            display: flex;
+            flex-direction: column;
+        }
+        .manager-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .manager-email {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
         }
 
         /* Modal Styles */
@@ -1335,6 +1410,43 @@ const ClientManagement = () => {
         </div>
       )}
 
+{isManagerModalOpen && clientForManagerSelection && (
+        <div className="modal-overlay open">
+            <div className="modal-content manager-select-modal">
+                <div className="modal-header">
+                    <h3 className="modal-title">Select Manager for {clientForManagerSelection.firstName}</h3>
+                    <button className="modal-close-btn" onClick={handleCloseManagerModal}>&times;</button>
+                </div>
+
+                 <div className="manager-search-container">
+                    <input
+                        type="text"
+                        placeholder="Search managers by name..."
+                        className="manager-search-input"
+                        value={managerSearchTerm}
+                        onChange={(e) => setManagerSearchTerm(e.target.value)}
+                    />
+                </div>
+
+                <div className="manager-list">
+                    {managerList
+                        .filter(manager => 
+                            `${manager.firstName} ${manager.lastName}`.toLowerCase().includes(managerSearchTerm.toLowerCase())
+                        )
+                        .map(manager => (
+                            <div key={manager.id} className="manager-item" onClick={() => handleSelectManager(`${manager.firstName} ${manager.lastName}`)}>
+                                <div className="manager-avatar">{`${manager.firstName.charAt(0)}${manager.lastName.charAt(0)}`}</div>
+                                <div className="manager-info">
+                                    <div className="manager-name">{`${manager.firstName} ${manager.lastName}`}</div>
+                                    <div className="manager-email">{manager.personalEmail}</div>
+                                </div>
+                            </div>
+                        ))
+                      }
+                </div>
+            </div>
+        </div>
+      )}
 
 {/* Client Details Modal */}
       {isClientDetailsModalOpen && selectedClientForDetails && (
