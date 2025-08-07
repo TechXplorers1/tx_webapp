@@ -127,11 +127,13 @@ export default function LoginPage() {
       const userData = {
         name: baseUsername,
         email: registeredUser.email,
+        roles: ['client'],
         avatar: `https://placehold.co/40x40/007bff/white?text=${baseUsername.charAt(0).toUpperCase()}`
       };
 
+     sessionStorage.setItem('loggedInEmployee', JSON.stringify(userData));
       login(userData);
-      navigate('/');
+      navigate('/clientdashboard'); // Navigate clients to their dashboard
       return;
     }
 
@@ -139,25 +141,33 @@ export default function LoginPage() {
     const baseUsername = email.split('@')[0];
     if (password === 'Password@123') {
       let redirectPath = null;
+      let userRoles = [];
 
       if (email === 'admin@gmail.com') {
-        redirectPath = '/adminworksheet';
+        redirectPath = '/adminpage';
+        userRoles = ['admin'];
       } else if (email === 'client@gmail.com') {
-        redirectPath = '/';
+        redirectPath = '/clientdashboard'; // Updated path for client
+        userRoles = ['client'];
       } else if (email === 'manager@gmail.com') {
         redirectPath = '/managerworksheet';
+        userRoles = ['manager'];
       } else if (email === 'assets@gmail.com') {
         redirectPath = '/assetworksheet';
-      } else if (email.endsWith('.tx')) {
+        userRoles = ['asset_manager'];
+      } else if (email=== 'employee@gmail.com') {
         redirectPath = '/employees';
+        userRoles = ['employee'];
       }
 
       if (redirectPath) {
         const userData = {
           name: baseUsername,
           email,
+           roles: userRoles,
           avatar: `https://placehold.co/40x40/007bff/white?text=${baseUsername.charAt(0).toUpperCase()}`
         };
+         sessionStorage.setItem('loggedInEmployee', JSON.stringify(userData));
         login(userData);
         navigate(redirectPath);
         return;

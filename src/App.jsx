@@ -1,7 +1,7 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import { ThemeProvider } from './context/ThemeContext';
-import { AuthProvider } from './components/AuthContext';
+import { AuthProvider, useAuth } from './components/AuthContext';
 
 import LandingPage from './components/LandingPage';
 import AboutUs from './components/AboutUs';
@@ -17,10 +17,6 @@ import DigitalMarketing from './components/services/DigitalMarketing';
 import JobSupport from './components/services/JobSupport';
 import CyberSecurity from './components/services/CyberSecurity';
 import JobSupportContactForm from './components/services/JobSupportContactForm';
-import UserDashboard from './components/Dashboard/UserDashboard';
-import AdminDashboard from './components/Dashboard/AdminDashboard';
-import ManagerData from './components/Dashboard/ManagerData';
-import TeamLeadData from './components/Dashboard/TeamLeadData';
 import EmployeeData from './components/Dashboard/EmployeeData';
 import Reports from './components/Reports';
 import WorkGroups from './components/workgroups';
@@ -36,10 +32,24 @@ import AdminPage from './components/AdminWorkSheet/AdminPage';
 
 
 
+const ProtectedRoute = ({ children, allowedRoles }) => {
+  const { isLoggedIn, user } = useAuth();
+  if (!isLoggedIn) {
+    // If user is not logged in, redirect to the login page
+    return <Navigate to="/login" replace />;
+    }
 
+  // Check if the user's roles are allowed for this route
+  const isAuthorized = user && user.roles && user.roles.some(role => allowedRoles.includes(role));
 
+  if (!isAuthorized) {
+    // If logged in but not authorized, redirect to a default/home page
+    // Or you can create a dedicated "Unauthorized" page
+    return <Navigate to="/login" replace />;
+  }
 
-
+  return children;
+};
 
 
 
@@ -55,9 +65,7 @@ const App = () => {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/careers" element={<Careers />} />
-        <Route path="/clientdashboard" element={<ClientDashboard />} />
-        <Route path="/admindashboard" element={<AdminDashboard />} />
-        <Route path="/userdashboard" element={<UserDashboard />} />
+        
            {/* Services-Path */}
         <Route path="/services/mobile-app-development" element={<MobileAppDev />} />
         <Route path="/services/web-app-development" element={<WebAppDev />} />
@@ -68,18 +76,17 @@ const App = () => {
         <Route path="/services/job-contact-form" element={<JobSupportContactForm />} />
         <Route path="/services/servicesForm" element={<ServicesForm />} />
            {/* DashBoards */}
-        <Route path="/admindashboard" element={<AdminDashboard />} />
-        <Route path="/assetworksheet" element={<AssetsWorksheet/>} />
-        <Route path="/reports" element={<Reports />} />
-        <Route path="/managers" element={<ManagerData />} />
-        <Route path="/teamleads" element={<TeamLeadData />} />
-        <Route path="/employees" element={<EmployeeData />} />
-        <Route path="/workgroups" element={<WorkGroups />} />
-        <Route path="/adminpage" element={<AdminPage/>} />
-        <Route path="/adminworksheet" element={<AdminWorksheet/>} />
-        <Route path="/managerworksheet" element={<ManagerWorksheet/>} />
-        <Route path="/employee-registration-form" element={<EmployeeRegistrationForm />} />
-        <Route path="/employee-onboarding-sheet" element={<EmployeeOnboardingWorkSheet />} />
+     {/* --- Protected Routes with Role-Based Access --- */}
+            <Route path="/clientdashboard" element={<ProtectedRoute allowedRoles={['client']}><ClientDashboard /></ProtectedRoute>} />
+            <Route path="/assetworksheet" element={<ProtectedRoute allowedRoles={['asset_manager']}><AssetsWorksheet /></ProtectedRoute>} />
+            <Route path="/reports" element={<ProtectedRoute allowedRoles={['admin', 'manager']}><Reports /></ProtectedRoute>} />
+            <Route path="/employees" element={<ProtectedRoute allowedRoles={['employee']}><EmployeeData /></ProtectedRoute>} />
+            <Route path="/workgroups" element={<ProtectedRoute allowedRoles={['admin', 'manager']}><WorkGroups /></ProtectedRoute>} />
+            <Route path="/adminpage" element={<ProtectedRoute allowedRoles={['admin']}><AdminPage /></ProtectedRoute>} />
+            <Route path="/adminworksheet" element={<ProtectedRoute allowedRoles={['admin']}><AdminWorksheet /></ProtectedRoute>} />
+            <Route path="/managerworksheet" element={<ProtectedRoute allowedRoles={['manager']}><ManagerWorksheet /></ProtectedRoute>} />
+            <Route path="/employee-registration-form" element={<ProtectedRoute allowedRoles={['admin']}><EmployeeRegistrationForm /></ProtectedRoute>} />
+            <Route path="/employee-onboarding-sheet" element={<ProtectedRoute allowedRoles={['admin']}><EmployeeOnboardingWorkSheet /></ProtectedRoute>} />
 
 
 
