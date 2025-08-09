@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Modal, Button } from 'react-bootstrap';
+import { database } from '../../firebase'; // Import your Firebase config
+import { ref, push, set } from "firebase/database";
 
 const ServicesForm = () => {
     const location = useLocation();
@@ -49,7 +51,7 @@ const ServicesForm = () => {
         }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         
         const newClient = {
@@ -69,22 +71,26 @@ const ServicesForm = () => {
             jobsApplyFor: '', // Not applicable for this form
         };
 
-        // Retrieve existing clients from localStorage, or initialize an empty array
-        const existingClients = JSON.parse(localStorage.getItem('clients')) || [];
-        
-        const updatedClients = [...existingClients, newClient];
-        // Add the new client
-        
-        
-        // Save back to localStorage
-        localStorage.setItem('clients', JSON.stringify(updatedClients));
+          try {
+            // Get a reference to the 'clients' node in your database
+            const clientsRef = ref(database, 'clients');
+            // push() creates a new unique key for the client data
+            const newClientRef = push(clientsRef);
+            // set() saves the new client data to that location
+            await set(newClientRef, newClient);
 
-        console.log('Form submitted and saved to localStorage:', newClient);
-        setShowSuccessModal(true);
-        setTimeout(() => {
-            setShowSuccessModal(false);
-            navigate("/"); // Navigate to home page after 3 seconds
-        }, 3000);
+            console.log('Form data saved to Firebase successfully:', newClient);
+            setShowSuccessModal(true);
+            setTimeout(() => {
+                setShowSuccessModal(false);
+                navigate("/"); // Navigate to home page after 3 seconds
+            }, 3000);
+
+        } catch (error) {
+            console.error("Failed to save to Firebase", error);
+            // Optionally, show an error message to the user
+            alert("Submission failed. Please try again.");
+        }
     };
 
     const handleBackClick = () => {

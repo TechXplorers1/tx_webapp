@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from 'react-bootstrap';
 import { Country, State, City } from 'country-state-city';
 import successImage from '../assets/successImage.png'; // Adjust path as needed
+import { database } from '../firebase'; // Import your Firebase config
+import { ref, push, set } from "firebase/database";
 
 const EmployeeRegistrationForm = ({ onFormSubmit }) => {
   // Styles for various elements to achieve a modern look (all existing styles are preserved)
@@ -252,50 +254,61 @@ const EmployeeRegistrationForm = ({ onFormSubmit }) => {
   };
 
   // Handle final submission after review
-  const handleFinalSubmit = () => {
+  const handleFinalSubmit = async () => {
     setShowReviewModal(false);
-    setShowSuccessMessage(true);
 
-    const newEmployee = {
-      id: Date.now(),
+    const newEmployeeData = {
+      // Personal Info
       firstName: formData.firstName,
       lastName: formData.lastName,
       gender: formData.gender,
       dateOfBirth: formData.dateOfBirth,
       maritalStatus: formData.maritalStatus,
+      
+      // Contact Info
       personalNumber: formData.personalNumber,
       alternativeNumber: formData.alternativeNumber,
       personalEmail: formData.personalEmail,
-      workEmail: formData.workEmail,
+      workEmail: formData.workEmail, // Ensure workEmail is captured
+      
+      // Address Info
       address: formData.address,
       country: formData.country,
       state: formData.state,
       city: formData.city,
       zipcode: formData.zipcode,
+      
+      // Employment Info
       dateOfJoin: formData.dateOfJoin,
-      status: "Awaiting",
-      designations: "No designations assigned",
-      passwordStatus: "Password Created",
-      submittedOn: new Date().toLocaleString(),
+      status: "Awaiting", // Default status
+      designations: "Not Assigned", // Default designation
+      temporaryPassword: `Pass@${new Date().getFullYear()}`, // Auto-generate a basic password
+      roles: ["employee", "pending"] // Default roles
     };
 
     // NEW: Save to local storage
     try {
-      const existingEmployees = JSON.parse(localStorage.getItem('employees') || '[]');
-      const updatedEmployees = [...existingEmployees, newEmployee];
-      localStorage.setItem('employees', JSON.stringify(updatedEmployees));
+      const employeesRef = ref(database, 'employees');
+      const newEmployeeRef = push(employeesRef);
+      await set(newEmployeeRef, newEmployeeData);
+      
+      console.log("Employee data saved to Firebase successfully!");
+      setShowSuccessMessage(true);
+
     } catch (error) {
-      console.error("Failed to save to local storage", error);
+      console.error("Failed to save to Firebase", error);
+      alert("There was an error submitting your registration. Please try again.");
+      return;
     }
     
     // This function can still be called if a parent component needs to react
     if (onFormSubmit) {
-       onFormSubmit(newEmployee);
+       onFormSubmit(newEmployeeData);
     }
 
     setTimeout(() => {
       setShowSuccessMessage(false);
-      // Reset form data
+      // Reset form data after success
       const india = Country.getAllCountries().find(country => country.name === 'India');
       setFormData({
         firstName: "", lastName: "", gender: "", dateOfBirth: "", maritalStatus: "",

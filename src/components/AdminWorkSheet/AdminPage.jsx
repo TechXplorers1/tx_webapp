@@ -5,6 +5,8 @@ import DepartmentManagement from './DepartmentManagement';
 import EmployeeManagement from './EmployeeManagement';
 import AssetManagement from './AssetManagement';
 import RequestManagement from './RequestManagement';
+import { database } from '../../firebase'; // Import your Firebase config
+import { ref, update } from "firebase/database"; // Import update function
 
 const AdminPage = () => {
   const navigate = useNavigate();
@@ -31,13 +33,10 @@ const AdminPage = () => {
     const loggedInUserData = sessionStorage.getItem('loggedInEmployee');
     if (loggedInUserData) {
         const userData = JSON.parse(loggedInUserData);
-        setUserProfile(prevDetails => ({
-            ...prevDetails,
-            name: userData.name,
-            email: userData.email,
-        }));
+        // Set the full user object to state
+        setUserProfile(userData);
     }
-  }, [navigate]);
+  }, []);
 
   const getInitials = (name) => {
     if (!name) return '';
@@ -64,10 +63,25 @@ const AdminPage = () => {
     setEditableProfile(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSaveProfile = () => {
-    setUserProfile(editableProfile); // Update the main profile state
-    setIsEditingUserProfile(false); // Switch back to view-only mode
-    alert('Profile updated successfully!');
+   const handleSaveProfile = async () => {
+    if (!userProfile.firebaseKey) {
+        alert("Error: Cannot update profile. User key is missing.");
+        return;
+    }
+    try {
+        const userRef = ref(database, `employees/${userProfile.firebaseKey}`);
+        await update(userRef, editableProfile); // Use update to save only changed fields
+
+        // Update local state and session storage to reflect changes immediately
+        setUserProfile(editableProfile);
+        sessionStorage.setItem('loggedInEmployee', JSON.stringify(editableProfile));
+
+        setIsEditingUserProfile(false);
+        alert('Profile updated successfully!');
+    } catch (error) {
+        console.error("Error updating profile in Firebase:", error);
+        alert("Failed to update profile. Please try again.");
+    }
   };
 
   // Effect to close dropdown on outside click
@@ -316,33 +330,50 @@ const AdminPage = () => {
       </main>
 
       {/* User Profile Modal */}
-      {isUserProfileModalOpen && (
+         {isUserProfileModalOpen && (
         <div className="modal-overlay">
-          <div className="modal-content">
+          <div className="modal-content" style={{ maxWidth: '800px', maxHeight: '80vh', overflowY: 'auto' }}>
             <div className="modal-header">
               <h3 className="modal-title">Admin Profile</h3>
               <button className="modal-close-button" onClick={closeUserProfileModal}>&times;</button>
             </div>
-            <div className="profile-details-grid">
-              <div className="profile-detail-item">
-                <label className="profile-detail-label" htmlFor="profileName">Name:</label>
-                <input type="text" id="profileName" name="name" value={editableProfile.name || ''} onChange={handleProfileChange} readOnly={!isEditingUserProfile} />
+            <div className="profile-details-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              {/* Personal Info Section */}
+              <div style={{ gridColumn: '1 / -1', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px', marginBottom: '10px' }}>
+                <h5 style={{ fontWeight: 600, color: '#2563eb' }}>Personal Information</h5>
               </div>
               <div className="profile-detail-item">
-                <label className="profile-detail-label">Admin ID:</label>
-                <input type="text" value={userProfile.employeeId} readOnly />
+                <label className="profile-detail-label" htmlFor="firstName">First Name:</label>
+                <input type="text" id="firstName" name="firstName" value={editableProfile.firstName || ''} onChange={handleProfileChange} readOnly={!isEditingUserProfile} />
               </div>
               <div className="profile-detail-item">
-                <label className="profile-detail-label" htmlFor="profileEmail">Email:</label>
-                <input type="email" id="profileEmail" name="email" value={editableProfile.email || ''} onChange={handleProfileChange} readOnly={!isEditingUserProfile} />
+                <label className="profile-detail-label" htmlFor="lastName">Last Name:</label>
+                <input type="text" id="lastName" name="lastName" value={editableProfile.lastName || ''} onChange={handleProfileChange} readOnly={!isEditingUserProfile} />
               </div>
               <div className="profile-detail-item">
-                <label className="profile-detail-label" htmlFor="profileMobile">Mobile No.:</label>
-                <input type="tel" id="profileMobile" name="mobile" value={editableProfile.mobile || ''} onChange={handleProfileChange} readOnly={!isEditingUserProfile} />
+                <label className="profile-detail-label" htmlFor="dateOfBirth">Date of Birth:</label>
+                <input type="date" id="dateOfBirth" name="dateOfBirth" value={editableProfile.dateOfBirth || ''} onChange={handleProfileChange} readOnly={!isEditingUserProfile} />
               </div>
               <div className="profile-detail-item">
-                <label className="profile-detail-label">Last Login:</label>
-                <input type="text" value={userProfile.lastLogin} readOnly />
+                <label className="profile-detail-label" htmlFor="gender">Gender:</label>
+                <input type="text" id="gender" name="gender" value={editableProfile.gender || ''} onChange={handleProfileChange} readOnly={!isEditingUserProfile} />
+              </div>
+
+              {/* Contact Info Section */}
+              <div style={{ gridColumn: '1 / -1', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px', margin: '15px 0' }}>
+                <h5 style={{ fontWeight: 600, color: '#2563eb' }}>Contact & Address</h5>
+              </div>
+              <div className="profile-detail-item">
+                <label className="profile-detail-label" htmlFor="personalEmail">Personal Email:</label>
+                <input type="email" id="personalEmail" name="personalEmail" value={editableProfile.personalEmail || ''} onChange={handleProfileChange} readOnly={!isEditingUserProfile} />
+              </div>
+              <div className="profile-detail-item">
+                <label className="profile-detail-label" htmlFor="personalNumber">Personal Number:</label>
+                <input type="tel" id="personalNumber" name="personalNumber" value={editableProfile.personalNumber || ''} onChange={handleProfileChange} readOnly={!isEditingUserProfile} />
+              </div>
+              <div className="profile-detail-item" style={{ gridColumn: '1 / -1' }}>
+                <label className="profile-detail-label" htmlFor="address">Address:</label>
+                <input type="text" id="address" name="address" value={editableProfile.address || ''} onChange={handleProfileChange} readOnly={!isEditingUserProfile} />
               </div>
             </div>
             <div className="profile-actions">

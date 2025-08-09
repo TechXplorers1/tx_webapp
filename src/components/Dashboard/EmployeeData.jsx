@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Modal } from 'react-bootstrap'; // Using react-bootstrap Modal
+import { getDatabase, ref, update } from "firebase/database";
 
 
 
@@ -380,6 +381,7 @@ const AdminHeader = ({
 
 const EmployeeData = () => {
   const navigate = useNavigate();
+  const fileInputRef = useRef(null);
 
   // State for theme and profile dropdown for AdminHeader
   const [theme, setTheme] = useState(() => {
@@ -404,21 +406,15 @@ const EmployeeData = () => {
   });
 
   // NEW: useEffect to get logged-in user data from sessionStorage
+  // Update useEffect to get the full employee object from sessionStorage
   useEffect(() => {
     const loggedInUserData = sessionStorage.getItem('loggedInEmployee');
     if (loggedInUserData) {
         const userData = JSON.parse(loggedInUserData);
-        // Update the state with the details of the logged-in employee
-        setEmployeeDetails(prevDetails => ({
-            ...prevDetails, // Keep other default details if needed
-            name: userData.name,
-            email: userData.email
-        }));
+        // Set the state with the full user object from login
+        setEmployeeDetails(userData);
     } else {
-        // Optional: If no user data is found, you can redirect to the login page
-        // This prevents users from accessing this page directly without logging in.
-        // Uncomment the line below to enable redirection.
-        // navigate('/'); 
+        // navigate('/'); // Optional: redirect if not logged in
     }
   }, [navigate]); // Add navigate to dependency array
 
@@ -502,11 +498,26 @@ const EmployeeData = () => {
   };
 
   // NEW: Handle saving edited profile
-  const handleSaveProfileChanges = () => {
-    setEmployeeDetails(editedEmployeeDetails); // Update main employee details
-    setIsEditingProfile(false); // Exit edit mode
-    triggerNotification("Profile updated successfully!"); // Trigger notification
-    // setShowEmployeeProfileModal(false); // Optionally close modal after saving
+   const handleSaveProfileChanges = async () => {
+    if (!employeeDetails.firebaseKey) {
+        alert("Error: Cannot update profile. User key is missing.");
+        return;
+    }
+    try {
+        const employeeRef = ref(database, `employees/${employeeDetails.firebaseKey}`);
+        await update(employeeRef, editedEmployeeDetails); // Use update to save changes
+
+        // Also update the local state and session storage
+        setEmployeeDetails(editedEmployeeDetails);
+        sessionStorage.setItem('loggedInEmployee', JSON.stringify(editedEmployeeDetails));
+
+        setIsEditingProfile(false);
+        triggerNotification("Profile updated successfully!");
+
+    } catch (error) {
+        console.error("Error updating profile in Firebase:", error);
+        alert("Failed to update profile. Please try again.");
+    }
   };
 
   // NEW: Handle canceling edit profile
@@ -556,6 +567,9 @@ const EmployeeData = () => {
 
   const [showEditFileModal, setShowEditFileModal] = useState(false);
   const [editedFileFormData, setEditedFileFormData] = useState(null);
+
+   const [showImageViewer, setShowImageViewer] = useState(false);
+  const [imageUrlToView, setImageUrlToView] = useState('');
 
   // NEW: State for new clients awaiting acceptance
   const [newClients, setNewClients] = useState([]);
@@ -1208,6 +1222,48 @@ const EmployeeData = () => {
   };
 
 
+  const handlePasteAttachment = useCallback((event) => {
+    // Check if the edit modal is the active context
+    if (!showEditApplicationModal) return;
+
+    const items = (event.clipboardData || event.originalEvent.clipboardData).items;
+    let pastedFiles = [];
+
+    for (const item of items) {
+      if (item.kind === 'file') {
+        const file = item.getAsFile();
+        // Create a new file object matching your state's structure
+        const newFileObject = {
+          name: file.name || `Pasted Image ${Date.now()}.${file.type.split('/')[1] || 'png'}`,
+          size: `${(file.size / 1024).toFixed(1)} KB`,
+          type: 'pasted screenshot',
+          uploadDate: new Date().toISOString().split('T')[0],
+          file: file, // The actual File object
+        };
+        pastedFiles.push(newFileObject);
+      }
+    }
+
+    if (pastedFiles.length > 0) {
+      // Add the pasted files to the attachments in the edit form state
+      setEditedApplicationFormData(prev => ({
+        ...prev,
+        attachments: [...(prev.attachments || []), ...pastedFiles],
+      }));
+      triggerNotification(`${pastedFiles.length} file(s) pasted successfully!`);
+    }
+  }, [showEditApplicationModal, setEditedApplicationFormData, triggerNotification]); // Dependencies for useCallback
+
+  // This useEffect adds and removes the paste event listener
+  useEffect(() => {
+    window.addEventListener('paste', handlePasteAttachment);
+    
+    // Cleanup function to remove the listener when the component unmounts
+    return () => {
+      window.removeEventListener('paste', handlePasteAttachment);
+    };
+  }, [handlePasteAttachment]);
+
   const handleDeleteApplication = (clientId, appId) => {
     const updateClientList = (prevClients) => {
       return prevClients.map(client =>
@@ -1365,9 +1421,17 @@ const EmployeeData = () => {
     triggerNotification("File uploaded successfully!"); // Trigger notification
   };
 
-  const handleViewFile = (file) => {
-    setViewedFile(file);
-    setShowViewFileModal(true);
+   const handleViewFile = (file) => {
+    // NEW LOGIC: Check if the file is an image
+    if (file.file && typeof file.file.type === 'string' && file.file.type.startsWith('image/')) {
+      // If it's an image, create a URL and open the image viewer modal
+      setImageUrlToView(URL.createObjectURL(file.file));
+      setShowImageViewer(true);
+    } else {
+      // Otherwise, open the existing file details modal
+      setViewedFile(file);
+      setShowViewFileModal(true);
+    }
   };
 
   const handleEditFile = (file) => {
@@ -1605,6 +1669,113 @@ triggerNotification(`Client ${newActiveClient.name} accepted!`);
       {/* Centralized CSS styles for hover effects and animations */}
       <style>
         {`
+         .custom-file-input-container {
+          display: flex;
+          align-items: center;
+          gap: 0; /* Remove gap to make it look like one continuous field */
+          border: 1px solid #cbd5e1;
+          border-radius: 25px; /* Fully rounded corners */
+          padding: 4px; /* Padding to contain the button */
+          cursor: text;
+          transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .custom-file-input-container:hover,
+        .custom-file-input-container:focus-within {
+        border-color: #3b82f6;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+         }
+
+       .add-attachment-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          border: none; /* Remove border from button */
+          background-color: transparent;
+          font-size: 24px;
+          font-weight: 300;
+          color: #64748b;
+          cursor: pointer;
+          transition: all 0.2s;
+          flex-shrink: 0;
+        }
+
+        .add-attachment-btn:hover {
+          background-color: #e0effe;
+          color: #3b82f6;
+        }
+
+        .file-input-facade {
+            flex-grow: 1;
+            padding: 8px 12px;
+            height: 100%;
+        }
+
+        .file-input-placeholder {
+          color: #94a3b8;
+          font-size: 0.9rem;
+        }
+
+        /* NEW: Attachment Preview Styles */
+        .attachments-preview-container {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          margin-bottom: 10px;
+          padding: 10px;
+          background-color: #f8fafc;
+          border-radius: 8px;
+        }
+
+        .attachment-item {
+          display: flex;
+          align-items: center;
+          background-color: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          padding: 5px 8px;
+          font-size: 0.85rem;
+          max-width: 200px;
+        }
+        
+        .attachment-image-preview {
+          width: 24px;
+          height: 24px;
+          object-fit: cover;
+          border-radius: 4px;
+          margin-right: 8px;
+        }
+        
+        .attachment-file-icon {
+          margin-right: 8px;
+          color: #64748b;
+        }
+
+        .attachment-name {
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          flex-grow: 1;
+        }
+
+        .attachment-remove-btn {
+          background: none;
+          border: none;
+          color: #94a3b8;
+          font-size: 20px;
+          line-height: 1;
+          cursor: pointer;
+          margin-left: 8px;
+          padding: 0 4px;
+        }
+        
+        .attachment-remove-btn:hover {
+          color: #ef4444;
+        }
+
         /* General hover effect for buttons */
         .button-hover-effect:hover {
             transform: translateY(-2px);
@@ -2224,7 +2395,7 @@ triggerNotification(`Client ${newActiveClient.name} accepted!`);
                   <div key={selectedClient.id} style={clientApplicationsContainerStyle}>
                     <div style={clientApplicationsHeaderStyle}>
                       <div style={initialsCircleStyle}>{selectedClient.initials}</div>
-                      <div style={{ flexGrow: 1 }}>
+                      <div style={{ flexGrow: 0 }}>
                         <p style={clientNameStyle}>{`${selectedClient.firstName} ${selectedClient.lastName}`} <span style={{ ...priorityBadgeStyle, backgroundColor: selectedClient.priority === 'high' ? '#fee2e2' : selectedClient.priority === 'medium' ? '#fef3c7' : '#e0f2fe', color: selectedClient.priority === 'high' ? '#dc2626' : selectedClient.priority === 'medium' ? '#d97706' : '#2563eb' }}>{selectedClient.priority}</span></p>
                         <p style={clientCodeStyle}>{selectedClient.role || selectedClient.position } - {selectedClient.location}</p>
                       </div>
@@ -3114,7 +3285,7 @@ triggerNotification(`Client ${newActiveClient.name} accepted!`);
                   <div key={selectedClient.id} style={clientApplicationsContainerStyle}>
                     <div style={clientApplicationsHeaderStyle}>
                       <div style={initialsCircleStyle}>{selectedClient.initials}</div>
-                      <div style={{ flexGrow: 1 }}>
+                      <div style={{ flexGrow: 0 }}>
                         <p style={clientNameStyle}>{selectedClient.name} <span style={{ ...priorityBadgeStyle, backgroundColor: selectedClient.priority === 'high' ? '#fee2e2' : selectedClient.priority === 'medium' ? '#fef3c7' : '#e0f2fe', color: selectedClient.priority === 'high' ? '#dc2626' : selectedClient.priority === 'medium' ? '#d97706' : '#2563eb' }}>{selectedClient.priority}</span></p>
                         <p style={clientCodeStyle}>{selectedClient.role} - {selectedClient.location}</p>
                       </div>
@@ -4029,59 +4200,74 @@ triggerNotification(`Client ${newActiveClient.name} accepted!`);
               {/* Add this new field for attachments */}
               <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
                 <label style={modalLabelStyle}>Attachments</label>
-                <input
-                  type="file"
-                  multiple
-                  onChange={(e) => {
-                    const newFiles = Array.from(e.target.files).map(file => ({
-                      name: file.name,
-                      size: `${(file.size / 1024).toFixed(1)} KB`,
-                      type: file.type,
-                      uploadDate: new Date().toLocaleString(),
-                      file: file
-                    }));
-                    setEditedApplicationFormData(prev => ({
-                      ...prev,
-                      attachments: [...prev.attachments, ...newFiles]
-                    }));
-                  }}
-                  style={modalInputStyle}
-                />
+
+                           {/* Preview area for pasted/selected files */}
                 {editedApplicationFormData.attachments.length > 0 && (
-                  <div style={{ marginTop: '10px' }}>
-                    <p style={{ fontSize: '0.9rem', marginBottom: '5px' }}>Attached files:</p>
-                    <ul style={{ listStyle: 'none', padding: 0 }}>
-                      {editedApplicationFormData.attachments.map((file, index) => (
-                        <li key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ marginRight: '8px' }}>
-                            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
-                            <polyline points="13 2 13 9 20 9"></polyline>
-                          </svg>
-                          <span style={{ fontSize: '0.85rem' }}>{file.name} ({file.size})</span>
-                          <button
-                            onClick={() => {
-                              const updatedAttachments = [...editedApplicationFormData.attachments];
-                              updatedAttachments.splice(index, 1);
-                              setEditedApplicationFormData(prev => ({ ...prev, attachments: updatedAttachments }));
-                            }}
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              color: '#ef4444',
-                              marginLeft: '10px',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                              <line x1="18" y1="6" x2="6" y2="18"></line>
-                              <line x1="6" y1="6" x2="18" y2="18"></line>
+                  <div className="attachments-preview-container">
+                    {editedApplicationFormData.attachments.map((file, index) => (
+                      <div key={index} className="attachment-item">
+                        {file.file && typeof file.file.type === 'string' &&  file.file.type.startsWith('image/') ? (
+                          <img src={URL.createObjectURL(file.file)} alt={file.name} className="attachment-image-preview" />
+                        ) : (
+                          <div className="attachment-file-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                              <polyline points="13 2 13 9 20 9"></polyline>
                             </svg>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
+                          </div>
+                        )}
+                        <span className="attachment-name">{file.name}</span>
+                        <button
+                          onClick={() => {
+                            const updatedAttachments = [...editedApplicationFormData.attachments];
+                            updatedAttachments.splice(index, 1);
+                            setEditedApplicationFormData(prev => ({ ...prev, attachments: updatedAttachments }));
+                          }}
+                          className="attachment-remove-btn"
+                        >
+                          &times;
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 )}
+
+              <div 
+                  className="custom-file-input-container" 
+                >
+                  {/* This button is now the only way to trigger the file dialog */}
+                  <button 
+                    type="button" 
+                    className="add-attachment-btn"
+                    onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                  >
+                    +
+                  </button>
+                     <input
+                    type="file"
+                    multiple
+                    ref={fileInputRef}
+                    style={{ display: 'none' }} // Hide the actual input
+                    onChange={(e) => {
+                      const newFiles = Array.from(e.target.files).map(file => ({
+                        name: file.name,
+                        size: `${(file.size / 1024).toFixed(1)} KB`,
+                        type: file.type,
+                        uploadDate: new Date().toLocaleString(),
+                        file: file
+                      }));
+                      setEditedApplicationFormData(prev => ({
+                        ...prev,
+                        attachments: [...(prev.attachments || []), ...newFiles]
+                      }));
+                    }}
+                  />
+                  <div className="file-input-facade">
+                    <span className="file-input-placeholder">
+                      Add file or paste a screenshot
+                    </span>
+                  </div>
+                </div>
               </div>
 
 
@@ -4388,109 +4574,87 @@ triggerNotification(`Client ${newActiveClient.name} accepted!`);
       )}
 
       {/* Employee Profile Details Modal */}
-      <Modal show={showEmployeeProfileModal} onHide={() => setShowEmployeeProfileModal(false)} size="md" centered>
+      {/* Employee Profile Details Modal */}
+      <Modal show={showEmployeeProfileModal} onHide={() => setShowEmployeeProfileModal(false)} size="lg" centered>
         <Modal.Header closeButton style={modalHeaderStyle}>
-          <Modal.Title style={modalTitleStyle}>Employee Profile</Modal.Title>
+          <Modal.Title style={modalTitleStyle}>My Profile</Modal.Title>
         </Modal.Header>
-        <Modal.Body style={modalBodyStyle}>
-          {isEditingProfile ? (
-            // Edit Mode
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}> {/* Changed to flex column for one-by-one */}
+        <Modal.Body style={{ ...modalBodyStyle, maxHeight: '70vh', overflowY: 'auto' }}>
+            <div style={modalFormGridStyle}>
+              {/* Personal Info Section */}
+              <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1', borderBottom: '1px solid #e2e8f0', paddingBottom: '15px', marginBottom: '15px' }}>
+                <h5 style={{ fontWeight: 600, color: '#3b82f6' }}>Personal Information</h5>
+              </div>
               <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Name <span style={{ color: 'red' }}>*</span></label>
-                <input
-                  type="text"
-                  name="name"
-                  value={editedEmployeeDetails.name}
-                  onChange={handleProfileFormChange}
-                  style={modalInputStyle}
-                  required
-                />
+                <label style={modalLabelStyle}>First Name</label>
+                <input type="text" name="firstName" value={isEditingProfile ? editedEmployeeDetails.firstName : employeeDetails.firstName} onChange={handleProfileFormChange} style={modalInputStyle} disabled={!isEditingProfile} />
+              </div>
+              <div style={modalFormFieldGroupStyle}>
+                <label style={modalLabelStyle}>Last Name</label>
+                <input type="text" name="lastName" value={isEditingProfile ? editedEmployeeDetails.lastName : employeeDetails.lastName} onChange={handleProfileFormChange} style={modalInputStyle} disabled={!isEditingProfile} />
+              </div>
+              <div style={modalFormFieldGroupStyle}>
+                <label style={modalLabelStyle}>Date of Birth</label>
+                <input type="date" name="dateOfBirth" value={isEditingProfile ? editedEmployeeDetails.dateOfBirth : employeeDetails.dateOfBirth} onChange={handleProfileFormChange} style={modalInputStyle} disabled={!isEditingProfile} />
+              </div>
+              <div style={modalFormFieldGroupStyle}>
+                <label style={modalLabelStyle}>Gender</label>
+                <input type="text" name="gender" value={isEditingProfile ? editedEmployeeDetails.gender : employeeDetails.gender} onChange={handleProfileFormChange} style={modalInputStyle} disabled={!isEditingProfile} />
+              </div>
+
+              {/* Contact Info Section */}
+              <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1', borderBottom: '1px solid #e2e8f0', paddingBottom: '15px', margin: '15px 0' }}>
+                <h5 style={{ fontWeight: 600, color: '#3b82f6' }}>Contact Details</h5>
+              </div>
+              <div style={modalFormFieldGroupStyle}>
+                <label style={modalLabelStyle}>Personal Email</label>
+                <input type="email" name="personalEmail" value={isEditingProfile ? editedEmployeeDetails.personalEmail : employeeDetails.personalEmail} onChange={handleProfileFormChange} style={modalInputStyle} disabled={!isEditingProfile} />
+              </div>
+               <div style={modalFormFieldGroupStyle}>
+                <label style={modalLabelStyle}>Work Email</label>
+                <input type="email" name="workEmail" value={employeeDetails.workEmail} style={modalInputStyle} disabled />
+              </div>
+              <div style={modalFormFieldGroupStyle}>
+                <label style={modalLabelStyle}>Personal Number</label>
+                <input type="tel" name="personalNumber" value={isEditingProfile ? editedEmployeeDetails.personalNumber : employeeDetails.personalNumber} onChange={handleProfileFormChange} style={modalInputStyle} disabled={!isEditingProfile} />
+              </div>
+              <div style={modalFormFieldGroupStyle}>
+                <label style={modalLabelStyle}>Alternative Number</label>
+                <input type="tel" name="alternativeNumber" value={isEditingProfile ? editedEmployeeDetails.alternativeNumber : employeeDetails.alternativeNumber} onChange={handleProfileFormChange} style={modalInputStyle} disabled={!isEditingProfile} />
+              </div>
+               <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
+                <label style={modalLabelStyle}>Address</label>
+                <textarea name="address" value={isEditingProfile ? editedEmployeeDetails.address : employeeDetails.address} onChange={handleProfileFormChange} style={modalTextareaStyle} disabled={!isEditingProfile}></textarea>
+              </div>
+
+               {/* Employment Info Section */}
+              <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1', borderBottom: '1px solid #e2e8f0', paddingBottom: '15px', margin: '15px 0' }}>
+                <h5 style={{ fontWeight: 600, color: '#3b82f6' }}>Employment Details</h5>
               </div>
               <div style={modalFormFieldGroupStyle}>
                 <label style={modalLabelStyle}>Employee ID</label>
-                <input
-                  type="text"
-                  name="employeeId"
-                  value={editedEmployeeDetails.employeeId}
-                  style={modalInputStyle}
-                  disabled // Employee ID is not editable
-                />
+                <input type="text" value={employeeDetails.firebaseKey} style={modalInputStyle} disabled />
               </div>
-              <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Email <span style={{ color: 'red' }}>*</span></label>
-                <input
-                  type="email"
-                  name="email"
-                  value={editedEmployeeDetails.email}
-                  onChange={handleProfileFormChange}
-                  style={modalInputStyle}
-                  disabled
-                />
+               <div style={modalFormFieldGroupStyle}>
+                <label style={modalLabelStyle}>Date of Joining</label>
+                <input type="date" name="dateOfJoin" value={employeeDetails.dateOfJoin} style={modalInputStyle} disabled />
               </div>
-              <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Mobile No. <span style={{ color: 'red' }}>*</span></label>
-                <input
-                  type="text"
-                  name="mobile"
-                  value={editedEmployeeDetails.mobile}
-                  onChange={handleProfileFormChange}
-                  style={modalInputStyle}
-                  required
-                />
-              </div>
-              <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Last Login</label>
-                <input
-                  type="text"
-                  name="lastLogin"
-                  value={editedEmployeeDetails.lastLogin}
-                  style={modalInputStyle}
-                  disabled // Last Login is not editable
-                />
+               <div style={modalFormFieldGroupStyle}>
+                <label style={modalLabelStyle}>Roles</label>
+                <input type="text" value={(employeeDetails.roles || []).join(', ')} style={modalInputStyle} disabled />
               </div>
             </div>
-          ) : (
-            // View Mode
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}> {/* Changed to flex column for one-by-one */}
-              <p style={modalViewDetailItemStyle}><strong>Name:</strong> {employeeDetails.name}</p>
-              <p style={modalViewDetailItemStyle}><strong>Employee ID:</strong> {employeeDetails.employeeId}</p>
-              <p style={modalViewDetailItemStyle}><strong>Email:</strong> {employeeDetails.email}</p>
-              <p style={modalViewDetailItemStyle}><strong>Mobile No.:</strong> {employeeDetails.mobile}</p>
-              <p style={modalViewDetailItemStyle}><strong>Last Login:</strong> {employeeDetails.lastLogin}</p>
-            </div>
-          )}
         </Modal.Body>
         <Modal.Footer style={modalFooterStyle}>
           {isEditingProfile ? (
             <>
-              <button
-                onClick={handleCancelEditProfile}
-                style={modalCancelButtonStyle}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveProfileChanges}
-                style={modalAddButtonPrimaryStyle}
-              >
-                Save Changes
-              </button>
+              <button onClick={handleCancelEditProfile} style={modalCancelButtonStyle}>Cancel</button>
+              <button onClick={handleSaveProfileChanges} style={modalAddButtonPrimaryStyle}>Save Changes</button>
             </>
           ) : (
             <>
-              <button
-                onClick={() => setIsEditingProfile(true)}
-                style={modalAddButtonPrimaryStyle} // Reusing primary style for edit button
-              >
-                Edit Profile
-              </button>
-              <button
-                onClick={() => setShowEmployeeProfileModal(false)}
-                style={modalCancelButtonStyle}
-              >
-                Close
-              </button>
+              <button onClick={() => setIsEditingProfile(true)} style={modalAddButtonPrimaryStyle}>Edit Profile</button>
+              <button onClick={() => setShowEmployeeProfileModal(false)} style={modalCancelButtonStyle}>Close</button>
             </>
           )}
         </Modal.Footer>
@@ -4566,6 +4730,19 @@ triggerNotification(`Client ${newActiveClient.name} accepted!`);
           </Modal.Body>
         </Modal>
       )}
+
+       <Modal show={showImageViewer} onHide={() => setShowImageViewer(false)} size="lg" centered>
+        <Modal.Header closeButton style={modalHeaderStyle}>
+          <Modal.Title style={modalTitleStyle}>Image Preview</Modal.Title>
+        </Modal.Header>
+        <Modal.Body style={{ ...modalBodyStyle, textAlign: 'center', padding: '10px' }}>
+          <img 
+            src={imageUrlToView} 
+            alt="Attachment Preview" 
+            style={{ maxWidth: '100%', maxHeight: '75vh', borderRadius: '8px' }} 
+          />
+        </Modal.Body>
+      </Modal>
 
     </div>
   );

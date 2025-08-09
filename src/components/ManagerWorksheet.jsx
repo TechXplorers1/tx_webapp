@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'; // Import useRef
 import { useNavigate } from 'react-router-dom';
 import { Modal, Button } from 'react-bootstrap'; // Using react-bootstrap Modal
-
+import { getDatabase, ref, onValue, update } from "firebase/database"; // Import Firebase functions
+import { database } from '../firebase'; // Import your Firebase config
 
 const ManagerWorkSheet = () => {
 
@@ -48,24 +49,15 @@ const ManagerWorkSheet = () => {
 
 
   // NEW: useEffect to get logged-in user data from sessionStorage
-  useEffect(() => {
+ useEffect(() => {
     const loggedInUserData = sessionStorage.getItem('loggedInEmployee');
     if (loggedInUserData) {
       const userData = JSON.parse(loggedInUserData);
-      // Update the state with the details of the logged-in employee
-      setUserName(userData.name);
-      setUserProfile(prevDetails => ({
-        ...prevDetails, // Keep other default details if needed
-        name: userData.name,
-        email: userData.email,
-      }));
-    } else {
-      // Optional: If no user data is found, you can redirect to the login page
-      // This prevents users from accessing this page directly without logging in.
-      // Uncomment the line below to enable redirection.
-      // navigate('/'); 
+      // Update the state with the full user object
+      setUserProfile(userData); 
+      setUserName(userData.name); // Keep setting userName for the welcome message
     }
-  }, [navigate]);
+  }, []);
 
   useEffect(() => {
     const loadAllEmployees = async () => {
@@ -86,6 +78,51 @@ const ManagerWorkSheet = () => {
     };
     loadAllEmployees();
   }, []);
+
+  useEffect(() => {
+    const clientsRef = ref(database, 'clients');
+    const employeesRef = ref(database, 'employees');
+    
+    // Set up listeners for real-time data fetching
+    const unsubscribeClients = onValue(clientsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        // Firebase returns data as an object; convert it to an array
+        const clientsArray = Object.keys(data).map(key => ({
+          id: key,
+          ...data[key]
+        }));
+        setClients(clientsArray);
+        localStorage.setItem('clients', JSON.stringify(clientsArray)); // Optionally, still cache in localStorage
+      }
+      setLoading(false);
+    }, (error) => {
+      console.error("Firebase clients fetch error:", error);
+      setError(error.message);
+      setLoading(false);
+    });
+
+    const unsubscribeEmployees = onValue(employeesRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const employeesArray = Object.keys(data).map(key => ({
+          id: key,
+          ...data[key]
+        }));
+        setEmployees(employeesArray);
+        localStorage.setItem('employees', JSON.stringify(employeesArray)); // Optionally, cache
+      }
+    }, (error) => {
+      console.error("Firebase employees fetch error:", error);
+      // Handle employee fetch error if necessary
+    });
+
+    // Cleanup function: Unsubscribe from Firebase listeners when the component unmounts
+    return () => {
+      unsubscribeClients();
+      unsubscribeEmployees();
+    };
+  }, []); 
 
   useEffect(() => {
     // ... (existing code for loading loggedInUserData and allEmployees) ...
@@ -1592,12 +1629,26 @@ Please provide a summary no longer than 150 words.`;
   };
 
   // NEW: Handle saving profile changes
-  const handleSaveProfile = () => {
-    setUserProfile(editableProfile); // Update the main userProfile state
-    setUserName(editableProfile.name); // Update userName in parent state
-    setIsEditingUserProfile(false); // Switch back to read-only after saving
-    console.log('User profile updated:', editableProfile); // Log the updated profile
-    alert('Profile updated successfully!');
+  const handleSaveProfile = async () => {
+    if (!userProfile.firebaseKey) {
+        alert("Error: Cannot update profile. User key is missing.");
+        return;
+    }
+    try {
+        const userRef = ref(database, `employees/${userProfile.firebaseKey}`);
+        await update(userRef, editableProfile);
+
+        // Update local state and session storage
+        setUserProfile(editableProfile);
+        setUserName(editableProfile.name); // Also update the display name
+        sessionStorage.setItem('loggedInEmployee', JSON.stringify(editableProfile));
+        
+        setIsEditingUserProfile(false);
+        alert('Profile updated successfully!');
+    } catch (error) {
+        console.error("Error updating profile in Firebase:", error);
+        alert("Failed to update profile. Please try again.");
+    }
   };
 
   const handleProfileClick = () => {
@@ -5040,57 +5091,61 @@ Please provide a summary no longer than 150 words.`;
       )}
 
       {/* NEW: User Profile Modal */}
-      {isUserProfileModalOpen && (
+       {isUserProfileModalOpen && (
         <div className="modal-overlay">
-          <div className="modal-content user-profile-modal-content">
+          <div className="modal-content user-profile-modal-content" style={{ maxWidth: '800px', maxHeight: '80vh', overflowY: 'auto' }}>
             <div className="modal-header">
-              <h3 className="modal-title">Employee Profile</h3>
+              <h3 className="modal-title">Manager Profile</h3>
               <button className="modal-close-button" onClick={closeUserProfileModal}>
                 <i className="fas fa-times"></i>
               </button>
             </div>
-            <div className="profile-details-grid">
-              <div className="profile-detail-item">
-                <label className="profile-detail-label" htmlFor="profileName">Name:</label>
-                <input
-                  type="text"
-                  id="profileName"
-                  name="name"
-                  value={editableProfile.name || ''}
-                  onChange={handleProfileChange}
-                  readOnly={!isEditingUserProfile} // Read-only unless editing
-                />
-              </div>
-              <div className="profile-detail-item">
-                <label className="profile-detail-label">Manager ID:</label>
-                <span className="profile-detail-value">{userProfile.employeeId}</span>
-              </div>
-              <div className="profile-detail-item">
-                <label className="profile-detail-label" htmlFor="profileEmail">Email:</label>
-                <input
-                  type="email"
-                  id="profileEmail"
-                  name="email"
-                  value={editableProfile.email || ''}
-                  onChange={handleProfileChange}
-                  readOnly={!isEditingUserProfile} // Read-only unless editing
-                />
-              </div>
-              <div className="profile-detail-item">
-                <label className="profile-detail-label" htmlFor="profileMobile">Mobile No.:</label>
-                <input
-                  type="tel"
-                  id="profileMobile"
-                  name="mobile"
-                  value={editableProfile.mobile || ''}
-                  onChange={handleProfileChange}
-                  readOnly={!isEditingUserProfile} // Read-only unless editing
-                />
-              </div>
-              <div className="profile-detail-item">
-                <label className="profile-detail-label">Last Login:</label>
-                <span className="profile-detail-value">{userProfile.lastLogin}</span>
-              </div>
+            <div className="profile-details-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                {/* Personal Info Section */}
+                <div style={{ gridColumn: '1 / -1', borderBottom: '1px solid var(--header-border-color)', paddingBottom: '10px', marginBottom: '10px' }}>
+                    <h4 style={{ color: 'var(--card-icon-blue-color)', margin: 0 }}>Personal Information</h4>
+                </div>
+                <div className="profile-detail-item">
+                    <label className="profile-detail-label" htmlFor="firstName">First Name:</label>
+                    <input type="text" id="firstName" name="firstName" value={editableProfile.firstName || ''} onChange={handleProfileChange} readOnly={!isEditingUserProfile} />
+                </div>
+                <div className="profile-detail-item">
+                    <label className="profile-detail-label" htmlFor="lastName">Last Name:</label>
+                    <input type="text" id="lastName" name="lastName" value={editableProfile.lastName || ''} onChange={handleProfileChange} readOnly={!isEditingUserProfile} />
+                </div>
+                <div className="profile-detail-item">
+                    <label className="profile-detail-label" htmlFor="dateOfBirth">Date of Birth:</label>
+                    <input type="date" id="dateOfBirth" name="dateOfBirth" value={editableProfile.dateOfBirth || ''} onChange={handleProfileChange} readOnly={!isEditingUserProfile} />
+                </div>
+                <div className="profile-detail-item">
+                    <label className="profile-detail-label" htmlFor="gender">Gender:</label>
+                    <input type="text" id="gender" name="gender" value={editableProfile.gender || ''} onChange={handleProfileChange} readOnly={!isEditingUserProfile} />
+                </div>
+
+                {/* Contact & Address Section */}
+                <div style={{ gridColumn: '1 / -1', borderBottom: '1px solid var(--header-border-color)', paddingBottom: '10px', margin: '15px 0' }}>
+                    <h4 style={{ color: 'var(--card-icon-blue-color)', margin: 0 }}>Contact & Address</h4>
+                </div>
+                <div className="profile-detail-item">
+                    <label className="profile-detail-label" htmlFor="personalEmail">Personal Email:</label>
+                    <input type="email" id="personalEmail" name="personalEmail" value={editableProfile.personalEmail || ''} onChange={handleProfileChange} readOnly={!isEditingUserProfile} />
+                </div>
+                <div className="profile-detail-item">
+                    <label className="profile-detail-label" htmlFor="workEmail">Work Email:</label>
+                    <input type="email" id="workEmail" name="workEmail" value={editableProfile.workEmail || ''} readOnly style={{ cursor: 'not-allowed', backgroundColor: '#f1f1f1' }}/>
+                </div>
+                <div className="profile-detail-item">
+                    <label className="profile-detail-label" htmlFor="personalNumber">Personal Number:</label>
+                    <input type="tel" id="personalNumber" name="personalNumber" value={editableProfile.personalNumber || ''} onChange={handleProfileChange} readOnly={!isEditingUserProfile} />
+                </div>
+                <div className="profile-detail-item">
+                    <label className="profile-detail-label" htmlFor="alternativeNumber">Alternative Number:</label>
+                    <input type="tel" id="alternativeNumber" name="alternativeNumber" value={editableProfile.alternativeNumber || ''} onChange={handleProfileChange} readOnly={!isEditingUserProfile} />
+                </div>
+                <div className="profile-detail-item" style={{ gridColumn: '1 / -1' }}>
+                    <label className="profile-detail-label" htmlFor="address">Address:</label>
+                    <input type="text" id="address" name="address" value={editableProfile.address || ''} onChange={handleProfileChange} readOnly={!isEditingUserProfile} />
+                </div>
             </div>
             <div className="profile-actions">
               {isEditingUserProfile ? (

@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Container, Form, Button, Row, Col, Alert, Modal } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import { database } from '../../firebase'; // Import your Firebase config
+import { ref, push, set } from "firebase/database";
 
 const JobSupportContactForm = () => {
   const navigate = useNavigate();
@@ -140,7 +142,6 @@ const JobSupportContactForm = () => {
     const countryName = countryData ? countryData.name : 'N/A';
 
     const newClient = {
-      id: new Date().getTime(),
       name: `${formData.firstName} ${formData.lastName}`,
       mobile: `${formData.countryCode} ${formData.mobile}`,
       email: formData.email,
@@ -186,18 +187,20 @@ const JobSupportContactForm = () => {
       referenceRole: formData.referenceRole,
       jobPortalAccountName: formData.jobPortalAccountNameandCredentials,
     };
-    try {
-      const existingClients = JSON.parse(localStorage.getItem('clients')) || [];
-      const updatedClients = [...existingClients, newClient];
-      localStorage.setItem('clients', JSON.stringify(updatedClients));
-      console.log("Form data saved to localStorage:", newClient);
+     try {
+      // Save the new client to the 'clients' node in Firebase
+      const clientsRef = ref(database, 'clients');
+      const newClientRef = push(clientsRef);
+      await set(newClientRef, newClient);
+      
+      console.log("Form data saved to Firebase successfully:", newClient);
       setSubmitStatus({ success: true, message: 'Form submitted successfully!' });
       setFormData(initialFormData);
       setShowPreviewModal(false);
       setTimeout(() => { navigate('/'); }, 2000);
     } catch (error) {
       setSubmitStatus({ success: false, message: 'Submission failed. Please try again.' });
-      console.error("Failed to save to localStorage", error);
+      console.error("Failed to save to Firebase", error);
     } finally {
       setIsSubmitting(false);
     }

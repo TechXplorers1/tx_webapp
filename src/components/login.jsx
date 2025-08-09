@@ -90,16 +90,18 @@ export default function LoginPage() {
     }
 
     // 1. Check if it's a predefined employee
-    const employee = employees.find(
+   const employee = employees.find(
       emp => emp.workEmail === email && emp.temporaryPassword === password
     );
 
     if (employee) {
       const userData = {
+        firebaseKey: employee.firebaseKey, // Pass the Firebase key for profile edits
         name: `${employee.firstName} ${employee.lastName}`,
         email: employee.workEmail,
         roles: employee.roles,
-        avatar: `https://placehold.co/40x40/007bff/white?text=${employee.firstName.charAt(0).toUpperCase()}`
+        // Include all other employee data to pass to the profile page
+        ...employee 
       };
 
       sessionStorage.setItem('loggedInEmployee', JSON.stringify(userData));
@@ -110,10 +112,8 @@ export default function LoginPage() {
         navigate('/adminpage');
       } else if (employee.roles.includes('manager')) {
         navigate('/managerworksheet');
-      } else if (employee.roles.includes('employee')) {
-        navigate('/employees');
       } else {
-        setLoginError("Access denied. No valid role assigned.");
+        navigate('/employees');
       }
       return;
     }

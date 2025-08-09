@@ -1,4 +1,6 @@
 import React, {useState, useEffect } from 'react';
+import { database } from '../../firebase'; // Import your Firebase config
+import { ref, onValue, push, set, remove, update } from "firebase/database";
 
 const EmployeeManagement = () => {
   // --- Employee Management States ---
@@ -78,6 +80,34 @@ const EmployeeManagement = () => {
     (employee.personalEmail || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (employee.roles || []).some(role => (role || '').toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+
+    useEffect(() => {
+    const employeesRef = ref(database, 'employees');
+    
+    // Set up a listener for real-time data fetching
+    const unsubscribe = onValue(employeesRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        // Firebase returns data as an object with unique keys; convert it to an array
+        const employeesArray = Object.keys(data).map(key => ({
+          firebaseKey: key, // Keep the Firebase key for future updates/deletes
+          ...data[key]
+        }));
+        setEmployees(employeesArray);
+      } else {
+        setEmployees([]); // Handle case where there are no employees
+      }
+      setLoading(false);
+    }, (error) => {
+      console.error("Firebase employees fetch error:", error);
+      setError(error.message);
+      setLoading(false);
+    });
+
+    // Cleanup function: Unsubscribe from Firebase listener when the component unmounts
+    return () => unsubscribe();
+  }, []);
 
    useEffect(() => {
           const loadEmployees = async () => {
@@ -173,84 +203,98 @@ const EmployeeManagement = () => {
 
 
 
-  const handleCreateEmployeeAccount = (e) => {
+ const handleCreateEmployeeAccount = async (e) => {
     e.preventDefault();
-    const newEmployeeId = employees.length > 0 ? Math.max(...employees.map(u => u.id)) + 1 : 1;
-    const newRoles = [newEmployee.role.toLowerCase()];
-    if (newEmployee.accountStatus.toLowerCase() === 'active') {
-      newRoles.push('active');
-    } else if (newEmployee.accountStatus.toLowerCase() === 'inactive') {
-      newRoles.push('inactive');
-    } else if (newEmployee.accountStatus.toLowerCase() === 'pending') {
-      newRoles.push('pending');
+    
+    // Construct the new employee object from the form state
+   const newEmployeeData = {
+      // Personal Info
+      firstName: newEmployee.firstName,
+      lastName: newEmployee.lastName,
+      gender: newEmployee.gender,
+      dateOfBirth: newEmployee.dateOfBirth,
+      maritalStatus: newEmployee.maritalStatus,
+      
+      // Contact Info
+      personalNumber: newEmployee.personalNumber,
+      alternativeNumber: newEmployee.alternativeNumber,
+      personalEmail: newEmployee.personalEmail,
+      workEmail: newEmployee.workEmail,
+
+      // Address Info
+      address: newEmployee.address,
+      country: newEmployee.country,
+      state: newEmployee.state,
+      city: newEmployee.city,
+      zipcode: newEmployee.zipcode,
+      
+      // Employment Info
+      dateOfJoin: newEmployee.dateOfJoin,
+      status: "Awaiting", // Default status
+      temporaryPassword: newEmployee.temporaryPassword,
+      roles: [
+        newEmployee.role.toLowerCase(),
+        newEmployee.accountStatus.toLowerCase(),
+        ...(newEmployee.department !== 'No department assigned' ? [newEmployee.department.toLowerCase()] : [])
+      ]
+    };
+
+     try {
+      const employeesRef = ref(database, 'employees');
+      const newEmployeeRef = push(employeesRef);
+      await set(newEmployeeRef, newEmployeeData);
+      
+      console.log("Employee created successfully in Firebase by Admin!");
+      handleCloseAddEmployeeModal();
+
+    } catch (error) {
+      console.error("Error creating employee in Firebase:", error);
+      alert("Failed to create employee. Please try again.");
     }
-    if (newEmployee.department !== 'No department assigned') {
-      newRoles.push(newEmployee.department.toLowerCase());
-    }
-    setEmployees(prevemployees => [
-      ...prevemployees,
-       {
-        id: newEmployeeId,
-    firstName: newEmployee.firstName,
-    lastName: newEmployee.lastName,
-    gender: newEmployee.gender,
-    dateOfBirth: newEmployee.dateOfBirth,
-    maritalStatus: newEmployee.maritalStatus,
-    personalNumber: newEmployee.personalNumber,
-    alternativeNumber: newEmployee.alternativeNumber,
-    personalEmail: newEmployee.personalEmail,
-    workEmail: newEmployee.workEmail,
-    country: newEmployee.country,
-    state: newEmployee.state,
-    city: newEmployee.city,
-    address: newEmployee.address,
-    zipcode: newEmployee.zipcode,
-    status: 'Awaiting',
-    role: newEmployee.role || 'employee',
-    department: newEmployee.department || 'No department assigned',
-    accountStatus: newEmployee.accountStatus || 'Active',
-    dateOfJoin: newEmployee.dateOfJoin || '',
-    temporaryPassword: newEmployee.temporaryPassword || '',
-    roles: newRoles,
-      }
-    ]);
-    handleCloseAddEmployeeModal();
   };
 
   const getEmployeeChanges = (original, updated) => {
     const changes = [];
-    if (original.firstName !== updated.firstName) {
-      changes.push(`Name from '${original.firstName}' to '${updated.firstName}'`);
-    }
-    if (original.personalEmail !== updated.personalEmail) {
-      changes.push(`Email from '${original.personalEmail}' to '${updated.personalEmail}'`);
-    }
-    // Extract original role and department from roles array for comparison
-    const originalRole = roleOptions.find(opt => original.roles.includes(opt.value.toLowerCase()))?.value || 'employee';
-    const originalDepartment = departmentOptions.find(dept => original.roles.includes(dept.toLowerCase())) || 'No department assigned';
-    const originalAccountStatus = accountStatusOptions.find(status => original.roles.includes(status.toLowerCase())) || 'Active';
+    const fieldsToCompare = [
+        'firstName', 'lastName', 'gender', 'dateOfBirth', 'maritalStatus',
+        'personalNumber', 'alternativeNumber', 'personalEmail', 'workEmail',
+        'address', 'city', 'state', 'zipcode', 'country', 'dateOfJoin'
+    ];
 
-    if (originalRole !== updated.role) {
-      changes.push(`Role from '${originalRole}' to '${updated.role}'`);
+    // Loop through the fields and compare original vs. updated values
+    fieldsToCompare.forEach(field => {
+        if (original[field] !== updated[field]) {
+            const fieldName = field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+            changes.push(`${fieldName} changed`);
+        }
+    });
+    // Extract original role and department from roles array for comparison
+    const originalRole = roleOptions.find(opt => (original.roles || []).includes(opt.value.toLowerCase()))?.value || 'Employee';
+    const originalDepartment = departmentOptions.find(dept => (original.roles || []).includes(dept.toLowerCase())) || 'No department assigned';
+    const originalAccountStatus = accountStatusOptions.find(status => (original.roles || []).includes(status.toLowerCase())) || 'Active';
+
+   if (originalRole !== updated.role) {
+        changes.push(`Role changed`);
     }
     if (originalDepartment !== updated.department) {
-      changes.push(`Department from '${originalDepartment}' to '${updated.department}'`);
+        changes.push(`Department changed`);
     }
     if (originalAccountStatus !== updated.accountStatus) {
-      changes.push(`Account Status from '${originalAccountStatus}' to '${updated.accountStatus}'`);
+        changes.push(`Account Status changed`);
     }
+
     return changes.length > 0 ? changes.join(', ') : 'no changes';
   };
 
-  const handleEditEmployeeClick = (employeeId) => {
-    const employee = employees.find(u => u.id === employeeId);
+   const handleEditEmployeeClick = (firebaseKey) => {
+    const employee = employees.find(u => u.firebaseKey === firebaseKey); // Use firebaseKey to find the employee
     if (employee) {
       const employeeDepartment = departmentOptions.find(dept => (employee.roles || []).includes(dept.toLowerCase())) || 'No department assigned';
       const employeeAccountStatus = accountStatusOptions.find(status => (employee.roles || []).includes(status.toLowerCase())) || 'Active';
       const employeeRole = roleOptions.find(role => (employee.roles || []).includes(role.value.toLowerCase()))?.value || 'Employee';
 
       setCurrentEmployeeToEdit({
-         id: employee.id,
+        firebaseKey: employee.firebaseKey, // Make sure to include the firebaseKey
         role: employeeRole,
         department: employeeDepartment,
         accountStatus: employeeAccountStatus,
@@ -269,7 +313,6 @@ const EmployeeManagement = () => {
         dateOfJoin: employee.dateOfJoin || '',
         personalEmail: employee.personalEmail || '',
         workEmail: employee.workEmail || '',
-
       });
       setIsEditEmployeeModalOpen(true);
     }
@@ -289,63 +332,57 @@ const EmployeeManagement = () => {
   };
   
   const handleUpdateEmployeeAccount = (e) => {
-      e.preventDefault();
-
-        const originalEmployee = employees.find(emp => emp.id === currentEmployeeToEdit.id);
+    e.preventDefault();
+    // Use firebaseKey to find the original employee
+    const originalEmployee = employees.find(emp => emp.firebaseKey === currentEmployeeToEdit.firebaseKey);
     const changes = getEmployeeChanges(originalEmployee, currentEmployeeToEdit);
 
     if (changes === 'no changes') {
       setConfirmUpdateMessage('No changes were made to the employee details.');
       setIsConfirmUpdateModalOpen(true);
-      setConfirmActionType(null); // No action needed
+      setConfirmActionType(null);
       return;
     }
-      setPendingEmployeeUpdate(currentEmployeeToEdit);
-      setConfirmUpdateMessage(`Are you sure you want to update this employee's details?`);
-      setIsConfirmUpdateModalOpen(true);
-      setConfirmActionType('employeeUpdate');
+    
+    setPendingEmployeeUpdate(currentEmployeeToEdit);
+    // You can make this message more detailed if you want by passing 'changes'
+    setConfirmUpdateMessage(`Are you sure you want to apply the following changes: ${changes}?`);
+    setIsConfirmUpdateModalOpen(true);
+    setConfirmActionType('employeeUpdate');
   };
 
-  const confirmEmployeeUpdate = () => {
-    setEmployees(prev => prev.map(employee => {
-      if (employee.id === pendingEmployeeUpdate.id) {
-        const updatedRoles = [
-            pendingEmployeeUpdate.role.toLowerCase(), 
-            pendingEmployeeUpdate.accountStatus.toLowerCase()
-        ];
-        if (pendingEmployeeUpdate.department && pendingEmployeeUpdate.department !== 'No department assigned') {
-            updatedRoles.push(pendingEmployeeUpdate.department.toLowerCase());
-        }
-        
-       
+   const confirmEmployeeUpdate = async () => {
+    if (!pendingEmployeeUpdate || !pendingEmployeeUpdate.firebaseKey) {
+      console.error("Update failed: Employee data or Firebase key is missing.");
+      return;
+    }
 
-        return {
-              ...employee,
-          roles: updatedRoles,
-          firstName: pendingEmployeeUpdate.firstName,
-          lastName: pendingEmployeeUpdate.lastName,
-          gender: pendingEmployeeUpdate.gender,
-          dateOfBirth: pendingEmployeeUpdate.dateOfBirth,
-          maritalStatus: pendingEmployeeUpdate.maritalStatus,
-          personalNumber: pendingEmployeeUpdate.personalNumber,
-          alternativeNumber: pendingEmployeeUpdate.alternativeNumber,
-          country: pendingEmployeeUpdate.country,
-          state: pendingEmployeeUpdate.state,
-          city: pendingEmployeeUpdate.city,
-          address: pendingEmployeeUpdate.address,
-          zipcode: pendingEmployeeUpdate.zipcode,
-          dateOfJoin: pendingEmployeeUpdate.dateOfJoin,
-          personalEmail: pendingEmployeeUpdate.personalEmail,
-          workEmail: pendingEmployeeUpdate.workEmail,
+    const { firebaseKey, ...employeeDataToUpdate } = pendingEmployeeUpdate;
 
-        };
-      }
-      return employee;
-    }));
+    // Construct the data object for Firebase (without the key)
+    const updatedData = {
+        ...employees.find(emp => emp.firebaseKey === firebaseKey), // Start with original data
+        ...employeeDataToUpdate, // Apply changes
+        roles: [
+            pendingEmployeeUpdate.role.toLowerCase(),
+            pendingEmployeeUpdate.accountStatus.toLowerCase(),
+            ...(pendingEmployeeUpdate.department !== 'No department assigned' ? [pendingEmployeeUpdate.department.toLowerCase()] : [])
+        ]
+    };
+    delete updatedData.id; // Remove the old numeric ID if it exists
+
+    try {
+        const employeeRef = ref(database, `employees/${firebaseKey}`);
+        await update(employeeRef, updatedData);
+        console.log("Employee updated successfully in Firebase!");
+    } catch (error) {
+        console.error("Error updating employee in Firebase:", error);
+        alert("Failed to update employee. Please try again.");
+    }
+
     handleCloseEditEmployeeModal();
     setIsConfirmUpdateModalOpen(false);
     setPendingEmployeeUpdate(null);
-    setConfirmActionType(null);
   };
   
   const handleDeleteEmployeeClick = (employeeId) => {
@@ -356,10 +393,23 @@ const EmployeeManagement = () => {
       setConfirmActionType('employeeDelete');
   };
   
-  const handleConfirmDelete = () => {
-      setEmployees(employees.filter(employee => employee.id !== employeeToDeleteDetails.id));
-      setIsConfirmUpdateModalOpen(false);
-      setEmployeeToDeleteDetails(null);
+  const handleConfirmDelete = async () => {
+    if (!employeeToDeleteDetails || !employeeToDeleteDetails.firebaseKey) {
+        console.error("Delete failed: Employee data or Firebase key is missing.");
+        return;
+    }
+
+    try {
+        const employeeRef = ref(database, `employees/${employeeToDeleteDetails.firebaseKey}`);
+        await remove(employeeRef);
+        console.log("Employee deleted successfully from Firebase!");
+    } catch (error) {
+        console.error("Error deleting employee from Firebase:", error);
+        alert("Failed to delete employee. Please try again.");
+    }
+      
+    setIsConfirmUpdateModalOpen(false);
+    setEmployeeToDeleteDetails(null);
   };
   
 
@@ -805,8 +855,8 @@ const EmployeeManagement = () => {
               </div>
             </div>
             <div className="employee-list">
-              {filteredEmployees.map(employee => (
-                <div className="employee-card" key={employee.id}>
+               {filteredEmployees.map(employee => (
+                <div className="employee-card" key={employee.firebaseKey}> {/* Use firebaseKey as the key */}
                   <div className="employee-card-left">
                     <div className="employee-avatar">{getInitials(`${employee.firstName} ${employee.lastName}`)}</div>
                     <div className="employee-info">
@@ -820,8 +870,10 @@ const EmployeeManagement = () => {
                     </div>
                   </div>
                   <div className="employee-actions">
-                    <button className="action-btn" onClick={() => handleEditEmployeeClick(employee.id)}>Edit</button>
-                    <button className="action-btn delete-btn" onClick={() => handleDeleteEmployeeClick(employee.id)}>Delete</button>
+                    {/* Pass firebaseKey to the edit handler */}
+                    <button className="action-btn" onClick={() => handleEditEmployeeClick(employee.firebaseKey)}>Edit</button>
+                    {/* The delete handler also needs firebaseKey */}
+                    <button className="action-btn delete-btn" onClick={() => handleDeleteEmployeeClick(employee.firebaseKey)}>Delete</button>
                   </div>
                 </div>
               ))}

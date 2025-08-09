@@ -64,7 +64,7 @@ const JsNavbar = () => {
               style={{ cursor: 'pointer' }}
               onClick={() => navigate('/')}
             >
-              Go to Home
+              Home
             </span>
             </div>
         </Navbar.Collapse>

@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { getDatabase, ref, onValue } from "firebase/database"; // Import Firebase functions
+import { database } from '../../firebase'; // Import your Firebase config
 
 const ClientManagement = () => {
   // --- Client Management States ---
@@ -40,42 +42,52 @@ const ClientManagement = () => {
 
 
   // NEW: useEffect to load clients from localStorage or fetch from clients.json
-  useEffect(() => {
-    const loadData = async () => {
-        try {
-            // First, try to get clients from local storage
-            const savedClients = localStorage.getItem('clients');
-            if (savedClients && JSON.parse(savedClients).length > 0) {
-                setClients(JSON.parse(savedClients));
-            } else {
-                // If not in local storage, fetch from the JSON file
-                const response = await fetch('/clients.json'); // Assumes clients.json is in /public folder
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                const clientData = await response.json();
-                setClients(clientData);
-            }
-             // Load employees from local storage or fetch from employees.json
-            const savedEmployees = localStorage.getItem('employees');
-            if (savedEmployees && JSON.parse(savedEmployees).length > 0) {
-                setEmployees(JSON.parse(savedEmployees));
-            } else {
-                const response = await fetch('/employees.json');
-                if (!response.ok) throw new Error('Network response for employees was not ok');
-                const employeeData = await response.json();
-                setEmployees(employeeData);
-            }
-        } catch (err) {
-            setError(err.message);
-            console.error("Failed to load clients:", err);
-        } finally {
-            setLoading(false);
-        }
-    };
 
-    loadData();
-  }, []);
+
+  useEffect(() => {
+    const clientsRef = ref(database, 'clients');
+    const employeesRef = ref(database, 'employees');
+    
+    // Set up listeners for real-time data fetching
+    const unsubscribeClients = onValue(clientsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        // Firebase returns data as an object; convert it to an array
+        const clientsArray = Object.keys(data).map(key => ({
+          id: key,
+          ...data[key]
+        }));
+        setClients(clientsArray);
+        localStorage.setItem('clients', JSON.stringify(clientsArray)); // Optionally, still cache in localStorage
+      }
+      setLoading(false);
+    }, (error) => {
+      console.error("Firebase clients fetch error:", error);
+      setError(error.message);
+      setLoading(false);
+    });
+
+    const unsubscribeEmployees = onValue(employeesRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const employeesArray = Object.keys(data).map(key => ({
+          id: key,
+          ...data[key]
+        }));
+        setEmployees(employeesArray);
+        localStorage.setItem('employees', JSON.stringify(employeesArray)); // Optionally, cache
+      }
+    }, (error) => {
+      console.error("Firebase employees fetch error:", error);
+      // Handle employee fetch error if necessary
+    });
+
+    // Cleanup function: Unsubscribe from Firebase listeners when the component unmounts
+    return () => {
+      unsubscribeClients();
+      unsubscribeEmployees();
+    };
+  }, []); 
 
       // --- NEW: Add this useEffect to listen for real-time updates from other tabs ---
   useEffect(() => {
