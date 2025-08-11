@@ -10,8 +10,13 @@ import { useAuth } from '../components/AuthContext';
 
 // Import Firebase services
 import { auth, database } from "../../src/firebase";
-import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
-import { ref, get, child } from "firebase/database";
+import { 
+  signInWithEmailAndPassword, 
+  sendPasswordResetEmail,
+  GoogleAuthProvider,
+  signInWithPopup
+} from "firebase/auth";
+import { ref, get, child, set } from "firebase/database";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -27,8 +32,47 @@ export default function LoginPage() {
   const [forgotEmail, setForgotEmail] = useState("");
   const [modalAlert, setModalAlert] = useState({ type: "", message: "" });
 
+  // --- 🔀 Unified Login Processor ---
+  const processLogin = async (user) => {
+    const dbRef = ref(database);
+    const snapshot = await get(child(dbRef, `users/${user.uid}`));
+    let userDataFromDb;
 
-  // --- 🔐 Firebase Login Handler ---
+    if (snapshot.exists()) {
+        // User exists, get their data
+        userDataFromDb = snapshot.val();
+    } else {
+        // New user (signed in via Google for the first time)
+        // Create a new record for them in the database
+        userDataFromDb = {
+            email: user.email,
+            roles: ['client'], // Assign a default role
+        };
+        await set(ref(database, 'users/' + user.uid), userDataFromDb);
+    }
+    
+    const finalUserData = {
+        uid: user.uid,
+        email: user.email,
+        roles: userDataFromDb.roles || ['client'],
+        avatar: user.photoURL || `https://placehold.co/40x40/007bff/white?text=${user.email.charAt(0).toUpperCase()}`
+    };
+
+    sessionStorage.setItem('loggedInEmployee', JSON.stringify(finalUserData));
+    login(finalUserData);
+
+    // Role-based navigation
+    if (finalUserData.roles.includes('admin')) {
+        navigate('/adminpage');
+    } else if (finalUserData.roles.includes('manager')) {
+        navigate('/managerworksheet');
+    } else {
+        navigate('/clientdashboard'); // Default for clients
+    }
+  };
+
+
+  // --- 🔐 Firebase Email/Password Login Handler ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoginError("");
@@ -39,47 +83,27 @@ export default function LoginPage() {
     }
 
     try {
-        // Sign in using Firebase Authentication
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-
-        // Get user data (roles) from Realtime Database
-        const dbRef = ref(database);
-        const snapshot = await get(child(dbRef, `users/${user.uid}`));
-
-        if (snapshot.exists()) {
-            const userDataFromDb = snapshot.val();
-            const userData = {
-                uid: user.uid,
-                email: user.email,
-                roles: userDataFromDb.roles || ['client'], // Default to client role
-                avatar: `https://placehold.co/40x40/007bff/white?text=${user.email.charAt(0).toUpperCase()}`
-            };
-
-            sessionStorage.setItem('loggedInEmployee', JSON.stringify(userData));
-            login(userData);
-
-            // Role-based navigation
-            if (userData.roles.includes('admin')) {
-                navigate('/adminpage');
-            } else if (userData.roles.includes('manager')) {
-                navigate('/managerworksheet');
-            } else {
-                navigate('/clientdashboard'); // Default for clients
-            }
-        } else {
-            // This case is unlikely if signup is always creating a user record
-            setLoginError("User data not found. Please contact support.");
-            auth.signOut();
-        }
-
+        await processLogin(userCredential.user);
     } catch (error) {
         if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
             setLoginError("Invalid email or password.");
         } else {
             setLoginError("An error occurred during login. Please try again.");
-            console.error("Firebase login error:", error);
+            console.error("Firebase email login error:", error);
         }
+    }
+  };
+
+  // --- 🇬 Google Login Handler ---
+  const handleGoogleLogin = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+        const result = await signInWithPopup(auth, provider);
+        await processLogin(result.user);
+    } catch (error) {
+        setLoginError("Failed to sign in with Google. Please try again.");
+        console.error("Firebase Google login error:", error);
     }
   };
 
@@ -127,6 +151,7 @@ export default function LoginPage() {
         <button
           type="button"
           className="btn btn-outline-secondary w-100 p-2 mb-3 d-flex align-items-center justify-content-center gap-2"
+          onClick={handleGoogleLogin} // Added onClick handler
         >
           <FcGoogle size={22} /> Continue with Google
         </button>

@@ -6,13 +6,20 @@ import { RiLockPasswordFill } from "react-icons/ri";
 import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
 import JsNavbar from './JsNavbar';
 import { Card, Button, Form, InputGroup, Modal } from 'react-bootstrap';
+import { useAuth } from '../components/AuthContext';
+
 
 // Import Firebase auth and database services
 import { auth, database } from "../../src/firebase";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { ref, set } from "firebase/database";
+import { 
+    createUserWithEmailAndPassword,
+    GoogleAuthProvider,
+    signInWithPopup
+} from "firebase/auth";
+import { ref, set, get, child } from "firebase/database";
 
 export default function SignupPage() {
+  const { login } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -32,7 +39,46 @@ export default function SignupPage() {
     return null;
   };
 
-  // Updated handleSubmit to use Firebase
+  // --- 🔀 Unified Login/Signup Processor (for Google) ---
+  const processGoogleUser = async (user) => {
+    const dbRef = ref(database);
+    const snapshot = await get(child(dbRef, `users/${user.uid}`));
+    let userDataFromDb;
+
+    if (snapshot.exists()) {
+        // User exists, get their data
+        userDataFromDb = snapshot.val();
+    } else {
+        // New user signing up via Google
+        // Create a new record for them in the database
+        userDataFromDb = {
+            email: user.email,
+            roles: ['client'], // Assign a default role
+        };
+        await set(ref(database, 'users/' + user.uid), userDataFromDb);
+    }
+    
+    const finalUserData = {
+        uid: user.uid,
+        email: user.email,
+        roles: userDataFromDb.roles || ['client'],
+        avatar: user.photoURL || `https://placehold.co/40x40/007bff/white?text=${user.email.charAt(0).toUpperCase()}`
+    };
+
+    sessionStorage.setItem('loggedInEmployee', JSON.stringify(finalUserData));
+    login(finalUserData); // Log the user in via context
+
+    // Role-based navigation
+    if (finalUserData.roles.includes('admin')) {
+        navigate('/adminpage');
+    } else if (finalUserData.roles.includes('manager')) {
+        navigate('/managerworksheet');
+    } else {
+        navigate('/clientdashboard'); // Default for clients
+    }
+  };
+
+  // --- 🔐 Firebase Email/Password Signup Handler ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     setEmailError("");
@@ -58,17 +104,14 @@ export default function SignupPage() {
 
     if (!hasError) {
       try {
-        // Create user with Firebase Authentication
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        // Save user data to Realtime Database
         await set(ref(database, 'users/' + user.uid), {
           email: user.email,
-          roles: ['client'], // Assign a default role
+          roles: ['client'],
         });
         
-        console.log("User Registered and saved to Firebase:", user.uid);
         setShowSuccessModal(true);
 
         setTimeout(() => {
@@ -83,6 +126,18 @@ export default function SignupPage() {
             console.error("Firebase signup error:", error);
         }
       }
+    }
+  };
+
+  // --- 🇬 Google Signup/Login Handler ---
+  const handleGoogleLogin = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+        const result = await signInWithPopup(auth, provider);
+        await processGoogleUser(result.user);
+    } catch (error) {
+        setPasswordError("Failed to sign in with Google. Please try again.");
+        console.error("Firebase Google login error:", error);
     }
   };
 
@@ -129,7 +184,11 @@ export default function SignupPage() {
           <Card.Body>
             <h3 className="text-center fw-bold mb-4 text-primary">Create Account</h3>
 
-            <Button variant="outline-secondary" className="w-100 mb-3 p-2 d-flex align-items-center justify-content-center gap-2">
+            <Button 
+              variant="outline-secondary" 
+              className="w-100 mb-3 p-2 d-flex align-items-center justify-content-center gap-2"
+              onClick={handleGoogleLogin}
+            >
               <FcGoogle size={20} /> Continue with Google
             </Button>
 
