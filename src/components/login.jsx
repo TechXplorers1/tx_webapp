@@ -1,13 +1,17 @@
-// LoginPage.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from 'react-router-dom';
 import JsNavbar from './JsNavbar';
-import { Button, Modal, Form } from 'react-bootstrap';
+import { Button, Modal, Form, InputGroup, Alert } from 'react-bootstrap';
 import { FcGoogle } from "react-icons/fc";
 import { MdEmail } from "react-icons/md";
 import { RiLockPasswordFill } from "react-icons/ri";
 import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
 import { useAuth } from '../components/AuthContext';
+
+// Import Firebase services
+import { auth, database } from "../../src/firebase";
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
+import { ref, get, child } from "firebase/database";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -16,236 +20,89 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [emailError, setEmailError] = useState("");
-  const [passwordError, setPasswordError] = useState("");
   const [loginError, setLoginError] = useState("");
-
-  const [employees, setEmployees] = useState([]);
 
   // Password Reset State
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
-  const [enteredOtp, setEnteredOtp] = useState("");
-  const [generatedOtp, setGeneratedOtp] = useState("");
-  const [otpError, setOtpError] = useState("");
-  const [otpTimer, setOtpTimer] = useState(60);
-  const [isResendingOtp, setIsResendingOtp] = useState(false);
-  const [modalAlert, setModalAlert] = useState("");
-  const [otpVerified, setOtpVerified] = useState(false);
-  const [showNewPasswordModal, setShowNewPasswordModal] = useState(false);
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [newPasswordError, setNewPasswordError] = useState("");
-  const [confirmPasswordError, setConfirmPasswordError] = useState("");
-  const [showSuccess, setShowSuccess] = useState(false);
+  const [modalAlert, setModalAlert] = useState({ type: "", message: "" });
 
-  // Fetch employees data on mount
-  useEffect(() => {
-    fetch('/employees.json')
-      .then(response => {
-        if (!response.ok) throw new Error('Network response was not ok');
-        return response.json();
-      })
-      .then(data => setEmployees(data))
-      .catch(error => console.error("Failed to fetch employees:", error));
-  }, []);
 
-  // OTP Timer
-  useEffect(() => {
-    let timerInterval;
-    if (otpSent && otpTimer > 0) {
-      timerInterval = setInterval(() => setOtpTimer(prev => prev - 1), 1000);
-    } else if (otpTimer === 0) {
-      setIsResendingOtp(false);
-    }
-    return () => clearInterval(timerInterval);
-  }, [otpSent, otpTimer]);
-
-  // Password Validation
-  const validatePassword = (value) => {
-    if (value.length < 8) return 'Password must be at least 8 characters';
-    if (!/[A-Z]/.test(value)) return 'Must contain uppercase';
-    if (!/[a-z]/.test(value)) return 'Must contain lowercase';
-    if (!/[0-9]/.test(value)) return 'Must contain number';
-    if (!/[@_\$\-]/.test(value)) return 'Must contain @, _, $, or -';
-    return null;
-  };
-
-  // --- 🔐 Unified Login Handler ---
-  const handleSubmit = (e) => {
+  // --- 🔐 Firebase Login Handler ---
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setEmailError("");
-    setPasswordError("");
     setLoginError("");
 
-    // Email validation
-    if (!email || !email.includes("@") || !email.includes(".")) {
-      setEmailError("Please enter a valid email");
-      return;
-    }
-    if (!password) {
-      setPasswordError("Password is required");
+    if (!email || !password) {
+      setLoginError("Please enter both email and password.");
       return;
     }
 
-    // 1. Check if it's a predefined employee
-   const employee = employees.find(
-      emp => emp.workEmail === email && emp.temporaryPassword === password
-    );
+    try {
+        // Sign in using Firebase Authentication
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
 
-    if (employee) {
-      const userData = {
-        firebaseKey: employee.firebaseKey, // Pass the Firebase key for profile edits
-        name: `${employee.firstName} ${employee.lastName}`,
-        email: employee.workEmail,
-        roles: employee.roles,
-        // Include all other employee data to pass to the profile page
-        ...employee 
-      };
+        // Get user data (roles) from Realtime Database
+        const dbRef = ref(database);
+        const snapshot = await get(child(dbRef, `users/${user.uid}`));
 
-      sessionStorage.setItem('loggedInEmployee', JSON.stringify(userData));
-      login(userData);
+        if (snapshot.exists()) {
+            const userDataFromDb = snapshot.val();
+            const userData = {
+                uid: user.uid,
+                email: user.email,
+                roles: userDataFromDb.roles || ['client'], // Default to client role
+                avatar: `https://placehold.co/40x40/007bff/white?text=${user.email.charAt(0).toUpperCase()}`
+            };
 
-      // Role-based navigation
-      if (employee.roles.includes('admin')) {
-        navigate('/adminpage');
-      } else if (employee.roles.includes('manager')) {
-        navigate('/managerworksheet');
-      } else {
-        navigate('/employees');
-      }
-      return;
+            sessionStorage.setItem('loggedInEmployee', JSON.stringify(userData));
+            login(userData);
+
+            // Role-based navigation
+            if (userData.roles.includes('admin')) {
+                navigate('/adminpage');
+            } else if (userData.roles.includes('manager')) {
+                navigate('/managerworksheet');
+            } else {
+                navigate('/clientdashboard'); // Default for clients
+            }
+        } else {
+            // This case is unlikely if signup is always creating a user record
+            setLoginError("User data not found. Please contact support.");
+            auth.signOut();
+        }
+
+    } catch (error) {
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+            setLoginError("Invalid email or password.");
+        } else {
+            setLoginError("An error occurred during login. Please try again.");
+            console.error("Firebase login error:", error);
+        }
     }
-
-    // 2. Check if it's a self-registered user
-    const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers')) || [];
-    const registeredUser = registeredUsers.find(u => u.email === email && u.password === password);
-
-    if (registeredUser) {
-      const baseUsername = email.split('@')[0];
-      const userData = {
-        name: baseUsername,
-        email: registeredUser.email,
-        roles: ['client'],
-        avatar: `https://placehold.co/40x40/007bff/white?text=${baseUsername.charAt(0).toUpperCase()}`
-      };
-
-     sessionStorage.setItem('loggedInEmployee', JSON.stringify(userData));
-      login(userData);
-      navigate('/clientdashboard'); // Navigate clients to their dashboard
-      return;
-    }
-
-    // 3. Check hardcoded fallback credentials
-    const baseUsername = email.split('@')[0];
-    if (password === 'Password@123') {
-      let redirectPath = null;
-      let userRoles = [];
-
-      if (email === 'admin@gmail.com') {
-        redirectPath = '/adminpage';
-        userRoles = ['admin'];
-      } else if (email === 'client@gmail.com') {
-        redirectPath = '/clientdashboard'; // Updated path for client
-        userRoles = ['client'];
-      } else if (email === 'manager@gmail.com') {
-        redirectPath = '/managerworksheet';
-        userRoles = ['manager'];
-      } else if (email === 'assets@gmail.com') {
-        redirectPath = '/assetworksheet';
-        userRoles = ['asset_manager'];
-      } else if (email=== 'employee@gmail.com') {
-        redirectPath = '/employees';
-        userRoles = ['employee'];
-      }
-
-      if (redirectPath) {
-        const userData = {
-          name: baseUsername,
-          email,
-           roles: userRoles,
-          avatar: `https://placehold.co/40x40/007bff/white?text=${baseUsername.charAt(0).toUpperCase()}`
-        };
-         sessionStorage.setItem('loggedInEmployee', JSON.stringify(userData));
-        login(userData);
-        navigate(redirectPath);
-        return;
-      }
-    }
-
-    // 4. If no match, show error
-    setLoginError("Invalid email or password.");
   };
 
-  // --- 🔁 Send OTP ---
-  const sendOtp = () => {
+  // --- 🔁 Firebase Password Reset Handler ---
+  const handlePasswordReset = async () => {
     if (!forgotEmail.includes("@")) {
-      setModalAlert("Please enter a valid email address.");
+      setModalAlert({ type: "danger", message: "Please enter a valid email address." });
       return;
     }
-    setModalAlert("");
-    const otp = Math.floor(1000 + Math.random() * 9000).toString();
-    setGeneratedOtp(otp);
-    console.log(`Generated OTP for ${forgotEmail}: ${otp}`);
-    setModalAlert(`An OTP has been sent to ${forgotEmail}. (For demo, OTP is ${otp})`);
-    setOtpSent(true);
-    setOtpTimer(60);
-    setIsResendingOtp(true);
-    setOtpError("");
-  };
-
-  // --- ✅ Verify OTP ---
-  const verifyOtp = () => {
-    if (enteredOtp === generatedOtp) {
-      setOtpVerified(true);
-      setOtpError("");
-      setShowForgotModal(false);
-      setShowNewPasswordModal(true);
-    } else {
-      setOtpError("Invalid OTP. Please try again.");
+    try {
+        await sendPasswordResetEmail(auth, forgotEmail);
+        setModalAlert({ type: "success", message: `A password reset link has been sent to ${forgotEmail}.` });
+    } catch (error) {
+        setModalAlert({ type: "danger", message: "Could not send password reset email. Please check the address and try again." });
+        console.error("Password reset error:", error);
     }
-  };
+  }
 
-  // --- 🆕 Create New Password ---
-  const createNewPassword = () => {
-    setNewPasswordError("");
-    setConfirmPasswordError("");
-    let hasError = false;
-
-    const passError = validatePassword(newPassword);
-    if (passError) {
-      setNewPasswordError(passError);
-      hasError = true;
-    }
-    if (newPassword !== confirmPassword) {
-      setConfirmPasswordError("Passwords do not match.");
-      hasError = true;
-    }
-    if (hasError) return;
-
-    // Update in localStorage if user exists
-    const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers')) || [];
-    const userIndex = registeredUsers.findIndex(u => u.email === forgotEmail);
-    if (userIndex !== -1) {
-      registeredUsers[userIndex].password = newPassword;
-      localStorage.setItem('registeredUsers', JSON.stringify(registeredUsers));
-    }
-
-    console.log("New password set successfully!");
-    setShowNewPasswordModal(false);
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 4000);
-
-    // Reset all reset-related states
+  const openForgotModal = () => {
+    setShowForgotModal(true);
     setForgotEmail("");
-    setOtpSent(false);
-    setEnteredOtp("");
-    setGeneratedOtp("");
-    setOtpVerified(false);
-    setNewPassword("");
-    setConfirmPassword("");
-  };
+    setModalAlert({ type: "", message: "" });
+  }
 
   return (
     <div style={{
@@ -278,67 +135,48 @@ export default function LoginPage() {
         <Form onSubmit={handleSubmit}>
           <Form.Group className="mb-3">
             <Form.Label>Email</Form.Label>
-            <div className="input-group">
-              <span className="input-group-text"><MdEmail /></span>
+            <InputGroup>
+              <InputGroup.Text><MdEmail /></InputGroup.Text>
               <Form.Control
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                isInvalid={!!emailError}
                 placeholder="Enter your email"
                 autoComplete="email"
               />
-            </div>
-            {emailError && <Form.Text className="text-danger">{emailError}</Form.Text>}
+            </InputGroup>
           </Form.Group>
 
           <Form.Group className="mb-3">
             <Form.Label>Password</Form.Label>
-            <div className="input-group">
-              <span className="input-group-text"><RiLockPasswordFill /></span>
+            <InputGroup>
+              <InputGroup.Text><RiLockPasswordFill /></InputGroup.Text>
               <Form.Control
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                isInvalid={!!passwordError}
                 placeholder="Enter your password"
                 autoComplete="current-password"
               />
-              <span
-                className="input-group-text"
+              <InputGroup.Text
                 style={{ cursor: "pointer" }}
                 onClick={() => setShowPassword(!showPassword)}
               >
                 {showPassword ? <AiFillEye /> : <AiFillEyeInvisible />}
-              </span>
-            </div>
-            {passwordError && <Form.Text className="text-danger">{passwordError}</Form.Text>}
+              </InputGroup.Text>
+            </InputGroup>
           </Form.Group>
 
           <div className="text-end mb-3">
             <span
               style={{ color: '#007bff', fontWeight: 600, cursor: 'pointer' }}
-              onClick={() => {
-                setShowForgotModal(true);
-                setOtpSent(false);
-                setOtpVerified(false);
-                setForgotEmail("");
-                setEnteredOtp("");
-                setOtpError("");
-                setNewPassword("");
-                setConfirmPassword("");
-                setNewPasswordError("");
-                setConfirmPasswordError("");
-                setOtpTimer(60);
-                setIsResendingOtp(false);
-                setModalAlert("");
-              }}
+              onClick={openForgotModal}
             >
               Forgot Password?
             </span>
           </div>
 
-          {loginError && <div className="alert alert-danger py-2">{loginError}</div>}
+          {loginError && <Alert variant="danger" className="py-2">{loginError}</Alert>}
 
           <Button type="submit" className="w-100 btn btn-primary text-white fw-bold">Log In</Button>
 
@@ -358,8 +196,7 @@ export default function LoginPage() {
       <Modal show={showForgotModal} onHide={() => setShowForgotModal(false)} centered>
         <Modal.Header closeButton><Modal.Title>Reset Password</Modal.Title></Modal.Header>
         <Modal.Body>
-          {modalAlert && <p className="text-info small">{modalAlert}</p>}
-          {!otpSent ? (
+          {modalAlert.message && <Alert variant={modalAlert.type}>{modalAlert.message}</Alert>}
             <Form.Group>
               <Form.Label>Enter your registered email</Form.Label>
               <Form.Control
@@ -370,83 +207,10 @@ export default function LoginPage() {
                 autoComplete="email"
               />
             </Form.Group>
-          ) : (
-            <Form.Group>
-              <Form.Label>Enter OTP sent to {forgotEmail}</Form.Label>
-              <Form.Control
-                type="text"
-                value={enteredOtp}
-                onChange={(e) => setEnteredOtp(e.target.value)}
-                placeholder="Enter 4-digit OTP"
-                isInvalid={!!otpError}
-              />
-              <Form.Control.Feedback type="invalid">{otpError}</Form.Control.Feedback>
-            </Form.Group>
-          )}
         </Modal.Body>
         <Modal.Footer>
-          {!otpSent ? (
-            <Button variant="primary" onClick={sendOtp}>Send OTP</Button>
-          ) : (
-            <>
-              <Button variant="primary" onClick={verifyOtp} disabled={enteredOtp.length !== 4}>Verify OTP</Button>
-              <Button
-                variant="secondary"
-                onClick={sendOtp}
-                disabled={isResendingOtp && otpTimer > 0}
-              >
-                {isResendingOtp && otpTimer > 0 ? `Resend OTP (${otpTimer}s)` : 'Resend OTP'}
-              </Button>
-            </>
-          )}
+            <Button variant="primary" onClick={handlePasswordReset}>Send Reset Link</Button>
         </Modal.Footer>
-      </Modal>
-
-      {/* New Password Modal */}
-      <Modal show={showNewPasswordModal} onHide={() => setShowNewPasswordModal(false)} centered>
-        <Modal.Header closeButton><Modal.Title>Create New Password</Modal.Title></Modal.Header>
-        <Modal.Body>
-          <Form.Group className="mb-2">
-            <Form.Label>New Password</Form.Label>
-            <Form.Control
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="New Password"
-              isInvalid={!!newPasswordError}
-              autoComplete="new-password"
-            />
-            <Form.Control.Feedback type="invalid">{newPasswordError}</Form.Control.Feedback>
-          </Form.Group>
-          <Form.Group>
-            <Form.Label>Confirm Password</Form.Label>
-            <Form.Control
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Confirm Password"
-              isInvalid={!!confirmPasswordError}
-              autoComplete="new-password"
-            />
-            <Form.Control.Feedback type="invalid">{confirmPasswordError}</Form.Control.Feedback>
-          </Form.Group>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="success" onClick={createNewPassword}>Set New Password</Button>
-        </Modal.Footer>
-      </Modal>
-
-      {/* Success Modal */}
-      <Modal show={showSuccess} onHide={() => setShowSuccess(false)} centered>
-        <Modal.Body className="text-center p-4">
-          <img
-            src="https://cdn-icons-png.flaticon.com/512/845/845646.png"
-            alt="Success"
-            style={{ width: '80px' }}
-            onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/80x80/28a745/white?text=OK'; }}
-          />
-          <h5 className="mt-3 text-success">Password successfully created!</h5>
-        </Modal.Body>
       </Modal>
     </div>
   );

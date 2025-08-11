@@ -7,6 +7,11 @@ import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
 import JsNavbar from './JsNavbar';
 import { Card, Button, Form, InputGroup, Modal } from 'react-bootstrap';
 
+// Import Firebase auth and database services
+import { auth, database } from "../../src/firebase";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { ref, set } from "firebase/database";
+
 export default function SignupPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -27,8 +32,8 @@ export default function SignupPage() {
     return null;
   };
 
-  // Updated handleSubmit to save user data to localStorage
-  const handleSubmit = (e) => {
+  // Updated handleSubmit to use Firebase
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setEmailError("");
     setPasswordError("");
@@ -52,30 +57,32 @@ export default function SignupPage() {
     }
 
     if (!hasError) {
-      // Create a new user object
-      const newUser = { email, password, roles: ['client'] };
+      try {
+        // Create user with Firebase Authentication
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
 
-      // Retrieve existing users from localStorage or initialize an empty array
-      const existingUsers = JSON.parse(localStorage.getItem('registeredUsers')) || [];
+        // Save user data to Realtime Database
+        await set(ref(database, 'users/' + user.uid), {
+          email: user.email,
+          roles: ['client'], // Assign a default role
+        });
+        
+        console.log("User Registered and saved to Firebase:", user.uid);
+        setShowSuccessModal(true);
 
-        // Check if user already exists
-      if (existingUsers.some(user => user.email === email)) {
-          setEmailError("An account with this email already exists.");
-          return;
+        setTimeout(() => {
+          handleCloseSuccessModal();
+        }, 3000);
+
+      } catch (error) {
+        if (error.code === 'auth/email-already-in-use') {
+            setEmailError("An account with this email already exists.");
+        } else {
+            setPasswordError("Failed to create an account. Please try again.");
+            console.error("Firebase signup error:", error);
+        }
       }
-
-      // Add the new user to the array
-      existingUsers.push(newUser);
-
-      // Save the updated array back to localStorage
-      localStorage.setItem('registeredUsers', JSON.stringify(existingUsers));
-
-      console.log("User Registered and saved to localStorage:", newUser);
-      setShowSuccessModal(true);
-
-      setTimeout(() => {
-        handleCloseSuccessModal();
-      }, 3000);
     }
   };
 
