@@ -1669,6 +1669,100 @@ Please provide a summary no longer than 150 words.`;
     window.location.href = '/'; // Redirect to home page on logout
   };
 
+  // --- NEW Component for the Applications Tab UI ---
+const ApplicationsTab = ({ applicationData, employees }) => {
+  const [expandedClient, setExpandedClient] = useState(null);
+
+  const getInitials = (name) => {
+    if (!name) return '';
+    const parts = name.split(' ');
+    if (parts.length > 1) return `${parts[0][0]}${parts[parts.length - 1][0]}`;
+    return name.substring(0, 2);
+  };
+
+  const groupedByClient = applicationData.reduce((acc, app) => {
+    if (!acc[app.clientName]) {
+      acc[app.clientName] = {
+        apps: [],
+        employeeName: app.assignedTo,
+      };
+    }
+    acc[app.clientName].apps.push(app);
+    return acc;
+  }, {});
+
+  return (
+    <section className="applications-management-section">
+      <h2 className="client-assignment-title">Client Applications</h2>
+      <div className="table-responsive">
+        <table className="applications-table">
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>Client</th>
+              <th>Job Title</th>
+              <th>Total Applications</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(groupedByClient).map(([clientName, data]) => {
+              const employee = employees.find(e => e.fullName === data.employeeName);
+              const isExpanded = expandedClient === clientName;
+              return (
+                <React.Fragment key={clientName}>
+                  <tr onClick={() => setExpandedClient(isExpanded ? null : clientName)} style={{ cursor: 'pointer' }}>
+                    <td className="employee-cell">
+                      <div className="employee-avatar">{employee ? employee.avatar : '??'}</div>
+                      {data.employeeName}
+                    </td>
+                    <td>{clientName}</td>
+                    <td>{data.apps[0]?.jobTitle}</td>
+                    <td style={{ textAlign: 'center' }}>{data.apps.length}</td>
+                    <td style={{ textAlign: 'center' }}>
+                      <span style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', display: 'inline-block', transition: 'transform 0.2s' }}>⋁</span>
+                    </td>
+                  </tr>
+                  {isExpanded && (
+                    <tr>
+                      <td colSpan="5" style={{ padding: '0 15px', backgroundColor: 'var(--bg-color)' }}>
+                        <div style={{ padding: '15px', border: '1px solid var(--header-border-color)', borderRadius: '8px', margin: '10px 0' }}>
+                          <table className="applications-table" style={{ minWidth: 'auto' }}>
+                            <thead>
+                              <tr>
+                                <th>Company</th>
+                                <th>Platform</th>
+                                <th>Job ID</th>
+                                <th>Link</th>
+                                <th>Applied Date</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {data.apps.map(app => (
+                                <tr key={app.id}>
+                                  <td>{app.company}</td>
+                                  <td>{app.platform}</td>
+                                  <td>{app.jobId}</td>
+                                  <td><a href={app.jobUrl} target="_blank" rel="noopener noreferrer">Link</a></td>
+                                  <td>{formatDateToDDMMYYYY(app.appliedDate)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+};
+
 
   return (
     <div className="manager-dashboard-container">
@@ -4122,121 +4216,12 @@ Please provide a summary no longer than 150 words.`;
           </section>
         )}
 
+       {/* --- NEW Applications Tab UI --- */}
         {activeTab === 'Applications' && (
-          <section className="applications-management-section">
-            <div className="applications-header">
-              <h2 className="applications-title">Employee Applications Management</h2>
-              {/* Container for right-aligned actions */}
-              <div className="applications-header-actions">
-                {isApplicationFilterActive && (
-                  <button className="clear-filter-button" onClick={handleClearApplicationFilters}>
-                    <i className="fas fa-times-circle"></i> Clear Filters
-                  </button>
-                )}
-                <span className="pending-review-badge">0 pending review</span>
-              </div>
-            </div>
-
-            <div className="applications-filters">
-              <div className="search-input-wrapper">
-                <i className="fas fa-search"></i>
-                <input
-                  type="text"
-                  placeholder="Search applications..."
-                  value={applicationSearchQuery} // Bind value to state
-                  onChange={handleApplicationSearchChange} // Add onChange handler
-                />
-              </div>
-              <div className="filter-dropdown">
-                <select
-                  value={applicationFilterEmployee} // Bind value to state
-                  onChange={handleApplicationFilterEmployeeChange} // Add onChange handler
-                >
-                  <option value="">Filter by employee</option>
-                  {employees.map(emp => (
-                    <option key={emp.id} value={emp.name}>{emp.name}</option>
-                  ))}
-                </select>
-                <i className="fas fa-chevron-down"></i>
-              </div>
-              {/* Filter by Client dropdown - now only shows assigned clients */}
-              <div className="filter-dropdown">
-                <select
-                  value={applicationFilterClient}
-                  onChange={handleApplicationFilterClientChange}
-                >
-                  <option value="">Filter by client</option>
-                  {uniqueAssignedClientNames.map(clientName => (
-                    <option key={clientName} value={clientName}>{clientName}</option>
-                  ))}
-                </select>
-                <i className="fas fa-chevron-down"></i>
-              </div>
-              {/* NEW: Start Date Filter */}
-              <div className="assign-form-group" style={{ flex: '1 1 150px', minWidth: '150px' }}>
-                <label htmlFor="startDateFilter" style={{ fontSize: '14px', marginBottom: '4px', color: 'var(--form-label-color)' }}>Start Date</label>
-                <input
-                  type="date"
-                  id="startDateFilter"
-                  value={startDateFilter}
-                  onChange={handleStartDateFilterChange}
-                  style={{ padding: '10px 12px', border: '1px solid var(--form-input-border)', borderRadius: '8px', backgroundColor: 'var(--form-input-bg)', color: 'var(--form-input-text)', fontSize: '14px' }}
-                />
-              </div>
-              {/* NEW: End Date Filter */}
-              <div className="assign-form-group" style={{ flex: '1 1 150px', minWidth: '150px' }}>
-                <label htmlFor="endDateFilter" style={{ fontSize: '14px', marginBottom: '4px', color: 'var(--form-label-color)' }}>End Date</label>
-                <input
-                  type="date"
-                  id="endDateFilter"
-                  value={endDateFilter}
-                  onChange={handleEndDateFilterChange}
-                  style={{ padding: '10px 12px', border: '1px solid var(--form-input-border)', borderRadius: '8px', backgroundColor: 'var(--form-input-bg)', color: 'var(--form-input-text)', fontSize: '14px' }}
-                />
-              </div>
-            </div>
-
-            <div className="table-responsive">
-              <table className="applications-table">
-                <thead><tr>
-                  <th>S.No</th>
-                  <th>EMPLOYEE</th>
-                  <th>CLIENT</th>
-                  <th>JOB TITLE</th>
-                  <th>COMPANY</th>
-                  <th>PLATFORM</th>
-                  <th>JOB ID</th>
-                  <th>APPLIED DATE</th>
-                  <th>TOTAL APPLICATIONS</th> {/* NEW COLUMN HEADER */}
-                </tr></thead>
-                <tbody>
-                  {filteredApplicationData.map((app, index) => (
-                    <tr key={app.id}>
-                      <td>{index + 1}</td>
-                      <td className="employee-cell">
-                        <div className="employee-avatar">{app.employeeAvatar}</div>
-                        {app.employeeName}
-                      </td>
-                      <td>{app.clientName}</td>
-                      <td>{app.jobTitle}</td>
-                      <td>{app.company}</td>
-                      <td>{app.platform}</td>
-                      <td>{app.jobId}</td>
-                      <td>{formatDateToDDMMYYYY(app.appliedDate)}</td>
-                      <td>{clientApplicationCounts[app.clientName] || 0}</td> {/* NEW COLUMN DATA */}
-                    </tr>
-                  ))}
-                  {filteredApplicationData.length === 0 && (
-                    <tr>
-                      <td colSpan="9" style={{ textAlign: 'center', color: 'var(--text-color)' }}> {/* Adjusted colspan */}
-                        No applications to display.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
+          <ApplicationsTab
+            applicationData={applicationData}
+            employees={displayEmployees}
+          />
         )}
 
         {activeTab === 'Interviews' && (
