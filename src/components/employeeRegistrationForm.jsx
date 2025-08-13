@@ -288,7 +288,7 @@ const EmployeeRegistrationForm = ({ onFormSubmit }) => {
 
     // NEW: Save to local storage
     try {
-      const employeesRef = ref(database, 'employees');
+      const employeesRef = ref(database, 'users');
       const newEmployeeRef = push(employeesRef);
       await set(newEmployeeRef, newEmployeeData);
       

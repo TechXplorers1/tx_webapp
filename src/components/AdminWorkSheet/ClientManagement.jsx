@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { getDatabase, ref, onValue } from "firebase/database"; // Import Firebase functions
+import { getDatabase, ref, onValue, query, orderByChild, equalTo } from "firebase/database"; // Import Firebase functions
 import { database } from '../../firebase'; // Import your Firebase config
 
 const ClientManagement = () => {
   // --- Client Management States ---
+  const [managerList, setManagerList] = useState([]);
   const [clientFilter, setClientFilter] = useState('registered');
   const [editingClientId, setEditingClientId] = useState(null);
   const [tempSelectedManager, setTempSelectedManager] = useState('');
@@ -46,7 +47,7 @@ const ClientManagement = () => {
 
   useEffect(() => {
     const clientsRef = ref(database, 'clients');
-    const employeesRef = ref(database, 'employees');
+    const usersRef = ref(database, 'users');
     
     // Set up listeners for real-time data fetching
     const unsubscribeClients = onValue(clientsRef, (snapshot) => {
@@ -58,7 +59,6 @@ const ClientManagement = () => {
           ...data[key]
         }));
         setClients(clientsArray);
-        localStorage.setItem('clients', JSON.stringify(clientsArray)); // Optionally, still cache in localStorage
       }
       setLoading(false);
     }, (error) => {
@@ -67,25 +67,28 @@ const ClientManagement = () => {
       setLoading(false);
     });
 
-    const unsubscribeEmployees = onValue(employeesRef, (snapshot) => {
+    const unsubscribeUsers = onValue(usersRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        const employeesArray = Object.keys(data).map(key => ({
-          id: key,
+        const usersArray = Object.keys(data).map(key => ({
+          firebaseKey: key,
           ...data[key]
         }));
-        setEmployees(employeesArray);
-        localStorage.setItem('employees', JSON.stringify(employeesArray)); // Optionally, cache
+         // Filter the array to find users with the 'manager' role
+        const managers = usersArray.filter(user => 
+          user.roles && Array.isArray(user.roles) && user.roles.includes('manager')
+        );
+        
+        setManagerList(managers); // Set the dynamic list of managers
       }
     }, (error) => {
-      console.error("Firebase employees fetch error:", error);
-      // Handle employee fetch error if necessary
+      console.error("Firebase users fetch error:", error);
     });
 
     // Cleanup function: Unsubscribe from Firebase listeners when the component unmounts
     return () => {
       unsubscribeClients();
-      unsubscribeEmployees();
+      unsubscribeUsers();
     };
   }, []); 
 
@@ -128,7 +131,6 @@ const ClientManagement = () => {
   // const managers = [ ... ];
 
   // NEW: Dynamically create the manager list from the employees state
-  const managerList = employees.filter(emp => emp.roles && emp.roles.includes('manager'));
 
   const serviceOptions = [
     'All',
@@ -315,8 +317,12 @@ const ClientManagement = () => {
   };
 
   const getFilteredClients = () => {
-    let filtered = clients.filter(client => client.displayStatuses.includes(clientFilter));
-    if (selectedServiceFilter !== 'All') {
+let filtered = clients.filter(client => 
+        client.displayStatuses && 
+        Array.isArray(client.displayStatuses) && 
+        client.displayStatuses.includes(clientFilter)
+    );
+        if (selectedServiceFilter !== 'All') {
       filtered = filtered.filter(client => client.service === selectedServiceFilter);
     }
     const searchTermLower = clientSearchTerm.toLowerCase();
@@ -448,8 +454,9 @@ const ClientManagement = () => {
       <div className="all-services-list">
         {servicesToDisplay.map(service => {
           const clientsForService = clients.filter(client =>
-            client.displayStatuses.includes(clientFilter) &&
-            client.service === service &&
+client.displayStatuses && 
+            Array.isArray(client.displayStatuses) && 
+            client.displayStatuses.includes(clientFilter) &&            client.service === service &&
             ((client.firstName || '').toLowerCase().includes(clientSearchTerm.toLowerCase()) ||
              (client.lastName || '').toLowerCase().includes(clientSearchTerm.toLowerCase()) ||
              (client.email || '').toLowerCase().includes(clientSearchTerm.toLowerCase()))
@@ -1311,10 +1318,10 @@ const ClientManagement = () => {
                 {/* Client Filter Tabs */}
                 <div className="client-filter-tabs">
                   {[
-                    { label: 'Registered Clients', value: 'registered', count: clients.filter(c => c.displayStatuses.includes('registered')).length, activeBg: 'var(--client-filter-tab-bg-active-registered)', activeColor: 'var(--client-filter-tab-text-active-registered)', badgeBg: 'var(--client-filter-tab-badge-registered)' },
-                    { label: 'Unassigned Clients', value: 'unassigned', count: clients.filter(c => c.displayStatuses.includes('unassigned')).length, activeBg: 'var(--client-filter-tab-bg-active-unassigned)', activeColor: 'var(--client-filter-tab-text-active-unassigned)', badgeBg: 'var(--client-filter-tab-badge-unassigned)' },
-                    { label: 'Active Clients', value: 'active', count: clients.filter(c => c.displayStatuses.includes('active')).length, activeBg: 'var(--client-filter-tab-bg-active-active)', activeColor: 'var(--client-filter-tab-text-active-active)', badgeBg: 'var(--client-filter-tab-badge-active)' },
-                    { label: 'Rejected Clients', value: 'rejected', count: clients.filter(c => c.displayStatuses.includes('rejected')).length, activeBg: 'var(--client-filter-tab-bg-active-rejected)', activeColor: 'var(--client-filter-tab-text-active-rejected)', badgeBg: 'var(--client-filter-tab-badge-rejected)' },
+                    { label: 'Registered Clients', value: 'registered', count: clients.filter(c => c.displayStatuses && c.displayStatuses.includes('registered')).length, activeBg: 'var(--client-filter-tab-bg-active-registered)', activeColor: 'var(--client-filter-tab-text-active-registered)', badgeBg: 'var(--client-filter-tab-badge-registered)' },
+                    { label: 'Unassigned Clients', value: 'unassigned', count: clients.filter(c => c.displayStatuses && c.displayStatuses.includes('unassigned')).length, activeBg: 'var(--client-filter-tab-bg-active-unassigned)', activeColor: 'var(--client-filter-tab-text-active-unassigned)', badgeBg: 'var(--client-filter-tab-badge-unassigned)' },
+                    { label: 'Active Clients', value: 'active', count: clients.filter(c => c.displayStatuses && c.displayStatuses.includes('active')).length, activeBg: 'var(--client-filter-tab-bg-active-active)', activeColor: 'var(--client-filter-tab-text-active-active)', badgeBg: 'var(--client-filter-tab-badge-active)' },
+                    { label: 'Rejected Clients', value: 'rejected', count: clients.filter(c => c.displayStatuses && c.displayStatuses.includes('rejected')).length, activeBg: 'var(--client-filter-tab-bg-active-rejected)', activeColor: 'var(--client-filter-tab-text-active-rejected)', badgeBg: 'var(--client-filter-tab-badge-rejected)' },
                     // { label: 'Restore Clients', value: 'restored', count: clients.filter(c => c.displayStatuses.includes('restored')).length, activeBg: 'var(--client-filter-tab-bg-active-restored)', activeColor: 'var(--client-filter-tab-text-active-restored)', badgeBg: 'var(--client-filter-tab-badge-restored)' },
                   ].map((option) => (
                     <label
@@ -1446,15 +1453,18 @@ const ClientManagement = () => {
                             `${manager.firstName} ${manager.lastName}`.toLowerCase().includes(managerSearchTerm.toLowerCase())
                         )
                         .map(manager => (
-                            <div key={manager.id} className="manager-item" onClick={() => handleSelectManager(`${manager.firstName} ${manager.lastName}`)}>
-                                <div className="manager-avatar">{`${manager.firstName.charAt(0)}${manager.lastName.charAt(0)}`}</div>
+                            <div key={manager.firebaseKey} className="manager-item" onClick={() => handleSelectManager(`${manager.firstName} ${manager.lastName}`)}>
+                                <div className="manager-avatar">{`${(manager.firstName || ' ').charAt(0)}${(manager.lastName || ' ').charAt(0)}`}</div>
                                 <div className="manager-info">
                                     <div className="manager-name">{`${manager.firstName} ${manager.lastName}`}</div>
-                                    <div className="manager-email">{manager.personalEmail}</div>
+                                    <div className="manager-email">{manager.workEmail || manager.email}</div>
                                 </div>
                             </div>
                         ))
                       }
+                      {managerList.length === 0 && (
+                          <p style={{textAlign: 'center', color: 'var(--text-secondary)'}}>No managers found.</p>
+                      )}
                 </div>
             </div>
         </div>

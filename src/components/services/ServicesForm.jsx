@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Modal, Button } from 'react-bootstrap';
 import { database } from '../../firebase'; // Import your Firebase config
-import { ref, push, set } from "firebase/database";
+import { ref, push, set, update } from "firebase/database";
+import { useAuth } from '../../components/AuthContext';
 
 const ServicesForm = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const { user } = useAuth();
     
     const [formData, setFormData] = useState({
         firstName: '',
@@ -55,7 +57,6 @@ const ServicesForm = () => {
         e.preventDefault();
         
         const newClient = {
-            id: new Date().getTime(),
             name: `${formData.firstName} ${formData.lastName}`,
             firstName: formData.firstName,
             lastName: formData.lastName,
@@ -68,18 +69,15 @@ const ServicesForm = () => {
             displayStatuses: ['registered'],
             paymentStatus: 'Pending',
             country: 'N/A', // Default value
-            jobsApplyFor: '', // Not applicable for this form
         };
 
           try {
             // Get a reference to the 'clients' node in your database
-            const clientsRef = ref(database, 'clients');
+            const clientsRef = ref(database, `clients/${user.firebaseKey}`);
             // push() creates a new unique key for the client data
-            const newClientRef = push(clientsRef);
-            // set() saves the new client data to that location
-            await set(newClientRef, newClient);
+            await update(clientsRef, newClient);
 
-            console.log('Form data saved to Firebase successfully:', newClient);
+            console.log('Client details updated in Firebase successfully:', newClient);
             setShowSuccessModal(true);
             setTimeout(() => {
                 setShowSuccessModal(false);

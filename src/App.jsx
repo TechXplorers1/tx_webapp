@@ -73,12 +73,12 @@ const App = () => {
         <Route path="/services/it-talent-supply" element={<ITTalentSupply />} />
         <Route path="/services/job-support" element={<JobSupport />} />
         <Route path="/services/cyber-security" element={<CyberSecurity />} />
-        <Route path="/services/job-contact-form" element={<JobSupportContactForm />} />
-        <Route path="/services/servicesForm" element={<ServicesForm />} />
+        <Route path="/services/job-contact-form" element={<ProtectedRoute allowedRoles={['client']}><JobSupportContactForm /></ProtectedRoute>} />
+        <Route path="/services/servicesForm" element={<ProtectedRoute allowedRoles={['client']}><ServicesForm /></ProtectedRoute>} />
            {/* DashBoards */}
      {/* --- Protected Routes with Role-Based Access --- */}
             <Route path="/clientdashboard" element={<ProtectedRoute allowedRoles={['client']}><ClientDashboard /></ProtectedRoute>} />
-            <Route path="/assetworksheet" element={<ProtectedRoute allowedRoles={['asset_manager']}><AssetsWorksheet /></ProtectedRoute>} />
+            <Route path="/assetworksheet" element={<ProtectedRoute allowedRoles={['admin']}><AssetsWorksheet /></ProtectedRoute>} />
             <Route path="/reports" element={<ProtectedRoute allowedRoles={['admin', 'manager']}><Reports /></ProtectedRoute>} />
             <Route path="/employees" element={<ProtectedRoute allowedRoles={['employee']}><EmployeeData /></ProtectedRoute>} />
             <Route path="/workgroups" element={<ProtectedRoute allowedRoles={['admin', 'manager']}><WorkGroups /></ProtectedRoute>} />

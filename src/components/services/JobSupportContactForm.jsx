@@ -3,11 +3,13 @@ import { Container, Form, Button, Row, Col, Alert, Modal } from 'react-bootstrap
 import { useNavigate } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { database } from '../../firebase'; // Import your Firebase config
-import { ref, push, set } from "firebase/database";
+import { ref, push, set, update } from "firebase/database";
+import { useAuth } from '../../components/AuthContext';
 
 const JobSupportContactForm = () => {
   const navigate = useNavigate();
   const countryDropdownRef = useRef(null);
+  const { user } = useAuth();
 
   // Define the initial state for the form data
   const initialFormData = {
@@ -188,19 +190,19 @@ const JobSupportContactForm = () => {
       jobPortalAccountName: formData.jobPortalAccountNameandCredentials,
     };
      try {
+      if (!user || !user.firebaseKey) {
+        throw new Error("User is not logged in or is missing a key.");
+      }
       // Save the new client to the 'clients' node in Firebase
-      const clientsRef = ref(database, 'clients');
-      const newClientRef = push(clientsRef);
-      await set(newClientRef, newClient);
+      const clientsRef = ref(database, `clients/${user.firebaseKey}`);
+      await update(clientsRef, newClient);
       
-      console.log("Form data saved to Firebase successfully:", newClient);
+        console.log("Client details updated in Firebase:", newClient);
       setSubmitStatus({ success: true, message: 'Form submitted successfully!' });
-      setFormData(initialFormData);
-      setShowPreviewModal(false);
-      setTimeout(() => { navigate('/'); }, 2000);
+      // ... (rest of the success logic)
     } catch (error) {
       setSubmitStatus({ success: false, message: 'Submission failed. Please try again.' });
-      console.error("Failed to save to Firebase", error);
+      console.error("Failed to update client in Firebase", error);
     } finally {
       setIsSubmitting(false);
     }

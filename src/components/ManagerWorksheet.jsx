@@ -14,6 +14,10 @@ const ManagerWorkSheet = () => {
     return savedTheme ? savedTheme : 'light';
   });
 
+  const [clients, setClients] = useState([]); // REMOVE THIS LINE
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   // State to manage the active tab, now including 'Assigned', 'Interviews', 'Notes'
   const [activeTab, setActiveTab] = useState('Assignments'); // Default to 'Assignments'
 
@@ -50,13 +54,80 @@ const ManagerWorkSheet = () => {
 
   // NEW: useEffect to get logged-in user data from sessionStorage
  useEffect(() => {
-    const loggedInUserData = sessionStorage.getItem('loggedInEmployee');
-    if (loggedInUserData) {
-      const userData = JSON.parse(loggedInUserData);
-      // Update the state with the full user object
-      setUserProfile(userData); 
-      setUserName(userData.name); // Keep setting userName for the welcome message
+    const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInEmployee'));
+    const managerFullName = loggedInUserData ? `${loggedInUserData.firstName} ${loggedInUserData.lastName}` : null;
+
+    if (!managerFullName) {
+        setLoading(false);
+        return; 
     }
+
+    const clientsRef = ref(database, 'clients');
+    const usersRef = ref(database, 'users'); // Reference the 'users' node
+
+    const unsubscribeClients = onValue(clientsRef, (snapshot) => {
+      const data = snapshot.val();
+      const clientsArray = data ? Object.keys(data).map(key => ({ firebaseKey: key, ...data[key] })) : [];
+      
+      // Filter clients into "Unassigned" and "Assigned" specifically for the logged-in manager
+      const unassignedForManager = clientsArray.filter(c => c.manager === managerFullName && c.status === 'unassigned');
+      const assignedByManager = clientsArray.filter(c => c.manager === managerFullName && c.status === 'assigned');
+
+      setUnassignedClients(unassignedForManager);
+      setAssignedClients(assignedByManager);
+
+      // Process applications and interviews based ONLY on this manager's assigned clients
+      const allApplications = assignedByManager.flatMap(client => 
+          (client.jobApplications || []).map(app => ({
+              ...app,
+              clientFirebaseKey: client.firebaseKey,
+              clientName: `${client.firstName} ${client.lastName}`,
+              assignedTo: client.assignedTo,
+          }))
+      );
+      setApplicationData(allApplications);
+
+      const allInterviews = assignedByManager.flatMap(client => 
+          (client.jobApplications || [])
+              .filter(app => app.status === 'Interview')
+              .map(app => ({ ...app, clientName: `${client.firstName} ${client.lastName}`, assignedTo: client.assignedTo }))
+      );
+      setInterviewData(allInterviews);
+      
+      setLoading(false);
+    }, (err) => {
+        console.error("Firebase clients fetch error:", err);
+        setError(err.message);
+        setLoading(false);
+    });
+
+    // --- MODIFIED: Fetch all users and filter for employees ---
+    const unsubscribeUsers = onValue(usersRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const usersArray = Object.keys(data).map(key => ({
+          firebaseKey: key,
+          ...data[key]
+        }));
+        
+        // This list will be used for displaying details and general lookups
+        setAllEmployees(usersArray); 
+        
+        // Create a specific list for the assignment modal, containing only 'employees'
+        const employeesOnly = usersArray.filter(user => 
+          user.roles && Array.isArray(user.roles) && user.roles.includes('employee')
+        );
+        setEmployeesForAssignment(employeesOnly);
+      }
+    }, (error) => {
+      console.error("Firebase users fetch error:", error);
+    });
+
+    // Cleanup listeners when the component unmounts
+    return () => {
+      unsubscribeClients();
+      unsubscribeUsers();
+    };
   }, []);
 
   useEffect(() => {
@@ -1239,7 +1310,7 @@ const ManagerWorkSheet = () => {
 
 
   // Handler for "Assign Client" or "Reassign Client" button submission
-  const handleAssignmentSubmit = () => {
+  const handleAssignmentSubmit = async () => {
     const isReassignment = !!clientToReassign;
     const clientToProcess = isReassignment ? clientToReassign : selectedClientToAssign;
 
@@ -1248,24 +1319,17 @@ const ManagerWorkSheet = () => {
       return;
     }
 
-    const employeeInfo = allEmployees.find(emp => emp.id === parseInt(selectedEmployee));
-    if (!employeeInfo) {
-      alert('Selected employee not found.');
-      return;
-    }
+    const employeeInfo = allEmployees.find(emp => emp.firebaseKey === selectedEmployee);
+   
     const employeeFullName = `${employeeInfo.firstName} ${employeeInfo.lastName}`;
-    const assignmentDate = new Date().toISOString().slice(0, 10);
+        const clientRef = ref(database, `clients/${clientToProcess.firebaseKey}`);
 
-    // --- LOGIC for Manager's own state and localStorage ---
-    let updatedAssignedClients;
-    let updatedUnassignedClients;
 
     // Create a comprehensive client object with all necessary fields for the manager's view
-    const newAssignedClient = {
-      ...clientToProcess,
+    const updates = {
       assignedTo: employeeFullName,
       status: 'assigned', // Status for the manager's "Total assigned Clients" view
-      assignedDate: assignmentDate,
+      assignedDate: new Date().toISOString().split('T')[0],
       priority: assignmentPriority, // Add priority from the modal's state
       // Add additional fields for consistent display in the "Total assigned Clients" table
       clientName: clientToProcess.name || `${clientToProcess.firstName} ${clientToProcess.lastName}`,
@@ -1274,45 +1338,24 @@ const ManagerWorkSheet = () => {
       company: clientToProcess.currentCompany || 'Not specified',
       location: clientToProcess.address ? clientToProcess.address.split(',').slice(-2).join(', ').trim() : 'Not specified',
     };
+    try {
+      await update(clientRef, updates);
 
-    if (isReassignment) {
-      // Reassignment Logic
-      updatedAssignedClients = assignedClients.map(client =>
-        client.id === clientToProcess.id
-          ? { ...client, assignedTo: employeeFullName, assignedDate: assignmentDate, priority: assignmentPriority }
-          : client
-      );
-      setSuccessMessage(`Successfully reassigned ${clientToProcess.clientName} to ${employeeFullName}.`);
-      closeReassignClientModal();
-    } else {
-      // New Assignment Logic
-      updatedAssignedClients = [...assignedClients, newAssignedClient];
-      updatedUnassignedClients = unassignedClients.filter(c => c.id !== clientToProcess.id);
+      // --- THE BLOCK OF CODE THAT SENT CLIENTS TO THE EMPLOYEE'S LOCALSTORAGE HAS BEEN REMOVED FROM HERE ---
+      
+      setSuccessMessage(`Successfully assigned ${clientToProcess.firstName} to ${employeeFullName}.`);
+      setShowSuccessModal(true);
+      
+      if (isReassignment) {
+        closeReassignClientModal();
+      } else {
+        closeAssignClientModal();
+      }
 
-      setUnassignedClients(updatedUnassignedClients);
-      localStorage.setItem('manager_unassigned_clients', JSON.stringify(updatedUnassignedClients));
-
-      setSuccessMessage(`Successfully assigned ${newAssignedClient.clientName} to ${employeeFullName}.`);
-      closeAssignClientModal();
+    } catch (error) {
+        console.error("Firebase update failed:", error);
+        alert("Failed to assign client. Please try again.");
     }
-
-    setAssignedClients(updatedAssignedClients);
-    localStorage.setItem('manager_assigned_clients', JSON.stringify(updatedAssignedClients));
-
-    // --- LOGIC to send client to EmployeeData page ---
-    const employeeNewClients = JSON.parse(localStorage.getItem('employee_new_clients')) || [];
-    if (!employeeNewClients.some(c => c.id === clientToProcess.id)) {
-      // Use the newly created comprehensive 'newAssignedClient' object
-      // but set the status to 'new' for the employee's perspective.
-      const clientForEmployee = {
-        ...newAssignedClient,
-        status: 'new', // This status is for the "New Clients" tab in EmployeeData
-        initials: getInitials(newAssignedClient.clientName)
-      };
-      localStorage.setItem('employee_new_clients', JSON.stringify([...employeeNewClients, clientForEmployee]));
-    }
-
-    setShowSuccessModal(true);
   };
 
   // Handler for "Quick Assign" button
@@ -1438,9 +1481,7 @@ const ManagerWorkSheet = () => {
     return hasEmployeeRole && matchesSearch;
   });
 
-  const employeesForAssignment = displayEmployees.filter(employee =>
-    employee.roles && employee.roles.includes('employee')
-  );
+   const [employeesForAssignment, setEmployeesForAssignment] = useState([]);
 
 
   // NEW: Function to open Client Preview/Edit Modal
@@ -4439,7 +4480,7 @@ const ApplicationsTab = ({ applicationData, employees }) => {
               <label>Select Employee</label>
               <div className="pseudo-input" onClick={() => setIsEmployeeSelectModalOpen(true)}>
                 {selectedEmployee
-                  ? employeesForAssignment.find(e => e.id === parseInt(selectedEmployee))?.fullName
+                  ? employeesForAssignment.find(e => e.firebaseKey === parseInt(selectedEmployee))?.fullName
                   : "Click to choose an employee..."
                 }
               </div>
@@ -4447,7 +4488,7 @@ const ApplicationsTab = ({ applicationData, employees }) => {
 
             {/* The confirmation box still works perfectly! */}
             {selectedEmployee && (() => {
-              const employeeDetails = employeesForAssignment.find(e => e.id === parseInt(selectedEmployee));
+              const employeeDetails = employeesForAssignment.find(e => e.firebaseKey === selectedEmployee);
               if (!employeeDetails) return null;
 
               return (
@@ -4494,19 +4535,19 @@ const ApplicationsTab = ({ applicationData, employees }) => {
             <div className="employee-select-list">
               {employeesForAssignment.map(employee => (
                 <div
-                  key={employee.id}
+                  key={employee.firebaseKey}
                   className="employee-select-item"
                   onClick={() => {
-                    setSelectedEmployee(employee.id); // Set the selected employee's ID
+                    setSelectedEmployee(employee.firebaseKey); // Set the selected employee's ID
                     setIsEmployeeSelectModalOpen(false); // Close this modal
                   }}
                 >
                   <div className="employee-select-info">
-                    <strong>{employee.fullName}</strong>
-                    <span>{employee.role}</span>
+                    <strong>{`${employee.firstName} ${employee.lastName}`}</strong>
+                    <span>{employee.role || (employee.roles && employee.roles.join(', '))}</span>
                   </div>
                   <div className="clients-count-badge">
-                    {employee.assignedClients} clients
+                    {displayEmployees.find(e => e.firebaseKey === employee.firebaseKey)?.assignedClients || 0} clients
                   </div>
                 </div>
               ))}
@@ -4548,7 +4589,7 @@ const ApplicationsTab = ({ applicationData, employees }) => {
                 </thead>
                 <tbody>
                   {assignedClients.map((client) => (
-                    <tr key={client.id}>
+                    <tr key={client.firebaseKey}>
                       <td>
                         <div className="employee-cell"> {/* Reusing employee-cell for client avatar/name layout */}
                           <div className="employee-avatar">
@@ -4625,7 +4666,7 @@ const ApplicationsTab = ({ applicationData, employees }) => {
                 // FIX: Changed .name to .fullName for correct filtering
                 .filter(client => client.assignedTo === selectedEmployeeForClients.fullName)
                 .map(client => (
-                  <div key={client.id} className="employee-client-card">
+                  <div key={client.firebaseKey} className="employee-client-card">
                     <div className="employee-client-card-header">
                       <span className="employee-client-name">{client.clientName}</span>
                       <span className={`modal-client-priority-badge ${client.priority}`}>

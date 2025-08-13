@@ -60,7 +60,7 @@ const EmployeeManagement = () => {
   departmentOptions.unshift('No department assigned');
 
   const roleOptions = [
-    { value: 'Administrator', label: 'Administrator', description: 'Full system access and employee management' },
+    { value: 'Admin', label: 'Admin', description: 'Full system access and employee management' },
     { value: 'Manager', label: 'Manager', description: 'Manages teams and oversees operations' },
     { value: 'Team Lead', label: 'Team Lead', description: 'Leads a team and monitors activities' },
     { value: 'Employee', label: 'Employee', description: 'Standard employee access for job processing' },
@@ -82,21 +82,31 @@ const EmployeeManagement = () => {
   );
 
 
-    useEffect(() => {
-    const employeesRef = ref(database, 'employees');
+   useEffect(() => {
+    const usersRef = ref(database, 'users');
     
     // Set up a listener for real-time data fetching
-    const unsubscribe = onValue(employeesRef, (snapshot) => {
+    const unsubscribe = onValue(usersRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        // Firebase returns data as an object with unique keys; convert it to an array
-        const employeesArray = Object.keys(data).map(key => ({
+        // Firebase returns an object; convert it to an array
+        const allUsersArray = Object.keys(data).map(key => ({
           firebaseKey: key, // Keep the Firebase key for future updates/deletes
           ...data[key]
         }));
-        setEmployees(employeesArray);
+
+        // --- NEW: Filter for users with the 'employee' role ---
+        const filteredUsers = allUsersArray.filter(user => 
+            user.roles && Array.isArray(user.roles) && (
+                user.roles.includes('employee') || 
+                user.roles.includes('admin') || 
+                user.roles.includes('manager')
+            )
+        );
+
+        setEmployees(filteredUsers);
       } else {
-        setEmployees([]); // Handle case where there are no employees
+        setEmployees([]); // Handle case where there are no users
       }
       setLoading(false);
     }, (error) => {
@@ -112,7 +122,7 @@ const EmployeeManagement = () => {
    useEffect(() => {
           const loadEmployees = async () => {
               try {
-                  const savedEmployees = localStorage.getItem('employees');
+                  const savedEmployees = localStorage.getItem('users');
                   if (savedEmployees && JSON.parse(savedEmployees).length > 0) {
                       setEmployees(JSON.parse(savedEmployees));
                   } else {
@@ -135,13 +145,13 @@ const EmployeeManagement = () => {
   
       useEffect(() => {
           if (!loading && employees.length > 0) {
-              localStorage.setItem('employees', JSON.stringify(employees));
+              localStorage.setItem('users', JSON.stringify(employees));
           }
       }, [employees, loading]);
   
       useEffect(() => {
           const handleStorageChange = (event) => {
-              if (event.key === 'employees' && event.newValue) {
+              if (event.key === 'users' && event.newValue) {
                   try {
                       setEmployees(JSON.parse(event.newValue));
                   } catch (error) {
@@ -206,6 +216,17 @@ const EmployeeManagement = () => {
  const handleCreateEmployeeAccount = async (e) => {
     e.preventDefault();
     
+     const newRole = newEmployee.role.toLowerCase();
+    let roles = [
+        newRole,
+        newEmployee.accountStatus.toLowerCase(),
+        ...(newEmployee.department !== 'No department assigned' ? [newEmployee.department.toLowerCase()] : [])
+    ];
+
+    // --- FIX: Ensure 'employee' role is included for managers/admins ---
+    if ((newRole === 'admin' || newRole === 'manager') && !roles.includes('employee')) {
+        roles.push('employee');
+    }
     // Construct the new employee object from the form state
    const newEmployeeData = {
       // Personal Info
@@ -239,12 +260,15 @@ const EmployeeManagement = () => {
       ]
     };
 
-     try {
-      const employeesRef = ref(database, 'employees');
-      const newEmployeeRef = push(employeesRef);
+      try {
+      const usersRef = ref(database, 'users'); // Correctly save to 'users' node
+      const newEmployeeRef = push(usersRef);
+
+      newEmployeeData.firebaseKey = newEmployeeRef.key;
+      
       await set(newEmployeeRef, newEmployeeData);
       
-      console.log("Employee created successfully in Firebase by Admin!");
+      console.log("Employee created successfully in Firebase!");
       handleCloseAddEmployeeModal();
 
     } catch (error) {
@@ -372,8 +396,8 @@ const EmployeeManagement = () => {
     delete updatedData.id; // Remove the old numeric ID if it exists
 
     try {
-        const employeeRef = ref(database, `employees/${firebaseKey}`);
-        await update(employeeRef, updatedData);
+        const usersRef = ref(database, `users/${firebaseKey}`);
+        await update(usersRef, updatedData);
         console.log("Employee updated successfully in Firebase!");
     } catch (error) {
         console.error("Error updating employee in Firebase:", error);
@@ -400,8 +424,8 @@ const EmployeeManagement = () => {
     }
 
     try {
-        const employeeRef = ref(database, `employees/${employeeToDeleteDetails.firebaseKey}`);
-        await remove(employeeRef);
+        const usersRef = ref(database, `users/${employeeToDeleteDetails.firebaseKey}`);
+        await remove(usersRef);
         console.log("Employee deleted successfully from Firebase!");
     } catch (error) {
         console.error("Error deleting employee from Firebase:", error);
@@ -856,7 +880,7 @@ const EmployeeManagement = () => {
             </div>
             <div className="employee-list">
                {filteredEmployees.map(employee => (
-                <div className="employee-card" key={employee.firebaseKey}> {/* Use firebaseKey as the key */}
+                <div className="employee-card" key={employee.firebaseKey}>
                   <div className="employee-card-left">
                     <div className="employee-avatar">{getInitials(`${employee.firstName} ${employee.lastName}`)}</div>
                     <div className="employee-info">

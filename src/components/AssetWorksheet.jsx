@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Bell, User, ChevronDown, Plus, Search, Info, X, Tag, Calendar, MapPin, Hash, Edit, Trash2, LogOut, Settings, CheckCircle, Wrench, DollarSign, FilterX } from 'lucide-react';
+import { getDatabase, ref, onValue, push, set, remove, update } from "firebase/database";
+import { database } from '../firebase';
+
 
 const AssetWorksheet = () => {
   // State variables for managing UI and data
@@ -27,20 +30,39 @@ const AssetWorksheet = () => {
   const notificationsRef = useRef(null);
 
   // Data
-  const [assets, setAssets] = useState([
-    { id: 'TXP-LT-001', name: 'Dell Latitude 5520', type: 'Laptop', status: 'available', assignedTo: 'Unassigned', assignedDate: null, location: 'Branch 1', value: '$1,200', brand: 'Dell', purchaseDate: '15/03/2023', serialNumber: 'DLT-001-2023', returnDate: null },
-    { id: 'TXP-LT-004', name: 'Dell Latitude 5520', type: 'Laptop', status: 'available', assignedTo: 'Unassigned', assignedDate: null, location: 'Branch 1', value: '$1,200', brand: 'Dell', purchaseDate: '15/03/2023', serialNumber: 'DLT-004-2023', returnDate: null },
-    { id: 'TXP-LT-002', name: 'MacBook Pro 14"', type: 'Laptop', status: 'available', assignedTo: 'Unassigned', assignedDate: null, location: 'Branch 1', value: '$2,500', brand: 'Apple', purchaseDate: '20/06/2023', serialNumber: 'MBP-002-2023', returnDate: null },
-    { id: 'TXP-MON-001', name: 'Dell Ultrasharp U2720Q', type: 'Monitor', status: 'available', assignedTo: 'Unassigned', assignedDate: null, location: 'Branch 1', value: '$400', brand: 'Dell', purchaseDate: '10/02/2024', serialNumber: 'DMON-001-2024', returnDate: null },
-    { id: 'TXP-DT-001', name: 'HP EliteDesk 800 G9', type: 'Desktop', status: 'assigned', assignedTo: 'Prakash', assignedDate: '10/07/2024', location: 'Branch 2', value: '$800', brand: 'HP', purchaseDate: '05/09/2022', serialNumber: 'HPDT-001-2022', returnDate: null },
-    { id: 'TXP-MB-001', name: 'iPhone 15 Pro', type: 'Mobile', status: 'in maintenance', assignedTo: 'Unassigned', assignedDate: null, location: 'Branch 2', value: '$1,000', brand: 'Apple', purchaseDate: '12/11/2023', serialNumber: 'IP-001-2023', returnDate: null },
-    { id: 'TXP-LT-003', name: 'Lenovo ThinkPad', type: 'Laptop', status: 'assigned', assignedTo: 'Sai', assignedDate: '01/06/2024', location: 'Branch 1', value: '$1,100', brand: 'Lenovo', purchaseDate: '10/01/2023', serialNumber: 'LNV-003-2023', returnDate: '18/07/2025' },
-    { id: 'TXP-MSE-001', name: 'Logitech MX Master 3', type: 'Mouse', status: 'available', assignedTo: 'Unassigned', assignedDate: null, location: 'Branch 1', value: '$99', brand: 'Logitech', purchaseDate: '01/01/2024', serialNumber: null, returnDate: null },
-    { id: 'TXP-MSE-002', name: 'Logitech MX Master 3', type: 'Mouse', status: 'available', assignedTo: 'Unassigned', assignedDate: null, location: 'Branch 1', value: '$99', brand: 'Logitech', purchaseDate: '01/01/2024', serialNumber: null, returnDate: null },
-  ]);
+  const [assets, setAssets] = useState([]);
+  const [users, setUsers] = useState([]); // This will hold all users with roles
+  const [loading, setLoading] = useState(true);
 
-  const users = ['Prakash', 'Sai', 'Bharath', 'Chaveen', 'Sandeep', 'Sapare', 'Humer', 'Unassigned'];
   const branchLocations = ['Branch 1', 'Branch 2'];
+
+     useEffect(() => {
+    const assetsRef = ref(database, 'assets');
+    const usersRef = ref(database, 'users');
+
+    // Listener for Assets
+    const unsubscribeAssets = onValue(assetsRef, (snapshot) => {
+      const data = snapshot.val();
+      const assetsArray = data ? Object.keys(data).map(key => ({ firebaseKey: key, ...data[key] })) : [];
+      setAssets(assetsArray);
+      setLoading(false);
+    });
+
+    // Listener for Users (to populate assignment dropdowns)
+    const unsubscribeUsers = onValue(usersRef, (snapshot) => {
+      const data = snapshot.val();
+      const usersArray = data ? Object.keys(data).map(key => ({ firebaseKey: key, ...data[key] })) : [];
+      // Filter for users who can be assigned assets
+      const assignableUsers = usersArray.filter(u => u.roles && (u.roles.includes('employee') || u.roles.includes('manager') || u.roles.includes('admin')));
+      setUsers(assignableUsers);
+    });
+
+    // Cleanup listeners on component unmount
+    return () => {
+      unsubscribeAssets();
+      unsubscribeUsers();
+    };
+  }, []);
 
   // Helper to check if an asset should be considered available
   const isAssetConsideredAvailable = (asset) => {
@@ -185,19 +207,48 @@ const AssetWorksheet = () => {
     window.location.href = '/';
   };
 
-  const handleAssignAsset = (assignedAssetId, assignedUser, assignmentReason, assignedDate) => {
+  const handleAssignAsset = async (assignedAssetId, assignedUser, assignmentReason, assignedDate) => {
     const assetToAssign = assets.find(a => a.id === assignedAssetId);
-    setAssets(prevAssets => prevAssets.map(asset =>
-      asset.id === assignedAssetId
-        ? { ...asset, status: 'assigned', assignedTo: assignedUser, assignedDate: assignedDate, returnDate: null }
-        : asset
-    ));
-    setShowAssignAssetModal(false);
-    setNotifications(prev => [{ id: Date.now(), message: `Asset "${assetToAssign?.name}" assigned to ${assignedUser}.`, timestamp: new Date() }, ...prev]);
+    if (!assetToAssign) {
+        console.error("Asset to assign not found");
+        return;
+    }
+
+    const assetRef = ref(database, `assets/${assetToAssign.firebaseKey}`);
+
+    try {
+        await update(assetRef, {
+            status: 'assigned',
+            assignedTo: assignedUser,
+            assignedDate: assignedDate,
+            returnDate: null // Clear return date on new assignment
+        });
+      setShowAssignAssetModal(false);
+        setNotifications(prev => [{ id: Date.now(), message: `Asset "${assetToAssign.name}" assigned to ${assignedUser}.`, timestamp: new Date() }, ...prev]);
+    } catch (error) {
+        console.error("Failed to assign asset in Firebase:", error);
+        alert("Error assigning asset. Please try again.");
+    }
   };
   
-  const handleAddAsset = (newAssets) => {
-    setAssets(prevAssets => [...prevAssets, ...newAssets]);
+  const handleAddAsset = async (newAssets) => {
+    const assetsRef = ref(database, 'assets');
+    
+    // Use a loop to handle creating multiple assets if quantity > 1
+    for (const newAsset of newAssets) {
+      try {
+        const newAssetRef = push(assetsRef); // Generate a new unique key
+        await set(newAssetRef, {
+            ...newAsset,
+            id: newAssetRef.key // Use the Firebase key as the primary ID
+        });
+      } catch (error) {
+        console.error("Failed to add new asset to Firebase:", error);
+        alert("There was an error adding the asset. Please try again.");
+        return; // Stop if one fails
+      }
+    }
+    
     setShowAddAssetModal(false);
     setNotifications(prev => [{ 
       id: Date.now(), 
@@ -513,7 +564,11 @@ const AssetWorksheet = () => {
                     ))}
                 </select>
             </div>
-            <div className="form-group" style={{marginTop: '16px'}}><label className="form-label">Assign to Employee *</label><select className="form-select" value={assignedUser} onChange={(e) => setAssignedUser(e.target.value)} required><option value="">Choose an Employee</option>{users.filter(u => u !== 'Unassigned').map(u => (<option key={u} value={u}>{u}</option>))}</select></div>
+            <div className="form-group" style={{marginTop: '16px'}}><label className="form-label">Assign to Employee *</label><select className="form-select" value={assignedUser} onChange={(e) => setAssignedUser(e.target.value)} required><option value="">Choose an Employee</option>{users.map(user => (
+    <option key={user.firebaseKey} value={`${user.firstName} ${user.lastName}`}>
+      {`${user.firstName} ${user.lastName}`} ({user.email})
+    </option>
+  ))}</select></div>
             <div className="form-group" style={{marginTop: '16px'}}><label className="form-label">Assigned Date *</label><input type="text" value={assignedDate} className="form-input" readOnly /></div>
             <div className="form-group" style={{marginTop: '16px'}}><label className="form-label">Assignment Reason *</label><textarea placeholder="Reason for assignment..." className="form-textarea" rows="3" value={assignmentReason} onChange={(e) => setAssignmentReason(e.target.value)} required></textarea></div>
             <div className="modal-footer"><button type="button" className="modal-button cancel" onClick={onClose}>Cancel</button><button type="submit" className="modal-button primary">Assign Asset</button></div>

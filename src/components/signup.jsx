@@ -73,7 +73,9 @@ export default function SignupPage() {
         navigate('/adminpage');
     } else if (finalUserData.roles.includes('manager')) {
         navigate('/managerworksheet');
-    } else {
+    } else if (finalUserData.roles.includes('employee')) {
+        navigate('/employees');
+    }else {
         navigate('/clientdashboard'); // Default for clients
     }
   };
@@ -107,10 +109,23 @@ export default function SignupPage() {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        await set(ref(database, 'users/' + user.uid), {
+         const userRecord = {
           email: user.email,
           roles: ['client'],
-        });
+        };
+
+         await set(ref(database, 'users/' + user.uid), userRecord);
+
+          const clientRecord = {
+          email: user.email,
+          firstName: user.email.split('@')[0], // Use part of email as a temporary name
+          lastName: '',
+          displayStatuses: ['registered'],
+          // Add other default fields as needed
+        };
+
+        await set(ref(database, 'clients/' + user.uid), clientRecord);
+
         
         setShowSuccessModal(true);
 

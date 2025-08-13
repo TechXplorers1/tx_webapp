@@ -42,16 +42,14 @@ export default function LoginPage() {
         // User exists, get their data
         userDataFromDb = snapshot.val();
     } else {
-        // New user (signed in via Google for the first time)
-        // Create a new record for them in the database
-        userDataFromDb = {
-            email: user.email,
-            roles: ['client'], // Assign a default role
-        };
+        userDataFromDb = { email: user.email, roles: ['client'] };
         await set(ref(database, 'users/' + user.uid), userDataFromDb);
+        // Also create the placeholder client record for new Google users
+        await set(ref(database, 'clients/' + user.uid), { email: user.email, firstName: user.email.split('@')[0], lastName: '' });
     }
     
     const finalUserData = {
+       firebaseKey: user.uid, // --- ADD THIS LINE ---
         uid: user.uid,
         email: user.email,
         roles: userDataFromDb.roles || ['client'],
@@ -66,6 +64,8 @@ export default function LoginPage() {
         navigate('/adminpage');
     } else if (finalUserData.roles.includes('manager')) {
         navigate('/managerworksheet');
+    } else if (finalUserData.roles.includes('employee')) {
+        navigate('/employees');
     } else {
         navigate('/clientdashboard'); // Default for clients
     }
