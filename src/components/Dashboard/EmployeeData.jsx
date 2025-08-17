@@ -1,8 +1,11 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback,useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Modal } from 'react-bootstrap'; // Using react-bootstrap Modal
-import { getDatabase, ref, update } from "firebase/database";
+import { getDatabase, ref, onValue, query, orderByChild, equalTo, update, remove, set } from "firebase/database";
+import { database } from '../../firebase'; // Import your Firebase config
 
+
+  const simplifiedServices = ['Mobile Development', 'Web Development', 'Digital Marketing', 'IT Talent Supply', 'Cyber Security'];
 
 
 // AdminHeader Component - Provided by the user
@@ -407,16 +410,37 @@ const EmployeeData = () => {
 
   // NEW: useEffect to get logged-in user data from sessionStorage
   // Update useEffect to get the full employee object from sessionStorage
-  useEffect(() => {
-    const loggedInUserData = sessionStorage.getItem('loggedInEmployee');
-    if (loggedInUserData) {
-        const userData = JSON.parse(loggedInUserData);
-        // Set the state with the full user object from login
-        setEmployeeDetails(userData);
-    } else {
-        // navigate('/'); // Optional: redirect if not logged in
+useEffect(() => {
+    const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInEmployee'));
+    const employeeFullName = loggedInUserData ? `${loggedInUserData.firstName} ${loggedInUserData.lastName}` : null;
+
+    if (!employeeFullName) {
+      console.warn("No employee is logged in.");
+      return; 
     }
-  }, [navigate]); // Add navigate to dependency array
+
+    const clientsRef = ref(database, 'clients');
+
+    const unsubscribe = onValue(clientsRef, (snapshot) => {
+      const data = snapshot.val();
+      const allClients = data ? Object.keys(data).map(key => ({ firebaseKey: key, ...data[key] })) : [];
+
+      // Filter for clients assigned to THIS employee
+      const myClients = allClients.filter(client => client.assignedTo === employeeFullName);
+
+      // --- Separate clients into tabs based on their status ---
+      const newAssigned = myClients.filter(c => c.assignmentStatus === 'pending_acceptance'); // 'assigned' is the "New" status for employees
+      const active = myClients.filter(c => c.assignmentStatus === 'active');
+      const inactive = myClients.filter(c => c.assignmentStatus === 'inactive');
+
+      setNewClients(newAssigned);
+      setActiveClients(active);
+      setInactiveClients(inactive);
+    });
+
+    // Cleanup listener on unmount
+    return () => unsubscribe();
+  }, []);
 
   // NEW: Temporary state for editing profile
   const [editedEmployeeDetails, setEditedEmployeeDetails] = useState({});
@@ -598,213 +622,7 @@ const EmployeeData = () => {
   }, []);
 
   // Mock data for employee's assigned clients (now only accepted clients)
-  const [activeClients, setActiveClients] = useState(() => {
-    const savedActiveClients = localStorage.getItem('employee_active_clients');
-    if (savedActiveClients) {
-      return JSON.parse(savedActiveClients);
-    }
-    // Fallback to initial hardcoded data if nothing is in local storage
-    return [
-      {
-      id: 11,
-      initials: 'JA',
-      name: 'John Anderson',
-      code: 'C001',
-      status: 'active',
-      priority: 'high',
-      role: 'Frontend Developer',
-      location: 'San Francisco, CA',
-      salaryRange: '$90,000 - $120,000',
-      lastActivity: '6/21/2025',
-      applicationsCount: 3,
-      filesCount: 3,
-      resumeUpdates: [
-        { date: '2025-06-21', type: 'Resume', status: 'Updated', details: 'Added new project experience' },
-        { date: '2025-06-15', type: 'LinkedIn Profile', status: 'Reviewed', details: 'Optimized keywords' },
-        { date: '2025-06-10', type: 'Resume', status: 'Draft 2 Sent', details: 'Revised for client feedback' },
-      ],
-      jobApplications: [
-        { id: 101, clientId: 1, jobTitle: 'Full Stack Developer', company: 'WebTech Solutions', platform: 'LinkedIn', status: 'Applied', appliedDate: '2025-06-21', jobUrl: 'https://example.com/job1', salaryRange: '$90,000 - $110,000', location: 'San Francisco, CA', notes: 'Initial application sent.', jobId: 'WEBFS101' },
-        { id: 102, clientId: 1, jobTitle: 'Senior Frontend Developer', company: 'TechFlow Inc', platform: 'LinkedIn', status: 'Interview', appliedDate: '2025-06-20', jobUrl: 'https://example.com/job2', salaryRange: '$100,000 - $120,000', location: 'Remote', notes: 'Interview scheduled for next week.', jobId: 'TFSE202', round: '1', interviewDate: '2025-07-01', recruiterMail:'accenture@gmail.com' }, // Added round and interviewDate
-        { id: 103, clientId: 1, jobTitle: 'React Developer', company: 'StartupXYZ', platform: 'Indeed', status: 'Applied', appliedDate: '2025-06-19', jobUrl: 'https://example.com/job3', salaryRange: '$80,000 - $100,000', location: 'New York, NY', notes: 'Followed up via email.', jobId: 'SXYZRD303' },
-      ],
-      files: [
-        { id: 1001, clientId: 1, name: 'john_anderson_resume_2025.pdf', size: '245 KB', type: 'resume', status: 'Uploaded', uploadDate: '2025-06-15', notes: '' },
-        { id: 1002, clientId: 1, name: 'techflow_interview_screenshot.png', size: '1.2 MB', type: 'interview screenshot', status: 'Uploaded', uploadDate: '2025-06-21', notes: 'Interview invitation for Senior Frontend Developer position' },
-        { id: 1003, clientId: 1, name: 'john_cover_letter.pdf', size: '98 KB', type: 'cover letter', status: 'Uploaded', uploadDate: '2025-06-16', notes: '' },
-      ],
-      // NEW: Extended client data fields
-      firstName: 'John',
-      middleName: '',
-      lastName: 'Anderson',
-      dob: '1990-05-15',
-      gender: 'Male',
-      ethnicity: 'Caucasian',
-      address: '123 Main St, San Francisco, CA',
-      zipCode: '94105',
-      mobile: '123-456-7890',
-      email: 'john.anderson@example.com',
-      securityClearance: 'Yes',
-      clearanceLevel: 'Top Secret',
-      willingToRelocate: 'Yes',
-      workPreference: 'Hybrid',
-      restrictedCompanies: 'None',
-      jobsToApply: 'Frontend, Fullstack',
-      technologySkills: 'React, JavaScript, HTML, CSS, Node.js',
-      currentSalary: '$110,000',
-      expectedSalary: '$130,000',
-      visaStatus: 'H1B',
-      otherVisaStatus: '',
-      schoolName: 'University of California, Berkeley',
-      schoolAddress: 'Berkeley, CA',
-      schoolPhone: '555-123-4567',
-      courseOfStudy: 'Computer Science',
-      graduationDate: '2012-05-20',
-      currentCompany: 'WebTech Solutions',
-      currentDesignation: 'Senior Frontend Developer',
-      preferredInterviewTime: 'Morning',
-      earliestJoiningDate: '2025-08-01',
-      relievingDate: '2025-07-31',
-      referenceName: 'Jane Smith',
-      referencePhone: '555-987-6543',
-      referenceAddress: '456 Oak Ave',
-      referenceEmail: 'jane.smith@example.com',
-      referenceRole: 'Manager',
-      jobPortalAccountName: 'john.anderson.linkedin',
-      jobPortalCredentials: 'encrypted_password_123',
-    },
-    {
-      id: 21,
-      initials: 'SM',
-      name: 'Sarah Mitchell',
-      code: 'C002',
-      status: 'active',
-      priority: 'medium',
-      role: 'UX Designer',
-      location: 'Remote',
-      salaryRange: '$70,000 - $95,000',
-      lastActivity: '6/20/2025',
-      applicationsCount: 3,
-      filesCount: 3,
-      resumeUpdates: [
-        { date: '2025-06-20', type: 'Resume', status: 'Updated', details: 'Design portfolio link added' },
-        { date: '2025-06-18', type: 'Glassdoor Profile', status: 'Created', details: 'New profile setup' },
-      ],
-      jobApplications: [
-        { id: 201, clientId: 2, jobTitle: 'Product Designer', company: 'DesignCo', platform: 'Behance', status: 'Applied', appliedDate: '2025-06-18', jobUrl: 'https://example.com/job4', salaryRange: '$75,000 - $90,000', location: 'Remote', notes: 'Portfolio reviewed.', jobId: 'DCPROD201' },
-        { id: 202, clientId: 2, jobTitle: 'UI/UX Lead', company: 'InnovateCorp', platform: 'LinkedIn', status: 'Rejected', appliedDate: '2025-06-15', jobUrl: 'https://example.com/job5', salaryRange: '$80,000 - $95,000', location: 'Austin, TX', notes: 'Received rejection email.', jobId: 'ICUIUX202' },
-        { id: 203, clientId: 2, jobTitle: 'Junior UX Designer', company: 'CreativeLabs', platform: 'AngelList', status: 'Interview', appliedDate: '2025-06-10', jobUrl: 'https://example.com/job6', salaryRange: '$60,000 - $75,000', location: 'San Diego, CA', notes: 'First round interview completed.', jobId: 'CLJUX303', round: '1', interviewDate: '2025-06-25', recruiterMail:'accenture@gmail.com' }, // Added round and interviewDate
-      ],
-      files: [
-        { id: 2001, clientId: 2, name: 'sarah_portfolio.pdf', size: '3.5 MB', type: 'portfolio', status: 'Uploaded', uploadDate: '2025-06-18', notes: '' },
-        { id: 2002, clientId: 2, name: 'sarah_resume.docx', size: '150 KB', type: 'resume', status: 'Uploaded', uploadDate: '2025-06-20', notes: 'Latest version' },
-      ],
-      // NEW: Extended client data fields
-      firstName: 'Sarah',
-      middleName: 'Jane',
-      lastName: 'Mitchell',
-      dob: '1992-11-22',
-      gender: 'Female',
-      ethnicity: 'Asian',
-      address: '789 Pine St, Remote',
-      zipCode: '00000',
-      mobile: '987-654-3210',
-      email: 'sarah.m@example.com',
-      securityClearance: 'No',
-      clearanceLevel: '',
-      willingToRelocate: 'No',
-      workPreference: 'Remote',
-      restrictedCompanies: 'Acme Corp',
-      jobsToApply: 'UX, Product Design',
-      technologySkills: 'Figma, Sketch, Adobe XD, User Research',
-      currentSalary: '$85,000',
-      expectedSalary: '$100,000',
-      visaStatus: 'Green Card',
-      otherVisaStatus: '',
-      schoolName: 'ArtCenter College of Design',
-      schoolAddress: 'Pasadena, CA',
-      schoolPhone: '555-999-8888',
-      courseOfStudy: 'Product Design',
-      graduationDate: '2014-06-01',
-      currentCompany: 'DesignCo',
-      currentDesignation: 'Product Designer',
-      preferredInterviewTime: 'Afternoon',
-      earliestJoiningDate: '2025-09-01',
-      relievingDate: '2025-08-31',
-      referenceName: 'David Lee',
-      referencePhone: '555-111-2222',
-      referenceAddress: '101 Elm St',
-      referenceEmail: 'david.lee@example.com',
-      referenceRole: 'Colleague',
-      jobPortalAccountName: 'sarah.behance',
-      jobPortalCredentials: 'another_encrypted_password',
-    },
-    {
-      id: 3,
-      initials: 'MC',
-      name: 'Michael Chen',
-      code: 'C003',
-      status: 'active',
-      priority: 'medium',
-      role: 'Data Analyst',
-      location: 'New York, NY',
-      salaryRange: '$75,000 - $100,000',
-      lastActivity: '6/19/2025',
-      applicationsCount: 2,
-      filesCount: 2,
-      resumeUpdates: [
-        { date: '2025-06-19', type: 'Resume', status: 'Updated', details: 'Optimized for data science roles' },
-        { date: '2025-06-17', type: 'Resume', status: 'Draft 1 Sent', details: 'Initial draft sent' },
-      ],
-      jobApplications: [
-        { id: 301, clientId: 3, jobTitle: 'Data Scientist', company: 'Data Insights', platform: 'Indeed', status: 'Applied', appliedDate: '2025-06-19', jobUrl: 'https://example.com/job7', salaryRange: '$85,000 - $105,000', location: 'New York, NY', notes: 'Awaiting response.', jobId: 'DI_DS_NY_007' },
-        { id: 302, clientId: 3, jobTitle: 'Business Intelligence Analyst', company: 'Analytics Pros', platform: 'Glassdoor', status: 'Interview', appliedDate: '2025-06-17', jobUrl: 'https://example.com/job8', salaryRange: '$70,000 - $90,000', location: 'Chicago, IL', notes: 'Technical interview next week.', jobId: 'AP_BI_CHI_008', round: '2', interviewDate: '2025-07-05', recruiterMail:'accenture@gmail.com' }, // Added round and interviewDate
-      ],
-      files: [
-        { id: 3001, clientId: 3, name: 'michael_resume.pdf', size: '280 KB', type: 'resume', status: 'Uploaded', uploadDate: '2025-06-19', notes: '' },
-        { id: 3002, clientId: 3, name: 'data_analysis_report.xlsx', size: '800 KB', type: 'report', status: 'Uploaded', uploadDate: '2025-06-17', notes: 'Sample report for portfolio' },
-      ],
-      // NEW: Extended client data fields (placeholder, can be filled with specific data)
-      firstName: 'Michael',
-      middleName: '',
-      lastName: 'Chen',
-      dob: '1988-03-10',
-      gender: 'Male',
-      ethnicity: 'Asian',
-      address: '456 Elm St, New York, NY',
-      zipCode: '10001',
-      mobile: '111-222-3333',
-      email: 'michael.c@example.com',
-      securityClearance: 'No',
-      clearanceLevel: '',
-      willingToRelocate: 'Yes',
-      workPreference: 'On-site',
-      restrictedCompanies: '',
-      jobsToApply: 'Data Analyst, BI Developer',
-      technologySkills: 'Python, SQL, Tableau, Excel',
-      currentSalary: '$95,000',
-      expectedSalary: '$110,000',
-      visaStatus: 'H1B',
-      otherVisaStatus: '',
-      schoolName: 'New York University',
-      schoolAddress: 'New York, NY',
-      schoolPhone: '555-444-5555',
-      courseOfStudy: 'Data Science',
-      graduationDate: '2010-05-25',
-      currentCompany: 'Data Insights',
-      currentDesignation: 'Data Analyst',
-      preferredInterviewTime: 'Any',
-      earliestJoiningDate: '2025-07-15',
-      relievingDate: '2025-07-10',
-      referenceName: 'Chris Green',
-      referencePhone: '555-777-8888',
-      referenceAddress: '789 Maple St',
-      referenceEmail: 'chris.g@example.com',
-      referenceRole: 'Colleague',
-      jobPortalAccountName: 'michael.indeed',
-      jobPortalCredentials: 'another_strong_password',
-    },
-  ]});
+  const [activeClients, setActiveClients] = useState([]);
 
   // NEW: Add this useEffect to save the activeClients list to local storage whenever it changes
   useEffect(() => {
@@ -816,81 +634,16 @@ const EmployeeData = () => {
   }, [activeClients]);
 
   // NEW: State for inactive clients
-  const [inactiveClients, setInactiveClients] = useState([
-    {
-      id: 6,
-      initials: 'RW',
-      name: 'Robert White',
-      code: 'C004',
-      status: 'inactive',
-      priority: 'low',
-      role: 'Marketing Specialist',
-      location: 'Boston, MA',
-      salaryRange: '$60,000 - $80,000',
-      lastActivity: '2/10/2024', // Old activity date
-      applicationsCount: 1,
-      filesCount: 1,
-      resumeUpdates: [
-        { date: '2024-02-05', type: 'Resume', status: 'Outdated', details: 'Resume from 2024' },
-      ],
-      jobApplications: [
-        { id: 401, clientId: 6, jobTitle: 'Digital Marketing Manager', company: 'BrandX', platform: 'LinkedIn', status: 'Rejected', appliedDate: '2024-02-10', jobUrl: 'https://example.com/job9', salaryRange: '$65,000 - $85,000', location: 'Boston, MA', notes: 'Client decided to pursue other opportunities.', jobId: 'BX_DMM_009' },
-      ],
-      files: [
-        { id: 4001, clientId: 6, name: 'robert_white_resume_2024.pdf', size: '200 KB', type: 'resume', status: 'Uploaded', uploadDate: '2024-02-05', notes: 'Old resume' },
-      ],
-      firstName: 'Robert', middleName: '', lastName: 'White', dob: '1995-01-01', gender: 'Male', ethnicity: 'Caucasian', address: '123 Inactive St, Boston, MA', zipCode: '02108', mobile: '555-111-2222', email: 'robert.w@example.com', securityClearance: 'No', clearanceLevel: '', willingToRelocate: 'No', workPreference: 'On-site', restrictedCompanies: '', jobsToApply: 'Marketing', technologySkills: 'SEO, SEM, Google Analytics', currentSalary: '$70,000', expectedSalary: '$80,000', visaStatus: 'Citizen', otherVisaStatus: '', schoolName: 'Boston University', schoolAddress: 'Boston, MA', schoolPhone: '555-333-4444', courseOfStudy: 'Marketing', graduationDate: '2017-05-20', currentCompany: 'Inactive Co', currentDesignation: 'Marketing Specialist', preferredInterviewTime: 'Any', earliestJoiningDate: '2025-01-01', relievingDate: '2024-12-31', referenceName: 'Emily Brown', referencePhone: '555-555-6666', referenceAddress: '789 Elm St', referenceEmail: 'emily.b@example.com', referenceRole: 'Colleague', jobPortalAccountName: 'robert.linkedin', jobPortalCredentials: 'inactive_password',
-    },
-    {
-      id: 7,
-      initials: 'LG',
-      name: 'Laura Green',
-      code: 'C005',
-      status: 'inactive',
-      priority: 'low',
-      role: 'Software Tester',
-      location: 'Seattle, WA',
-      salaryRange: '$65,000 - $90,000',
-      lastActivity: '1/01/2024',
-      applicationsCount: 0,
-      filesCount: 1,
-      resumeUpdates: [
-        { date: '2024-01-01', type: 'Resume', status: 'Outdated', details: 'Initial resume' },
-      ],
-      jobApplications: [],
-      files: [
-        { id: 5001, clientId: 7, name: 'laura_green_resume.pdf', size: '180 KB', type: 'resume', status: 'Uploaded', uploadDate: '2024-01-01', notes: 'Original resume' },
-      ],
-      firstName: 'Laura', middleName: '', lastName: 'Green', dob: '1993-07-20', gender: 'Female', ethnicity: 'Asian', address: '456 Old Road, Seattle, WA', zipCode: '98101', mobile: '555-333-4444', email: 'laura.g@example.com', securityClearance: 'No', clearanceLevel: '', willingToRelocate: 'No', workPreference: 'Remote', restrictedCompanies: '', jobsToApply: 'QA, Testing', technologySkills: 'Manual Testing, Automation, Selenium', currentSalary: '$75,000', expectedSalary: '$85,000', visaStatus: 'Citizen', otherVisaStatus: '', schoolName: 'University of Washington', schoolAddress: 'Seattle, WA', schoolPhone: '555-777-8888', courseOfStudy: 'Computer Engineering', graduationDate: '2015-06-10', currentCompany: 'Old Tech', currentDesignation: 'QA Engineer', preferredInterviewTime: 'Morning', earliestJoiningDate: '2025-01-01', relievingDate: '2024-12-31', referenceName: 'Mark Davis', referencePhone: '555-999-0000', referenceAddress: '111 Pine St', referenceEmail: 'mark.d@example.com', referenceRole: 'Manager', jobPortalAccountName: 'laura.indeed', jobPortalCredentials: 'old_password',
-    },
-    {
-      id: 8,
-      initials: 'PB',
-      name: 'Peter Brown',
-      code: 'C006',
-      status: 'inactive',
-      priority: 'low',
-      role: 'Network Engineer',
-      location: 'Dallas, TX',
-      salaryRange: '$80,000 - $100,000',
-      lastActivity: '12/15/2023',
-      applicationsCount: 2,
-      filesCount: 1,
-      resumeUpdates: [
-        { date: '2023-12-10', type: 'Resume', status: 'Outdated', details: 'Initial resume' },
-      ],
-      jobApplications: [
-        { id: 601, clientId: 8, jobTitle: 'Network Administrator', company: 'NetSolutions', platform: 'Dice', status: 'Rejected', appliedDate: '2023-12-15', jobUrl: 'https://example.com/job10', salaryRange: '$80,000 - $95,000', location: 'Dallas, TX', notes: 'Not a good fit.', jobId: 'NS_NA_010' },
-      ],
-      files: [
-        { id: 6001, clientId: 8, name: 'peter_brown_resume.pdf', size: '220 KB', type: 'resume', status: 'Uploaded', uploadDate: '2023-12-10', notes: 'Resume version 1' },
-      ],
-      firstName: 'Peter', middleName: '', lastName: 'Brown', dob: '1985-09-05', gender: 'Male', ethnicity: 'Hispanic', address: '789 Dead End, Dallas, TX', zipCode: '75201', mobile: '555-666-7777', email: 'peter.b@example.com', securityClearance: 'Yes', clearanceLevel: 'Secret', willingToRelocate: 'Yes', workPreference: 'On-site', restrictedCompanies: '', jobsToApply: 'Network, Infrastructure', technologySkills: 'Cisco, Juniper, Routing, Switching', currentSalary: '$90,000', expectedSalary: '$105,000', visaStatus: 'Green Card', otherVisaStatus: '', schoolName: 'Texas A&M University', schoolAddress: 'College Station, TX', schoolPhone: '555-123-9876', courseOfStudy: 'Electrical Engineering', graduationDate: '2007-05-15', currentCompany: 'Old Network', currentDesignation: 'Network Engineer', preferredInterviewTime: 'Morning', earliestJoiningDate: '2025-01-01', relievingDate: '2024-12-31', referenceName: 'Sarah Johnson', referencePhone: '555-888-9999', referenceAddress: '222 River Rd', referenceEmail: 'sarah.j@example.com', referenceRole: 'Supervisor', jobPortalAccountName: 'peter.dice', jobPortalCredentials: 'last_password',
-    },
-  ]);
+  const [inactiveClients, setInactiveClients] = useState([]);
 
   // NEW: State for the currently selected client from the dropdown
   const [selectedClient, setSelectedClient] = useState(null);
+
+   const [filterWebsites, setFilterWebsites] = useState([]);
+  const [filterPositions, setFilterPositions] = useState([]);
+  const [filterCompanies, setFilterCompanies] = useState([]);
+  const [startDateFilter, setStartDateFilter] = useState('');
+  const [endDateFilter, setEndDateFilter] = useState('');
 
    const [isClientSelectModalOpen, setIsClientSelectModalOpen] = useState(false);
   const [clientSearchTermInModal, setClientSearchTermInModal] = useState('');
@@ -1070,70 +823,35 @@ const EmployeeData = () => {
     setNewApplicationFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSaveNewApplication = () => {
+  const handleSaveNewApplication = async () => {
     if (!selectedClientForApplication) return;
 
-    // Process attachments if any
-    const attachments = newApplicationFormData.attachments?.map(file => ({
-      id: Date.now() + Math.random(), // Unique ID for each file
-      clientId: selectedClientForApplication.id,
-      name: file.name,
-      size: `${(file.size / 1024).toFixed(1)} KB`,
-      type: 'application attachment', // Special type for application attachments
-      status: 'Uploaded',
-      uploadDate: new Date().toISOString().split('T')[0],
-      notes: `Attached to ${newApplicationFormData.jobTitle} application`,
-      file: file // Keep the file object for download/view
-    })) || [];
-
-
-    const newApp = {
+      const newApp = {
       id: Date.now(),
-      clientId: selectedClientForApplication.id,
+      clientId: selectedClientForApplication.firebaseKey,
       ...newApplicationFormData,
       status: 'Applied',
       appliedDate: new Date().toISOString().split('T')[0],
-      attachments: attachments
+      attachments: [] // from the attachments state
     };
 
-    // Determine which client list to update based on selectedClientForApplication's status
-    if (selectedClientForApplication.status === 'active') {
-      setActiveClients(prevClients => {
-        const updatedClients = prevClients.map(client =>
-          client.id === selectedClientForApplication.id
-            ? {
-              ...client,
-              jobApplications: [newApp, ...client.jobApplications], // Prepend new application
-              // Add the attachments to the client's files as well
-              files: [...attachments, ...client.files]
-            }
-            : client
-        );
-        // Update selectedClient to reference the newly updated client object
-        setSelectedClient(updatedClients.find(c => c.id === selectedClientForApplication.id));
-        return updatedClients;
-      });
-    } else if (selectedClientForApplication.status === 'inactive') {
-      setInactiveClients(prevClients => {
-        const updatedClients = prevClients.map(client =>
-          client.id === selectedClientForApplication.id
-            ? {
-              ...client,
-              jobApplications: [newApp, ...client.jobApplications], // Prepend new application
-              files: [...attachments, ...client.files]
-            }
-            : client
-        );
-        setSelectedClient(updatedClients.find(c => c.id === selectedClientForApplication.id));
-        return updatedClients;
-      });
-    }
 
-    setShowAddApplicationModal(false);
-    setNewApplicationFormData({
-      jobTitle: '', company: '', platform: '', jobUrl: '', salaryRange: '', location: '', notes: '', attachments: [], jobId: ''
-    });
-    triggerNotification("Application added successfully!"); // Trigger notification
+   const existingApplications = selectedClientForApplication.jobApplications || [];
+    const updatedApplications = [newApp, ...existingApplications];
+
+    // Create a reference to the specific client's jobApplications node
+    const clientApplicationsRef = ref(database, `clients/${selectedClientForApplication.firebaseKey}/jobApplications`);
+    
+    try {
+        // Use set() to overwrite the jobApplications array for that client
+        await set(clientApplicationsRef, updatedApplications);
+        
+        setShowAddApplicationModal(false);
+        triggerNotification("Application added successfully to Firebase!");
+    } catch (error) {
+        console.error("Failed to save new application to Firebase:", error);
+        alert("Error saving application.");
+    }
   };
 
   const handleViewApplication = (application) => {
@@ -1143,7 +861,12 @@ const EmployeeData = () => {
 
   const handleEditApplication = (application) => {
     // Find the client associated with this application to set selectedClientForApplication
-    const client = [...activeClients, ...inactiveClients].find(c => c.jobApplications.some(appItem => appItem.id === application.id));
+    const client = [...newClients,...activeClients, ...inactiveClients].find(c => c.jobApplications && c.jobApplications.some(appItem => appItem.id === application.id));
+     if (!client) {
+        console.error("Could not find the client for the selected application.", application);
+        alert("An error occurred. Could not find the client for this application.");
+        return;
+    }
     setSelectedClientForApplication(client);
     // Copy for editing, including new round and interviewDate fields
     setEditedApplicationFormData({
@@ -1161,65 +884,34 @@ const EmployeeData = () => {
     setEditedApplicationFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSaveEditedApplication = () => {
+const handleSaveEditedApplication = async () => {
     if (!editedApplicationFormData || !selectedClientForApplication) return;
 
+    // Create a copy of the client's current applications
+    const updatedApplications = selectedClientForApplication.jobApplications.map(app =>
+      app.id === editedApplicationFormData.id 
+        ? editedApplicationFormData // Replace the old application with the edited version
+        : app
+    );
 
-    if (editedApplicationFormData.status === 'Interview') {
-      const newInterview = {
-        id: editedApplicationFormData.id, // Use application ID for uniqueness
-        date: editedApplicationFormData.interviewDate,
-        jobId: editedApplicationFormData.jobId,
-        time: editedApplicationFormData.interviewTime || 'TBD', // Add a default time if not provided
-        company: editedApplicationFormData.company,
-        role: editedApplicationFormData.jobTitle,
-        recruiterMailId: editedApplicationFormData.recruiterMail,
-        round: editedApplicationFormData.round,
-        // Add client's name for display in the ClientDashboard modal
-        clientName: `${selectedClientForApplication.firstName} ${selectedClientForApplication.lastName}`,
-        attachments: [], // You can add logic to handle attachments if needed
-      };
+    // Get a reference to the specific client's jobApplications array in Firebase
+    const clientApplicationsRef = ref(database, `clients/${selectedClientForApplication.firebaseKey}/jobApplications`);
+
+    try {
+      // Use set() to overwrite the jobApplications array with the updated version
+      await set(clientApplicationsRef, updatedApplications);
       
-      // Get existing interviews, prepend the new one, and save
-      const existingInterviews = JSON.parse(localStorage.getItem('scheduled_interviews')) || [];
-      // Avoid duplicates by checking ID
-      const filteredInterviews = existingInterviews.filter(inv => inv.id !== newInterview.id);
-      const updatedInterviews = [newInterview, ...filteredInterviews];
-      localStorage.setItem('scheduled_interviews', JSON.stringify(updatedInterviews));
+      setShowEditApplicationModal(false);
+      setEditedApplicationFormData(null);
+      setSelectedClientForApplication(null);
+      triggerNotification("Application updated successfully in Firebase!");
+
+    } catch (error) {
+      console.error("Failed to save edited application to Firebase:", error);
+      alert("Error updating application.");
     }
-
-    const updateClientList = (prevClients) => {
-      return prevClients.map(client =>
-        client.id === selectedClientForApplication.id
-          ? {
-            ...client,
-            jobApplications: client.jobApplications.map(app =>
-              app.id === editedApplicationFormData.id ? {
-                ...editedApplicationFormData
-              } : app
-            ),
-          }
-          : client
-      );
-    };
-
-    if (selectedClientForApplication.status === 'active') {
-      setActiveClients(updateClientList);
-    } else if (selectedClientForApplication.status === 'inactive') {
-      setInactiveClients(updateClientList);
-    }
-
-    // Update selectedClient to reference the newly updated client object
-    setSelectedClient(prevSelected => {
-      const updatedClient = updateClientList([prevSelected]).find(c => c.id === prevSelected.id);
-      return updatedClient || prevSelected;
-    });
-
-    setShowEditApplicationModal(false);
-    setEditedApplicationFormData(null);
-    setSelectedClientForApplication(null); // Clear selected client after saving
-    triggerNotification("Application updated successfully!"); // Trigger notification
   };
+
 
 
   const handlePasteAttachment = useCallback((event) => {
@@ -1298,7 +990,7 @@ const EmployeeData = () => {
 
   // Function to filter and sort job applications
   const getFilteredAndSortedApplications = (applications) => {
-    let filtered = applications;
+    let filtered = applications || [];
 
     // Client filter (NEW) - This filter is now handled by passing the specific client's applications
     // if (selectedClient) {
@@ -1608,46 +1300,71 @@ const EmployeeData = () => {
     return filtered;
   };
 
-// NEW: Handle accepting a new client
-const handleAcceptClient = (clientId) => {
-    const clientToAccept = newClients.find(client => client.id === clientId);
-    if (!clientToAccept) return;
-
-    // Prevent adding a client if one with the same ID already exists
-    if (activeClients.some(client => client.id === clientToAccept.id)) {
-        alert(`Error: A client with ID ${clientToAccept.id} is already in the active list.`);
-        // Remove from localStorage to clear the duplicate from the queue
-        const updatedNewClients = newClients.filter(client => client.id !== clientId);
-        localStorage.setItem('employee_new_clients', JSON.stringify(updatedNewClients));
-        setNewClients(updatedNewClients);
+const handleAcceptClient = async (clientToAccept) => {
+    if (!clientToAccept || !clientToAccept.firebaseKey) {
+        console.error("Invalid client object passed to handleAcceptClient", clientToAccept);
+        alert("Error: Cannot accept client due to missing key.");
         return;
     }
-    
-    // FIX: Prepare the client object for the active list, ensuring necessary arrays exist.
-    const newActiveClient = {
-        ...clientToAccept,
-        status: 'active',
-        // Initialize arrays if they don't exist to prevent rendering errors
-        jobApplications: clientToAccept.jobApplications || [],
-        files: clientToAccept.files || [],
-        resumeUpdates: clientToAccept.resumeUpdates || [],
-    };
 
-    // Move client from new to active in state
-    const updatedNewClientsList = newClients.filter(client => client.id !== clientId);
-    setNewClients(updatedNewClientsList);
-    setActiveClients(prev => [...prev, newActiveClient]); // Use the prepared object
-    
-    // Update localStorage to remove the accepted client from the "new" list
-    localStorage.setItem('employee_new_clients', JSON.stringify(updatedNewClientsList));
-    
-    // Select the newly accepted client and switch tabs
-    setSelectedClient(newActiveClient); // Use the prepared object
-    setActiveTab('Active Clients');
-    setActiveSubTab('Applications');
-triggerNotification(`Client ${newActiveClient.name} accepted!`);
-  };
+    const clientRef = ref(database, `clients/${clientToAccept.firebaseKey}`);
+    try {
+        await update(clientRef, {
+            assignmentStatus: 'active' // This is the key change that moves the client
+        });
+        triggerNotification(`Client ${clientToAccept.firstName} has been moved to Active Clients!`);
+        // The UI will now update automatically via the real-time Firebase listener.
+    } catch (error) {
+        console.error("Failed to accept client in Firebase:", error);
+        alert("Error accepting client.");
+    }
+};
 
+// ... inside the EmployeeData component, before the return statement ...
+
+  // Apply all filters to the relevant base set of applications
+  const filteredApplicationsForDisplay = useMemo(() => {
+    // --- FIX: Add a safety check ---
+    // If no client is selected, return an empty array immediately.
+    if (!selectedClient) {
+      return [];
+    }
+    
+    // The rest of the logic runs only if a client is selected.
+    let baseApps = selectedClient.jobApplications || [];
+
+    return baseApps.filter(app => {
+      const matchesWebsite = filterWebsites.length === 0 || filterWebsites.includes(app.website);
+      const matchesPosition = filterPositions.length === 0 || filterPositions.includes(app.position);
+      const matchesCompany = filterCompanies.length === 0 || filterCompanies.includes(app.company);
+
+      const lowerCaseSearchTerm = searchTerm.toLowerCase();
+      const matchesSearchTerm =
+        searchTerm === '' ||
+        (app.website && app.website.toLowerCase().includes(lowerCaseSearchTerm)) ||
+        (app.position && app.position.toLowerCase().includes(lowerCaseSearchTerm)) ||
+        (app.company && app.company.toLowerCase().includes(lowerCaseSearchTerm)) ||
+        (app.jobDescription && app.jobDescription.toLowerCase().includes(lowerCaseSearchTerm));
+
+      let matchesDateRange = true;
+      if (startDateFilter || endDateFilter) {
+        const appDate = new Date(convertDDMMYYYYtoYYYYMMDD(app.dateAdded));
+        appDate.setHours(0, 0, 0, 0);
+
+        const start = startDateFilter ? new Date(convertDDMMYYYYtoYYYYMMDD(startDateFilter)) : null;
+        const end = endDateFilter ? new Date(convertDDMMYYYYtoYYYYMMDD(endDateFilter)) : null;
+
+        if (start) start.setHours(0, 0, 0, 0);
+        if (end) end.setHours(23, 59, 59, 999);
+
+        matchesDateRange =
+          (!start || appDate >= start) &&
+          (!end || appDate <= end);
+      }
+
+      return matchesWebsite && matchesPosition && matchesCompany && matchesSearchTerm && matchesDateRange;
+    });
+  }, [selectedClient, filterWebsites, filterPositions, filterCompanies, searchTerm, startDateFilter, endDateFilter]);
 
 
 
@@ -2065,7 +1782,7 @@ triggerNotification(`Client ${newActiveClient.name} accepted!`);
           ) : (
             <div style={newClientsGridStyle}>
               {newClients.map(client => (
-                <div key={client.id} style={newClientCardStyle}>
+                <div key={client.firebaseKey} style={newClientCardStyle}>
                   <div style={newClientCardHeaderStyle}>
                     <div style={initialsCircleStyle}>{client.initials}</div>
                     <div style={{ flexGrow: 1 }}>
@@ -2092,7 +1809,7 @@ triggerNotification(`Client ${newActiveClient.name} accepted!`);
                   <p style={newClientDetailStyle}><strong>Country:</strong> {client.country}</p>
                   <p style={newClientDetailStyle}><strong>Visa Status:</strong> {client.visaStatus}</p>
                   <div style={newClientCardActionsStyle}>
-                    <button onClick={() => handleAcceptClient(client.id)} style={acceptButtonStyle}>Accept</button>
+                    <button onClick={() => handleAcceptClient(client)} style={acceptButtonStyle}>Accept</button>
                     {/* <button onClick={() => handleDeclineClient(client.id)} style={declineButtonStyle}>Decline</button> */}
                   </div>
                 </div>
@@ -2116,7 +1833,7 @@ triggerNotification(`Client ${newActiveClient.name} accepted!`);
               </svg>
             </button>
           </div>
-          {selectedClient && selectedClient.status === 'active' ? (
+          {selectedClient && selectedClient.assignmentStatus === 'active' ? (
             <>
               <div style={{ marginTop: '20px', padding: '15px', background: '#e0effe', borderRadius: '8px', border: '1px solid #c4e0ff' }}>
                 <p style={{ fontSize: '1.1rem', fontWeight: '600', color: '#3b82f6', margin: '0 0 10px 0' }}>
@@ -2400,10 +2117,10 @@ triggerNotification(`Client ${newActiveClient.name} accepted!`);
                         <p style={clientCodeStyle}>{selectedClient.role || selectedClient.position } - {selectedClient.location}</p>
                       </div>
                       <div style={clientAppStatsStyle}>
-                        <span>Showing: <strong>{getFilteredAndSortedApplications(selectedClient.jobApplications).length}</strong></span>
-                        <span>Total: <strong>{selectedClient.jobApplications.length}</strong></span>
-                        <span>Interviews: <strong>{selectedClient.jobApplications.filter(app => app.status === 'Interview').length}</strong></span>
-                        <span>Applied: <strong>{selectedClient.jobApplications.filter(app => app.status === 'Applied').length}</strong></span>
+                        <span>Showing: <strong>{getFilteredAndSortedApplications(selectedClient?.jobApplications).length}</strong></span>
+                        <span>Total: <strong>{selectedClient?.jobApplications?.length ?? 0}</strong></span>
+                        <span>Interviews: <strong>{selectedClient?.jobApplications?.filter(app => app.status === 'Interview').length ?? 0}</strong></span>
+                        <span>Applied: <strong>{selectedClient?.jobApplications?.filter(app => app.status === 'Applied').length ?? 0}</strong></span>
                       </div>
                       <button
                         style={addApplicationButtonStyle}
@@ -2881,7 +2598,21 @@ triggerNotification(`Client ${newActiveClient.name} accepted!`);
                       Add Application
                     </button>
                   </div>
-
+                  {simplifiedServices.includes(selectedClient.service) ? (
+                    // --- RENDER SIMPLIFIED VIEW for ServiceForm clients (View Only) ---
+                    <div style={{ ...clientDataGridStyle, gridTemplateColumns: '1fr' }}>
+                      <div style={clientDataSectionStyle}>
+                        <h3 style={clientDataSectionTitleStyle}>Service Request Details</h3>
+                        <p style={clientDataDetailStyle}><strong>First Name:</strong> {selectedClient.firstName || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Last Name:</strong> {selectedClient.lastName || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Mobile:</strong> {selectedClient.mobile || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Email:</strong> {selectedClient.email || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Service:</strong> {selectedClient.service || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Sub-Services:</strong> {(selectedClient.subServices || []).join(', ') || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>User Type:</strong> {selectedClient.userType || '-'}</p>
+                      </div>
+                    </div>
+                  ) : (
                   <div style={clientDataGridStyle}>
                     <div style={clientDataSectionStyle}>
                       <h3 style={clientDataSectionTitleStyle}>Personal Information</h3>
@@ -2950,12 +2681,12 @@ triggerNotification(`Client ${newActiveClient.name} accepted!`);
                     </div>
 
                     <div style={clientDataSectionStyle}>
-                  <h3 style={clientDataSectionTitleStyle}>Resume</h3>
-                  <div style={{ display: 'flex', alignItems: 'center' }}>
-                    <p style={{ ...clientDataDetailStyle, margin: 0, flexGrow: 1 }}>
+                       <h3 style={clientDataSectionTitleStyle}>Resume</h3>
+                       <div style={{ display: 'flex', alignItems: 'center' }}>
+                       <p style={{ ...clientDataDetailStyle, margin: 0, flexGrow: 1 }}>
                       {selectedClient.resume || 'No resume uploaded'}
-                    </p>
-                    {selectedClient.resume && (
+                       </p>
+                       {selectedClient.resume && (
                       <button
                         style={{
                           backgroundColor: '#28a745',
@@ -2982,7 +2713,8 @@ triggerNotification(`Client ${newActiveClient.name} accepted!`);
                   </div>
                 </div>
                   </div>
-                </div>
+              )}
+              </div>
               )}
             </>
           ) : (
@@ -3771,6 +3503,22 @@ triggerNotification(`Client ${newActiveClient.name} accepted!`);
                       Add Application
                     </button>
                   </div>
+                     
+                     {simplifiedServices.includes(selectedClient.service) ? (
+                    // --- RENDER SIMPLIFIED VIEW for ServiceForm clients ---
+                    <div style={{ ...clientDataGridStyle, gridTemplateColumns: '1fr' }}>
+                      <div style={clientDataSectionStyle}>
+                        <h3 style={clientDataSectionTitleStyle}>Service Request Details</h3>
+                        <p style={clientDataDetailStyle}><strong>First Name:</strong> {selectedClient.firstName || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Last Name:</strong> {selectedClient.lastName || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Mobile:</strong> {selectedClient.mobile || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Email:</strong> {selectedClient.email || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Service:</strong> {selectedClient.service || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Sub-Services:</strong> {(selectedClient.subServices || []).join(', ') || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>User Type:</strong> {selectedClient.userType || '-'}</p>
+                      </div>
+                    </div>
+                  ) : (
 
                   <div style={clientDataGridStyle}>
                     <div style={clientDataSectionStyle}>
@@ -3839,7 +3587,8 @@ triggerNotification(`Client ${newActiveClient.name} accepted!`);
                       <p style={clientDataDetailStyle}><strong>Credentials:</strong> {selectedClient.jobPortalCredentials ? '********' : '-'}</p>
                     </div>
                   </div>
-                </div>
+              )}
+               </div>
               )}
             </>
           ) : (
@@ -4717,7 +4466,7 @@ triggerNotification(`Client ${newActiveClient.name} accepted!`);
                   `${client.firstName} ${client.lastName}`.toLowerCase().includes(clientSearchTermInModal.toLowerCase())
                 )
                 .map(client => (
-                  <div key={client.id} className="client-select-item" onClick={() => handleSelectClientFromModal(client)}>
+                  <div key={client.firebaseKey} className="client-select-item" onClick={() => handleSelectClientFromModal(client)}>
                     <div className="client-select-avatar">{client.initials}</div>
                     <div className="client-select-info">
                       <div className="client-select-name">{`${client.firstName} ${client.lastName}`}</div>

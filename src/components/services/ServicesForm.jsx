@@ -67,6 +67,7 @@ const ServicesForm = () => {
             userType: formData.userType,
             registeredDate: new Date().toISOString().split('T')[0], // YYYY-MM-DD format
             displayStatuses: ['registered'],
+            assignedManager: '',
             paymentStatus: 'Pending',
             country: 'N/A', // Default value
         };

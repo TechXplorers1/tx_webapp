@@ -154,6 +154,7 @@ const JobSupportContactForm = () => {
       paymentStatus: 'Pending',
       displayStatuses: ['registered'],
       service: formData.service,
+      assignedManager: '',
       subServices: [],
       userType: 'Individual',
       firstName: formData.firstName,

@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { getDatabase, ref, onValue, query, orderByChild, equalTo, update, remove, set } from "firebase/database";
+import { database } from '../../firebase'; // Import your Firebase config
 import {
   Chart as ChartJS,
   LineElement,
@@ -2185,8 +2187,6 @@ const ClientDashboard = () => {
 
 useEffect(() => {
     const loadClientData = () => {
-      // In a real app, you might get the client's ID from URL params or auth context.
-      // Here, we'll just load the first active client as an example.
       const allClients = JSON.parse(localStorage.getItem('employee_active_clients')) || [];
       if (allClients.length > 0) {
         setClientData(allClients[0]);
@@ -2372,61 +2372,52 @@ useEffect(() => {
 
   // ... other states ...
 
-  // NEW: Add this useEffect to load and transform application data from local storage
+// ClientDashboard.jsx
+
   useEffect(() => {
-    const loadApplicationData = () => {
-      // Load the clients that the employee has accepted from the other component
-      const employeeClients = JSON.parse(localStorage.getItem('employee_active_clients')) || [];
+    const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInEmployee'));
+    // Ensure you are logged in as a client and have a firebaseKey
+    if (!loggedInUserData || !loggedInUserData.firebaseKey) return;
 
-      // Transform the data into the structure ClientDashboard expects: { 'DD-MM-YYYY': [apps] }
-      const groupedApplications = {};
+    // Create a direct reference to this client's data in Firebase
+    const clientRef = ref(database, `clients/${loggedInUserData.firebaseKey}`);
 
-      employeeClients.forEach(client => {
-        if (client.jobApplications && Array.isArray(client.jobApplications)) {
-          client.jobApplications.forEach(app => {
-            // EmployeeData stores appliedDate as YYYY-MM-DD. We need to convert it to DD-MM-YYYY for the key.
-            const dateParts = app.appliedDate.split('-');
-            const formattedDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`; // DD-MM-YYYY
+    // Listen for real-time updates to this client's data
+    const unsubscribe = onValue(clientRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            setClientData(data); // Set the full client data for use in the component
 
-            if (!groupedApplications[formattedDate]) {
-              groupedApplications[formattedDate] = [];
-            }
-
-            // Recreate the application object to match the structure expected by ClientDashboard
-            const appForDashboard = {
-              id: app.id,
-              jobId: app.jobId || 'N/A',
-              website: app.platform || 'N/A',
-              position: app.jobTitle || 'N/A',
-              company: app.company || 'N/A',
-              link: app.jobUrl || '#',
-              dateAdded: formattedDate,
-              jobDescription: app.notes || 'No description provided.'
-            };
-
-            groupedApplications[formattedDate].push(appForDashboard);
-          });
+            // Process applications for the worksheet view
+            const apps = data.jobApplications || [];
+            const interviews = apps.filter(app => app.status === 'Interview');
+            setScheduledInterviews(interviews);
+            
+            // This assumes your existing logic for processing applicationsData is correct
+            const groupedApplications = (apps || []).reduce((acc, app) => {
+                const formattedDate = formatDate(app.appliedDate);
+                if (!acc[formattedDate]) {
+                    acc[formattedDate] = [];
+                }
+                acc[formattedDate].push({
+                    id: app.id,
+                    jobId: app.jobId || 'N/A',
+                    website: app.platform || 'N/A',
+                    position: app.jobTitle || 'N/A',
+                    company: app.company || 'N/A',
+                    link: app.jobUrl || '#',
+                    dateAdded: formattedDate,
+                    jobDescription: app.notes || 'No description provided.'
+                });
+                return acc;
+            }, {});
+            setApplicationsData(groupedApplications);
         }
-      });
+    });
 
-      setApplicationsData(groupedApplications);
-    };
-
-    loadApplicationData();
-
-    // Add a listener for storage changes to see real-time updates
-    const handleStorageChange = (event) => {
-      if (event.key === 'employee_active_clients') {
-        loadApplicationData();
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, []); // Empty dependency array ensures this runs on mount
+    // Cleanup listener on unmount
+    return () => unsubscribe();
+  }, []);
 
 
   const profilePlaceholder = "https://imageio.forbes.com/specials-images/imageserve/5c7d7829a7ea434b351ba0b6/0x0.jpg?format=jpg&crop=1837,1839,x206,y250,safe&height=416&width=416&fit=bounds";

@@ -32,6 +32,9 @@ const ManagerWorkSheet = () => {
 
   // NEW STATE: For Notifications Modal
   const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
+
+  const simplifiedServices = ['Mobile Development', 'Web Development', 'Digital Marketing', 'IT Talent Supply', 'Cyber Security'];
+
   // Dummy notifications data
   const [notifications, setNotifications] = useState([
     { id: 1, title: 'New Feature Alert', message: 'Discover our new analytics dashboard!', time: '2 hours ago' },
@@ -53,13 +56,13 @@ const ManagerWorkSheet = () => {
 
 
   // NEW: useEffect to get logged-in user data from sessionStorage
- useEffect(() => {
+useEffect(() => {
     const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInEmployee'));
-    const managerFullName = loggedInUserData ? `${loggedInUserData.firstName} ${loggedInUserData.lastName}` : null;
+    const managerFirebaseKey = loggedInUserData ? loggedInUserData.firebaseKey : null;
 
-    if (!managerFullName) {
+    if (!managerFirebaseKey) {
         setLoading(false);
-        return; 
+        return; // Stop if no manager is logged in
     }
 
     const clientsRef = ref(database, 'clients');
@@ -70,8 +73,8 @@ const ManagerWorkSheet = () => {
       const clientsArray = data ? Object.keys(data).map(key => ({ firebaseKey: key, ...data[key] })) : [];
       
       // Filter clients into "Unassigned" and "Assigned" specifically for the logged-in manager
-      const unassignedForManager = clientsArray.filter(c => c.manager === managerFullName && c.status === 'unassigned');
-      const assignedByManager = clientsArray.filter(c => c.manager === managerFullName && c.status === 'assigned');
+      const unassignedForManager = clientsArray.filter(c => c.assignedManager === managerFirebaseKey && c.assignmentStatus === 'pending_employee');
+      const assignedByManager = clientsArray.filter(c => c.assignedManager === managerFirebaseKey && ['pending_acceptance', 'active'].includes(c.assignmentStatus));
 
       setUnassignedClients(unassignedForManager);
       setAssignedClients(assignedByManager);
@@ -80,9 +83,7 @@ const ManagerWorkSheet = () => {
       const allApplications = assignedByManager.flatMap(client => 
           (client.jobApplications || []).map(app => ({
               ...app,
-              clientFirebaseKey: client.firebaseKey,
               clientName: `${client.firstName} ${client.lastName}`,
-              assignedTo: client.assignedTo,
           }))
       );
       setApplicationData(allApplications);
@@ -95,10 +96,7 @@ const ManagerWorkSheet = () => {
       setInterviewData(allInterviews);
       
       setLoading(false);
-    }, (err) => {
-        console.error("Firebase clients fetch error:", err);
-        setError(err.message);
-        setLoading(false);
+   
     });
 
     // --- MODIFIED: Fetch all users and filter for employees ---
@@ -119,8 +117,6 @@ const ManagerWorkSheet = () => {
         );
         setEmployeesForAssignment(employeesOnly);
       }
-    }, (error) => {
-      console.error("Firebase users fetch error:", error);
     });
 
     // Cleanup listeners when the component unmounts
@@ -130,82 +126,7 @@ const ManagerWorkSheet = () => {
     };
   }, []);
 
-  useEffect(() => {
-    const loadAllEmployees = async () => {
-      try {
-        const savedEmployees = localStorage.getItem('employees');
-        if (savedEmployees && JSON.parse(savedEmployees).length > 0) {
-          setAllEmployees(JSON.parse(savedEmployees));
-        } else {
-          // Fallback to fetch if localStorage is empty
-          const response = await fetch('/employees.json');
-          if (!response.ok) throw new Error("Could not fetch employees");
-          const data = await response.json();
-          setAllEmployees(data);
-        }
-      } catch (error) {
-        console.error("Failed to load employees:", error);
-      }
-    };
-    loadAllEmployees();
-  }, []);
-
-  useEffect(() => {
-    const clientsRef = ref(database, 'clients');
-    const employeesRef = ref(database, 'employees');
-    
-    // Set up listeners for real-time data fetching
-    const unsubscribeClients = onValue(clientsRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        // Firebase returns data as an object; convert it to an array
-        const clientsArray = Object.keys(data).map(key => ({
-          id: key,
-          ...data[key]
-        }));
-        setClients(clientsArray);
-        localStorage.setItem('clients', JSON.stringify(clientsArray)); // Optionally, still cache in localStorage
-      }
-      setLoading(false);
-    }, (error) => {
-      console.error("Firebase clients fetch error:", error);
-      setError(error.message);
-      setLoading(false);
-    });
-
-    const unsubscribeEmployees = onValue(employeesRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        const employeesArray = Object.keys(data).map(key => ({
-          id: key,
-          ...data[key]
-        }));
-        setEmployees(employeesArray);
-        localStorage.setItem('employees', JSON.stringify(employeesArray)); // Optionally, cache
-      }
-    }, (error) => {
-      console.error("Firebase employees fetch error:", error);
-      // Handle employee fetch error if necessary
-    });
-
-    // Cleanup function: Unsubscribe from Firebase listeners when the component unmounts
-    return () => {
-      unsubscribeClients();
-      unsubscribeEmployees();
-    };
-  }, []); 
-
-  useEffect(() => {
-    // ... (existing code for loading loggedInUserData and allEmployees) ...
-
-    // MODIFIED: Load both unassigned AND assigned clients from localStorage
-    const savedAssignedClients = JSON.parse(localStorage.getItem('manager_assigned_clients')) || initialAssignedClientsData;
-    const savedUnassignedClients = JSON.parse(localStorage.getItem('manager_unassigned_clients')) || initialUnassignedClientsData; // Assuming initial data for both for now
-
-    setAssignedClients(savedAssignedClients);
-    setUnassignedClients(savedUnassignedClients);
-
-  }, []);
+ 
 
   // State to manage editable profile fields
   const [editableProfile, setEditableProfile] = useState({});
@@ -326,54 +247,8 @@ const ManagerWorkSheet = () => {
     { id: 210, clientName: 'Anna Lee', location: 'Portland, OR', position: 'Data Scientist', salary: '$115,000 - $145,000', company: 'DataInsights', assignedTo: 'Mohammed Sheikh', priority: 'medium', status: 'applied', assignedDate: '2025-07-11', platform: 'LinkedIn', jobId: 'LI-5010', appliedDate: '2025-07-14' },
   ];
 
-  // Initial dummy data for employees, reflecting assignedClients counts from initialAssignedClientsData
-  // This will be used as a base, and counts will be dynamically calculated.
-  const baseDummyEmployees = [
-    {
-      id: 101,
-      name: 'Vyshnavi Vysh',
-      role: 'Senior Placement Specialist',
-      successRate: 85,
-      avatar: 'VV',
-    },
-    {
-      id: 102,
-      name: 'Krishna Kumar',
-      role: 'Placement Specialist',
-      successRate: 78,
-      avatar: 'KK',
-    },
-    {
-      id: 103,
-      name: 'Nagarjuna Sai',
-      role: 'Junior Placement Specialist',
-      successRate: 72,
-      avatar: 'NS',
-    },
-    {
-      id: 104,
-      name: 'Mohammed Sheikh',
-      role: 'Placement Specialist',
-      successRate: 65,
-      avatar: 'MS',
-    },
-    {
-      id: 105,
-      name: 'Yamuna Yamu',
-      role: 'Placement Specialist',
-      successRate: 70,
-      avatar: 'YY',
-    },
-  ];
 
-  // NEW DUMMY DATA for the Interviews tab, including a 'status' field
-  const initialInterviewData = [
-    { id: 401, employeeName: 'Vyshnavi Vysh', employeeAvatar: 'VV', clientName: 'John Anderson', jobTitle: 'Senior Frontend Developer', company: 'TechFlow Inc', round: '1st Round', date: '2025-07-08', status: 'Scheduled' },
-    { id: 402, employeeName: 'Vyshnavi Vysh', employeeAvatar: 'VV', clientName: 'Alex Thompson', jobTitle: 'Full Stack Developer', company: 'StartupXYZ', round: '2nd Round', date: '2025-07-06', status: 'Completed' },
-    { id: 403, employeeName: 'Mohammed Sheikh', employeeAvatar: 'MS', clientName: 'Jessica Williams', jobTitle: 'Product Designer', company: 'Design Studio', round: '3rd Round', date: '2025-07-10', status: 'Pending Review' },
-    { id: 404, employeeName: 'Nagarjuna Sai', employeeAvatar: 'NS', clientName: 'David Kim', jobTitle: 'Backend Developer', company: 'TechCorp', round: '1st Round', date: '2025-07-09', status: 'Scheduled' },
-    { id: 405, employeeName: 'Vyshnavi Vysh', employeeAvatar: 'VV', clientName: 'Maria Rodriguez', jobTitle: 'React Developer', company: 'WebDev Inc', round: '2nd Round', date: '2025-07-11', status: 'Completed' },
-  ];
+
 
 
   // Add this helper function inside your ManagerWorkSheet component
@@ -387,26 +262,11 @@ const ManagerWorkSheet = () => {
 
   // State variables for dynamic data
   // 2. REPLACE your 'useState' for unassignedClients with this new logic
-  const [unassignedClients, setUnassignedClients] = useState(() => {
-    // Get clients assigned from the Admin worksheet
-    const clientsFromAdmin = JSON.parse(localStorage.getItem('manager_unassigned_clients') || '[]');
 
-    // Combine the new clients with your initial list, avoiding duplicates by checking IDs
-    const combinedClients = [...clientsFromAdmin];
-    const existingIds = new Set(clientsFromAdmin.map(c => c.id));
-
-    initialUnassignedClientsData.forEach(initialClient => {
-      if (!existingIds.has(initialClient.id)) {
-        combinedClients.push(initialClient);
-      }
-    });
-
-    return combinedClients;
-  });
-  const [assignedClients, setAssignedClients] = useState(initialAssignedClientsData);
-  const [employees, setEmployees] = useState(baseDummyEmployees); // Initialize with base, counts will be updated
+  const [unassignedClients, setUnassignedClients] = useState([]);
+  const [assignedClients, setAssignedClients] = useState([]);
   const [allEmployees, setAllEmployees] = useState([]);
-  const [interviewData, setInterviewData] = useState(initialInterviewData);
+  const [interviewData, setInterviewData] = useState([]);
   const [applicationData, setApplicationData] = useState([]); // Initialize as empty, will be populated by useEffect
 
   // State to store application counts per client
@@ -1117,28 +977,7 @@ const ManagerWorkSheet = () => {
     };
   }, [isProfileDropdownOpen]);
 
-  // NEW: Effect to dynamically populate applicationData based on assignedClients
-  useEffect(() => {
-    const updatedApplicationData = assignedClients.map(client => {
-      // Find the employee to get their avatar initial
-      const employee = employees.find(emp => emp.name === client.assignedTo);
-      // Use employee.avatar if available, otherwise generate from name
-      const employeeAvatar = employee ? employee.avatar : (client.assignedTo ? client.assignedTo.split(' ').map(n => n[0]).join('').toUpperCase() : '');
 
-      return {
-        id: client.id,
-        employeeName: client.assignedTo,
-        employeeAvatar: employeeAvatar,
-        clientName: client.clientName,
-        jobTitle: client.position,
-        company: client.company,
-        platform: client.platform, // New field
-        jobId: client.jobId,       // New field
-        appliedDate: client.appliedDate, // New field
-      };
-    });
-    setApplicationData(updatedApplicationData);
-  }, [assignedClients, employees]); // Depend on assignedClients and employees
 
   // Effect to calculate application counts per client
   useEffect(() => {
@@ -1182,47 +1021,6 @@ const ManagerWorkSheet = () => {
   // Add this new state variable for the employee selection modal
   const [isEmployeeSelectModalOpen, setIsEmployeeSelectModalOpen] = useState(false);
 
-  // In ManagerWorkSheet.js, add these two new useEffect hooks
-
-  // This effect listens for new clients being assigned from the Admin worksheet
-  useEffect(() => {
-    const handleStorageChange = (event) => {
-      if (event.key === 'manager_unassigned_clients' && event.newValue) {
-        const clientsFromAdmin = JSON.parse(event.newValue);
-
-        // Re-create the list by combining with initial data
-        const combinedClients = [...clientsFromAdmin];
-        const existingIds = new Set(clientsFromAdmin.map(c => c.id));
-
-        initialUnassignedClientsData.forEach(initialClient => {
-          if (!existingIds.has(initialClient.id)) {
-            combinedClients.push(initialClient);
-          }
-        });
-
-        setUnassignedClients(combinedClients);
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, []); // Empty array ensures this runs only once on mount
-
-  // This effect saves changes made within the ManagerWorkSheet back to local storage
-  useEffect(() => {
-    try {
-      // Filter out the initial hardcoded clients to only save the dynamic ones
-      const initialIds = new Set(initialUnassignedClientsData.map(c => c.id));
-      const clientsToSave = unassignedClients.filter(client => !initialIds.has(client.id));
-
-      localStorage.setItem('manager_unassigned_clients', JSON.stringify(clientsToSave));
-    } catch (error) {
-      console.error("Failed to save manager's unassigned clients", error);
-    }
-  }, [unassignedClients]); // This runs whenever the manager's list changes
 
   // Function to toggle between light and dark themes
   const toggleTheme = () => {
@@ -1311,15 +1109,23 @@ const ManagerWorkSheet = () => {
 
   // Handler for "Assign Client" or "Reassign Client" button submission
   const handleAssignmentSubmit = async () => {
-    const isReassignment = !!clientToReassign;
+       const isReassignment = !!clientToReassign;
     const clientToProcess = isReassignment ? clientToReassign : selectedClientToAssign;
-
+    
     if (!clientToProcess || !selectedEmployee) {
       alert('Please select an employee.');
       return;
     }
 
-    const employeeInfo = allEmployees.find(emp => emp.firebaseKey === selectedEmployee);
+     const employeeInfo = allEmployees.find(emp => emp.firebaseKey === selectedEmployee);
+  
+    // --- ADD THIS SAFETY CHECK ---
+    if (!employeeInfo) {
+      alert('Error: Could not find the selected employee. Please try again.');
+      return;
+    }
+
+   
    
     const employeeFullName = `${employeeInfo.firstName} ${employeeInfo.lastName}`;
         const clientRef = ref(database, `clients/${clientToProcess.firebaseKey}`);
@@ -1328,15 +1134,15 @@ const ManagerWorkSheet = () => {
     // Create a comprehensive client object with all necessary fields for the manager's view
     const updates = {
       assignedTo: employeeFullName,
-      status: 'assigned', // Status for the manager's "Total assigned Clients" view
+      assignmentStatus: 'pending_acceptance', // Status for the manager's "Total assigned Clients" view
       assignedDate: new Date().toISOString().split('T')[0],
       priority: assignmentPriority, // Add priority from the modal's state
       // Add additional fields for consistent display in the "Total assigned Clients" table
-      clientName: clientToProcess.name || `${clientToProcess.firstName} ${clientToProcess.lastName}`,
-      position: clientToProcess.jobsApplyFor || 'Not specified',
-      salary: clientToProcess.expectedSalary ? `$${clientToProcess.currentSalary} - $${clientToProcess.expectedSalary}` : 'Not specified',
-      company: clientToProcess.currentCompany || 'Not specified',
-      location: clientToProcess.address ? clientToProcess.address.split(',').slice(-2).join(', ').trim() : 'Not specified',
+      // clientName: clientToProcess.name || `${clientToProcess.firstName} ${clientToProcess.lastName}`,
+      // position: clientToProcess.jobsApplyFor || 'Not specified',
+      // salary: clientToProcess.expectedSalary ? `$${clientToProcess.currentSalary} - $${clientToProcess.expectedSalary}` : 'Not specified',
+      // company: clientToProcess.currentCompany || 'Not specified',
+      // location: clientToProcess.address ? clientToProcess.address.split(',').slice(-2).join(', ').trim() : 'Not specified',
     };
     try {
       await update(clientRef, updates);
@@ -1346,7 +1152,7 @@ const ManagerWorkSheet = () => {
       setSuccessMessage(`Successfully assigned ${clientToProcess.firstName} to ${employeeFullName}.`);
       setShowSuccessModal(true);
       
-      if (isReassignment) {
+         if (isReassignment) {
         closeReassignClientModal();
       } else {
         closeAssignClientModal();
@@ -1398,13 +1204,18 @@ const ManagerWorkSheet = () => {
     setInterviewFilterRound(event.target.value);
   };
 
-  // Filtered interview data based on search and round filter
-  const filteredInterviewData = initialInterviewData.filter(interview => { // Use initialInterviewData here
-    const matchesSearch = interview.employeeName.toLowerCase().includes(interviewSearchQuery.toLowerCase()) ||
-      interview.clientName.toLowerCase().includes(interviewSearchQuery.toLowerCase()) ||
-      interview.jobTitle.toLowerCase().includes(interviewSearchQuery.toLowerCase()) ||
-      interview.company.toLowerCase().includes(interviewSearchQuery.toLowerCase());
+ const filteredInterviewData = interviewData.filter(interview => { // Use the live 'interviewData' state from Firebase
+    const lowerCaseSearchQuery = interviewSearchQuery.toLowerCase();
+
+    // Make the search more robust by checking if properties exist before calling .toLowerCase()
+    const matchesSearch = 
+      (interview.assignedTo || '').toLowerCase().includes(lowerCaseSearchQuery) || // Changed from employeeName to assignedTo
+      (interview.clientName || '').toLowerCase().includes(lowerCaseSearchQuery) ||
+      (interview.jobTitle || '').toLowerCase().includes(lowerCaseSearchQuery) ||
+      (interview.company || '').toLowerCase().includes(lowerCaseSearchQuery);
+      
     const matchesRound = interviewFilterRound === 'All Rounds' || interview.round === interviewFilterRound;
+    
     return matchesSearch && matchesRound;
   });
 
@@ -1437,14 +1248,16 @@ const ManagerWorkSheet = () => {
     const appDate = new Date(app.appliedDate);
     const start = startDateFilter ? new Date(startDateFilter) : null;
     const end = endDateFilter ? new Date(endDateFilter) : null;
+    const lowerCaseSearchQuery = applicationSearchQuery.toLowerCase();
 
-    const matchesSearch = app.employeeName.toLowerCase().includes(applicationSearchQuery.toLowerCase()) ||
-      app.clientName.toLowerCase().includes(applicationSearchQuery.toLowerCase()) ||
-      app.jobTitle.toLowerCase().includes(applicationSearchQuery.toLowerCase()) ||
-      app.company.toLowerCase().includes(applicationSearchQuery.toLowerCase()) ||
-      app.platform.toLowerCase().includes(applicationSearchQuery.toLowerCase()) ||
-      app.jobId.toLowerCase().includes(applicationSearchQuery.toLowerCase()) ||
-      app.appliedDate.toLowerCase().includes(applicationSearchQuery.toLowerCase());
+    const matchesSearch = 
+          (app.employeeName || '').toLowerCase().includes(lowerCaseSearchQuery) ||
+      (app.clientName || '').toLowerCase().includes(lowerCaseSearchQuery) ||
+      (app.jobTitle || '').toLowerCase().includes(lowerCaseSearchQuery) ||
+      (app.company || '').toLowerCase().includes(lowerCaseSearchQuery) ||
+      (app.platform || '').toLowerCase().includes(lowerCaseSearchQuery) ||
+      (app.jobId || '').toLowerCase().includes(lowerCaseSearchQuery) ||
+      (app.appliedDate || '').toLowerCase().includes(lowerCaseSearchQuery);
     const matchesEmployee = applicationFilterEmployee === '' || app.employeeName === applicationFilterEmployee;
     const matchesClient = applicationFilterClient === '' || app.clientName === applicationFilterClient;
     const matchesDateRange = (!start || appDate >= start) && (!end || appDate <= end);
@@ -1474,6 +1287,11 @@ const ManagerWorkSheet = () => {
 
   // Filtered employees for the "Assigned" tab
   const filteredEmployees = displayEmployees.filter(employee => {
+
+    if (!employee || !employee.fullName) {
+      return false; 
+    }
+
     const hasEmployeeRole = employee.roles && employee.roles.includes('employee');
     const fullName = employee.fullName.toLowerCase();
     const lowerCaseSearchQuery = assignedEmployeeSearchQuery.toLowerCase();
@@ -1518,34 +1336,22 @@ const ManagerWorkSheet = () => {
   };
 
   // NEW: Handle updating client details
-  const handleUpdateClient = () => {
-    if (clientToEdit) {
-      setMockDetailedClientsData(prevData =>
-        prevData.map(client =>
-          client.id === clientToEdit.id ? clientToEdit : client
-        )
-      );
-      // Also update assignedClients if this client is in it
-      setAssignedClients(prevAssigned =>
-        prevAssigned.map(client =>
-          client.id === clientToEdit.id ? {
-            ...client,
-            clientName: clientToEdit.name,
-            location: clientToEdit.address.split(',').pop().trim(), // Simple extraction
-            position: clientToEdit.currentDesignation || clientToEdit.jobsToApply.split(',')[0],
-            salary: clientToEdit.expectedSalary,
-            company: clientToEdit.currentCompany,
-            priority: clientToEdit.priority,
-            status: clientToEdit.status,
-            platform: clientToEdit.platform, // Update platform
-            jobId: clientToEdit.jobId,       // Update Job ID
-            appliedDate: clientToEdit.appliedDate, // Update Applied Date
-          } : client
-        )
-      );
-      setIsEditingClient(false); // Switch back to read-only after saving
-      console.log('Client details updated:', clientToEdit); // Log the updated client
-      alert(`Client ${clientToEdit.name} details updated successfully!`);
+const handleUpdateClient = async () => {
+    if (clientToEdit && clientToEdit.firebaseKey) {
+      // Create a reference to the specific client in Firebase
+      const clientRef = ref(database, `clients/${clientToEdit.firebaseKey}`);
+      try {
+        await update(clientRef, clientToEdit);
+        setSuccessMessage(`Successfully updated details for ${clientToEdit.firstName} ${clientToEdit.lastName}.`);
+        setShowSuccessModal(true);
+        setIsEditingClient(false); // Switch back to view mode
+      } catch (error) {
+        console.error("Failed to update client details:", error);
+        alert("Error updating client details.");
+      }
+    } else {
+      console.error("Cannot update client: missing client data or Firebase key.");
+      alert("An error occurred while trying to save client details.");
     }
   };
 
@@ -4423,7 +4229,7 @@ const ApplicationsTab = ({ applicationData, employees }) => {
                 const clientSalary = client.salary || `$${client.expectedSalary || 'N/A'}`;
 
                 return (
-                  <div key={client.id} className="modal-client-card">
+                  <div key={client.firebaseKey} className="modal-client-card">
                     <div className="modal-client-card-header">
                       <span className="modal-client-name">{clientName}</span>
                       {client.priority && (
@@ -4436,12 +4242,27 @@ const ApplicationsTab = ({ applicationData, employees }) => {
                         <span key={index} className="modal-client-skill-tag">{skill}</span>
                       ))}
                     </div>
-                    <div className="modal-client-details">
-                      <span><i className="fas fa-briefcase"></i> {clientExperience}</span>
-                      <span><i className="fas fa-map-marker-alt"></i> {client.remote ? 'Remote' : 'On-site'}</span>
-                      <span><i className="fas fa-envelope"></i> {clientEmail}</span>
-                      <span><i className="fas fa-money-bill-wave"></i> {clientSalary}</span>
+                     <div className="modal-client-details">
+                      {simplifiedServices.includes(client.service) ? (
+                        // Simplified View for the 5 main services
+                        <>
+                          <span><i className="fas fa-concierge-bell"></i><strong>Service:</strong> {client.service || 'N/A'}</span>
+                          <span><i className="fas fa-envelope"></i> {client.email || 'N/A'}</span>
+                          <span><i className="fas fa-calendar-alt"></i><strong>Registered:</strong> {client.registeredDate || 'N/A'}</span>
+                          <span><i className="fas fa-user-tag"></i><strong>Type:</strong> {client.userType || 'N/A'}</span>
+                        </>
+                      ) : (
+                        // Detailed View for "Job Supporting & Consulting"
+                        <>
+                       <span><i className="fas fa-concierge-bell"></i><strong>Service:</strong> {client.service || 'N/A'}</span>
+                          <span><i className="fas fa-envelope"></i> {client.email || 'N/A'}</span>
+                          <span><i className="fas fa-calendar-alt"></i><strong>Registered:</strong> {client.registeredDate || 'N/A'}</span>
+                          <span><i className="fas fa-user-tie"></i><strong>Designation:</strong> {client.currentDesignation || 'N/A'}</span>
+                          <span><i className="fas fa-money-bill-wave"></i><strong>Salary:</strong> {client.currentSalary ? `$${client.currentSalary}` : 'N/A'}</span>
+                        </>
+                      )}
                     </div>
+
                     <div className="modal-client-actions">
                       <button className="modal-assign-button" onClick={() => openAssignClientModal(client)}>
                         <i className="fas fa-user-plus"></i> Assign Employee
@@ -4746,11 +4567,11 @@ const ApplicationsTab = ({ applicationData, employees }) => {
                 onChange={(e) => setSelectedEmployee(e.target.value)}
               >
                 <option value="">Choose new employee</option>
-                {employees
-                  .filter(emp => emp.name !== clientToReassign.assignedTo) // Exclude current employee
+                {employeesForAssignment
+                  .filter(emp => `${emp.firstName} ${emp.lastName}` !== clientToReassign.assignedTo) // Exclude current employee
                   .map((employee) => (
-                    <option key={employee.id} value={employee.id}>
-                      {employee.name} - {employee.role}
+                    <option key={employee.firebaseKey} value={employee.firebaseKey}>
+                      {`${employee.firstName} ${employee.lastName}`} - {employee.role || (employee.roles && employee.roles.join(', '))}
                     </option>
                   ))}
               </select>
@@ -4806,6 +4627,45 @@ const ApplicationsTab = ({ applicationData, employees }) => {
             </div>
 
             {/* Comprehensive Client Details Grid - now with input fields */}
+            {simplifiedServices.includes(clientToEdit.service) ? (
+              // --- RENDER SIMPLIFIED VIEW ---
+              <div className="client-preview-grid-container" style={{ gridTemplateColumns: '1fr' }}>
+                <div className="client-preview-section">
+                  <h4 className="client-preview-section-title">Service Request Details</h4>
+                  <div className="assign-form-group">
+                    <label>First Name *</label>
+                    <input type="text" name="firstName" value={clientToEdit.firstName || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} required />
+                  </div>
+                  <div className="assign-form-group">
+                    <label>Last Name *</label>
+                    <input type="text" name="lastName" value={clientToEdit.lastName || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} required />
+                  </div>
+                  <div className="assign-form-group">
+                    <label>Mobile *</label>
+                    <input type="tel" name="mobile" value={clientToEdit.mobile || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} required />
+                  </div>
+                  <div className="assign-form-group">
+                    <label>Email ID *</label>
+                    <input type="email" name="email" value={clientToEdit.email || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} required />
+                  </div>
+                  <div className="assign-form-group">
+                    <label>Service *</label>
+                    <input type="text" name="service" value={clientToEdit.service || ''} readOnly style={{ cursor: 'not-allowed' }} />
+                  </div>
+                  {clientToEdit.subServices && (
+                    <div className="assign-form-group">
+                      <label>Selected Sub-Services</label>
+                      <textarea name="subServices" value={Array.isArray(clientToEdit.subServices) ? clientToEdit.subServices.join(', ') : ''} onChange={handleEditClientChange} readOnly={!isEditingClient}></textarea>
+                    </div>
+                  )}
+                  <div className="assign-form-group">
+                    <label>User Type</label>
+                    <input type="text" name="userType" value={clientToEdit.userType || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
             <div className="client-preview-grid-container">
               {/* Personal Information */}
               <div className="client-preview-section">
@@ -5069,6 +4929,8 @@ const ApplicationsTab = ({ applicationData, employees }) => {
                   ></textarea>
                 </div>
               </div>
+            )}
+            </> // FIX: Closing fragment tag was missing
             )}
 
             <div className="assign-form-actions">
