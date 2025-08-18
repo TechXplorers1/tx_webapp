@@ -4,6 +4,91 @@ import { Modal, Button } from 'react-bootstrap'; // Using react-bootstrap Modal
 import { getDatabase, ref, onValue, update } from "firebase/database"; // Import Firebase functions
 import { database } from '../firebase'; // Import your Firebase config
 
+
+
+const FilterComponent = ({
+  filterDateRange,
+  handleDateRangeChange,
+  sortOrder,
+  setSortOrder,
+  quickFilter,
+  handleQuickFilterChange,
+  areFiltersActive,
+  handleClearFilters,
+  sortOptions
+}) => {
+  return (
+    <div className="filter-container-style">
+      <div className="filter-group-style">
+        <label className="filter-label-style">Date Range</label>
+        <div className="date-range-input-group-style">
+          <input
+            type="date"
+            name="startDate"
+            value={filterDateRange.startDate}
+            onChange={handleDateRangeChange}
+            className="date-input-style"
+          />
+          <span style={{ margin: '0 8px', color: '#64748b' }}>to</span>
+          <input
+            type="date"
+            name="endDate"
+            value={filterDateRange.endDate}
+            onChange={handleDateRangeChange}
+            className="date-input-style"
+          />
+        </div>
+      </div>
+
+      <div className="filter-group-style" style={{ marginLeft: 'auto' }}>
+        <label className="filter-label-style">Sort Order</label>
+        <select
+          value={sortOrder}
+          onChange={(e) => setSortOrder(e.target.value)}
+          className="select-filter-style"
+        >
+          {sortOptions.map(option => <option key={option} value={option}>{option}</option>)}
+        </select>
+      </div>
+
+      <div className="filter-group-style">
+        <label className="filter-label-style">Quick Filters</label>
+        <div className="quick-filter-buttons-style">
+          <button
+            onClick={() => handleQuickFilterChange('Last 7 Days')}
+            className={`quick-filter-button-style ${quickFilter === 'Last 7 Days' ? 'active' : ''}`}
+          >
+            Last 7 Days
+          </button>
+          <button
+            onClick={() => handleQuickFilterChange('Last 30 Days')}
+            className={`quick-filter-button-style ${quickFilter === 'Last 30 Days' ? 'active' : ''}`}
+          >
+            Last 30 Days
+          </button>
+          <button
+            onClick={() => handleQuickFilterChange('All Time')}
+            className={`quick-filter-button-style ${quickFilter === 'All Time' ? 'active' : ''}`}
+          >
+            All Time
+          </button>
+        </div>
+      </div>
+
+      {areFiltersActive() && (
+        <div className="clear-filters-button-container-style">
+          <label className="filter-label-style">Actions</label>
+          <button onClick={handleClearFilters} className="clear-filters-button-style">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 4H8l-7 16 7 16h13a2 2 0 0 0 2-2V6a2 0 0 0-2-2z"></path><line x1="18" y1="9" x2="12" y2="15"></line><line x1="12" y1="9" x2="18" y2="15"></line></svg>
+            Clear Filters
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+
 const ManagerWorkSheet = () => {
 
   const navigate = useNavigate();
@@ -201,6 +286,63 @@ useEffect(() => {
   // NEW: State for LLM response and loading status
   const [llmResponse, setLlmResponse] = useState('');
   const [isLoadingLLMResponse, setIsLoadingLLMResponse] = useState(false);
+
+
+  const [filterDateRange, setFilterDateRange] = useState({ startDate: '', endDate: '' });
+  const [sortOrder, setSortOrder] = useState('Newest First');
+  const [quickFilter, setQuickFilter] = useState('');
+  
+
+  // ... (rest of the state declarations)
+
+  // MODIFICATION: Add filter handler functions
+  const handleDateRangeChange = (e) => {
+    setFilterDateRange(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleQuickFilterChange = (filterType) => {
+    const today = new Date();
+    let startDate = '';
+    let endDate = today.toISOString().split('T')[0];
+
+    if (filterType === 'Last 7 Days') {
+      const sevenDaysAgo = new Date(today);
+      sevenDaysAgo.setDate(today.getDate() - 7);
+      startDate = sevenDaysAgo.toISOString().split('T')[0];
+    } else if (filterType === 'Last 30 Days') {
+      const thirtyDaysAgo = new Date(today);
+      thirtyDaysAgo.setDate(today.getDate() - 30);
+      startDate = thirtyDaysAgo.toISOString().split('T')[0];
+    } else if (filterType === 'All Time') {
+      startDate = '';
+      endDate = '';
+    }
+    setFilterDateRange({ startDate, endDate });
+    setQuickFilter(filterType);
+  };
+  
+  const areFiltersActive = () => {
+    return filterDateRange.startDate !== '' || filterDateRange.endDate !== '' || sortOrder !== 'Newest First' || quickFilter !== '';
+  };
+
+  const handleClearFilters = () => {
+    setFilterDateRange({ startDate: '', endDate: '' });
+    setSortOrder('Newest First');
+    setQuickFilter('');
+    // Clear specific search/filter states depending on the active tab
+    if (activeTab === 'Applications') {
+      setApplicationSearchQuery('');
+      setApplicationFilterEmployee('');
+      setApplicationFilterClient('');
+    } else if (activeTab === 'Interviews') {
+      setInterviewSearchQuery('');
+      setInterviewFilterRound('All Rounds');
+    }
+  };
+
+
+
+
 
   // Helper function to format date to DD/MM/YYYY
   const formatDateToDDMMYYYY = (dateString) => {
@@ -1204,20 +1346,33 @@ useEffect(() => {
     setInterviewFilterRound(event.target.value);
   };
 
- const filteredInterviewData = interviewData.filter(interview => { // Use the live 'interviewData' state from Firebase
+const filteredInterviewData = interviewData.filter(interview => {
     const lowerCaseSearchQuery = interviewSearchQuery.toLowerCase();
-
-    // Make the search more robust by checking if properties exist before calling .toLowerCase()
     const matchesSearch = 
-      (interview.assignedTo || '').toLowerCase().includes(lowerCaseSearchQuery) || // Changed from employeeName to assignedTo
+      (interview.assignedTo || '').toLowerCase().includes(lowerCaseSearchQuery) ||
       (interview.clientName || '').toLowerCase().includes(lowerCaseSearchQuery) ||
       (interview.jobTitle || '').toLowerCase().includes(lowerCaseSearchQuery) ||
       (interview.company || '').toLowerCase().includes(lowerCaseSearchQuery);
       
     const matchesRound = interviewFilterRound === 'All Rounds' || interview.round === interviewFilterRound;
-    
-    return matchesSearch && matchesRound;
+
+    const interviewDate = new Date(interview.interviewDate);
+    const start = filterDateRange.startDate ? new Date(filterDateRange.startDate) : null;
+    const end = filterDateRange.endDate ? new Date(filterDateRange.endDate) : null;
+    if(start) start.setHours(0,0,0,0);
+    if(end) end.setHours(23,59,59,999);
+    const matchesDateRange = (!start || interviewDate >= start) && (!end || interviewDate <= end);
+
+    return matchesSearch && matchesRound && matchesDateRange;
+  }).sort((a, b) => {
+      const dateA = new Date(a.interviewDate);
+      const dateB = new Date(b.interviewDate);
+      if (sortOrder === 'Newest First') return dateB - dateA;
+      if (sortOrder === 'Oldest First') return dateA - dateB;
+      // Add other sort options if needed
+      return 0;
   });
+
 
   // Handlers for Applications tab search and filter
   const handleApplicationSearchChange = (event) => {
@@ -1243,26 +1398,33 @@ useEffect(() => {
   };
 
 
-  // Filtered application data based on search, employee, client, and date range
   const filteredApplicationData = applicationData.filter(app => {
-    const appDate = new Date(app.appliedDate);
-    const start = startDateFilter ? new Date(startDateFilter) : null;
-    const end = endDateFilter ? new Date(endDateFilter) : null;
     const lowerCaseSearchQuery = applicationSearchQuery.toLowerCase();
-
     const matchesSearch = 
-          (app.employeeName || '').toLowerCase().includes(lowerCaseSearchQuery) ||
+      (app.assignedTo || '').toLowerCase().includes(lowerCaseSearchQuery) ||
       (app.clientName || '').toLowerCase().includes(lowerCaseSearchQuery) ||
       (app.jobTitle || '').toLowerCase().includes(lowerCaseSearchQuery) ||
-      (app.company || '').toLowerCase().includes(lowerCaseSearchQuery) ||
-      (app.platform || '').toLowerCase().includes(lowerCaseSearchQuery) ||
-      (app.jobId || '').toLowerCase().includes(lowerCaseSearchQuery) ||
-      (app.appliedDate || '').toLowerCase().includes(lowerCaseSearchQuery);
-    const matchesEmployee = applicationFilterEmployee === '' || app.employeeName === applicationFilterEmployee;
+      (app.company || '').toLowerCase().includes(lowerCaseSearchQuery);
+      
+    const matchesEmployee = applicationFilterEmployee === '' || app.assignedTo === applicationFilterEmployee;
     const matchesClient = applicationFilterClient === '' || app.clientName === applicationFilterClient;
-    const matchesDateRange = (!start || appDate >= start) && (!end || appDate <= end);
 
+    const appDate = new Date(app.appliedDate);
+    const start = filterDateRange.startDate ? new Date(filterDateRange.startDate) : null;
+    const end = filterDateRange.endDate ? new Date(filterDateRange.endDate) : null;
+    if(start) start.setHours(0,0,0,0);
+    if(end) end.setHours(23,59,59,999);
+    const matchesDateRange = (!start || appDate >= start) && (!end || appDate <= end);
+    
     return matchesSearch && matchesEmployee && matchesClient && matchesDateRange;
+  }).sort((a, b) => {
+      const dateA = new Date(a.appliedDate);
+      const dateB = new Date(b.appliedDate);
+      if (sortOrder === 'Newest First') return dateB - dateA;
+      if (sortOrder === 'Oldest First') return dateA - dateB;
+      if (sortOrder === 'Job Title A-Z') return (a.jobTitle || '').localeCompare(b.jobTitle || '');
+      if (sortOrder === 'Company A-Z') return (a.company || '').localeCompare(b.company || '');
+      return 0;
   });
 
   // Get unique client names for the filter dropdown - NOW ONLY FROM ASSIGNED CLIENTS
@@ -1541,6 +1703,17 @@ const ApplicationsTab = ({ applicationData, employees }) => {
   return (
     <section className="applications-management-section">
       <h2 className="client-assignment-title">Client Applications</h2>
+       <FilterComponent
+              filterDateRange={filterDateRange}
+              handleDateRangeChange={handleDateRangeChange}
+              sortOrder={sortOrder}
+              setSortOrder={setSortOrder}
+              quickFilter={quickFilter}
+              handleQuickFilterChange={handleQuickFilterChange}
+              areFiltersActive={areFiltersActive}
+              handleClearFilters={handleClearFilters}
+              sortOptions={['Newest First', 'Oldest First', 'Job Title A-Z', 'Company A-Z']}
+            />
       <div className="table-responsive">
         <table className="applications-table">
           <thead>
@@ -1947,6 +2120,88 @@ const ApplicationsTab = ({ applicationData, employees }) => {
           padding: 0;
           box-sizing: border-box;
         }
+
+          .filter-container-style {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--header-border-color);
+    align-items: flex-end;
+  }
+  .filter-group-style {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .filter-label-style {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--subtitle-color);
+  }
+  .date-range-input-group-style {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .date-input-style {
+    padding: 8px 12px;
+    border: 1px solid var(--header-border-color);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    color: var(--text-color);
+    flex: 1;
+    background-color: var(--card-bg);
+  }
+  .select-filter-style {
+    padding: 8px 12px;
+    border: 1px solid var(--header-border-color);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    color: var(--text-color);
+    background-color: var(--card-bg);
+    width: 100%;
+  }
+  .quick-filter-buttons-style {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .quick-filter-button-style {
+    background-color: var(--button-hover-bg);
+    color: var(--tab-button-color);
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+  }
+  .quick-filter-button-style.active {
+    background-color: var(--card-icon-blue-color);
+    color: white;
+  }
+  .clear-filters-button-container-style {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    justify-self: end;
+  }
+  .clear-filters-button-style {
+    background: #fef2f2;
+    color: #ef4444;
+    border: 1px solid #fecaca;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
 
         .manager-dashboard-container {
           min-height: 100vh;
@@ -4075,8 +4330,20 @@ const ApplicationsTab = ({ applicationData, employees }) => {
           <section className="interviews-section client-assignment-overview">
             <div className="client-assignment-header interviews-header">
               <h2 className="client-assignment-title">Interview Management</h2>
-              <span className="total-interviews-badge">{interviewData.length} total interviews</span>
+              <span className="total-interviews-badge">{filteredInterviewData.length} total interviews</span>
             </div>
+
+            <FilterComponent
+              filterDateRange={filterDateRange}
+              handleDateRangeChange={handleDateRangeChange}
+              sortOrder={sortOrder}
+              setSortOrder={setSortOrder}
+              quickFilter={quickFilter}
+              handleQuickFilterChange={handleQuickFilterChange}
+              areFiltersActive={areFiltersActive}
+              handleClearFilters={handleClearFilters}
+              sortOptions={['Newest First', 'Oldest First']}
+            />
 
             <div className="applications-filters"> {/* Reusing applications-filters for consistent styling */}
               <div className="search-input-wrapper">

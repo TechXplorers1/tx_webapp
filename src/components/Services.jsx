@@ -8,6 +8,8 @@ import talentIcon from '../assets/ItTalentSupplyService.png';
 import consultingIcon from '../assets/JobSupportingService.png';
 import CyberIcon from '../assets/CyberSecurityService.png';
 import '../styles/Services.css';
+import { database, auth } from '../firebase'; // Assuming firebase.js is in src folder
+import { ref, push } from "firebase/database";
 
 const services = [
   { title: "Mobile Application Development",icon: mobileIcon, path: "/services/mobile-app-development" },
@@ -25,9 +27,12 @@ const ServicesDropdown = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // NEW: Handler for form submission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     e.stopPropagation();
+
+    const currentUser = auth.currentUser;
+
 
     // Create the submission object
     const formData = new FormData(e.target);
@@ -36,17 +41,25 @@ const ServicesDropdown = () => {
       email:  formData.get('email'),
       message: formData.get('message'),
       receivedDate: new Date().toISOString().split('T')[0],
+      status: "Pending", // Add a default status
+      userId: currentUser ? currentUser.uid : "guest"
     };
 
-    // Retrieve existing submissions and add the new one
-    const existingSubmissions = JSON.parse(localStorage.getItem('service_submissions')) || [];
-    const updatedSubmissions = [newSubmission, ...existingSubmissions];
-    localStorage.setItem('service_submissions', JSON.stringify(updatedSubmissions));
+   try {
+      // Get a reference to the 'serviceRequests' node in your database
+      const serviceRequestsRef = ref(database, 'submissions/serviceRequests');
+      // Use push() to create a new unique entry in Firebase
+      await push(serviceRequestsRef, newSubmission);
 
-    // Reset form and show the success modal
-    setMessage('');
-    setEmail('');
-    setShowSuccessModal(true);
+      // Reset form and show the success modal
+      setMessage('');
+      setEmail('');
+      setShowSuccessModal(true);
+
+    } catch (error) {
+      console.error("Failed to submit service request to Firebase", error);
+      alert("Submission failed. Please try again.");
+    }
   };
   return (
      <>

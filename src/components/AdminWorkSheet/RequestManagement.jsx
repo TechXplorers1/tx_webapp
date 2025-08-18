@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { database } from '../../firebase';
+import { ref, onValue, update, remove } from "firebase/database";
 
 const RequestManagement = () => {
   // --- Request Management States ---
@@ -14,40 +16,48 @@ const RequestManagement = () => {
   const [showServiceRequestModal, setShowServiceRequestModal] = useState(false);
   const [selectedServiceRequest, setSelectedServiceRequest] = useState(null);
 
-  // Mock data for Career Submissions
-const initialCareerSubmissions = [
-    { id: 1, firstName: 'John', lastName: 'Doe', email: 'john.d@example.com', mobile: '1234567890', role: 'Data Analyst', experience: 3, currentSalary: '70000', expectedSalary: '85000', resume: 'john_doe_resume.pdf', status: 'Pending' },
-    { id: 2, firstName: 'Jane', lastName: 'Smith', email: 'jane.s@example.com', mobile: '0987654321', role: 'Scrum Master', experience: 5, currentSalary: '90000', expectedSalary: '110000', resume: 'jane_smith_cv.docx', status: 'Pending' },
-    { id: 3, firstName: 'Peter', lastName: 'Jones', email: 'peter.j@example.com', mobile: '1122334455', role: 'Cyber Security', experience: 2, currentSalary: '65000', expectedSalary: '75000', resume: 'peter_jones_resume.pdf', status: 'Accepted' },
-  ];
 
-   const [careerSubmissions, setCareerSubmissions] = useState(() => {
-    const savedSubmissions = localStorage.getItem('career_submissions');
-    return savedSubmissions ? JSON.parse(savedSubmissions) : initialCareerSubmissions;
-  });
+    const [careerSubmissions, setCareerSubmissions] = useState([]);
+  const [contactSubmissions, setContactSubmissions] = useState([]);
+  const [serviceRequests, setServiceRequests] = useState([]);
 
-  // Mock data for Contact Us Submissions
-   const initialContactSubmissions = [
-    { id: 1, firstName: 'Alice', lastName: 'Williams', email: 'alice.w@example.com', phone: '5551234567', message: 'I am interested in your web development services. Can we schedule a call?', receivedDate: '2024-07-20' },
-    { id: 2, firstName: 'Bob', lastName: 'Brown', email: 'bob.b@example.com', phone: '5559876543', message: 'Question about pricing for digital marketing packages.', receivedDate: '2024-07-21' },
-  ];
+// NEW: useEffect to fetch all submissions from Firebase in real-time
+  useEffect(() => {
+    // Reference to the main submissions node
+    const submissionsRef = ref(database, 'submissions');
 
-   const [contactSubmissions, setContactSubmissions] = useState(() => {
-    const savedSubmissions = localStorage.getItem('contact_submissions');
-    return savedSubmissions ? JSON.parse(savedSubmissions) : initialContactSubmissions;
-  });   
+    // Listener for all submissions
+    const unsubscribe = onValue(submissionsRef, (snapshot) => {
+      const allSubmissions = snapshot.val();
+      if (allSubmissions) {
+        // Helper function to convert Firebase object to array
+        const formatData = (dataObject) => 
+          Object.keys(dataObject).map(key => ({
+            firebaseKey: key, // Keep the unique key from Firebase
+            ...dataObject[key]
+          }));
 
-const initialServiceSubmissions = [
-  // Mock data for Service Request Submissions
-    { id: 1, email: 'service.user1@example.com', message: 'I need help setting up my new software.', receivedDate: '2024-07-23' },
-    { id: 2, email: 'service.user2@example.com', message: 'There is an issue with my account billing.', receivedDate: '2024-07-22' },
-];
+        // Set state for each submission type
+        setCareerSubmissions(allSubmissions.careerApplications ? formatData(allSubmissions.careerApplications) : []);
+        setContactSubmissions(allSubmissions.contactMessages ? formatData(allSubmissions.contactMessages) : []);
+        setServiceRequests(allSubmissions.serviceRequests ? formatData(allSubmissions.serviceRequests) : []);
+      } else {
+        // If no submissions exist, set all to empty
+        setCareerSubmissions([]);
+        setContactSubmissions([]);
+        setServiceRequests([]);
+      }
+    });
 
- const [serviceRequests, setServiceRequests] = useState(() => {
-    const savedSubmissions = localStorage.getItem('service_submissions');
-    return savedSubmissions ? JSON.parse(savedSubmissions) : initialServiceSubmissions;
-  });
+    // Cleanup: Unsubscribe from the listener when the component unmounts
+    return () => unsubscribe();
+  }, []);
 
+   const handleDownloadResume = (submission) => {
+    // For now, this is a placeholder. In a real app, you would integrate
+    // Firebase Storage to get a download URL for the resume file.
+    alert(`Initiating download for ${submission.resume}... (Storage integration required)`);
+  };
 
 
   // --- Request Management Handlers ---
@@ -93,20 +103,32 @@ const initialServiceSubmissions = [
     setShowRequestConfirmModal(true);
   };
 
-  const confirmRequestAction = () => {
-    if (requestConfirmAction === 'accept') {
-      setCareerSubmissions(prev => prev.map(sub => sub.id === itemToProcess.id ? { ...sub, status: 'Accepted' } : sub));
+const confirmRequestAction = async () => {
+    if (!itemToProcess || !requestConfirmAction) return;
+
+    let itemRef;
+    try {
+      if (requestConfirmAction === 'accept') {
+        itemRef = ref(database, `submissions/careerApplications/${itemToProcess.firebaseKey}`);
+        await update(itemRef, { status: 'Accepted' });
+      }
+      if (requestConfirmAction === 'reject') {
+        itemRef = ref(database, `submissions/careerApplications/${itemToProcess.firebaseKey}`);
+        await update(itemRef, { status: 'Rejected' });
+      }
+      if (requestConfirmAction === 'deleteContact') {
+        itemRef = ref(database, `submissions/contactMessages/${itemToProcess.firebaseKey}`);
+        await remove(itemRef);
+      }
+      if (requestConfirmAction === 'deleteServiceRequest') {
+        itemRef = ref(database, `submissions/serviceRequests/${itemToProcess.firebaseKey}`);
+        await remove(itemRef);
+      }
+      closeRequestConfirmModal();
+    } catch (error) {
+      console.error("Firebase action failed", error);
+      alert("The requested action failed. Please try again.");
     }
-    if (requestConfirmAction === 'reject') {
-      setCareerSubmissions(prev => prev.map(sub => sub.id === itemToProcess.id ? { ...sub, status: 'Rejected' } : sub));
-    }
-    if (requestConfirmAction === 'deleteContact') {
-      setContactSubmissions(prev => prev.filter(sub => sub.id !== itemToProcess.id));
-    }
-    if (requestConfirmAction === 'deleteServiceRequest') {
-      setServiceRequests(prev => prev.filter(req => req.id !== itemToProcess.id));
-    }
-    closeRequestConfirmModal();
   };
 
   const closeRequestConfirmModal = () => {
@@ -380,7 +402,7 @@ const initialServiceSubmissions = [
             <table className="request-table">
               <thead>
                 <tr>
-                  <th>#</th>
+                  <th>S.No</th>
                   <th>Name</th>
                   <th>Email & Mobile</th>
                   <th>Role Applied</th>
@@ -407,7 +429,7 @@ const initialServiceSubmissions = [
                       </span>
                     </td>
                     <td>
-                      <button className="action-button download">{sub.resume}</button>
+                      <button className="action-button download" onClick={() => handleDownloadResume(sub)}>{sub.resume}</button>
                     </td>
                     <td>
                       <div className="action-buttons">
@@ -432,7 +454,7 @@ const initialServiceSubmissions = [
             <table className="request-table">
               <thead>
                 <tr>
-                  <th>#</th>
+                  <th>S.No</th>
                   <th>Name</th>
                   <th>Email & Phone</th>
                   <th>Message</th>
@@ -469,7 +491,7 @@ const initialServiceSubmissions = [
             <table className="request-table">
               <thead>
                 <tr>
-                  <th>#</th>
+                  <th>S.No</th>
                   <th>Email</th>
                   <th>Message</th>
                   <th>Received Date</th>

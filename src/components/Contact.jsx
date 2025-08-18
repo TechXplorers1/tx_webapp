@@ -5,6 +5,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEnvelope, faPhone, faMapMarkerAlt } from '@fortawesome/free-solid-svg-icons';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
+import { database, auth } from '../firebase';
+import { ref, push } from "firebase/database";
 
 const ContactPage = () => {
     const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -25,19 +27,26 @@ const ContactPage = () => {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
+        const currentUser = auth.currentUser;
         const submission = {
             id: Date.now(),
             ...formData,
-            date: new Date().toISOString().split('T')[0],
+            receivedDate: new Date().toISOString().split('T')[0],
+            status: "Pending",
+            userId: currentUser ? currentUser.uid : "guest"
         };
 
-        const existingSubmissions = JSON.parse(localStorage.getItem('contact_submissions')) || [];
-        const updatedSubmissions = [submission, ...existingSubmissions];
-        localStorage.setItem('contact_submissions', JSON.stringify(updatedSubmissions));
-        
-        setShowSuccessModal(true);
+         try {
+            const contactSubmissionsRef = ref(database, 'submissions/contactMessages');
+            await push(contactSubmissionsRef, submission);
+            
+            setShowSuccessModal(true);
+        } catch (error) {
+            console.error("Failed to submit contact message to Firebase", error);
+            alert("Submission failed. Please try again.");
+        }
     };
     
     const handleCloseSuccessModal = () => {
