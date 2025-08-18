@@ -1,83 +1,92 @@
 import React, { useState, useEffect } from 'react';
+// Import Firebase functions and the initialized database
+// Make sure the path to your firebase configuration file is correct.
+import { getDatabase, ref, onValue, update } from "firebase/database";
+import { database } from '../../firebase'; 
 
 const AssetManagement = () => {
-  // --- Asset Management States ---
-  const [assets, setAssets] = useState([
-    { id: 1, tag: 'TXP-LT-001', name: 'Dell Latitude 5520', type: 'Laptop', status: 'assigned', assignedTo: 'John Smith', assignedDate: '2024-02-01' },
-    { id: 2, tag: 'TXP-MON-001', name: 'Dell UltraSharp U2720Q', type: 'Monitor', status: 'assigned', assignedTo: 'Sarah Johnson', assignedDate: '2024-01-10' },
-    { id: 3, tag: 'TXP-MB-001', name: 'iPhone 15 Pro', type: 'Mobile', status: 'assigned', assignedTo: 'Mike Chen', assignedDate: '2024-05-04' },
-    { id: 4, tag: 'TXP-LT-002', name: 'HP Spectre x360', type: 'Laptop', status: 'available', assignedTo: null, assignedDate: null },
-    { id: 5, tag: 'TXP-KB-001', name: 'Logitech MX Keys', type: 'Keyboard', status: 'available', assignedTo: null, assignedDate: null },
-  ]);
-
-  const [assetAssignments, setAssetAssignments] = useState([
-    { id: 1, assetId: 1, employeeId: 5, assignedDate: '2024-02-01', reason: 'New employee laptop setup' },
-    { id: 2, assetId: 2, employeeId: 2, assignedDate: '2024-01-10', reason: 'Manager workstation upgrade' },
-    { id: 3, assetId: 3, employeeId: 3, assignedDate: '2024-05-04', reason: 'Team lead mobile device' },
-  ]);
-
-   // MODIFIED: Initialize employees state as empty. It will be loaded from localStorage or JSON.
+  // --- Component State ---
+  // State for data fetched from Firebase
+  const [assets, setAssets] = useState([]);
   const [employees, setEmployees] = useState([]);
   
-  // NEW: Add loading and error states for the data fetch.
+  // State for managing UI (loading, errors, modals)
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
- // NEW: useEffect to load employees from localStorage or fetch from employees.json
-  useEffect(() => {
-    const loadEmployees = async () => {
-      try {
-        const savedEmployees = localStorage.getItem('employees');
-        if (savedEmployees && JSON.parse(savedEmployees).length > 0) {
-          setEmployees(JSON.parse(savedEmployees));
-        } else {
-          const response = await fetch('/employees.json'); // Assumes employees.json is in the /public folder
-          if (!response.ok) {
-            throw new Error('Network response was not ok');
-          }
-          const data = await response.json();
-          setEmployees(data);
-        }
-      } catch (err) {
-        setError(err.message);
-        console.error("Failed to load employees:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadEmployees();
-  }, []);
-
-  // NEW: useEffect to save employee data to localStorage whenever it changes
-  useEffect(() => {
-    if (!loading && employees.length > 0) {
-      localStorage.setItem('employees', JSON.stringify(employees));
-    }
-  }, [employees, loading]);
-
-
-
-  // Modal and Search States
   const [isAssignAssetModalOpen, setIsAssignAssetModalOpen] = useState(false);
-  const [newAssignment, setNewAssignment] = useState({
-    assetId: '',
-    employeeId: '',
-    reason: '',
+  const [newAssignment, setNewAssignment] = useState({ 
+    assetFirebaseKey: '', 
+    employeeFirebaseKey: '', 
+    reason: '' 
   });
   const [assetSearchTermInModal, setAssetSearchTermInModal] = useState('');
-  const [employeeSearchTermInModal, setEmployeeSearchTermInModal] = useState('');
 
-  // --- Asset Management Handlers ---
-  const handleAssignAssetClick = () => {
-    setIsAssignAssetModalOpen(true);
-  };
+  // --- Data Fetching Effect ---
+  // This useEffect hook runs once when the component mounts.
+  // It establishes real-time listeners to the Firebase database.
+  useEffect(() => {
+    // Define references to the 'assets' and 'users' nodes in your database.
+    const assetsRef = ref(database, 'assets');
+    const usersRef = ref(database, 'users'); // Assuming your employees are stored under 'users'
+
+    // Set up the listener for the 'assets' data.
+    const unsubscribeAssets = onValue(assetsRef, (snapshot) => {
+      const data = snapshot.val();
+      // Convert the Firebase object into an array, including the unique key.
+      const assetsArray = data ? Object.keys(data).map(key => ({ firebaseKey: key, ...data[key] })) : [];
+      setAssets(assetsArray);
+      setLoading(false); // Data has loaded, so stop the loading indicator.
+    }, (err) => {
+      console.error("Firebase asset read failed:", err);
+      setError(err.message);
+      setLoading(false);
+    });
+
+    // Set up the listener for the 'users' (employees) data.
+    const unsubscribeUsers = onValue(usersRef, (snapshot) => {
+      const data = snapshot.val();
+      const usersArray = data ? Object.keys(data).map(key => ({ firebaseKey: key, ...data[key] })) : [];
+      setEmployees(usersArray);
+    }, (err) => {
+      console.error("Firebase user read failed:", err);
+      setError(err.message);
+    });
+
+    // Cleanup function: This runs when the component unmounts.
+    // It's crucial for preventing memory leaks by detaching the listeners.
+    return () => {
+      unsubscribeAssets();
+      unsubscribeUsers();
+    };
+  }, []); // The empty dependency array ensures this effect runs only once.
+
+  // --- Derived Data ---
+  // Instead of a separate state, derive the activity log directly from the 'assets' state.
+  // This ensures the log is always in sync with the actual data.
+  const recentActivity = assets
+    .filter(asset => asset.status === 'assigned' && asset.assignedTo !== 'Unassigned')
+    .sort((a, b) => {
+        // A robust sort that handles different date formats
+        const dateA = new Date(a.assignedDate?.split('/').reverse().join('-'));
+        const dateB = new Date(b.assignedDate?.split('/').reverse().join('-'));
+        return dateB - dateA;
+    });
+
+  // Filter available assets for the assignment modal dropdown.
+  const filteredAvailableAssets = assets.filter(asset =>
+    asset.status === 'available' &&
+    (asset.name.toLowerCase().includes(assetSearchTermInModal.toLowerCase()) ||
+     (asset.serialNumber || '').toLowerCase().includes(assetSearchTermInModal.toLowerCase()))
+  );
+
+  // --- Event Handlers ---
+  const handleAssignAssetClick = () => setIsAssignAssetModalOpen(true);
 
   const handleCloseAssignAssetModal = () => {
     setIsAssignAssetModalOpen(false);
-    setNewAssignment({ assetId: '', employeeId: '', reason: '' });
+    // Reset form state when closing the modal
+    setNewAssignment({ assetFirebaseKey: '', employeeFirebaseKey: '', reason: '' });
     setAssetSearchTermInModal('');
-    setEmployeeSearchTermInModal('');
   };
 
   const handleNewAssignmentChange = (e) => {
@@ -85,67 +94,67 @@ const AssetManagement = () => {
     setNewAssignment(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleAssignAsset = (e) => {
+  // Handles the submission of the 'Assign Asset' form.
+  // This function is async because it interacts with the database.
+  const handleAssignAsset = async (e) => {
     e.preventDefault();
-    const { assetId, employeeId, reason } = newAssignment;
-    if (!assetId || !employeeId || !reason) {
-      console.error('Please fill in all required fields.');
+    const { assetFirebaseKey, employeeFirebaseKey, reason } = newAssignment;
+    if (!assetFirebaseKey || !employeeFirebaseKey || !reason) {
+      alert('Please fill in all required fields.');
       return;
     }
-    const assignedAsset = assets.find(asset => asset.id === parseInt(assetId));
-    const assignedEmployee = employees.find(emp => emp.id === parseInt(employeeId));
 
-    if (assignedAsset && assignedEmployee) {
-      const newAssignmentEntry = {
-        id: assetAssignments.length > 0 ? Math.max(...assetAssignments.map(a => a.id)) + 1 : 1,
-        assetId: assignedAsset.id,
-        employeeId: assignedEmployee.id,
-        assignedDate: new Date().toISOString().slice(0, 10),
-        reason: reason,
-      };
-      setAssetAssignments(prev => [...prev, newAssignmentEntry]);
-      setAssets(prevAssets => prevAssets.map(asset =>
-        asset.id === assignedAsset.id
-          ? { ...asset, status: 'assigned', assignedTo: assignedEmployee.name, assignedDate: newAssignmentEntry.assignedDate }
-          : asset
-      ));
-      handleCloseAssignAssetModal();
-    } else {
-      console.error('Selected asset or employee not found.');
+    // Create a reference to the specific asset in the database that needs to be updated.
+    const assetRef = ref(database, `assets/${assetFirebaseKey}`);
+    const assignedDate = new Date().toLocaleDateString('en-GB'); // Format as DD/MM/YYYY
+
+    try {
+      // Update the asset's data in Firebase.
+      await update(assetRef, {
+        status: 'assigned',
+        assignedTo: employeeFirebaseKey,
+        assignedDate: assignedDate,
+        returnDate: null // It's good practice to clear the return date on a new assignment.
+      });
+      handleCloseAssignAssetModal(); // Close the modal on success.
+    } catch (err) {
+      console.error("Failed to assign asset:", err);
+      alert("Error assigning asset. Please try again.");
     }
   };
   
-  const filteredAvailableAssets = assets.filter(asset =>
-    asset.status === 'available' &&
-    (asset.tag.toLowerCase().includes(assetSearchTermInModal.toLowerCase()) ||
-      asset.name.toLowerCase().includes(assetSearchTermInModal.toLowerCase()))
-  );
-
-  const filteredEmployeesForAssignment = employees.filter(employee =>
-    (employee.name || '').toLowerCase().includes(employeeSearchTermInModal.toLowerCase()) ||
-    (employee.email || '').toLowerCase().includes(employeeSearchTermInModal.toLowerCase())
-  );
-
   // --- Style Helper Functions ---
-  const getRoleTagBg = (role) => {
-    switch (role?.toLowerCase()) {
+  const getStatusTagBg = (status) => {
+    switch (status?.toLowerCase()) {
       case 'assigned': return '#E0F2FE';
-      case 'available': return '#D9F5E6';
+      case 'available': return '#D1FAE5';
+      case 'in maintenance': return '#FEE2E2';
       default: return '#E5E7EB';
     }
   };
 
-  const getRoleTagText = (role) => {
-    switch (role?.toLowerCase()) {
-      case 'assigned': return '#2563EB';
-      case 'available': return '#28A745';
-      default: return '#6B7280';
+  const getStatusTagText = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'assigned': return '#0284C7';
+      case 'available': return '#065F46';
+      case 'in maintenance': return '#991B1B';
+      default: return '#4B5563';
     }
   };
 
+  // --- Conditional Rendering for Loading/Error States ---
+  if (loading) {
+    return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading asset data...</div>;
+  }
+  if (error) {
+    return <div style={{ padding: '2rem', textAlign: 'center', color: 'red' }}>Error loading data: {error}</div>;
+  }
+
+  // --- JSX Render ---
   return (
     <div className="ad-body-container">
       <style>{`
+        /* Paste all the CSS from your original file here */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         :root {
             --bg-body: #f3f4f6;
@@ -172,28 +181,17 @@ const AssetManagement = () => {
             --create-employee-btn-text: #ffffff;
             --asset-card-icon-bg-total: #E0F2FE;
             --asset-card-icon-color-total: #2563EB;
-            --asset-card-icon-bg-available: #D9F5E6;
-            --asset-card-icon-color-available: #28A745;
-            --asset-card-icon-bg-assigned: #F3E5F5;
-            --asset-card-icon-color-assigned: #9C27B0;
-            --asset-card-icon-bg-pending: #FFF3E0;
-            --asset-card-icon-color-pending: #FF9800;
+            --asset-card-icon-bg-available: #D1FAE5;
+            --asset-card-icon-color-available: #065F46;
+            --asset-card-icon-bg-assigned: #F3E8FF;
+            --asset-card-icon-color-assigned: #7E22CE;
+            --asset-card-icon-bg-pending: #FEF3C7;
+            --asset-card-icon-color-pending: #92400E;
             --assign-asset-btn-bg: #2563EB;
             --assign-asset-btn-hover: #1D4ED8;
             --assign-asset-btn-text: #ffffff;
             --asset-section-title-color: #1f2937;
             --asset-section-subtitle-color: #6b7280;
-            --asset-quick-assign-bg: #ffffff;
-            --asset-quick-assign-border: #e5e7eb;
-            --asset-quick-assign-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-            --asset-quick-assign-card-bg: #f9fafb;
-            --asset-quick-assign-card-border: #e5e7eb;
-            --asset-quick-assign-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-            --asset-quick-assign-card-title: #1f2937;
-            --asset-quick-assign-card-text: #6b7280;
-            --asset-quick-assign-btn-bg: #2563eb;
-            --asset-quick-assign-btn-hover: #1d4ed8;
-            --asset-quick-assign-btn-text: #ffffff;
             --asset-activity-table-header-bg: #f9fafb;
             --asset-activity-table-header-text: #6b7280;
             --asset-activity-table-row-border: #e5e7eb;
@@ -201,141 +199,33 @@ const AssetManagement = () => {
             --asset-activity-text-primary: #1f2937;
             --asset-activity-text-secondary: #6b7280;
         }
-
-        .ad-body-container {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-body);
-            min-height: 100vh;
-            color: var(--text-primary);
-        }
-
-        .asset-management-container {
-            padding: 1.5rem;
-        }
-        .asset-management-box {
-            background-color: var(--bg-card);
-            border-radius: 0.75rem;
-            box-shadow: 0 4px 6px -1px var(--shadow-color-1), 0 2px 4px -1px var(--shadow-color-3);
-            border: 1px solid var(--border-color);
-            padding: 1.5rem;
-        }
-        .asset-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
-        .asset-title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: var(--asset-section-title-color);
-        }
-        .asset-subtitle {
-            font-size: 0.875rem;
-            color: var(--asset-section-subtitle-color);
-        }
-        .assign-asset-btn {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.6rem 1rem;
-            background-color: var(--assign-asset-btn-bg);
-            color: var(--assign-asset-btn-text);
-            border-radius: 0.5rem;
-            font-weight: 500;
-            border: none;
-            cursor: pointer;
-        }
-        .asset-stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-        .asset-stat-card {
-            background-color: var(--bg-card);
-            border-radius: 0.75rem;
-            border: 1px solid var(--border-color);
-            padding: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-        .asset-stat-card-icon-wrapper {
-            border-radius: 9999px;
-            padding: 0.75rem;
-            font-size: 1.5rem;
-        }
+        .ad-body-container { font-family: 'Inter', sans-serif; background-color: var(--bg-body); min-height: 100vh; color: var(--text-primary); }
+        .asset-management-container { padding: 1.5rem; }
+        .asset-management-box { background-color: var(--bg-card); border-radius: 0.75rem; box-shadow: 0 4px 6px -1px var(--shadow-color-1), 0 2px 4px -1px var(--shadow-color-3); border: 1px solid var(--border-color); padding: 1.5rem; }
+        .asset-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
+        .asset-title { font-size: 1.5rem; font-weight: 600; color: var(--asset-section-title-color); }
+        .asset-subtitle { font-size: 0.875rem; color: var(--asset-section-subtitle-color); }
+        .assign-asset-btn { display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1rem; background-color: var(--assign-asset-btn-bg); color: var(--assign-asset-btn-text); border-radius: 0.5rem; font-weight: 500; border: none; cursor: pointer; transition: background-color 0.2s; }
+        .assign-asset-btn:hover { background-color: var(--assign-asset-btn-hover); }
+        .asset-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+        .asset-stat-card { background-color: var(--bg-card); border-radius: 0.75rem; border: 1px solid var(--border-color); padding: 1rem; display: flex; align-items: center; gap: 1rem; }
+        .asset-stat-card-icon-wrapper { border-radius: 9999px; padding: 0.75rem; font-size: 1.5rem; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; }
         .asset-stat-card-icon-wrapper.total { background-color: var(--asset-card-icon-bg-total); color: var(--asset-card-icon-color-total); }
         .asset-stat-card-icon-wrapper.available { background-color: var(--asset-card-icon-bg-available); color: var(--asset-card-icon-color-available); }
         .asset-stat-card-icon-wrapper.assigned { background-color: var(--asset-card-icon-bg-assigned); color: var(--asset-card-icon-color-assigned); }
         .asset-stat-card-icon-wrapper.pending { background-color: var(--asset-card-icon-bg-pending); color: var(--asset-card-icon-color-pending); }
         .asset-stat-card-value { font-size: 1.875rem; font-weight: 700; }
         .asset-stat-card-label { font-size: 0.875rem; color: var(--text-secondary); }
-        .quick-assign-section {
-            margin-bottom: 1.5rem;
-            padding: 1.5rem;
-            background-color: var(--asset-quick-assign-bg);
-            border-radius: 0.75rem;
-            border: 1px solid var(--asset-quick-assign-border);
-        }
-        .quick-assign-section h3 {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-        }
-        .quick-assign-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-        }
-        .quick-assign-card {
-            background-color: var(--asset-quick-assign-card-bg);
-            border-radius: 0.5rem;
-            border: 1px solid var(--asset-quick-assign-card-border);
-            padding: 1rem;
-        }
-        .quick-assign-card-header { display: flex; justify-content: space-between; align-items: center; }
-        .quick-assign-card-title { font-weight: 600; }
-        .quick-assign-card-info { font-size: 0.875rem; color: var(--asset-quick-assign-card-text); margin-top: 0.5rem; }
-        .quick-assign-card-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            padding: 0.6rem 1rem;
-            margin-top: 1rem;
-            width: 100%;
-            background-color: var(--asset-quick-assign-btn-bg);
-            color: var(--asset-quick-assign-btn-text);
-            border-radius: 0.5rem;
-            font-weight: 500;
-            border: none;
-            cursor: pointer;
-        }
-        .recent-activity-section {
-            padding: 1.5rem;
-            background-color: var(--bg-card);
-            border-radius: 0.75rem;
-            border: 1px solid var(--border-color);
-        }
-        .recent-activity-section h3 {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-        }
+        .recent-activity-section { padding-top: 1.5rem; border-top: 1px solid var(--border-color); }
+        .recent-activity-section h3 { font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; }
         .asset-activity-table-container { overflow-x: auto; }
         .asset-activity-table { width: 100%; border-collapse: collapse; }
         .asset-activity-table th, .asset-activity-table td { padding: 1rem; text-align: left; border-bottom: 1px solid var(--asset-activity-table-row-border); }
         .asset-activity-table thead { background-color: var(--asset-activity-table-header-bg); }
-        .asset-activity-table th { font-weight: 600; color: var(--asset-activity-table-header-text); }
+        .asset-activity-table th { font-weight: 600; color: var(--asset-activity-table-header-text); font-size: 0.75rem; text-transform: uppercase; }
         .asset-activity-table .asset-info { display: flex; align-items: center; gap: 0.75rem; }
         .asset-activity-table .asset-icon-wrapper { background-color: var(--asset-card-icon-bg-total); color: var(--asset-card-icon-color-total); padding: 0.5rem; border-radius: 0.5rem; }
-        .asset-status-tag { padding: 0.2rem 0.6rem; border-radius: 9999px; font-size: 0.8rem; }
-        
-        /* Modal Styles */
+        .asset-status-tag { padding: 0.2rem 0.6rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 500; }
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--modal-overlay-bg); display: flex; justify-content: center; align-items: center; z-index: 1000; opacity: 0; visibility: hidden; transition: opacity 0.3s ease; }
         .modal-overlay.open { opacity: 1; visibility: visible; }
         .modal-content { background-color: var(--modal-bg); border-radius: 0.75rem; box-shadow: var(--modal-shadow); width: 90%; max-width: 600px; padding: 1.5rem; position: relative; }
@@ -347,7 +237,7 @@ const AssetManagement = () => {
         .modal-form-full-width { grid-column: 1 / -1; }
         .form-group { display: flex; flex-direction: column; gap: 0.5rem; }
         .form-label { font-weight: 500; color: var(--modal-label-color); }
-        .form-input, .form-select, textarea { padding: 0.75rem 1rem; border: 1px solid var(--modal-input-border); border-radius: 0.5rem; width: 100%; box-sizing: border-box; }
+        .form-input, .form-select, textarea { padding: 0.75rem 1rem; border: 1px solid var(--modal-input-border); border-radius: 0.5rem; width: 100%; box-sizing: border-box; background-color: #fff; }
         .modal-footer { margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 0.75rem; }
         .create-employee-btn { padding: 0.75rem 1.5rem; background-color: var(--create-employee-btn-bg); color: var(--create-employee-btn-text); border-radius: 0.5rem; font-weight: 600; border: none; cursor: pointer; }
         .confirm-cancel-btn { padding: 0.75rem 1.5rem; background-color: var(--confirm-modal-cancel-btn-bg); color: var(--confirm-modal-cancel-btn-text); border-radius: 0.5rem; font-weight: 500; border: none; cursor: pointer; }
@@ -366,85 +256,33 @@ const AssetManagement = () => {
             </div>
 
             <div className="asset-stats-grid">
-              <div className="asset-stat-card">
-                <div className="asset-stat-card-icon-wrapper total">A</div>
-                <div>
-                  <div className="asset-stat-card-value">{assets.length}</div>
-                  <div className="asset-stat-card-label">Total Assets</div>
-                </div>
-              </div>
-              <div className="asset-stat-card">
-                <div className="asset-stat-card-icon-wrapper available">✓</div>
-                <div>
-                  <div className="asset-stat-card-value">{assets.filter(a => a.status === 'available').length}</div>
-                  <div className="asset-stat-card-label">Available</div>
-                </div>
-              </div>
-              <div className="asset-stat-card">
-                <div className="asset-stat-card-icon-wrapper assigned">👤</div>
-                <div>
-                  <div className="asset-stat-card-value">{assets.filter(a => a.status === 'assigned').length}</div>
-                  <div className="asset-stat-card-label">Assigned</div>
-                </div>
-              </div>
-              <div className="asset-stat-card">
-                <div className="asset-stat-card-icon-wrapper pending">⏳</div>
-                <div>
-                  <div className="asset-stat-card-value">0</div>
-                  <div className="asset-stat-card-label">Pending</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="quick-assign-section">
-              <h3>Quick Asset Assignment by Role</h3>
-              <div className="quick-assign-grid">
-                {['Admin', 'Manager', 'Team Lead', 'Employee'].map(role => (
-                  <div className="quick-assign-card" key={role}>
-                    <div className="quick-assign-card-header">
-                      <div className="quick-assign-card-title">{role}</div>
-                    </div>
-                    <div className="quick-assign-card-info">Users: {employees.filter(emp => emp.roles.includes(role.toLowerCase())).length}</div>
-                    <button className="quick-assign-card-btn" onClick={handleAssignAssetClick}>Assign to {role}</button>
-                  </div>
-                ))}
-              </div>
+              <div className="asset-stat-card"><div className="asset-stat-card-icon-wrapper total">#</div><div><div className="asset-stat-card-value">{assets.length}</div><div className="asset-stat-card-label">Total Assets</div></div></div>
+              <div className="asset-stat-card"><div className="asset-stat-card-icon-wrapper available">✓</div><div><div className="asset-stat-card-value">{assets.filter(a => a.status === 'available').length}</div><div className="asset-stat-card-label">Available</div></div></div>
+              <div className="asset-stat-card"><div className="asset-stat-card-icon-wrapper assigned">👤</div><div><div className="asset-stat-card-value">{assets.filter(a => a.status === 'assigned').length}</div><div className="asset-stat-card-label">Assigned</div></div></div>
+              <div className="asset-stat-card"><div className="asset-stat-card-icon-wrapper pending">🔧</div><div><div className="asset-stat-card-value">{assets.filter(a => a.status === 'in maintenance').length}</div><div className="asset-stat-card-label">Maintenance</div></div></div>
             </div>
 
             <div className="recent-activity-section">
               <h3>Recent Asset Activity</h3>
               <div className="asset-activity-table-container">
                 <table className="asset-activity-table">
-                  <thead>
-                    <tr>
-                      <th>Asset</th>
-                      <th>Assigned To</th>
-                      <th>Status</th>
-                      <th>Date</th>
-                    </tr>
-                  </thead>
+                  <thead><tr><th>Asset</th><th>Assigned To</th><th>Status</th><th>Date</th></tr></thead>
                   <tbody>
-                    {assetAssignments.map(assignment => {
-                      const asset = assets.find(a => a.id === assignment.assetId);
-                      const employee = employees.find(e => e.id === assignment.employeeId);
+                    {recentActivity.map(asset => {
+                      const employee = employees.find(e => e.firebaseKey === asset.assignedTo);
                       return (
-                        <tr key={assignment.id}>
+                        <tr key={asset.firebaseKey}>
                           <td>
                             <div className="asset-info">
-                              <div className="asset-icon-wrapper">💻</div>
                               <div>
-                                <div>{asset?.tag} - {asset?.name}</div>
-                                <div style={{color: 'var(--text-secondary)', fontSize: '0.8rem'}}>{assignment.reason}</div>
+                                <div style={{fontWeight: 500}}>{asset?.name}</div>
+                                <div style={{color: 'var(--text-secondary)', fontSize: '0.8rem'}}>{asset?.serialNumber || 'N/A'}</div>
                               </div>
                             </div>
                           </td>
-                          <td>{employee?.name}</td>
-                          <td>
-                            <span className="asset-status-tag" style={{ backgroundColor: getRoleTagBg(asset?.status), color: getRoleTagText(asset?.status) }}>
-                              {asset?.status}
-                            </span>
-                          </td>
-                          <td>{assignment.assignedDate}</td>
+                          <td>{employee ? `${employee.firstName} ${employee.lastName}` : 'Unknown User'}</td>
+                          <td><span className="asset-status-tag" style={{ backgroundColor: getStatusTagBg(asset?.status), color: getStatusTagText(asset?.status) }}>{asset?.status}</span></td>
+                          <td>{asset.assignedDate}</td>
                         </tr>
                       );
                     })}
@@ -456,9 +294,8 @@ const AssetManagement = () => {
         </div>
       </main>
 
-      {/* Assign Asset Modal */}
       {isAssignAssetModalOpen && (
-        <div className="modal-overlay open">
+        <div className={`modal-overlay ${isAssignAssetModalOpen ? 'open' : ''}`}>
           <div className="modal-content">
             <div className="modal-header">
               <div>
@@ -469,37 +306,30 @@ const AssetManagement = () => {
             </div>
             <form className="modal-form" onSubmit={handleAssignAsset}>
               <div className="form-group modal-form-full-width">
-                <label htmlFor="searchAssets" className="form-label">Search Available Assets</label>
-                <input
-                  type="text"
-                  id="searchAssets"
-                  className="form-input"
-                  placeholder="Search by asset tag or name..."
-                  value={assetSearchTermInModal}
-                  onChange={(e) => setAssetSearchTermInModal(e.target.value)}
-                />
+                <label className="form-label">Search Available Assets</label>
+                <input type="text" className="form-input" placeholder="Search by name or serial number..." value={assetSearchTermInModal} onChange={(e) => setAssetSearchTermInModal(e.target.value)} />
               </div>
               <div className="form-group modal-form-full-width">
-                <label htmlFor="assetId" className="form-label">Select Asset *</label>
-                <select id="assetId" name="assetId" className="form-select" value={newAssignment.assetId} onChange={handleNewAssignmentChange} required>
+                <label className="form-label">Select Asset *</label>
+                <select name="assetFirebaseKey" className="form-select" value={newAssignment.assetFirebaseKey} onChange={handleNewAssignmentChange} required>
                   <option value="">Choose an asset</option>
                   {filteredAvailableAssets.map(asset => (
-                    <option key={asset.id} value={asset.id}>{asset.tag} - {asset.name}</option>
+                    <option key={asset.firebaseKey} value={asset.firebaseKey}>{asset.name} ({asset.serialNumber || 'No S/N'})</option>
                   ))}
                 </select>
               </div>
               <div className="form-group modal-form-full-width">
-                <label htmlFor="employeeId" className="form-label">Assign to User *</label>
-                <select id="employeeId" name="employeeId" className="form-select" value={newAssignment.employeeId} onChange={handleNewAssignmentChange} required>
+                <label className="form-label">Assign to User *</label>
+                <select name="employeeFirebaseKey" className="form-select" value={newAssignment.employeeFirebaseKey} onChange={handleNewAssignmentChange} required>
                   <option value="">Choose a user</option>
                   {employees.map(employee => (
-                    <option key={employee.id} value={employee.id}>{employee.firstName} ({employee.personalEmail})</option>
+                    <option key={employee.firebaseKey} value={employee.firebaseKey}>{employee.firstName} {employee.lastName} ({employee.email})</option>
                   ))}
                 </select>
               </div>
               <div className="form-group modal-form-full-width">
-                <label htmlFor="reason" className="form-label">Assignment Reason *</label>
-                <textarea id="reason" name="reason" className="form-input" value={newAssignment.reason} onChange={handleNewAssignmentChange} rows="3" required></textarea>
+                <label className="form-label">Assignment Reason *</label>
+                <textarea name="reason" className="form-input" placeholder="e.g., New hire setup, replacement, etc." value={newAssignment.reason} onChange={handleNewAssignmentChange} rows="3" required></textarea>
               </div>
               <div className="modal-footer modal-form-full-width">
                 <button type="button" className="confirm-cancel-btn" onClick={handleCloseAssignAssetModal}>Cancel</button>
