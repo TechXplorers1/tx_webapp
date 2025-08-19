@@ -1679,7 +1679,18 @@ Please provide a summary no longer than 150 words.`;
   };
 
   // --- NEW Component for the Applications Tab UI ---
-const ApplicationsTab = ({ applicationData, employees }) => {
+ const ApplicationsTab = ({ 
+    applicationData, 
+    employees,
+    filterDateRange,
+    handleDateRangeChange,
+    sortOrder,
+    setSortOrder,
+    quickFilter,
+    handleQuickFilterChange,
+    areFiltersActive,
+    handleClearFilters
+  }) => {
   const [expandedClient, setExpandedClient] = useState(null);
 
   const getInitials = (name) => {
@@ -1721,6 +1732,7 @@ const ApplicationsTab = ({ applicationData, employees }) => {
               <th>Employee</th>
               <th>Client</th>
               <th>Job Title</th>
+              <th>Role</th>
               <th>Total Applications</th>
               <th>Details</th>
             </tr>
@@ -1738,6 +1750,7 @@ const ApplicationsTab = ({ applicationData, employees }) => {
                     </td>
                     <td>{clientName}</td>
                     <td>{data.apps[0]?.jobTitle}</td>
+                    <td>{data.apps[0]?.role || '-'}</td>
                     <td style={{ textAlign: 'center' }}>{data.apps.length}</td>
                     <td style={{ textAlign: 'center' }}>
                       <span style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', display: 'inline-block', transition: 'transform 0.2s' }}>⋁</span>
@@ -4323,6 +4336,14 @@ const ApplicationsTab = ({ applicationData, employees }) => {
           <ApplicationsTab
             applicationData={applicationData}
             employees={displayEmployees}
+            filterDateRange={filterDateRange}
+            handleDateRangeChange={handleDateRangeChange}
+            sortOrder={sortOrder}
+            setSortOrder={setSortOrder}
+            quickFilter={quickFilter}
+            handleQuickFilterChange={handleQuickFilterChange}
+            areFiltersActive={areFiltersActive}
+            handleClearFilters={handleClearFilters}
           />
         )}
 

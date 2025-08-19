@@ -568,7 +568,7 @@ useEffect(() => {
   // States for Modals (Applications Tab)
   const [showAddApplicationModal, setShowAddApplicationModal] = useState(false);
   const [newApplicationFormData, setNewApplicationFormData] = useState({
-    jobTitle: '', company: '', platform: '', jobUrl: '', salaryRange: '', location: '', notes: '', jobId: '' // Added jobId
+    jobTitle: '', company: '', platform: '', jobUrl: '', salaryRange: '', location: '', notes: '', jobId: '' , role: '' // Added jobId
   });
   const [selectedClientForApplication, setSelectedClientForApplication] = useState(null);
 
@@ -3620,6 +3620,19 @@ const handleAcceptClient = async (clientToAccept) => {
                   required
                 />
               </div>
+               <div style={modalFormFieldGroupStyle}>
+                <label style={modalLabelStyle}>Role <span style={{ color: 'red' }}>*</span></label>
+                <input
+                  type="text"
+                  name="role"
+                  value={newApplicationFormData.role}
+                  onChange={handleNewApplicationFormChange}
+                  style={modalInputStyle}
+                  placeholder="e.g., Software Engineer"
+                  required
+                />
+              </div>
+
               <div style={modalFormFieldGroupStyle}>
                 <label style={modalLabelStyle}>Company <span style={{ color: 'red' }}>*</span></label>
                 <input
@@ -3726,6 +3739,7 @@ const handleAcceptClient = async (clientToAccept) => {
           <Modal.Body style={modalBodyStyle}>
             <div style={modalViewDetailsGridStyle}>
               <p style={modalViewDetailItemStyle}><strong>Job Title:</strong> {viewedApplication.jobTitle}</p>
+              <p style={modalViewDetailItemStyle}><strong>Role:</strong> {viewedApplication.role}</p>
               <p style={modalViewDetailItemStyle}><strong>Company:</strong> {viewedApplication.company}</p>
               <p style={modalViewDetailItemStyle}><strong>Platform:</strong> {viewedApplication.platform}</p>
               <p style={modalViewDetailItemStyle}><strong>Job ID:</strong> {viewedApplication.jobId || '-'}</p> {/* Display Job ID */}
