@@ -1732,7 +1732,6 @@ Please provide a summary no longer than 150 words.`;
               <th>Employee</th>
               <th>Client</th>
               <th>Job Title</th>
-              <th>Role</th>
               <th>Total Applications</th>
               <th>Details</th>
             </tr>
@@ -1750,7 +1749,6 @@ Please provide a summary no longer than 150 words.`;
                     </td>
                     <td>{clientName}</td>
                     <td>{data.apps[0]?.jobTitle}</td>
-                    <td>{data.apps[0]?.role || '-'}</td>
                     <td style={{ textAlign: 'center' }}>{data.apps.length}</td>
                     <td style={{ textAlign: 'center' }}>
                       <span style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', display: 'inline-block', transition: 'transform 0.2s' }}>⋁</span>
@@ -4303,7 +4301,7 @@ Please provide a summary no longer than 150 words.`;
 
             <div className="employee-cards-grid">
               {filteredEmployees.map((employee) => (
-                <div key={employee.id} className="employee-card">
+                <div key={employee.firebaseKey} className="employee-card">
                   <div className="employee-card-header">
                     <div className="employee-avatar-large">{employee.avatar}</div>
                     <div className="employee-info">

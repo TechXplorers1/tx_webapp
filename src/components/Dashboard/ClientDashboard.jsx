@@ -1710,8 +1710,7 @@ const Applications = ({
                   <th style={{ padding: '12px', textAlign: 'center' }}>S.No</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Applied Date</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Platform</th>
-                  <th style={{ padding: '12px', textAlign: 'center' }}>Job Title</th>
-                  <th style={{ padding: '12px', textAlign: 'center' }}>Role</th>
+                  <th style={{ padding: '12px', textAlign: 'center' }}>Job Title</th> 
                   <th style={{ padding: '12px', textAlign: 'center' }}>Job ID</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Company</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Link</th>
@@ -1733,7 +1732,6 @@ const Applications = ({
                     </td>
                     <td style={{ padding: '12px' }}>{app.website}</td>
                     <td style={{ padding: '12px' }}>{app.position}</td>
-                    <td style={{ padding: '12px' }}>{app.role || '-'}</td>
                     <td style={{ padding: '12px' }}>{app.jobId}</td>
                     <td style={{ padding: '12px' }}>{app.company}</td>
                     <td style={{ padding: '12px' }}>
@@ -2406,7 +2404,6 @@ useEffect(() => {
                     jobId: app.jobId || 'N/A',
                     website: app.platform || 'N/A',
                     position: app.jobTitle || 'N/A',
-                     role: app.role || 'N/A',
                     company: app.company || 'N/A',
                     link: app.jobUrl || '#',
                     dateAdded: formattedDate,
@@ -2781,7 +2778,6 @@ useEffect(() => {
       'Applied Date': app.dateAdded,
       'Platform': app.website,
       'Job Title': app.position,
-      'Role': app.role,
       'Job ID' : jobId,
       'Company': app.company,
       'Link': app.link,
