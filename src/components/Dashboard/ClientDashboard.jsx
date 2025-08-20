@@ -1710,8 +1710,8 @@ const Applications = ({
                   <th style={{ padding: '12px', textAlign: 'center' }}>S.No</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Applied Date</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Platform</th>
+                  <th style={{ padding: '12px', textAlign: 'center' }}>Job Title</th> 
                   <th style={{ padding: '12px', textAlign: 'center' }}>Job ID</th>
-                  <th style={{ padding: '12px', textAlign: 'center' }}>Job Title</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Company</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Link</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Job Description</th>
@@ -2778,6 +2778,7 @@ useEffect(() => {
       'Applied Date': app.dateAdded,
       'Platform': app.website,
       'Job Title': app.position,
+      'Job ID' : jobId,
       'Company': app.company,
       'Link': app.link,
       'Job Description': app.jobDescription

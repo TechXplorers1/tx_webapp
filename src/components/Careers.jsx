@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Container, Card, Button, Form, Modal, Row, Col } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import CustomNavbar from './Navbar';
+import { database, auth } from '../firebase';
+import { ref, push } from "firebase/database";
 
 // --- Data for Job Postings ---
 const jobs = [
@@ -70,9 +72,11 @@ function Careers() {
     }
   };
 
-  const handleFormSubmit = (e) => {
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
     if (!selectedJob) return;
+
+        const currentUser = auth.currentUser;
 
     const newSubmission = {
       id: Date.now(),
@@ -86,14 +90,23 @@ function Careers() {
       expectedSalary: formData.expectedSalary,
       resume: formData.resume ? formData.resume.name : 'N/A',
       status: 'Pending',
+      receivedDate: new Date().toISOString().split('T')[0],
+      userId: currentUser ? currentUser.uid : "guest"
     };
 
-    const existingSubmissions = JSON.parse(localStorage.getItem('career_submissions')) || [];
-    const updatedSubmissions = [newSubmission, ...existingSubmissions];
-    localStorage.setItem('career_submissions', JSON.stringify(updatedSubmissions));
+    try {
+      const careerSubmissionsRef = ref(database, 'submissions/careerApplications');
+      await push(careerSubmissionsRef, newSubmission);
 
-    handleModalClose();
-    setShowSuccessModal(true);
+      handleModalClose();
+      setShowSuccessModal(true);
+      
+      setFormData({ /* ... reset form ... */ });
+
+    } catch (error) {
+      console.error("Failed to submit career application to Firebase", error);
+      alert("Submission failed. Please try again.");
+    }
     
     setFormData({
       firstName: '', lastName: '', email: '', mobile: '',
