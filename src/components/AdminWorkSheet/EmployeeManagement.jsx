@@ -897,7 +897,7 @@ const EmployeeManagement = () => {
                     {/* Pass firebaseKey to the edit handler */}
                     <button className="action-btn" onClick={() => handleEditEmployeeClick(employee.firebaseKey)}>Edit</button>
                     {/* The delete handler also needs firebaseKey */}
-                    <button className="action-btn delete-btn" onClick={() => handleDeleteEmployeeClick(employee.firebaseKey)}>Delete</button>
+                    <button className="action-btn delete-btn" onClick={() => handleDeleteEmployeeClick(employee.firebaseKey)}>Inactive</button>
                   </div>
                 </div>
               ))}
