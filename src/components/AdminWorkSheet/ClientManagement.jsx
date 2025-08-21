@@ -460,7 +460,7 @@ const ClientManagement = () => {
                   <td style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-start' }}>
                     <div className="action-buttons">
                       {currentClientFilter === 'registered' && (<><button onClick={() => handleAcceptClient(client)} className="action-button accept">Accept</button><button onClick={() => handleDeclineClient(client)} className="action-button decline">Decline</button></>)}
-                      {(currentClientFilter === 'unassigned' || currentClientFilter === 'restored') && <button onClick={() => handleAssignClient(client)} className="action-button assign" disabled={!client.manager}>Assign</button>}
+                      {(currentClientFilter === 'unassigned' || currentClientFilter === 'restored') && <button onClick={() => handleAssignClient(client)} className="action-button assign" disabled={!client.manager}>Save</button>}
                       {currentClientFilter === 'active' && (<button onClick={() => handleOpenManagerModal(client)} className="action-button edit-manager">Edit Manager</button>)}                      {currentClientFilter === 'rejected' && (<><button onClick={() => handleRestoreClient(client)} className="action-button restore">Restore</button><button onClick={() => handleDeleteRejectedClient(client)} className="action-button delete-btn">Delete</button></>)}
                       </div>
                       {/* Send Payment Link Button */}

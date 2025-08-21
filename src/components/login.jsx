@@ -67,7 +67,7 @@ export default function LoginPage() {
     } else if (finalUserData.roles.includes('employee')) {
         navigate('/employees');
     } else {
-        navigate('/clientdashboard'); // Default for clients
+        navigate('/'); // Default for clients
     }
   };
 

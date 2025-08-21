@@ -1,6 +1,7 @@
 import React, {useState, useEffect } from 'react';
-import { database } from '../../firebase'; // Import your Firebase config
+import { database, auth } from '../../firebase'; // Import your Firebase config
 import { ref, onValue, push, set, remove, update } from "firebase/database";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 
 const EmployeeManagement = () => {
   // --- Employee Management States ---
@@ -13,6 +14,8 @@ const EmployeeManagement = () => {
   const [isDeleteConfirmModalOpen, setIsDeleteConfirmModalOpen] = useState(false);
   const [employeeToDeleteId, setEmployeeToDeleteId] = useState(null);
   const [currentEmployeeToEdit, setCurrentEmployeeToEdit] = useState(null);
+    const [isStatusConfirmModalOpen, setIsStatusConfirmModalOpen] = useState(false);
+  const [employeeToUpdateStatus, setEmployeeToUpdateStatus] = useState(null);
   const [newEmployee, setNewEmployee] = useState({
     workEmail: '',
     role: 'employee',
@@ -60,10 +63,10 @@ const EmployeeManagement = () => {
   departmentOptions.unshift('No department assigned');
 
   const roleOptions = [
+    { value: 'Employee', label: 'Employee', description: 'Standard employee access for job processing' },
     { value: 'Admin', label: 'Admin', description: 'Full system access and employee management' },
     { value: 'Manager', label: 'Manager', description: 'Manages teams and oversees operations' },
     { value: 'Team Lead', label: 'Team Lead', description: 'Leads a team and monitors activities' },
-    { value: 'Employee', label: 'Employee', description: 'Standard employee access for job processing' },
   ];
   const accountStatusOptions = ['Active', 'Inactive', 'Pending'];
   const genderOptions = ['Male', 'Female', 'Other'];
@@ -216,17 +219,7 @@ const EmployeeManagement = () => {
  const handleCreateEmployeeAccount = async (e) => {
     e.preventDefault();
     
-     const newRole = newEmployee.role.toLowerCase();
-    let roles = [
-        newRole,
-        newEmployee.accountStatus.toLowerCase(),
-        ...(newEmployee.department !== 'No department assigned' ? [newEmployee.department.toLowerCase()] : [])
-    ];
 
-    // --- FIX: Ensure 'employee' role is included for managers/admins ---
-    if ((newRole === 'admin' || newRole === 'manager') && !roles.includes('employee')) {
-        roles.push('employee');
-    }
     // Construct the new employee object from the form state
    const newEmployeeData = {
       // Personal Info
@@ -251,29 +244,40 @@ const EmployeeManagement = () => {
       
       // Employment Info
       dateOfJoin: newEmployee.dateOfJoin,
-      status: "Awaiting", // Default status
       temporaryPassword: newEmployee.temporaryPassword,
-      roles: [
-        newEmployee.role.toLowerCase(),
-        newEmployee.accountStatus.toLowerCase(),
-        ...(newEmployee.department !== 'No department assigned' ? [newEmployee.department.toLowerCase()] : [])
-      ]
+      accountStatus: newEmployee.accountStatus,
+      roles: [newEmployee.role.toLowerCase()],
+      department: newEmployee.department,
     };
 
       try {
-      const usersRef = ref(database, 'users'); // Correctly save to 'users' node
-      const newEmployeeRef = push(usersRef);
+      // --- MODIFICATION START ---
+      // Step 1: Create the user in Firebase Authentication
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        newEmployee.workEmail, // Use the employee's work email
+        newEmployee.temporaryPassword // Use the generated temporary password
+      );
+      const user = userCredential.user;
 
-      newEmployeeData.firebaseKey = newEmployeeRef.key;
+      // Step 2: Add the unique auth UID (firebaseKey) to the data object
+      newEmployeeData.firebaseKey = user.uid;
       
-      await set(newEmployeeRef, newEmployeeData);
+      // Step 3: Save the complete employee record to the Realtime Database under the new UID
+      const userRef = ref(database, `users/${user.uid}`);
+      await set(userRef, newEmployeeData);
+      // --- MODIFICATION END ---
       
-      console.log("Employee created successfully in Firebase!");
+      console.log("Employee created successfully in Firebase Auth and Database!");
       handleCloseAddEmployeeModal();
 
     } catch (error) {
-      console.error("Error creating employee in Firebase:", error);
-      alert("Failed to create employee. Please try again.");
+      if (error.code === 'auth/email-already-in-use') {
+        alert("This email is already registered. Please use a different work email.");
+      } else {
+        console.error("Error creating employee:", error);
+        alert("Failed to create employee. Please check the details and try again.");
+      }
     }
   };
 
@@ -387,11 +391,9 @@ const EmployeeManagement = () => {
     const updatedData = {
         ...employees.find(emp => emp.firebaseKey === firebaseKey), // Start with original data
         ...employeeDataToUpdate, // Apply changes
-        roles: [
-            pendingEmployeeUpdate.role.toLowerCase(),
-            pendingEmployeeUpdate.accountStatus.toLowerCase(),
-            ...(pendingEmployeeUpdate.department !== 'No department assigned' ? [pendingEmployeeUpdate.department.toLowerCase()] : [])
-        ]
+       accountStatus: pendingEmployeeUpdate.accountStatus,
+        roles: [pendingEmployeeUpdate.role.toLowerCase()],
+        department: pendingEmployeeUpdate.department
     };
     delete updatedData.id; // Remove the old numeric ID if it exists
 
@@ -410,7 +412,7 @@ const EmployeeManagement = () => {
   };
   
   const handleDeleteEmployeeClick = (employeeId) => {
-      const employee = employees.find(emp => emp.id === employeeId);
+      const employee = employees.find(emp => emp.firebaseKey === employeeId);
       setEmployeeToDeleteDetails(employee);
       setConfirmUpdateMessage(`Are you sure you want to delete employee '${employee.name}'? This action cannot be undone.`);
       setIsConfirmUpdateModalOpen(true);
@@ -443,6 +445,33 @@ const EmployeeManagement = () => {
     if (nameParts.length === 1) return nameParts[0].charAt(0).toUpperCase();
     if (nameParts.length >= 2) return (nameParts[0].charAt(0) + nameParts[nameParts.length - 1].charAt(0)).toUpperCase();
     return '';
+  };
+
+    const handleStatusToggle = (employee) => {
+    const newStatus = employee.accountStatus === 'Active' ? 'Inactive' : 'Active';
+    // Store the employee and the intended new status in state
+    setEmployeeToUpdateStatus({ ...employee, newStatus: newStatus });
+    setIsStatusConfirmModalOpen(true);
+  };
+
+  // MODIFICATION: Add a function to confirm and execute the status update in Firebase
+  const confirmStatusUpdate = async () => {
+    if (!employeeToUpdateStatus) return;
+
+    const { firebaseKey, newStatus } = employeeToUpdateStatus;
+    const userRef = ref(database, `users/${firebaseKey}`);
+
+    try {
+      await update(userRef, { accountStatus: newStatus });
+      console.log(`Employee status for ${firebaseKey} updated to ${newStatus}`);
+    } catch (error) {
+      console.error("Failed to update employee status in Firebase:", error);
+      alert("An error occurred while updating the employee's status.");
+    } finally {
+      // Close the modal and reset the state regardless of success or failure
+      setIsStatusConfirmModalOpen(false);
+      setEmployeeToUpdateStatus(null);
+    }
   };
 
  
@@ -538,6 +567,51 @@ const EmployeeManagement = () => {
             background-color: var(--bg-body);
             min-height: 100vh;
             color: var(--text-primary);
+        }
+
+           .toggle-switch {
+          position: relative;
+          display: inline-block;
+          width: 50px;
+          height: 28px;
+        }
+
+        .toggle-switch input {
+          opacity: 0;
+          width: 0;
+          height: 0;
+        }
+
+        .toggle-slider {
+          position: absolute;
+          cursor: pointer;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: #ccc;
+          transition: .4s;
+          border-radius: 28px;
+        }
+
+        .toggle-slider:before {
+          position: absolute;
+          content: "";
+          height: 20px;
+          width: 20px;
+          left: 4px;
+          bottom: 4px;
+          background-color: white;
+          transition: .4s;
+          border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+          background-color: #28a745; /* Green for Active */
+        }
+
+        input:checked + .toggle-slider:before {
+          transform: translateX(22px);
         }
         .employee-management-container {
             padding: 1.5rem;
@@ -894,8 +968,17 @@ const EmployeeManagement = () => {
                     </div>
                   </div>
                   <div className="employee-actions">
+                    <label className="toggle-switch" style={{top:"10px"}}>
+                      <input
+                        type="checkbox"
+                        checked={employee.accountStatus === 'Active'}
+                        onChange={() => handleStatusToggle(employee)}
+                      />
+                      <span className="toggle-slider"></span>
+                    </label>
                     {/* Pass firebaseKey to the edit handler */}
                     <button className="action-btn" onClick={() => handleEditEmployeeClick(employee.firebaseKey)}>Edit</button>
+                    
                     {/* The delete handler also needs firebaseKey */}
                     <button className="action-btn delete-btn" onClick={() => handleDeleteEmployeeClick(employee.firebaseKey)}>Delete</button>
                   </div>
@@ -957,7 +1040,7 @@ const EmployeeManagement = () => {
                   placeholder="Enter Your DOB"
                   value={newEmployee.dateOfBirth}
                   onChange={handleNewemployeeChange}
-                  required
+            
                 />
               </div>
               <div className="form-group">
@@ -1332,6 +1415,33 @@ const EmployeeManagement = () => {
             <div className="confirm-modal-buttons">
               <button type="button" className="confirm-cancel-btn" onClick={handleCancelDelete}>Cancel</button>
               <button type="button" className="confirm-delete-btn" onClick={handleConfirmDelete}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+       {/* MODIFICATION: Add the new Status Change Confirmation Modal */}
+      {isStatusConfirmModalOpen && employeeToUpdateStatus && (
+        <div className="modal-overlay open">
+          <div className="modal-content">
+            <div className="modal-header">
+                <h3 className="modal-title">Confirm Status Change</h3>
+                <button className="modal-close-btn" onClick={() => setIsStatusConfirmModalOpen(false)}>&times;</button>
+            </div>
+            <p>
+              Are you sure you want to change the status of 
+              <strong> {`${employeeToUpdateStatus.firstName} ${employeeToUpdateStatus.lastName}`} </strong> 
+              to <strong>{employeeToUpdateStatus.newStatus}</strong>?
+            </p>
+            <div className="confirm-modal-buttons">
+              <button type="button" className="confirm-cancel-btn" onClick={() => setIsStatusConfirmModalOpen(false)}>Cancel</button>
+              <button 
+                type="button" 
+                className={employeeToUpdateStatus.newStatus === 'Active' ? 'create-employee-btn' : 'confirm-delete-btn'}
+                onClick={confirmStatusUpdate}
+              >
+                Confirm
+              </button>
             </div>
           </div>
         </div>

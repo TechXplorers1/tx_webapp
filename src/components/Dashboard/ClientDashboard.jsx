@@ -186,8 +186,15 @@ const ClientHeader = ({
   onSubscriptionClick,
   unreadNotificationsCount,
   onNotificationClick,
-  onLogoutClick
+  onLogoutClick,
+  activeServices,
+  inactiveServices,
+  onActiveServiceClick,
+  onInactiveServiceClick
 }) => {
+
+  const [isServicesDropdownOpen, setIsServicesDropdownOpen] = useState(false);
+  const servicesMenuRef = useRef(null);
 
   // Effect to close profile dropdown when clicking outside
   useEffect(() => {
@@ -204,7 +211,19 @@ const ClientHeader = ({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [profileDropdownRef, setIsProfileDropdownOpen]); // Dependencies: profileDropdownRef and setIsProfileDropdownOpen
+   }, [profileDropdownRef, setIsProfileDropdownOpen]); // Dependencies: profileDropdownRef and setIsProfileDropdownOpen
+
+  useEffect(() => {
+    const handleClickOutsideServices = (event) => {
+      if (servicesMenuRef.current && !servicesMenuRef.current.contains(event.target)) {
+        setIsServicesDropdownOpen(false);
+      }
+    };
+    if (isServicesDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutsideServices);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutsideServices);
+  }, [isServicesDropdownOpen]);
 
   return (
     <>
@@ -286,6 +305,45 @@ const ClientHeader = ({
           gap: 0.75rem;
           transition: background-color 0.15s ease;
         }
+          .profile-dropdown-item.has-submenu {
+            position: relative;
+          }
+
+         .services-submenu {
+            position: absolute;
+            top: 0;
+            right: 100%;
+            background-color: var(--bg-header);
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border: 1px solid var(--border-color);
+            min-width: 15rem;
+            padding: 0.5rem 0;
+            list-style: none;
+            margin: 0;
+            margin-right: 0.5rem;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateX(10px);
+            transition: opacity 0.2s ease-out, transform 0.2s ease-out, visibility 0.2s ease-out;
+            pointer-events: none; /* Prevent interaction when hidden */
+          }
+
+         .profile-dropdown-item.has-submenu:hover > .services-submenu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(0);
+            pointer-events: auto; /* Allow interaction when visible */
+          }
+
+         .services-submenu-header {
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            padding: 0.5rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 0.5rem;
+          }
 
         .profile-dropdown-item:hover {
           background-color: var(--bg-nav-link-hover);
@@ -480,7 +538,7 @@ const ClientHeader = ({
             )}
           </div>
           <div className="profile-dropdown-container" ref={profileDropdownRef}>
-            <div className="ad-user-info" onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}>
+            <div className="ad-user-info" onClick={() => setIsProfileDropdownOpen(prev => !prev)}>
               <div className="ad-user-info-text">
                 <p className="ad-user-name">{clientUserName}</p>
                 <span className="ad-client-tag">
@@ -505,6 +563,40 @@ const ClientHeader = ({
                   </svg>
                   Your Profile
                 </li>
+
+                 <li 
+                  className="profile-dropdown-item has-submenu" 
+                  onClick={(e) => { e.stopPropagation(); setIsServicesDropdownOpen(!isServicesDropdownOpen); }}
+                  ref={servicesMenuRef}
+                >
+                  {/* Services Icon */}
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1rem', height: '1rem' }}>
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" />
+                    <path d="M2 17L12 22L22 17" />
+                    <path d="M2 12L12 17L22 12" />
+                  </svg>
+                  Services
+                   <ul className={`services-submenu ${isServicesDropdownOpen ? 'open' : ''}`}>
+                    <li className="services-submenu-header">Active Services</li>
+                    {activeServices.length > 0 ? (
+                      activeServices.map(service => (
+                        <li key={service.path} className="profile-dropdown-item" onClick={(e) => { e.stopPropagation(); onActiveServiceClick(service); }}>
+                          {service.title}
+                        </li>
+                      ))
+                    ) : (
+                      <li className="profile-dropdown-item" style={{ fontStyle: 'italic', color: 'var(--text-secondary)' }}>No active services</li>
+                    )}
+                    
+                    <li className="services-submenu-header" style={{ marginTop: '0.5rem' }}>Inactive Services</li>
+                    {inactiveServices.map(service => (
+                      <li key={service.path} className="profile-dropdown-item" onClick={(e) => { e.stopPropagation(); onInactiveServiceClick(service.path); }}>
+                        {service.title}
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+
                 <li className="profile-dropdown-item logout" onClick={onLogoutClick}>
                   {/* Log Out Icon (Door with arrow from screenshot) */}
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1rem', height: '1rem' }}>
@@ -2249,6 +2341,17 @@ useEffect(() => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const profileDropdownRef = useRef(null);
+  const [activeServices, setActiveServices] = useState([]);
+  const [inactiveServices, setInactiveServices] = useState([]);
+
+   const allServices = [
+    { title: "Mobile Application Development", path: "/services/mobile-app-development" },
+    { title: "Web Application Development", path: "/services/web-app-development" },
+    { title: "Digital Marketing", path: "/services/digital-marketing" },
+    { title: "IT Talent Supply", path: "/services/it-talent-supply" },
+    { title: "Job Supporting & Consulting", path: "/services/job-support" },
+    { title: "Cyber Security", path: "/services/cyber-security" },
+  ];
 
   const clientUserName = "Mukesh Ambani";
   const clientInitials = "MA";
@@ -2382,43 +2485,40 @@ useEffect(() => {
     // Create a direct reference to this client's data in Firebase
     const clientRef = ref(database, `clients/${loggedInUserData.firebaseKey}`);
 
-    // Listen for real-time updates to this client's data
     const unsubscribe = onValue(clientRef, (snapshot) => {
-        const data = snapshot.val();
-        if (data) {
-            setClientData(data); // Set the full client data for use in the component
+      const data = snapshot.val();
+      if (data) {
+        setClientData(data);
 
-            // Process applications for the worksheet view
-            const apps = data.jobApplications || [];
-            const interviews = apps.filter(app => app.status === 'Interview');
-            setScheduledInterviews(interviews);
-            
-            // This assumes your existing logic for processing applicationsData is correct
-            const groupedApplications = (apps || []).reduce((acc, app) => {
-                const formattedDate = formatDate(app.appliedDate);
-                if (!acc[formattedDate]) {
-                    acc[formattedDate] = [];
-                }
-                acc[formattedDate].push({
-                    id: app.id,
-                    jobId: app.jobId || 'N/A',
-                    website: app.platform || 'N/A',
-                    position: app.jobTitle || 'N/A',
-                    company: app.company || 'N/A',
-                    link: app.jobUrl || '#',
-                    dateAdded: formattedDate,
-                    jobDescription: app.notes || 'No description provided.'
-                });
-                return acc;
-            }, {});
-            setApplicationsData(groupedApplications);
-        }
+        // MODIFICATION: Process service registrations to categorize them
+        const registeredServiceNames = data.serviceRegistrations 
+          ? Object.values(data.serviceRegistrations).map(reg => reg.service) 
+          : [];
+        
+        const active = allServices.filter(service => registeredServiceNames.includes(service.title));
+        const inactive = allServices.filter(service => !registeredServiceNames.includes(service.title));
+
+        setActiveServices(active);
+        setInactiveServices(inactive);
+      }
     });
 
-    // Cleanup listener on unmount
     return () => unsubscribe();
   }, []);
 
+
+    const handleActiveServiceClick = (service) => {
+    // Here you would navigate to a specific dashboard view for that service
+    // For now, we'll just show an alert.
+    alert(`Navigating to the dashboard for: ${service.title}`);
+    setIsProfileDropdownOpen(false); // Close the dropdown
+  };
+
+  // Handler for when a client clicks on an INACTIVE service
+  const handleInactiveServiceClick = (path) => {
+    navigate(path); // Navigate to the corresponding service page to sign up
+    setIsProfileDropdownOpen(false); // Close the dropdown
+  };
 
   const profilePlaceholder = "https://imageio.forbes.com/specials-images/imageserve/5c7d7829a7ea434b351ba0b6/0x0.jpg?format=jpg&crop=1837,1839,x206,y250,safe&height=416&width=416&fit=bounds";
 
@@ -4126,8 +4226,8 @@ useEffect(() => {
 
       {/* Client Header */}
       <ClientHeader
-        clientUserName={clientUserName}
-        clientInitials={clientInitials}
+        clientUserName={clientData?.firstName || 'Client'}
+        clientInitials={clientData ? `${(clientData.firstName || 'C').charAt(0)}` : 'C'}
         isDarkMode={isDarkMode}
         toggleTheme={toggleTheme}
         toggleSidebar={toggleMenu} // Still passed, but the hamburger button is removed
@@ -4139,6 +4239,10 @@ useEffect(() => {
         unreadNotificationsCount={unreadNotificationsCount}
         onNotificationClick={handleNotificationClick}
         onLogoutClick={handleLogout}
+        activeServices={activeServices}
+        inactiveServices={inactiveServices}
+        onActiveServiceClick={handleActiveServiceClick}
+        onInactiveServiceClick={handleInactiveServiceClick}
       />
 
       {/* Dimming Overlay */}
