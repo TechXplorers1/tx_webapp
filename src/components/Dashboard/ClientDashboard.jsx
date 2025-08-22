@@ -305,44 +305,66 @@ const ClientHeader = ({
           gap: 0.75rem;
           transition: background-color 0.15s ease;
         }
-          .profile-dropdown-item.has-submenu {
-            position: relative;
+          
+          .header-button-item {
+            position: relative; /* Needed for the dropdown positioning */
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            background-color: transparent;
+            border: 1px solid transparent;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s, color 0.2s;
           }
 
-         .services-submenu {
+          .header-button-item:hover {
+            background-color: var(--bg-nav-link-hover);
+            color: var(--text-primary);
+          }
+
+          .services-dropdown-menu {
             position: absolute;
-            top: 0;
-            right: 100%;
+            top: calc(100% + 0.5rem); /* Position below the button */
+            right: 0;
             background-color: var(--bg-header);
             border-radius: 0.5rem;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             border: 1px solid var(--border-color);
-            min-width: 15rem;
+            min-width: 16rem; /* Wider for service names */
             padding: 0.5rem 0;
             list-style: none;
             margin: 0;
-            margin-right: 0.5rem;
-            opacity: 0;
-            visibility: hidden;
-            transform: translateX(10px);
-            transition: opacity 0.2s ease-out, transform 0.2s ease-out, visibility 0.2s ease-out;
-            pointer-events: none; /* Prevent interaction when hidden */
+            z-index: 70; /* Above other content but below profile dropdown if needed */
           }
 
-         .profile-dropdown-item.has-submenu:hover > .services-submenu {
-            opacity: 1;
-            visibility: visible;
-            transform: translateX(0);
-            pointer-events: auto; /* Allow interaction when visible */
-          }
-
-         .services-submenu-header {
+          .services-dropdown-header {
             font-weight: 600;
             color: var(--text-secondary);
             font-size: 0.8rem;
             padding: 0.5rem 1rem;
             border-bottom: 1px solid var(--border-color);
             margin-bottom: 0.5rem;
+          }
+
+          .services-dropdown-item {
+            padding: 0.75rem 1rem;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: background-color 0.15s ease;
+            cursor: pointer;
+          }
+
+          .services-dropdown-item:hover {
+            background-color: var(--bg-nav-link-hover);
           }
 
         .profile-dropdown-item:hover {
@@ -528,6 +550,37 @@ const ClientHeader = ({
             </svg>
             Subscription
           </li>
+
+             <div className="header-button-item" onMouseEnter={() => setIsServicesDropdownOpen(true)} onMouseLeave={() => setIsServicesDropdownOpen(false)}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1rem', height: '1rem' }}>
+              <path d="M12 2L2 7L12 12L22 7L12 2Z" />
+              <path d="M2 17L12 22L22 17" />
+              <path d="M2 12L12 17L22 12" />
+            </svg>
+            Services
+            {isServicesDropdownOpen && (
+              <ul className="services-dropdown-menu">
+                <li className="services-dropdown-header">Active Services</li>
+                {activeServices.length > 0 ? (
+                  activeServices.map(service => (
+                    <li key={service.path} className="services-dropdown-item" onClick={() => onActiveServiceClick(service)}>
+                      {service.title}
+                    </li>
+                  ))
+                ) : (
+                  <li className="services-dropdown-item" style={{ fontStyle: 'italic', color: 'var(--text-secondary)' }}>No active services</li>
+                )}
+                
+                <li className="services-dropdown-header" style={{ marginTop: '0.5rem' }}>Inactive Services</li>
+                {inactiveServices.map(service => (
+                  <li key={service.path} className="services-dropdown-item" onClick={() => onInactiveServiceClick(service.path)}>
+                    {service.title}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
           <div className="ad-notification-icon" onClick={onNotificationClick}>
             {/* Bell Icon */}
             <svg className="ad-icon-btn" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1.125rem', height: '1.125rem' }}>
@@ -562,39 +615,6 @@ const ClientHeader = ({
                     <path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z" />
                   </svg>
                   Your Profile
-                </li>
-
-                 <li 
-                  className="profile-dropdown-item has-submenu" 
-                  onClick={(e) => { e.stopPropagation(); setIsServicesDropdownOpen(!isServicesDropdownOpen); }}
-                  ref={servicesMenuRef}
-                >
-                  {/* Services Icon */}
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1rem', height: '1rem' }}>
-                    <path d="M12 2L2 7L12 12L22 7L12 2Z" />
-                    <path d="M2 17L12 22L22 17" />
-                    <path d="M2 12L12 17L22 12" />
-                  </svg>
-                  Services
-                   <ul className={`services-submenu ${isServicesDropdownOpen ? 'open' : ''}`}>
-                    <li className="services-submenu-header">Active Services</li>
-                    {activeServices.length > 0 ? (
-                      activeServices.map(service => (
-                        <li key={service.path} className="profile-dropdown-item" onClick={(e) => { e.stopPropagation(); onActiveServiceClick(service); }}>
-                          {service.title}
-                        </li>
-                      ))
-                    ) : (
-                      <li className="profile-dropdown-item" style={{ fontStyle: 'italic', color: 'var(--text-secondary)' }}>No active services</li>
-                    )}
-                    
-                    <li className="services-submenu-header" style={{ marginTop: '0.5rem' }}>Inactive Services</li>
-                    {inactiveServices.map(service => (
-                      <li key={service.path} className="profile-dropdown-item" onClick={(e) => { e.stopPropagation(); onInactiveServiceClick(service.path); }}>
-                        {service.title}
-                      </li>
-                    ))}
-                  </ul>
                 </li>
 
                 <li className="profile-dropdown-item logout" onClick={onLogoutClick}>
@@ -2274,33 +2294,6 @@ const ClientDashboard = () => {
   });
 
 
-
-
-
-useEffect(() => {
-    const loadClientData = () => {
-      const allClients = JSON.parse(localStorage.getItem('employee_active_clients')) || [];
-      if (allClients.length > 0) {
-        setClientData(allClients[0]);
-      }
-    };
-    loadClientData();
-
-    // Listen for changes from other tabs/windows
-    const handleStorageChange = (event) => {
-      if (event.key === 'scheduled_interviews' && event.newValue) {
-        setScheduledInterviews(JSON.parse(event.newValue));
-      }
-    };
-    window.addEventListener('storage', handleStorageChange);
-
-    // Cleanup listener
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, []);
-
-
   // Effect to save activeTab to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('activeClientDashboardTab', activeTab);
@@ -2345,11 +2338,11 @@ useEffect(() => {
   const [inactiveServices, setInactiveServices] = useState([]);
 
    const allServices = [
-    { title: "Mobile Application Development", path: "/services/mobile-app-development" },
-    { title: "Web Application Development", path: "/services/web-app-development" },
+    { title: "Mobile Development", path: "/services/mobile-app-development" },
+    { title: "Web Development", path: "/services/web-app-development" },
     { title: "Digital Marketing", path: "/services/digital-marketing" },
     { title: "IT Talent Supply", path: "/services/it-talent-supply" },
-    { title: "Job Supporting & Consulting", path: "/services/job-support" },
+    { title: "Job Supporting", path: "/services/job-support" },
     { title: "Cyber Security", path: "/services/cyber-security" },
   ];
 

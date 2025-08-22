@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Container, Form, Button, Row, Col, Alert, Modal } from 'react-bootstrap';
+import { Container, Form, Button, Row, Col, Alert, Modal, ProgressBar } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { database } from '../../firebase'; // Import your Firebase config
@@ -11,9 +11,12 @@ const JobSupportContactForm = () => {
   const countryDropdownRef = useRef(null);
   const { user } = useAuth();
 
+  const [currentStep, setCurrentStep] = useState(1);
+  const totalSteps = 5;
+
   // Define the initial state for the form data
   const initialFormData = {
-    service: 'Job Supporting & Consulting',
+    service: 'Job Supporting',
     // Personal Information
     firstName: '',
     middleName: '',
@@ -124,9 +127,9 @@ const JobSupportContactForm = () => {
 
   const handlePreview = (e) => {
     e.preventDefault();
-    if (validateForm()) {
+    
       setShowPreviewModal(true);
-    }
+    
   };
 
   const handleClosePreviewModal = () => {
@@ -143,7 +146,7 @@ const JobSupportContactForm = () => {
     const countryData = countryCodes.find(c => c.dialCode === formData.countryCode);
     const countryName = countryData ? countryData.name : 'N/A';
 
-    const newClient = {
+    const newServiceRegistration = {
       name: `${formData.firstName} ${formData.lastName}`,
       mobile: `${formData.countryCode} ${formData.mobile}`,
       email: formData.email,
@@ -152,7 +155,7 @@ const JobSupportContactForm = () => {
       country: countryName,
       visaStatus: formData.visaStatus === 'other' ? formData.otherVisaStatus : formData.visaStatus,
       paymentStatus: 'Pending',
-      displayStatuses: ['registered'],
+      assignmentStatus: 'registered',
       service: formData.service,
       assignedManager: '',
       subServices: [],
@@ -190,28 +193,48 @@ const JobSupportContactForm = () => {
       referenceRole: formData.referenceRole,
       jobPortalAccountName: formData.jobPortalAccountNameandCredentials,
     };
-     try {
-      if (!user || !user.firebaseKey) {
-        throw new Error("User is not logged in or is missing a key.");
-      }
-      // Save the new client to the 'clients' node in Firebase
-      const clientsRef = ref(database, `clients/${user.firebaseKey}`);
-      await update(clientsRef, newClient);
-      
-        console.log("Client details updated in Firebase:", newClient);
-      setSubmitStatus({ success: true, message: 'Form submitted successfully!' });
-      // ... (rest of the success logic)
-    } catch (error) {
-      setSubmitStatus({ success: false, message: 'Submission failed. Please try again.' });
-      console.error("Failed to update client in Firebase", error);
-    } finally {
-      setIsSubmitting(false);
-    }
+    const clientProfileUpdate = {
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            mobile: `${formData.countryCode} ${formData.mobile}`,
+            email: formData.email,
+        };
+             try {
+            if (!user || !user.firebaseKey) {
+                throw new Error("You must be logged in to submit this form.");
+            }
+            
+            // 1. Create a new, unique entry under the client's "serviceRegistrations"
+            const newRegistrationRef = push(ref(database, `clients/${user.firebaseKey}/serviceRegistrations`));
+            await set(newRegistrationRef, newServiceRegistration);
+            
+            // 2. Update the main client profile with the latest contact info
+            const clientProfileRef = ref(database, `clients/${user.firebaseKey}`);
+            await update(clientProfileRef, clientProfileUpdate);
+            
+            console.log("Job Support registration saved successfully.");
+            setSubmitStatus({ success: true, message: 'Form submitted successfully!' });
+            // ... (rest of success logic)
+        } catch (error) {
+            setSubmitStatus({ success: false, message: 'Submission failed. Please try again.' });
+            console.error("Failed to save to Firebase", error);
+        } finally {
+            setIsSubmitting(false);
+            setShowPreviewModal(false);
+        }
   };
 
   const countryCodes = [ { shortCode: 'US', dialCode: '+1', name: 'United States' }, { shortCode: 'CA', dialCode: '+1', name: 'Canada' }, { shortCode: 'GB', dialCode: '+44', name: 'United Kingdom' }, { shortCode: 'IN', dialCode: '+91', name: 'India' }, { shortCode: 'AU', dialCode: '+61', name: 'Australia' }, { shortCode: 'DE', dialCode: '+49', name: 'Germany' }, { shortCode: 'FR', dialCode: '+33', name: 'France' }, { shortCode: 'JP', dialCode: '+81', name: 'Japan' }, { shortCode: 'CN', dialCode: '+86', name: 'China' }, { shortCode: 'BR', dialCode: '+55', name: 'Brazil' }, { shortCode: 'ZA', dialCode: '+27', name: 'South Africa' }, { shortCode: 'MX', dialCode: '+52', name: 'Mexico' }, { shortCode: 'ES', dialCode: '+34', name: 'Spain' }, { shortCode: 'IT', dialCode: '+39', name: 'Italy' }, { shortCode: 'NL', dialCode: '+31', name: 'Netherlands' }, { shortCode: 'SE', dialCode: '+46', name: 'Sweden' }, { shortCode: 'NO', dialCode: '+47', name: 'Norway' }, { shortCode: 'DK', dialCode: '+45', name: 'Denmark' }, { shortCode: 'FI', dialCode: '+358', name: 'Finland' }, { shortCode: 'CH', dialCode: '+41', name: 'Switzerland' }, { shortCode: 'AT', dialCode: '+43', name: 'Austria' }, { shortCode: 'BE', dialCode: '+32', name: 'Belgium' }, { shortCode: 'IE', dialCode: '+353', name: 'Ireland' }, { shortCode: 'NZ', dialCode: '+64', name: 'New Zealand' }, { shortCode: 'SG', dialCode: '+65', name: 'Singapore' }, { shortCode: 'HK', dialCode: '+852', name: 'Hong Kong' }, { shortCode: 'KR', dialCode: '+82', name: 'South Korea' }, { shortCode: 'AE', dialCode: '+971', name: 'United Arab Emirates' }, { shortCode: 'SA', dialCode: '+966', name: 'Saudi Arabia' }, { shortCode: 'RU', dialCode: '+7', name: 'Russia' }, ];
   const filteredCountries = countryCodes.filter(country => country.name.toLowerCase().includes(countrySearchTerm.toLowerCase()) || country.dialCode.includes(countrySearchTerm));
   useEffect(() => { const handleClickOutside = (event) => { if (countryDropdownRef.current && !countryDropdownRef.current.contains(event.target)) { setIsCountryDropdownOpen(false); } }; document.addEventListener("mousedown", handleClickOutside); return () => document.removeEventListener("mousedown", handleClickOutside); }, []);
+
+  const nextStep = () => {
+    setCurrentStep(prev => (prev < totalSteps ? prev + 1 : prev));
+  };
+
+  const prevStep = () => {
+    setCurrentStep(prev => (prev > 1 ? prev - 1 : prev));
+  };
 
   const containerStyle = { backgroundColor: 'rgba(255, 255, 255, 0.95)', padding: '30px', borderRadius: '10px', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)', marginTop: '50px', marginBottom: '50px', position: 'relative' };
   const formHeaderStyle = { color: '#007bff', marginBottom: '1.5rem', textAlign: 'center', fontSize: '2rem', fontWeight: 'bold' };
@@ -223,17 +246,170 @@ const JobSupportContactForm = () => {
   const previewValueDisplay = { padding: '0.4rem 0.6rem', fontSize: '0.95rem', backgroundColor: '#e9ecef', borderRadius: '5px', border: '1px solid #ced4da', minHeight: '38px', display: 'flex', alignItems: 'center', wordBreak: 'break-word' };
   const previewTextAreaDisplay = { ...previewValueDisplay, minHeight: '80px', alignItems: 'flex-start' };
 
+   const modernStyles = `
+    .job-support-form-wrapper {
+      background: #f8f9fa; /* Light grey background for the whole page */
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .form-container-modern {
+      background-color: #ffffff;
+      padding: 2rem 2.5rem;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      margin-top: 50px;
+      margin-bottom: 50px;
+      position: relative;
+      width: 100%;
+      max-width: 900px; /* Wider for better layout */
+    }
+
+    .back-button-modern {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: transparent;
+      border: none;
+      color: #6c757d;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: color 0.2s ease;
+    }
+    .back-button-modern:hover {
+      color: #0d6efd;
+    }
+
+    .form-header-modern {
+      color: #212529;
+      margin-bottom: 2rem;
+      text-align: center;
+      font-size: 2rem;
+      font-weight: 700;
+    }
+    
+    .progress-bar-modern .progress-bar {
+      background-color: #0d6efd;
+      font-weight: 600;
+      transition: width 0.4s ease-in-out;
+    }
+
+    .step-section {
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .step-header-modern {
+      color: #0d6efd;
+      margin-bottom: 1.5rem;
+      font-weight: 600;
+      border-bottom: 2px solid #e9ecef;
+      padding-bottom: 0.75rem;
+    }
+
+    .form-label-modern {
+      font-weight: 500;
+      color: #495057;
+    }
+
+    .form-control-modern, .form-select-modern {
+      border-radius: 8px;
+      border: 1px solid #ced4da;
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .form-control-modern:focus, .form-select-modern:focus {
+      border-color: #86b7fe;
+      box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+      outline: none;
+    }
+
+    .navigation-buttons {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #e9ecef;
+    }
+
+    .nav-button {
+      padding: 0.75rem 2rem;
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: 50px; /* Pill shape */
+      border: 1px solid;
+      transition: all 0.3s ease;
+    }
+    .nav-button.prev {
+      background-color: transparent;
+      border-color: #6c757d;
+      color: #6c757d;
+    }
+    .nav-button.prev:hover {
+      background-color: #6c757d;
+      color: white;
+    }
+    .nav-button.next {
+      background-color: #0d6efd;
+      border-color: #0d6efd;
+      color: white;
+      margin-left: auto; /* Push to the right */
+    }
+    .nav-button.next:hover {
+      background-color: #0b5ed7;
+      border-color: #0a58ca;
+      transform: translateY(-2px);
+    }
+    .nav-button.preview {
+      background: linear-gradient(45deg, #198754, #157347);
+      border-color: #198754;
+      color: white;
+      margin-left: auto; /* Push to the right */
+    }
+    .nav-button.preview:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(25, 135, 84, 0.3);
+    }
+
+    /* Custom Dropdown for Country Code */
+    .country-dropdown-search {
+      padding: 0.5rem;
+      border-bottom: 1px solid #e9ecef;
+    }
+  `;
+
   return (
-    <div style={{ background: 'linear-gradient(to right, #e0f7fa, #b2ebf2)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <Container style={containerStyle}>
-        <Button style={backButtonStyle} onClick={() => navigate(-1)}>&larr; Back</Button>
-        {submitStatus.message && (<Alert variant={submitStatus.success ? 'success' : 'danger'} className="mt-3">{submitStatus.message}</Alert>)}
+   <>
+      <style>{modernStyles}</style>
+      <div className="job-support-form-wrapper">
+        <Container className="form-container-modern">
+          <Button className="back-button-modern" onClick={() => navigate(-1)}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+            Back
+          </Button>
         <h2 style={formHeaderStyle}>Job Support Contact Form</h2>
+         <div className="mb-4">
+          <ProgressBar now={(currentStep / totalSteps) * 100} label={`Step ${currentStep} of ${totalSteps}`} />
+        </div>
         <Form id="contact-form" onSubmit={handlePreview}>
           <input type="hidden" name="service" value={formData.service} />
 
-          {/* Personal Information */}
-          <h4 className="border-bottom pb-2 mb-3" style={subHeaderStyle}>Personal Information</h4>
+           {/* Step 1: Personal & Contact Information */}
+          {currentStep === 1 && (
+            <section className="step-section">
+          <h4 className="step-header-modern">Step 1: Personal & Contact Information</h4>
           <Row className="mb-3">
             <Form.Group as={Col} controlId="formFirstName"><Form.Label>First Name <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="firstName" onChange={handleChange} required style={inputControlStyle} /></Form.Group>
             <Form.Group as={Col} controlId="formMiddleName"><Form.Label>Middle Name</Form.Label><Form.Control type="text" name="middleName" onChange={handleChange} style={inputControlStyle} /></Form.Group>
@@ -246,7 +422,6 @@ const JobSupportContactForm = () => {
           </Row>
 
           {/* Contact Information */}
-          <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Contact Information</h4>
           <Row className="mb-3">
             <Form.Group as={Col} controlId="formAddress"><Form.Label>Address <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="address" onChange={handleChange} required style={inputControlStyle} /></Form.Group>
             <Form.Group as={Col} md={4} controlId="formZipCode"><Form.Label>Zip Code <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="zipCode" onChange={handleChange} required style={inputControlStyle} /></Form.Group>
@@ -262,9 +437,13 @@ const JobSupportContactForm = () => {
             <Form.Group as={Col} controlId="formMobile"><Form.Label>Mobile <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="mobile" onChange={handleChange} required style={inputControlStyle} /></Form.Group>
             <Form.Group as={Col} controlId="formEmail"><Form.Label>Email <span className="text-danger">*</span></Form.Label><Form.Control type="email" name="email" onChange={handleChange} required style={inputControlStyle} /></Form.Group>
           </Row>
+          </section>
+          )}
 
-          {/* Employment Information */}
-          <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Employment Information</h4>
+           {/* Step 2: Employment & Job Preferences */}
+          {currentStep === 2 && (
+            <section className="step-section">
+                <h4 className="step-header-modern">Step 2: Employment & Job Preferences</h4>
           <Row className="mb-3">
             <Form.Group as={Col} controlId="formSecurityClearance"><Form.Label>Security Clearance <span className="text-danger">*</span></Form.Label><Form.Select name="securityClearance" value={formData.securityClearance} onChange={handleChange}  style={inputControlStyle}><option value="">Select Option</option><option value="yes">Yes</option><option value="no">No</option></Form.Select></Form.Group>
             {formData.securityClearance === 'yes' && (<Form.Group as={Col} controlId="formClearanceLevel"><Form.Label>Clearance Level <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="clearanceLevel" value={formData.clearanceLevel} onChange={handleChange}  style={inputControlStyle} /></Form.Group>)}
@@ -282,7 +461,6 @@ const JobSupportContactForm = () => {
           </Row>
 
           {/* Job Preferences */}
-          <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Job Preferences</h4>
           <Row className="mb-3">
              <Form.Group as={Col} controlId="formJobsToApply"><Form.Label>Jobs to Apply For <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="jobsToApply" onChange={handleChange}  style={inputControlStyle} /></Form.Group>
             <Form.Group as={Col} controlId="formTechnologySkills"><Form.Label>Technology Skills <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="technologySkills" onChange={handleChange}  style={inputControlStyle} /></Form.Group>
@@ -293,9 +471,13 @@ const JobSupportContactForm = () => {
             <Form.Group as={Col} controlId="formVisaStatus"><Form.Label>Visa Status <span className="text-danger">*</span></Form.Label><Form.Select name="visaStatus" onChange={handleChange} required style={inputControlStyle}><option value="">Select Status</option><option value="us_citizen">US Citizen</option><option value="green_card">Green Card</option><option value="h1b">H1B</option><option value="opt">OPT</option><option value="cpt">CPT</option><option value="other">Other</option></Form.Select></Form.Group>
             {formData.visaStatus === 'other' && (<Form.Group as={Col} controlId="formOtherVisaStatus"><Form.Label>Please specify <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="otherVisaStatus" onChange={handleChange} required style={inputControlStyle} /></Form.Group>)}
           </Row>
+          </section>
+          )}
 
-          {/* Education */}
-          <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Education</h4>
+          {/* Step 3: Education & Current Employment */}
+          {currentStep === 3 && (
+             <section className="step-section">
+                <h4 className="step-header-modern">Step 3: Education & Current Employment</h4>
           <Row className="mb-3">
             <Form.Group as={Col} controlId="formUniversityName"><Form.Label>University Name <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="universityName" onChange={handleChange}  style={inputControlStyle} /></Form.Group>
             <Form.Group as={Col} controlId="formUniversityAddress"><Form.Label>University Address <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="universityAddress" onChange={handleChange}  style={inputControlStyle} /></Form.Group>
@@ -307,7 +489,6 @@ const JobSupportContactForm = () => {
           </Row>
 
           {/* Current Employment */}
-          <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Current Employment</h4>
           <Row className="mb-3">
             <Form.Group as={Col} controlId="formCurrentCompany"><Form.Label>Current Company <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="currentCompany" onChange={handleChange}  style={inputControlStyle} /></Form.Group>
             <Form.Group as={Col} controlId="formCurrentDesignation"><Form.Label>Current Designation <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="currentDesignation" onChange={handleChange}  style={inputControlStyle} /></Form.Group>
@@ -317,9 +498,13 @@ const JobSupportContactForm = () => {
             <Form.Group as={Col} controlId="formEarliestJoiningDate"><Form.Label>Earliest Joining Date <span className="text-danger">*</span></Form.Label><Form.Control type="date" name="earliestJoiningDate" onChange={handleChange}  style={inputControlStyle} /></Form.Group>
             <Form.Group as={Col} controlId="formRelievingDate"><Form.Label>Relieving Date <span className="text-danger">*</span></Form.Label><Form.Control type="date" name="relievingDate" onChange={handleChange}  style={inputControlStyle} /></Form.Group>
           </Row>
+           </section>
+          )}
 
-          {/* References (Optional) */}
-          <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>References</h4>
+           {/* Step 4: References */}
+          {currentStep === 4 && (
+            <section className="step-section">
+                <h4 className="step-header-modern">Step 4: References (Optional)</h4>
           <Row className="mb-3">
             <Form.Group as={Col} controlId="formReferenceName"><Form.Label>Reference Name (Optional)</Form.Label><Form.Control type="text" name="referenceName" onChange={handleChange} style={inputControlStyle} /></Form.Group>
             <Form.Group as={Col} controlId="formReferencePhone"><Form.Label>Reference Phone (Optional)</Form.Label><Form.Control type="text" name="referencePhone" onChange={handleChange} style={inputControlStyle} /></Form.Group>
@@ -329,17 +514,32 @@ const JobSupportContactForm = () => {
             <Form.Group as={Col} controlId="formReferenceEmail"><Form.Label>Reference Email (Optional)</Form.Label><Form.Control type="email" name="referenceEmail" onChange={handleChange} style={inputControlStyle} /></Form.Group>
             <Form.Group as={Col} controlId="formReferenceRole"><Form.Label>Reference Role (Optional)</Form.Label><Form.Control type="text" name="referenceRole" onChange={handleChange} style={inputControlStyle} /></Form.Group>
           </Row>
+          </section>
+          )}
 
-          {/* Job Portal Information (Optional) */}
-          <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Job Portal Information</h4>
+          {/* Step 5: Job Portal & Resume */}
+          {currentStep === 5 && (
+             <section className="step-section">
+                <h4 className="step-header-modern">Step 5: Job Portal & Resume</h4>
           <Form.Group controlId="formJobPortalCredentials" className="mb-3"><Form.Label>Job Portal Account Name & Credentials (Optional)</Form.Label><Form.Control name="jobPortalAccountNameandCredentials" onChange={handleChange} as="textarea" rows={2} style={{ ...inputControlStyle, minHeight: '80px', resize: 'vertical' }} /></Form.Group>
 
           {/* Upload Resume Section */}
           <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Upload Resume</h4>
           <Form.Group controlId="formResume" className="mb-3"><Form.Label>Upload Your Resume <span className="text-danger">*</span></Form.Label><Form.Control type="file" name="resume" onChange={handleChange} required style={inputControlStyle} accept=".pdf,.doc,.docx" /><Form.Text className="text-muted">Please upload your resume in PDF, DOC, or DOCX format.</Form.Text></Form.Group>
+          </section>
+          )}
 
-          <div className="d-flex justify-content-center mt-4 p-3">
-            <Button type="submit" size="lg" style={previewButtonStyle} disabled={isSubmitting}>Preview & Submit</Button>
+           {/* MODIFICATION: Navigation Buttons */}
+          <div className="navigation-buttons">
+            {currentStep > 1 && (
+              <Button className="nav-button prev" onClick={prevStep}>Previous</Button>
+            )}
+            {currentStep < totalSteps && (
+              <Button className="nav-button next" onClick={nextStep}>Next</Button>
+            )}
+            {currentStep === totalSteps && (
+              <Button type="submit" className="nav-button prev" disabled={isSubmitting}>Preview & Submit</Button>
+            )}
           </div>
         </Form>
       </Container>
@@ -404,6 +604,7 @@ const JobSupportContactForm = () => {
         </Modal.Footer>
       </Modal>
     </div>
+    </>
   );
 };
 

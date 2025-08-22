@@ -56,38 +56,47 @@ const ServicesForm = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         
-        const newClient = {
-            name: `${formData.firstName} ${formData.lastName}`,
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            mobile: formData.mobile,
-            email: formData.email,
+        const newServiceRegistration = {
             service: readOnlyService,
             subServices: formData.selectedServices,
             userType: formData.userType,
-            registeredDate: new Date().toISOString().split('T')[0], // YYYY-MM-DD format
-            displayStatuses: ['registered'],
+            firstName: formData.firstName, // Keep name for context
+            lastName: formData.lastName,   // Keep name for context
+            registeredDate: new Date().toISOString().split('T')[0],
+            assignmentStatus: 'registered',
             assignedManager: '',
             paymentStatus: 'Pending',
             country: 'N/A', // Default value
         };
+          const clientProfileUpdate = {
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            mobile: formData.mobile,
+            email: formData.email,
+        };
 
-          try {
-            // Get a reference to the 'clients' node in your database
-            const clientsRef = ref(database, `clients/${user.firebaseKey}`);
-            // push() creates a new unique key for the client data
-            await update(clientsRef, newClient);
+        try {
+            if (!user || !user.firebaseKey) {
+                throw new Error("You must be logged in to submit this form.");
+            }
 
-            console.log('Client details updated in Firebase successfully:', newClient);
+            // 1. Create a new, unique entry under the client's "serviceRegistrations"
+            const newRegistrationRef = push(ref(database, `clients/${user.firebaseKey}/serviceRegistrations`));
+            await set(newRegistrationRef, newServiceRegistration);
+
+            // 2. Update the main client profile with the latest contact info
+            const clientProfileRef = ref(database, `clients/${user.firebaseKey}`);
+            await update(clientProfileRef, clientProfileUpdate);
+
+            console.log('New service registration saved to Firebase successfully.');
             setShowSuccessModal(true);
             setTimeout(() => {
                 setShowSuccessModal(false);
-                navigate("/"); // Navigate to home page after 3 seconds
+                navigate("/");
             }, 3000);
 
         } catch (error) {
             console.error("Failed to save to Firebase", error);
-            // Optionally, show an error message to the user
             alert("Submission failed. Please try again.");
         }
     };

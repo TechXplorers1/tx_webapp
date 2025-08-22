@@ -16,8 +16,12 @@ const ClientManagement = () => {
   const [selectedClientForDetails, setSelectedClientForDetails] = useState(null);
   const [isEditClientModalOpen, setIsEditClientModalOpen] = useState(false);
   const [currentClientToEdit, setCurrentClientToEdit] = useState(null);
+  const [selectedRegistrationForDetails, setSelectedRegistrationForDetails] = useState(null);
+  const [currentRegistrationToEdit, setCurrentRegistrationToEdit] = useState(null);
   const [selectedServiceFilter, setSelectedServiceFilter] = useState('All');
   const simplifiedServices = ['Mobile Development', 'Web Development', 'Digital Marketing', 'IT Talent Supply', 'Cyber Security'];
+
+    const [serviceRegistrations, setServiceRegistrations] = useState([]);
 
   // State for Payment Management Modal
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -30,6 +34,7 @@ const ClientManagement = () => {
   const [generatedPaymentLink, setGeneratedPaymentLink] = useState('');
 
   const [isManagerModalOpen, setIsManagerModalOpen] = useState(false);
+  onst [registrationForManager, setRegistrationForManager] = useState(null);
   const [clientForManagerSelection, setClientForManagerSelection] = useState(null);
   const [managerSearchTerm, setManagerSearchTerm] = useState('');
 
@@ -46,92 +51,59 @@ const ClientManagement = () => {
   // NEW: useEffect to load clients from localStorage or fetch from clients.json
 
 
-  useEffect(() => {
+   useEffect(() => {
     const clientsRef = ref(database, 'clients');
     const usersRef = ref(database, 'users');
 
-    // Set up listeners for real-time data fetching
     const unsubscribeClients = onValue(clientsRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        // Firebase returns data as an object; convert it to an array
-        const clientsArray = Object.keys(data).map(key => ({
-          firebaseKey: key,
-          ...data[key]
-        }));
-        setClients(clientsArray);
+      const clientsData = snapshot.val();
+      if (clientsData) {
+        const allRegistrations = [];
+        // Iterate over each client (e.g., by their firebaseKey)
+        Object.keys(clientsData).forEach(clientKey => {
+          const client = clientsData[clientKey];
+          // Check if the client has any service registrations
+          if (client.serviceRegistrations) {
+            // Iterate over each service registration for that client
+            Object.keys(client.serviceRegistrations).forEach(regKey => {
+              const registration = client.serviceRegistrations[regKey];
+              // Create a new, flat object combining client and registration details
+              allRegistrations.push({
+                ...registration, // service, assignmentStatus, subServices, etc.
+                clientFirebaseKey: clientKey,      // The main key for the parent client
+                registrationKey: regKey,         // The unique key for this specific registration
+                email: client.email,
+                mobile: client.mobile,
+                // Use the name from the registration, fallback to the parent client's name
+                firstName: registration.firstName || client.firstName,
+                lastName: registration.lastName || client.lastName,
+              });
+            });
+          }
+        });
+        setServiceRegistrations(allRegistrations);
       }
       setLoading(false);
     }, (error) => {
-      console.error("Firebase clients fetch error:", error);
+      console.error("Firebase fetch error:", error);
       setError(error.message);
       setLoading(false);
     });
 
     const unsubscribeUsers = onValue(usersRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        const usersArray = Object.keys(data).map(key => ({
-          firebaseKey: key,
-          ...data[key]
-        }));
-        // Filter the array to find users with the 'manager' role
-        const managers = usersArray.filter(user =>
-          user.roles && Array.isArray(user.roles) && user.roles.includes('manager')
-        );
-
-        setManagerList(managers); // Set the dynamic list of managers
-      }
-    }, (error) => {
-      console.error("Firebase users fetch error:", error);
+        const usersData = snapshot.val();
+        if (usersData) {
+            const usersArray = Object.keys(usersData).map(key => ({ firebaseKey: key, ...usersData[key] }));
+            const managers = usersArray.filter(user => user.roles && user.roles.includes('manager'));
+            setManagerList(managers);
+        }
     });
 
-    // Cleanup function: Unsubscribe from Firebase listeners when the component unmounts
     return () => {
       unsubscribeClients();
       unsubscribeUsers();
     };
   }, []);
-
-  // --- NEW: Add this useEffect to listen for real-time updates from other tabs ---
-  useEffect(() => {
-    const handleStorageChange = (event) => {
-      // If the 'clients' item in localStorage changes, update the state
-      if (event.key === 'clients' && event.newValue) {
-        setClients(JSON.parse(event.newValue));
-      }
-    };
-
-    // Add event listener
-    window.addEventListener('storage', handleStorageChange);
-
-    // Cleanup: remove event listener when the component unmounts
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, []);
-
-  // NEW: useEffect to save clients to localStorage whenever the list changes
-  useEffect(() => {
-    // We only save to localStorage after the initial loading is done
-    // to avoid overwriting it with an empty array.
-    if (!loading) {
-      localStorage.setItem('clients', JSON.stringify(clients));
-    }
-  }, [clients, loading]);
-  // useEffect to save employees to localStorage
-  useEffect(() => {
-    if (!loading) {
-      localStorage.setItem('employees', JSON.stringify(employees));
-    }
-  }, [employees, loading]);
-
-
-
-  // REMOVED: Hardcoded managers array is no longer needed
-  // const managers = [ ... ];
-
-  // NEW: Dynamically create the manager list from the employees state
 
   const serviceOptions = [
     'All',
@@ -139,21 +111,20 @@ const ClientManagement = () => {
     'Web Development',
     'Digital Marketing',
     'IT Talent Supply',
-    'Job Supporting & Consulting',
+    'Job Supporting',
     'Cyber Security'
   ];
 
   // --- Client Management Handlers ---
-  const handleAcceptClient = async (client) => {
-    const clientRef = ref(database, `clients/${client.firebaseKey}`);
+  const handleAcceptClient = async (registration) => {
+    // The path now points to a specific registration within a client's record
+    const registrationRef = ref(database, `clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}`);
     try {
-      await update(clientRef, {
-        assignmentStatus: 'pending_manager' // This is the key status for the manager's view
+      await update(registrationRef, {
+        assignmentStatus: 'pending_manager'
       });
-      // The local state will update automatically via the onValue listener.
     } catch (error) {
-      console.error("Failed to accept client:", error);
-      alert("Error accepting client. Please try again.");
+      console.error("Failed to accept client registration:", error);
     }
   };
 
@@ -260,22 +231,20 @@ const ClientManagement = () => {
     setClientToDeleteId(null);
   };
 
-  const handleAssignClient = async (client) => {
-    if (!client || !client.managerFirebaseKey) { // Check for the key, not the name
-      alert('Please select a manager for this client first.');
+  const handleAssignClient = async (registration) => {
+    if (!registration || !registration.managerFirebaseKey) {
+      alert('Please select a manager for this service first.');
       return;
     }
-
-    const clientRef = ref(database, `clients/${client.firebaseKey}`);
+    const registrationRef = ref(database, `clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}`);
     try {
-      await update(clientRef, {
-        manager: client.manager, // Keep the manager's name for display
-        assignedManager: client.managerFirebaseKey, // *** ADD THIS LINE: Store the manager's unique key ***
-        assignmentStatus: 'pending_employee' // Keep status 'unassigned' so manager sees them in their queue
+      await update(registrationRef, {
+        manager: registration.manager,
+        assignedManager: registration.managerFirebaseKey,
+        assignmentStatus: 'pending_employee'
       });
     } catch (error) {
-      console.error("Failed to assign client:", error);
-      alert("Error assigning client. Please try again.");
+      console.error("Failed to assign manager:", error);
     }
   };
 
@@ -303,8 +272,8 @@ const ClientManagement = () => {
     setTempSelectedManager('');
   };
 
-  const handleOpenManagerModal = (client) => {
-    setClientForManagerSelection(client);
+ const handleOpenManagerModal = (registration) => {
+    setRegistrationForManager(registration);
     setIsManagerModalOpen(true);
   };
 
@@ -314,26 +283,24 @@ const ClientManagement = () => {
     setManagerSearchTerm('');
   };
 
-  const handleSelectManager = (manager) => { // Manager is now the full manager object
-    if (clientForManagerSelection) {
-      setClients(prevClients => prevClients.map(client =>
-        client.firebaseKey === clientForManagerSelection.firebaseKey
-          ? {
-            ...client,
-            manager: `${manager.firstName} ${manager.lastName}`, // For display
-            managerFirebaseKey: manager.firebaseKey // For assignment logic
-          }
-          : client
-      ));
+  const handleSelectManager = (manager) => {
+    if (registrationForManager) {
+        const updatedRegistrations = serviceRegistrations.map(reg => 
+            reg.registrationKey === registrationForManager.registrationKey
+            ? { ...reg, manager: `${manager.firstName} ${manager.lastName}`, managerFirebaseKey: manager.firebaseKey }
+            : reg
+        );
+        setServiceRegistrations(updatedRegistrations);
     }
-    handleCloseManagerModal();
+    setIsManagerModalOpen(false);
+    setRegistrationForManager(null);
   };
 
   const handleClientSearchChange = (event) => {
     setClientSearchTerm(event.target.value);
   };
 
-  const getFilteredClients = () => {
+  const getFilteredRegistrations = () => {
   let filtered = clients;
 
         if (clientFilter === 'registered') {
@@ -420,29 +387,29 @@ const ClientManagement = () => {
   };
 
   // --- Rendering Functions ---
-  const renderClientTable = (clientsToRender, serviceType, currentClientFilter, title = '') => {
-    const headers = ['First Name', 'Last Name', 'Mobile', 'Email', serviceType === 'Job Supporting & Consulting' ? 'Jobs Apply For' : 'Service', 'Registered Date', 'Country'];
-    if (serviceType === 'Job Supporting & Consulting') headers.push('Visa Status');
+  const renderClientTable = (registrationsToRender, serviceType, currentClientFilter, title = '') => {
+    const headers = ['First Name', 'Last Name', 'Mobile', 'Email', serviceType === 'Job Supporting' ? 'Jobs Apply For' : 'Service', 'Registered Date', 'Country'];
+    if (serviceType === 'Job Supporting') headers.push('Visa Status');
     if (['unassigned', 'active', 'restored'].includes(currentClientFilter)) headers.push('Manager');
     headers.push('Details', 'Actions');
 
     return (
       <div className="client-table-container">
-        {title && <h4 className="client-table-title">{title} ({clientsToRender.length})</h4>}
+        {title && <h4 className="client-table-title">{title} ({registrationsToRender.length})</h4>}
         <table className="client-table">
           <thead><tr>{headers.map(h => <th key={h}>{h}</th>)}</tr></thead>
           <tbody>
-            {clientsToRender.length > 0 ? (
-              clientsToRender.map(client => (
+            {registrationsToRender.length > 0 ? (
+              registrationsToRender.map(client => (
                 <tr key={client.firebaseKey}>
                   <td>{client.firstName}</td>
                   <td>{client.lastName}</td>
                   <td>{client.mobile}</td>
                   <td>{client.email}</td>
-                  <td>{client.service === 'Job Supporting & Consulting' ? client.jobsApplyFor : client.service}</td>
+                  <td>{client.service === 'Job Supporting' ? client.jobsApplyFor : client.service}</td>
                   <td>{client.registeredDate}</td>
                   <td>{client.country}</td>
-                  {client.service === 'Job Supporting & Consulting' && <td>{client.visaStatus}</td>}
+                  {client.service === 'Job Supporting' && <td>{client.visaStatus}</td>}
 
                   {(currentClientFilter === 'unassigned' || currentClientFilter === 'restored') && (
                     <td>
