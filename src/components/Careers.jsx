@@ -168,7 +168,7 @@ function Careers() {
 
     .hero-section {
       text-align: center;
-      padding: 4rem 1rem;
+      padding: 3rem 1rem;
       background-color: var(--light-surface);
       border-bottom: 1px solid var(--light-border);
       transition: background-color 0.3s ease, border-color 0.3s ease;
@@ -179,7 +179,7 @@ function Careers() {
     }
 
     .hero-title {
-      font-size: 3rem;
+      font-size: 2rem;
       font-weight: 700;
       color: var(--light-text-primary);
       margin-bottom: 1rem;
@@ -190,7 +190,7 @@ function Careers() {
     }
 
     .hero-subtitle {
-      font-size: 1.25rem;
+      font-size: 1.2rem;
       color: var(--light-text-secondary);
       max-width: 700px;
       margin: 0 auto 2rem auto;
@@ -244,14 +244,14 @@ function Careers() {
     }
 
     .jobs-section {
-      padding: 4rem 1rem;
+      padding: 1rem 1rem;
     }
 
     .section-title {
       text-align: center;
-      font-size: 2.5rem;
+      font-size: 2rem;
       font-weight: 600;
-      margin-bottom: 3rem;
+      margin-bottom: 2rem;
       color: var(--light-text-primary);
       transition: color 0.3s ease;
     }
@@ -503,7 +503,7 @@ function Careers() {
         
         <section className="hero-section">
           <Container>
-            <h1 className="hero-title">Find Your Next Opportunity</h1>
+            <h3 className="hero-title">Find Your Next Opportunity</h3>
             <p className="hero-subtitle">
               Join our team of innovators and explorers. We're building the future, and we need your talent. Discover a career that challenges and inspires you.
             </p>
@@ -522,7 +522,7 @@ function Careers() {
 
         <section className="jobs-section">
           <Container>
-            <h2 className="section-title">Open Positions</h2>
+            <h3 className="section-title">Open Positions</h3>
             {filteredJobs.length > 0 ? (
               <div className="job-marquee-wrapper">
                 <div className="job-marquee-track">

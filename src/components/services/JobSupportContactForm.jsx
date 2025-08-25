@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Container, Form, Button, Row, Col, Alert, Modal, ProgressBar } from 'react-bootstrap';
+import { Container, Form, Button, Row, Col, Alert, Modal, ProgressBar,Spinner } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { database } from '../../firebase'; // Import your Firebase config
@@ -72,6 +72,8 @@ const JobSupportContactForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState({ success: false, message: '' });
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+
+   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // State for the custom country code dropdown
   const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
@@ -213,8 +215,12 @@ const JobSupportContactForm = () => {
             await update(clientProfileRef, clientProfileUpdate);
             
             console.log("Job Support registration saved successfully.");
-            setSubmitStatus({ success: true, message: 'Form submitted successfully!' });
-            // ... (rest of success logic)
+             setShowSuccessModal(true);
+      // Set a timeout to close the modal and navigate to the homepage
+      setTimeout(() => {
+          setShowSuccessModal(false);
+          navigate("/");
+      }, 3000);
         } catch (error) {
             setSubmitStatus({ success: false, message: 'Submission failed. Please try again.' });
             console.error("Failed to save to Firebase", error);
@@ -284,7 +290,7 @@ const JobSupportContactForm = () => {
       transition: color 0.2s ease;
     }
     .back-button-modern:hover {
-      color: #0d6efd;
+      color: #f7f7f7ff;
     }
 
     .form-header-modern {
@@ -538,7 +544,7 @@ const JobSupportContactForm = () => {
               <Button className="nav-button next" onClick={nextStep}>Next</Button>
             )}
             {currentStep === totalSteps && (
-              <Button type="submit" className="nav-button prev" disabled={isSubmitting}>Preview & Submit</Button>
+              <Button type="submit" className="nav-button" disabled={isSubmitting}>Preview & Submit</Button>
             )}
           </div>
         </Form>
@@ -600,12 +606,49 @@ const JobSupportContactForm = () => {
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={handleClosePreviewModal}>Edit</Button>
-          <Button variant="primary" onClick={handleConfirmAndSubmit} disabled={isSubmitting}>{isSubmitting ? 'Submitting...' : 'Confirm & Submit'}</Button>
-        </Modal.Footer>
+         <Button variant="primary" onClick={handleConfirmAndSubmit} disabled={isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <Spinner
+                  as="span"
+                  animation="border"
+                  size="sm"
+                  role="status"
+                  aria-hidden="true"
+                />
+                <span style={{ marginLeft: '8px' }}>Submitting...</span>
+              </>
+            ) : (
+              'Confirm & Submit'
+            )}
+          </Button>        </Modal.Footer>
+      </Modal>
+
+      <Modal show={showSuccessModal} onHide={() => setShowSuccessModal(false)} centered>
+        <Modal.Header closeButton />
+        <Modal.Body style={successModalStyle}>
+            <div style={successAnimationContainerStyle}>
+                <span style={tickStyle}>✅</span>
+            </div>
+            <h4 style={successTitleStyle}>Form Successfully Submitted!</h4>
+            <p style={successMessageStyle}>Your form has been submitted successfully.</p>
+        </Modal.Body>
       </Modal>
     </div>
     </>
   );
 };
+
+const successModalStyle = { textAlign: "center", padding: "30px", borderRadius: "12px", boxShadow: "0 8px 25px rgba(0, 0, 0, 0.1)" };
+const successAnimationContainerStyle = { width: "80px", height: "80px", margin: "0 auto 20px", backgroundColor: "#2ecc71", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", animation: "scaleIn 0.5s ease-in-out" };
+const tickStyle = { fontSize: "40px", color: "#fff", animation: "fadeIn 0.5s ease-in-out" };
+const successTitleStyle = { fontSize: "24px", fontWeight: "600", color: "#333", marginBottom: "10px" };
+const successMessageStyle = { fontSize: "16px", color: "#555", marginBottom: "20px" };
+
+// You may need to add these keyframes to your existing modernStyles string or a new <style> tag if they aren't already global.
+const keyframes = `
+  @keyframes scaleIn { from { transform: scale(0); } to { transform: scale(1); } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+`;
 
 export default JobSupportContactForm;

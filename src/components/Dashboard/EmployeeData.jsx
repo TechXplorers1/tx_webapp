@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef, useCallback,useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Modal } from 'react-bootstrap'; // Using react-bootstrap Modal
 import { getDatabase, ref, onValue, query, orderByChild, equalTo, update, remove, set } from "firebase/database";
 import { database } from '../../firebase'; // Import your Firebase config
 
 
-  const simplifiedServices = ['Mobile Development', 'Web Development', 'Digital Marketing', 'IT Talent Supply', 'Cyber Security'];
+const simplifiedServices = ['Mobile Development', 'Web Development', 'Digital Marketing', 'IT Talent Supply', 'Cyber Security'];
 
 
 // AdminHeader Component - Provided by the user
@@ -410,28 +410,59 @@ const EmployeeData = () => {
 
   // NEW: useEffect to get logged-in user data from sessionStorage
   // Update useEffect to get the full employee object from sessionStorage
-useEffect(() => {
+  useEffect(() => {
     const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInEmployee'));
+    if (!loggedInUserData || !loggedInUserData.firebaseKey) {
+      console.error("No logged in user found, redirecting...");
+      navigate('/login'); // Redirect if not logged in
+      return;
+    }
+    setEmployeeDetails(loggedInUserData);
     const employeeFullName = loggedInUserData ? `${loggedInUserData.firstName} ${loggedInUserData.lastName}` : null;
 
     if (!employeeFullName) {
       console.warn("No employee is logged in.");
-      return; 
+      return;
     }
 
     const clientsRef = ref(database, 'clients');
 
     const unsubscribe = onValue(clientsRef, (snapshot) => {
-      const data = snapshot.val();
-      const allClients = data ? Object.keys(data).map(key => ({ firebaseKey: key, ...data[key] })) : [];
+      const clientsData = snapshot.val();
+
+
+      const allRegistrations = [];
+      if (clientsData) {
+        // --- MODIFICATION START ---
+        // Step 1: Flatten the nested data structure from Firebase
+        Object.keys(clientsData).forEach(clientKey => {
+          const client = clientsData[clientKey];
+          if (client.serviceRegistrations) {
+            Object.keys(client.serviceRegistrations).forEach(regKey => {
+              const registration = client.serviceRegistrations[regKey];
+              // Create a new, combined object with all necessary info
+              allRegistrations.push({
+                ...registration,
+                clientFirebaseKey: clientKey,
+                registrationKey: regKey,
+                email: client.email,
+                mobile: client.mobile,
+                // Create a consistent name and initials for display
+                name: `${registration.firstName || client.firstName || ''} ${registration.lastName || client.lastName || ''}`.trim(),
+                initials: `${(registration.firstName || 'C').charAt(0)}${(registration.lastName || 'L').charAt(0)}`
+              });
+            });
+          }
+        });
+      }
 
       // Filter for clients assigned to THIS employee
-      const myClients = allClients.filter(client => client.assignedTo === employeeFullName);
+      const myRegistrations = allRegistrations.filter(client => client.assignedTo === employeeFullName);
 
       // --- Separate clients into tabs based on their status ---
-      const newAssigned = myClients.filter(c => c.assignmentStatus === 'pending_acceptance'); // 'assigned' is the "New" status for employees
-      const active = myClients.filter(c => c.assignmentStatus === 'active');
-      const inactive = myClients.filter(c => c.assignmentStatus === 'inactive');
+      const newAssigned = myRegistrations.filter(c => c.assignmentStatus === 'pending_acceptance'); // 'assigned' is the "New" status for employees
+      const active = myRegistrations.filter(c => c.assignmentStatus === 'active');
+      const inactive = myRegistrations.filter(c => c.assignmentStatus === 'inactive');
 
       setNewClients(newAssigned);
       setActiveClients(active);
@@ -440,7 +471,7 @@ useEffect(() => {
 
     // Cleanup listener on unmount
     return () => unsubscribe();
-  }, []);
+  }, [navigate]);
 
   // NEW: Temporary state for editing profile
   const [editedEmployeeDetails, setEditedEmployeeDetails] = useState({});
@@ -522,25 +553,25 @@ useEffect(() => {
   };
 
   // NEW: Handle saving edited profile
-   const handleSaveProfileChanges = async () => {
+  const handleSaveProfileChanges = async () => {
     if (!employeeDetails.firebaseKey) {
-        alert("Error: Cannot update profile. User key is missing.");
-        return;
+      alert("Error: Cannot update profile. User key is missing.");
+      return;
     }
     try {
-        const employeeRef = ref(database, `employees/${employeeDetails.firebaseKey}`);
-        await update(employeeRef, editedEmployeeDetails); // Use update to save changes
+      const employeeRef = ref(database, `users/${employeeDetails.firebaseKey}`);
+      await update(employeeRef, editedEmployeeDetails); // Use update to save changes
 
-        // Also update the local state and session storage
-        setEmployeeDetails(editedEmployeeDetails);
-        sessionStorage.setItem('loggedInEmployee', JSON.stringify(editedEmployeeDetails));
+      // Also update the local state and session storage
+      setEmployeeDetails(editedEmployeeDetails);
+      sessionStorage.setItem('loggedInEmployee', JSON.stringify(editedEmployeeDetails));
 
-        setIsEditingProfile(false);
-        triggerNotification("Profile updated successfully!");
+      setIsEditingProfile(false);
+      triggerNotification("Profile updated successfully!");
 
     } catch (error) {
-        console.error("Error updating profile in Firebase:", error);
-        alert("Failed to update profile. Please try again.");
+      console.error("Error updating profile in Firebase:", error);
+      alert("Failed to update profile. Please try again.");
     }
   };
 
@@ -568,7 +599,7 @@ useEffect(() => {
   // States for Modals (Applications Tab)
   const [showAddApplicationModal, setShowAddApplicationModal] = useState(false);
   const [newApplicationFormData, setNewApplicationFormData] = useState({
-    jobTitle: '', company: '', platform: '', jobUrl: '', salaryRange: '', location: '', notes: '', jobId: '' , role: '' // Added jobId
+    jobTitle: '', company: '', platform: '', jobUrl: '', salaryRange: '', location: '', notes: '', jobId: '', role: '' // Added jobId
   });
   const [selectedClientForApplication, setSelectedClientForApplication] = useState(null);
 
@@ -592,13 +623,13 @@ useEffect(() => {
   const [showEditFileModal, setShowEditFileModal] = useState(false);
   const [editedFileFormData, setEditedFileFormData] = useState(null);
 
-   const [showImageViewer, setShowImageViewer] = useState(false);
+  const [showImageViewer, setShowImageViewer] = useState(false);
   const [imageUrlToView, setImageUrlToView] = useState('');
 
   // NEW: State for new clients awaiting acceptance
   const [newClients, setNewClients] = useState([]);
 
-   // Add this useEffect to load the new clients from localStorage
+  // Add this useEffect to load the new clients from localStorage
   useEffect(() => {
     const loadNewClients = () => {
       const clientsFromManager = JSON.parse(localStorage.getItem('employee_new_clients')) || [];
@@ -609,15 +640,15 @@ useEffect(() => {
 
     // Also, listen for real-time changes
     const handleStorageChange = (event) => {
-        if (event.key === 'employee_new_clients') {
-            setNewClients(JSON.parse(event.newValue || '[]'));
-        }
+      if (event.key === 'employee_new_clients') {
+        setNewClients(JSON.parse(event.newValue || '[]'));
+      }
     };
 
     window.addEventListener('storage', handleStorageChange);
 
     return () => {
-        window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
 
@@ -639,46 +670,24 @@ useEffect(() => {
   // NEW: State for the currently selected client from the dropdown
   const [selectedClient, setSelectedClient] = useState(null);
 
-   const [filterWebsites, setFilterWebsites] = useState([]);
+  const [filterWebsites, setFilterWebsites] = useState([]);
   const [filterPositions, setFilterPositions] = useState([]);
   const [filterCompanies, setFilterCompanies] = useState([]);
   const [startDateFilter, setStartDateFilter] = useState('');
   const [endDateFilter, setEndDateFilter] = useState('');
 
-   const [isClientSelectModalOpen, setIsClientSelectModalOpen] = useState(false);
+  const [isClientSelectModalOpen, setIsClientSelectModalOpen] = useState(false);
   const [clientSearchTermInModal, setClientSearchTermInModal] = useState('');
 
-  // Effect to set the first client as selected when component mounts or clients change
-  // Also re-syncs selectedClient if activeClients changes
   useEffect(() => {
-    let clientsToUse = [];
     if (activeTab === 'New Clients') {
-      clientsToUse = newClients;
+      setSelectedClient(newClients[0] || null);
     } else if (activeTab === 'Active Clients') {
-      clientsToUse = activeClients;
+      setSelectedClient(activeClients[0] || null);
     } else if (activeTab === 'Inactive Clients') {
-      clientsToUse = inactiveClients;
+      setSelectedClient(inactiveClients[0] || null);
     }
-
-    if (selectedClient) {
-      // If a client is already selected, try to find its updated version in the relevant list
-      const updatedSelectedClient = clientsToUse.find(c => c.id === selectedClient.id);
-      if (updatedSelectedClient && updatedSelectedClient !== selectedClient) {
-        setSelectedClient(updatedSelectedClient);
-      } else if (!updatedSelectedClient && clientsToUse.length > 0) {
-        // If selected client is no longer in the list (e.g., moved to another tab), select the first one
-        setSelectedClient(clientsToUse[0]);
-      } else if (clientsToUse.length === 0) {
-        // If no clients in the current list, clear selection
-        setSelectedClient(null);
-      }
-    } else if (clientsToUse.length > 0) {
-      // If no client is selected, and there are clients in the current list, select the first one
-      setSelectedClient(clientsToUse[0]);
-    } else {
-      setSelectedClient(null); // No clients in any list
-    }
-  }, [activeClients, inactiveClients, newClients, activeTab]); // Dependencies: all client lists and activeTab
+  }, [activeTab, newClients, activeClients, inactiveClients]);
 
 
   // Combined activities for the timeline
@@ -696,7 +705,8 @@ useEffect(() => {
         type: 'job application',
         date: app.appliedDate,
         time: '4:00 PM', // Placeholder for time
-         status: app.status === 'Interview' ? 'Active' : 'Completed',      });
+        status: app.status === 'Interview' ? 'Active' : 'Completed',
+      });
       if (app.status === 'Interview') {
         clientActivities.push({
           clientId: client.id,
@@ -812,9 +822,6 @@ useEffect(() => {
   // --- Applications Tab Functions ---
   const handleOpenAddApplicationModal = (client) => {
     setSelectedClientForApplication(client);
-    setNewApplicationFormData({
-      jobTitle: '', company: '', platform: '', jobUrl: '', salaryRange: '', location: '', notes: '', jobId: ''
-    });
     setShowAddApplicationModal(true);
   };
 
@@ -824,33 +831,29 @@ useEffect(() => {
   };
 
   const handleSaveNewApplication = async () => {
-    if (!selectedClientForApplication) return;
+    if (!selectedClient) return;
 
-      const newApp = {
+   const newApp = {
       id: Date.now(),
-      clientId: selectedClientForApplication.firebaseKey,
       ...newApplicationFormData,
       status: 'Applied',
       appliedDate: new Date().toISOString().split('T')[0],
-      attachments: [] // from the attachments state
+      attachments: []
     };
 
 
-   const existingApplications = selectedClientForApplication.jobApplications || [];
+     const existingApplications = selectedClient.jobApplications || [];
     const updatedApplications = [newApp, ...existingApplications];
-
-    // Create a reference to the specific client's jobApplications node
-    const clientApplicationsRef = ref(database, `clients/${selectedClientForApplication.firebaseKey}/jobApplications`);
+    
+    const registrationRef = ref(database, `clients/${selectedClient.clientFirebaseKey}/serviceRegistrations/${selectedClient.registrationKey}/jobApplications`);
     
     try {
-        // Use set() to overwrite the jobApplications array for that client
-        await set(clientApplicationsRef, updatedApplications);
-        
-        setShowAddApplicationModal(false);
-        triggerNotification("Application added successfully to Firebase!");
+      await set(registrationRef, updatedApplications);
+      setShowAddApplicationModal(false);
+      triggerNotification("Application added successfully!");
     } catch (error) {
-        console.error("Failed to save new application to Firebase:", error);
-        alert("Error saving application.");
+      console.error("Failed to save new application:", error);
+      alert("Error saving application.");
     }
   };
 
@@ -859,57 +862,29 @@ useEffect(() => {
     setShowViewApplicationModal(true);
   };
 
-  const handleEditApplication = (application) => {
-    // Find the client associated with this application to set selectedClientForApplication
-    const client = [...newClients,...activeClients, ...inactiveClients].find(c => c.jobApplications && c.jobApplications.some(appItem => appItem.id === application.id));
-     if (!client) {
-        console.error("Could not find the client for the selected application.", application);
-        alert("An error occurred. Could not find the client for this application.");
-        return;
-    }
-    setSelectedClientForApplication(client);
-    // Copy for editing, including new round and interviewDate fields
-    setEditedApplicationFormData({
-      ...application,
-      attachments: application.attachments || [],
-      round: application.round || '', // Initialize round
-      interviewDate: application.interviewDate || '', // Initialize interviewDate
-      recruiterMail:application.recruiterMail || '',
-    });
-    setShowEditApplicationModal(true);
+const handleEditApplication = (application) => {
+      setEditedApplicationFormData({ ...application, attachments: application.attachments || [] });
+      setShowEditApplicationModal(true);
   };
 
-  const handleEditedApplicationFormChange = (e) => {
-    const { name, value } = e.target;
-    setEditedApplicationFormData(prev => ({ ...prev, [name]: value }));
+ const handleEditedApplicationFormChange = (e) => {
+      const { name, value } = e.target;
+      setEditedApplicationFormData(prev => ({ ...prev, [name]: value }));
   };
 
-const handleSaveEditedApplication = async () => {
-    if (!editedApplicationFormData || !selectedClientForApplication) return;
-
-    // Create a copy of the client's current applications
-    const updatedApplications = selectedClientForApplication.jobApplications.map(app =>
-      app.id === editedApplicationFormData.id 
-        ? editedApplicationFormData // Replace the old application with the edited version
-        : app
-    );
-
-    // Get a reference to the specific client's jobApplications array in Firebase
-    const clientApplicationsRef = ref(database, `clients/${selectedClientForApplication.firebaseKey}/jobApplications`);
-
-    try {
-      // Use set() to overwrite the jobApplications array with the updated version
-      await set(clientApplicationsRef, updatedApplications);
-      
-      setShowEditApplicationModal(false);
-      setEditedApplicationFormData(null);
-      setSelectedClientForApplication(null);
-      triggerNotification("Application updated successfully in Firebase!");
-
-    } catch (error) {
-      console.error("Failed to save edited application to Firebase:", error);
-      alert("Error updating application.");
-    }
+   const handleSaveEditedApplication = async () => {
+      if (!editedApplicationFormData || !selectedClient) return;
+      const updatedApplications = (selectedClient.jobApplications || []).map(app =>
+          app.id === editedApplicationFormData.id ? editedApplicationFormData : app
+      );
+      const registrationRef = ref(database, `clients/${selectedClient.clientFirebaseKey}/serviceRegistrations/${selectedClient.registrationKey}/jobApplications`);
+      try {
+          await set(registrationRef, updatedApplications);
+          setShowEditApplicationModal(false);
+          triggerNotification("Application updated successfully!");
+      } catch (error) {
+          console.error("Failed to save edited application:", error);
+      }
   };
 
 
@@ -949,7 +924,7 @@ const handleSaveEditedApplication = async () => {
   // This useEffect adds and removes the paste event listener
   useEffect(() => {
     window.addEventListener('paste', handlePasteAttachment);
-    
+
     // Cleanup function to remove the listener when the component unmounts
     return () => {
       window.removeEventListener('paste', handlePasteAttachment);
@@ -1058,19 +1033,11 @@ const handleSaveEditedApplication = async () => {
     }
   };
 
-    const handleOpenClientSelectModal = () => {
-    setIsClientSelectModalOpen(true);
-  };
-
-  const handleCloseClientSelectModal = () => {
-    setIsClientSelectModalOpen(false);
-    setClientSearchTermInModal(''); // Reset search on close
-  };
-
+  const handleOpenClientSelectModal = () => setIsClientSelectModalOpen(true);
+  const handleCloseClientSelectModal = () => setIsClientSelectModalOpen(false);
   const handleSelectClientFromModal = (client) => {
-    setSelectedClient(client);
-    setActiveSubTab('Applications'); // Reset sub-tab when a new client is selected
-    handleCloseClientSelectModal();
+      setSelectedClient(client);
+      handleCloseClientSelectModal();
   };
 
   const handleSaveNewFile = () => {
@@ -1107,13 +1074,13 @@ const handleSaveEditedApplication = async () => {
       setInactiveClients(updateClientList);
     }
 
-  
+
 
     setShowUploadFileModal(false);
     triggerNotification("File uploaded successfully!"); // Trigger notification
   };
 
-   const handleViewFile = (file) => {
+  const handleViewFile = (file) => {
     // NEW LOGIC: Check if the file is an image
     if (file.file && typeof file.file.type === 'string' && file.file.type.startsWith('image/')) {
       // If it's an image, create a URL and open the image viewer modal
@@ -1300,27 +1267,18 @@ const handleSaveEditedApplication = async () => {
     return filtered;
   };
 
-const handleAcceptClient = async (clientToAccept) => {
-    if (!clientToAccept || !clientToAccept.firebaseKey) {
-        console.error("Invalid client object passed to handleAcceptClient", clientToAccept);
-        alert("Error: Cannot accept client due to missing key.");
-        return;
-    }
-
-    const clientRef = ref(database, `clients/${clientToAccept.firebaseKey}`);
+  const handleAcceptClient = async (clientToAccept) => {
+    const registrationRef = ref(database, `clients/${clientToAccept.clientFirebaseKey}/serviceRegistrations/${clientToAccept.registrationKey}`);
     try {
-        await update(clientRef, {
-            assignmentStatus: 'active' // This is the key change that moves the client
-        });
-        triggerNotification(`Client ${clientToAccept.firstName} has been moved to Active Clients!`);
-        // The UI will now update automatically via the real-time Firebase listener.
+      await update(registrationRef, { assignmentStatus: 'active' });
+      triggerNotification(`Client ${clientToAccept.name} has been moved to Active Clients!`);
     } catch (error) {
-        console.error("Failed to accept client in Firebase:", error);
-        alert("Error accepting client.");
+      console.error("Failed to accept client:", error);
+      alert("Error accepting client.");
     }
-};
+  };
 
-// ... inside the EmployeeData component, before the return statement ...
+  // ... inside the EmployeeData component, before the return statement ...
 
   // Apply all filters to the relevant base set of applications
   const filteredApplicationsForDisplay = useMemo(() => {
@@ -1329,7 +1287,7 @@ const handleAcceptClient = async (clientToAccept) => {
     if (!selectedClient) {
       return [];
     }
-    
+
     // The rest of the logic runs only if a client is selected.
     let baseApps = selectedClient.jobApplications || [];
 
@@ -1782,7 +1740,7 @@ const handleAcceptClient = async (clientToAccept) => {
           ) : (
             <div style={newClientsGridStyle}>
               {newClients.map(client => (
-                <div key={client.firebaseKey} style={newClientCardStyle}>
+                <div key={client.registrationKey} style={newClientCardStyle}>
                   <div style={newClientCardHeaderStyle}>
                     <div style={initialsCircleStyle}>{client.initials}</div>
                     <div style={{ flexGrow: 1 }}>
@@ -1826,10 +1784,10 @@ const handleAcceptClient = async (clientToAccept) => {
           <p style={subLabelStyle}>Choose a client to view their specific data across other tabs.</p>
           <div style={clientSelectContainerStyle}>
             <label style={filterLabelStyle}>Select Client:</label>
-           <button onClick={handleOpenClientSelectModal} style={selectClientButtonStyle}>
+            <button onClick={handleOpenClientSelectModal} style={selectClientButtonStyle}>
               {selectedClient ? `${selectedClient.firstName} ${selectedClient.lastName}` : 'Select a Client'}
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginLeft: '8px' }}>
-                  <polyline points="6 9 12 15 18 9"></polyline>
+                <polyline points="6 9 12 15 18 9"></polyline>
               </svg>
             </button>
           </div>
@@ -2114,7 +2072,7 @@ const handleAcceptClient = async (clientToAccept) => {
                       <div style={initialsCircleStyle}>{selectedClient.initials}</div>
                       <div style={{ flexGrow: 0 }}>
                         <p style={clientNameStyle}>{`${selectedClient.firstName} ${selectedClient.lastName}`} <span style={{ ...priorityBadgeStyle, backgroundColor: selectedClient.priority === 'high' ? '#fee2e2' : selectedClient.priority === 'medium' ? '#fef3c7' : '#e0f2fe', color: selectedClient.priority === 'high' ? '#dc2626' : selectedClient.priority === 'medium' ? '#d97706' : '#2563eb' }}>{selectedClient.priority}</span></p>
-                        <p style={clientCodeStyle}>{selectedClient.role || selectedClient.position } - {selectedClient.location}</p>
+                        <p style={clientCodeStyle}>{selectedClient.role || selectedClient.position} - {selectedClient.location}</p>
                       </div>
                       <div style={clientAppStatsStyle}>
                         <span>Showing: <strong>{getFilteredAndSortedApplications(selectedClient?.jobApplications).length}</strong></span>
@@ -2613,108 +2571,107 @@ const handleAcceptClient = async (clientToAccept) => {
                       </div>
                     </div>
                   ) : (
-                  <div style={clientDataGridStyle}>
-                    <div style={clientDataSectionStyle}>
-                      <h3 style={clientDataSectionTitleStyle}>Personal Information</h3>
-                      <p style={clientDataDetailStyle}><strong>First Name:</strong> {selectedClient.firstName || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Middle Name:</strong> {selectedClient.middleName || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Last Name:</strong> {selectedClient.lastName || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Date of Birth:</strong> {selectedClient.dob || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Gender:</strong> {selectedClient.gender || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Ethnicity:</strong> {selectedClient.ethnicity || '-'}</p>
-                    </div>
+                    <div style={clientDataGridStyle}>
+                      <div style={clientDataSectionStyle}>
+                        <h3 style={clientDataSectionTitleStyle}>Personal Information</h3>
+                        <p style={clientDataDetailStyle}><strong>First Name:</strong> {selectedClient.firstName || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Middle Name:</strong> {selectedClient.middleName || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Last Name:</strong> {selectedClient.lastName || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Date of Birth:</strong> {selectedClient.dob || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Gender:</strong> {selectedClient.gender || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Ethnicity:</strong> {selectedClient.ethnicity || '-'}</p>
+                      </div>
 
-                    <div style={clientDataSectionStyle}>
-                      <h3 style={clientDataSectionTitleStyle}>Contact Information</h3>
-                      <p style={clientDataDetailStyle}><strong>Address:</strong> {selectedClient.address || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Zip Code:</strong> {selectedClient.zipCode || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Mobile:</strong> {selectedClient.mobile || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Email:</strong> {selectedClient.email || '-'}</p>
-                    </div>
+                      <div style={clientDataSectionStyle}>
+                        <h3 style={clientDataSectionTitleStyle}>Contact Information</h3>
+                        <p style={clientDataDetailStyle}><strong>Address:</strong> {selectedClient.address || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Zip Code:</strong> {selectedClient.zipCode || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Mobile:</strong> {selectedClient.mobile || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Email:</strong> {selectedClient.email || '-'}</p>
+                      </div>
 
-                    <div style={clientDataSectionStyle}>
-                      <h3 style={clientDataSectionTitleStyle}>Job Preferences & Status</h3>
-                      <p style={clientDataDetailStyle}><strong>Security Clearance:</strong> {selectedClient.securityClearance || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Clearance Level:</strong> {selectedClient.clearanceLevel || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Willing to Relocate:</strong> {selectedClient.willingToRelocate || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Work Preference:</strong> {selectedClient.workPreference || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Restricted Companies:</strong> {selectedClient.restrictedCompanies || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Jobs to Apply:</strong> {selectedClient.jobsToApply || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Technology Skills:</strong> {selectedClient.technologySkills || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Current Salary:</strong> {selectedClient.currentSalary || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Expected Salary:</strong> {selectedClient.expectedSalary || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Visa Status:</strong> {selectedClient.visaStatus || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Other Visa Status:</strong> {selectedClient.otherVisaStatus || '-'}</p>
-                    </div>
+                      <div style={clientDataSectionStyle}>
+                        <h3 style={clientDataSectionTitleStyle}>Job Preferences & Status</h3>
+                        <p style={clientDataDetailStyle}><strong>Security Clearance:</strong> {selectedClient.securityClearance || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Clearance Level:</strong> {selectedClient.clearanceLevel || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Willing to Relocate:</strong> {selectedClient.willingToRelocate || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Work Preference:</strong> {selectedClient.workPreference || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Restricted Companies:</strong> {selectedClient.restrictedCompanies || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Jobs to Apply:</strong> {selectedClient.jobsToApply || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Technology Skills:</strong> {selectedClient.technologySkills || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Current Salary:</strong> {selectedClient.currentSalary || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Expected Salary:</strong> {selectedClient.expectedSalary || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Visa Status:</strong> {selectedClient.visaStatus || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Other Visa Status:</strong> {selectedClient.otherVisaStatus || '-'}</p>
+                      </div>
 
-                    <div style={clientDataSectionStyle}>
-                      <h3 style={clientDataSectionTitleStyle}>Education Details</h3>
-                      <p style={clientDataDetailStyle}><strong>School Name:</strong> {selectedClient.schoolName || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>School Address:</strong> {selectedClient.schoolAddress || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>School Phone:</strong> {selectedClient.schoolPhone || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Course of Study:</strong> {selectedClient.courseOfStudy || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Graduation Date:</strong> {selectedClient.graduationDate || '-'}</p>
-                    </div>
+                      <div style={clientDataSectionStyle}>
+                        <h3 style={clientDataSectionTitleStyle}>Education Details</h3>
+                        <p style={clientDataDetailStyle}><strong>School Name:</strong> {selectedClient.schoolName || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>School Address:</strong> {selectedClient.schoolAddress || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>School Phone:</strong> {selectedClient.schoolPhone || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Course of Study:</strong> {selectedClient.courseOfStudy || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Graduation Date:</strong> {selectedClient.graduationDate || '-'}</p>
+                      </div>
 
-                    <div style={clientDataSectionStyle}>
-                      <h3 style={clientDataSectionTitleStyle}>Employment Details</h3>
-                      <p style={clientDataDetailStyle}><strong>Current Company:</strong> {selectedClient.currentCompany || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Current Designation:</strong> {selectedClient.currentDesignation || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Preferred Interview Time:</strong> {selectedClient.preferredInterviewTime || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Earliest Joining Date:</strong> {selectedClient.earliestJoiningDate || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Relieving Date:</strong> {selectedClient.relievingDate || '-'}</p>
-                    </div>
+                      <div style={clientDataSectionStyle}>
+                        <h3 style={clientDataSectionTitleStyle}>Employment Details</h3>
+                        <p style={clientDataDetailStyle}><strong>Current Company:</strong> {selectedClient.currentCompany || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Current Designation:</strong> {selectedClient.currentDesignation || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Preferred Interview Time:</strong> {selectedClient.preferredInterviewTime || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Earliest Joining Date:</strong> {selectedClient.earliestJoiningDate || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Relieving Date:</strong> {selectedClient.relievingDate || '-'}</p>
+                      </div>
 
-                    <div style={clientDataSectionStyle}>
-                      <h3 style={clientDataSectionTitleStyle}>References</h3>
-                      <p style={clientDataDetailStyle}><strong>Reference Name:</strong> {selectedClient.referenceName || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Reference Phone:</strong> {selectedClient.referencePhone || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Reference Address:</strong> {selectedClient.referenceAddress || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Reference Email:</strong> {selectedClient.referenceEmail || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Reference Role:</strong> {selectedClient.referenceRole || '-'}</p>
-                    </div>
+                      <div style={clientDataSectionStyle}>
+                        <h3 style={clientDataSectionTitleStyle}>References</h3>
+                        <p style={clientDataDetailStyle}><strong>Reference Name:</strong> {selectedClient.referenceName || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Reference Phone:</strong> {selectedClient.referencePhone || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Reference Address:</strong> {selectedClient.referenceAddress || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Reference Email:</strong> {selectedClient.referenceEmail || '-'}</p>
+                      </div>
 
-                    <div style={clientDataSectionStyle}>
-                      <h3 style={clientDataSectionTitleStyle}>Job Portal Accounts</h3>
-                      <p style={clientDataDetailStyle}><strong>Account Name:</strong> {selectedClient.jobPortalAccountName || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Credentials:</strong> {selectedClient.jobPortalCredentials ? '********' : '-'}</p>
-                    </div>
+                      <div style={clientDataSectionStyle}>
+                        <h3 style={clientDataSectionTitleStyle}>Job Portal Accounts</h3>
+                        <p style={clientDataDetailStyle}><strong>Account Name:</strong> {selectedClient.jobPortalAccountName || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Credentials:</strong> {selectedClient.jobPortalCredentials ? '********' : '-'}</p>
+                      </div>
 
-                    <div style={clientDataSectionStyle}>
-                       <h3 style={clientDataSectionTitleStyle}>Resume</h3>
-                       <div style={{ display: 'flex', alignItems: 'center' }}>
-                       <p style={{ ...clientDataDetailStyle, margin: 0, flexGrow: 1 }}>
-                      {selectedClient.resume || 'No resume uploaded'}
-                       </p>
-                       {selectedClient.resume && (
-                      <button
-                        style={{
-                          backgroundColor: '#28a745',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '5px',
-                          padding: '6px 12px',
-                          cursor: 'pointer',
-                          fontSize: '14px',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '5px'
-                        }}
-                        onClick={() => handleDownloadResume(selectedClient.resume)}
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                          <polyline points="7 10 12 15 17 10"></polyline>
-                          <line x1="12" y1="15" x2="12" y2="3"></line>
-                        </svg>
-                        Download
-                      </button>
-                    )}
-                  </div>
+                      <div style={clientDataSectionStyle}>
+                        <h3 style={clientDataSectionTitleStyle}>Resume</h3>
+                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                          <p style={{ ...clientDataDetailStyle, margin: 0, flexGrow: 1 }}>
+                            {selectedClient.resume || 'No resume uploaded'}
+                          </p>
+                          {selectedClient.resume && (
+                            <button
+                              style={{
+                                backgroundColor: '#28a745',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '5px',
+                                padding: '6px 12px',
+                                cursor: 'pointer',
+                                fontSize: '14px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px'
+                              }}
+                              onClick={() => handleDownloadResume(selectedClient.resume)}
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                              </svg>
+                              Download
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                  </div>
-              )}
-              </div>
               )}
             </>
           ) : (
@@ -2733,11 +2690,11 @@ const handleAcceptClient = async (clientToAccept) => {
           <div style={clientSelectContainerStyle}>
             <label style={filterLabelStyle}>Select Client:</label>
             <button onClick={handleOpenClientSelectModal} style={selectClientButtonStyle}>
-          {selectedClient ? selectedClient.name : 'Select an Inactive Client'}
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginLeft: '8px' }}>
-              <polyline points="6 9 12 15 18 9"></polyline>
-          </svg>
-        </button>
+              {selectedClient ? selectedClient.name : 'Select an Inactive Client'}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginLeft: '8px' }}>
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
           </div>
           {selectedClient && selectedClient.status === 'inactive' ? (
             <>
@@ -3137,7 +3094,7 @@ const handleAcceptClient = async (clientToAccept) => {
                                       <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
                                     </svg>
                                   </button>
-                                   <button onClick={() => handleDeleteApplication(selectedClient.id, app.id)} style={deleteButtonAppStyle}>
+                                  <button onClick={() => handleDeleteApplication(selectedClient.id, app.id)} style={deleteButtonAppStyle}>
                                     {/* FIX: Replaced malformed SVG with a standard trash icon */}
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                       <polyline points="3 6 21 6"></polyline>
@@ -3503,8 +3460,8 @@ const handleAcceptClient = async (clientToAccept) => {
                       Add Application
                     </button>
                   </div>
-                     
-                     {simplifiedServices.includes(selectedClient.service) ? (
+
+                  {simplifiedServices.includes(selectedClient.service) ? (
                     // --- RENDER SIMPLIFIED VIEW for ServiceForm clients ---
                     <div style={{ ...clientDataGridStyle, gridTemplateColumns: '1fr' }}>
                       <div style={clientDataSectionStyle}>
@@ -3520,75 +3477,74 @@ const handleAcceptClient = async (clientToAccept) => {
                     </div>
                   ) : (
 
-                  <div style={clientDataGridStyle}>
-                    <div style={clientDataSectionStyle}>
-                      <h3 style={clientDataSectionTitleStyle}>Personal Information</h3>
-                      <p style={clientDataDetailStyle}><strong>First Name:</strong> {selectedClient.firstName || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Middle Name:</strong> {selectedClient.middleName || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Last Name:</strong> {selectedClient.lastName || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Date of Birth:</strong> {selectedClient.dob || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Gender:</strong> {selectedClient.gender || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Ethnicity:</strong> {selectedClient.ethnicity || '-'}</p>
-                    </div>
+                    <div style={clientDataGridStyle}>
+                      <div style={clientDataSectionStyle}>
+                        <h3 style={clientDataSectionTitleStyle}>Personal Information</h3>
+                        <p style={clientDataDetailStyle}><strong>First Name:</strong> {selectedClient.firstName || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Middle Name:</strong> {selectedClient.middleName || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Last Name:</strong> {selectedClient.lastName || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Date of Birth:</strong> {selectedClient.dob || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Gender:</strong> {selectedClient.gender || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Ethnicity:</strong> {selectedClient.ethnicity || '-'}</p>
+                      </div>
 
-                    <div style={clientDataSectionStyle}>
-                      <h3 style={clientDataSectionTitleStyle}>Contact Information</h3>
-                      <p style={clientDataDetailStyle}><strong>Address:</strong> {selectedClient.address || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Zip Code:</strong> {selectedClient.zipCode || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Mobile:</strong> {selectedClient.mobile || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Email:</strong> {selectedClient.email || '-'}</p>
-                    </div>
+                      <div style={clientDataSectionStyle}>
+                        <h3 style={clientDataSectionTitleStyle}>Contact Information</h3>
+                        <p style={clientDataDetailStyle}><strong>Address:</strong> {selectedClient.address || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Zip Code:</strong> {selectedClient.zipCode || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Mobile:</strong> {selectedClient.mobile || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Email:</strong> {selectedClient.email || '-'}</p>
+                      </div>
 
-                    <div style={clientDataSectionStyle}>
-                      <h3 style={clientDataSectionTitleStyle}>Job Preferences & Status</h3>
-                      <p style={clientDataDetailStyle}><strong>Security Clearance:</strong> {selectedClient.securityClearance || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Clearance Level:</strong> {selectedClient.clearanceLevel || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Willing to Relocate:</strong> {selectedClient.willingToRelocate || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Work Preference:</strong> {selectedClient.workPreference || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Restricted Companies:</strong> {selectedClient.restrictedCompanies || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Jobs to Apply:</strong> {selectedClient.jobsToApply || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Technology Skills:</strong> {selectedClient.technologySkills || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Current Salary:</strong> {selectedClient.currentSalary || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Expected Salary:</strong> {selectedClient.expectedSalary || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Visa Status:</strong> {selectedClient.visaStatus || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Other Visa Status:</strong> {selectedClient.otherVisaStatus || '-'}</p>
-                    </div>
+                      <div style={clientDataSectionStyle}>
+                        <h3 style={clientDataSectionTitleStyle}>Job Preferences & Status</h3>
+                        <p style={clientDataDetailStyle}><strong>Security Clearance:</strong> {selectedClient.securityClearance || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Clearance Level:</strong> {selectedClient.clearanceLevel || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Willing to Relocate:</strong> {selectedClient.willingToRelocate || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Work Preference:</strong> {selectedClient.workPreference || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Restricted Companies:</strong> {selectedClient.restrictedCompanies || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Jobs to Apply:</strong> {selectedClient.jobsToApply || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Technology Skills:</strong> {selectedClient.technologySkills || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Current Salary:</strong> {selectedClient.currentSalary || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Expected Salary:</strong> {selectedClient.expectedSalary || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Visa Status:</strong> {selectedClient.visaStatus || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Other Visa Status:</strong> {selectedClient.otherVisaStatus || '-'}</p>
+                      </div>
 
-                    <div style={clientDataSectionStyle}>
-                      <h3 style={clientDataSectionTitleStyle}>Education Details</h3>
-                      <p style={clientDataDetailStyle}><strong>School Name:</strong> {selectedClient.schoolName || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>School Address:</strong> {selectedClient.schoolAddress || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>School Phone:</strong> {selectedClient.schoolPhone || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Course of Study:</strong> {selectedClient.courseOfStudy || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Graduation Date:</strong> {selectedClient.graduationDate || '-'}</p>
-                    </div>
+                      <div style={clientDataSectionStyle}>
+                        <h3 style={clientDataSectionTitleStyle}>Education Details</h3>
+                        <p style={clientDataDetailStyle}><strong>School Name:</strong> {selectedClient.schoolName || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>School Address:</strong> {selectedClient.schoolAddress || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>School Phone:</strong> {selectedClient.schoolPhone || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Course of Study:</strong> {selectedClient.courseOfStudy || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Graduation Date:</strong> {selectedClient.graduationDate || '-'}</p>
+                      </div>
 
-                    <div style={clientDataSectionStyle}>
-                      <h3 style={clientDataSectionTitleStyle}>Employment Details</h3>
-                      <p style={clientDataDetailStyle}><strong>Current Company:</strong> {selectedClient.currentCompany || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Current Designation:</strong> {selectedClient.currentDesignation || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Preferred Interview Time:</strong> {selectedClient.preferredInterviewTime || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Earliest Joining Date:</strong> {selectedClient.earliestJoiningDate || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Relieving Date:</strong> {selectedClient.relievingDate || '-'}</p>
-                    </div>
+                      <div style={clientDataSectionStyle}>
+                        <h3 style={clientDataSectionTitleStyle}>Employment Details</h3>
+                        <p style={clientDataDetailStyle}><strong>Current Company:</strong> {selectedClient.currentCompany || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Current Designation:</strong> {selectedClient.currentDesignation || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Preferred Interview Time:</strong> {selectedClient.preferredInterviewTime || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Earliest Joining Date:</strong> {selectedClient.earliestJoiningDate || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Relieving Date:</strong> {selectedClient.relievingDate || '-'}</p>
+                      </div>
 
-                    <div style={clientDataSectionStyle}>
-                      <h3 style={clientDataSectionTitleStyle}>References</h3>
-                      <p style={clientDataDetailStyle}><strong>Reference Name:</strong> {selectedClient.referenceName || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Reference Phone:</strong> {selectedClient.referencePhone || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Reference Address:</strong> {selectedClient.referenceAddress || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Reference Email:</strong> {selectedClient.referenceEmail || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Reference Role:</strong> {selectedClient.referenceRole || '-'}</p>
-                    </div>
+                      <div style={clientDataSectionStyle}>
+                        <h3 style={clientDataSectionTitleStyle}>References</h3>
+                        <p style={clientDataDetailStyle}><strong>Reference Name:</strong> {selectedClient.referenceName || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Reference Phone:</strong> {selectedClient.referencePhone || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Reference Address:</strong> {selectedClient.referenceAddress || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Reference Email:</strong> {selectedClient.referenceEmail || '-'}</p>
+                      </div>
 
-                    <div style={clientDataSectionStyle}>
-                      <h3 style={clientDataSectionTitleStyle}>Job Portal Accounts</h3>
-                      <p style={clientDataDetailStyle}><strong>Account Name:</strong> {selectedClient.jobPortalAccountName || '-'}</p>
-                      <p style={clientDataDetailStyle}><strong>Credentials:</strong> {selectedClient.jobPortalCredentials ? '********' : '-'}</p>
+                      <div style={clientDataSectionStyle}>
+                        <h3 style={clientDataSectionTitleStyle}>Job Portal Accounts</h3>
+                        <p style={clientDataDetailStyle}><strong>Account Name:</strong> {selectedClient.jobPortalAccountName || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Credentials:</strong> {selectedClient.jobPortalCredentials ? '********' : '-'}</p>
+                      </div>
                     </div>
-                  </div>
-              )}
-               </div>
+                  )}
+                </div>
               )}
             </>
           ) : (
@@ -3620,18 +3576,7 @@ const handleAcceptClient = async (clientToAccept) => {
                   required
                 />
               </div>
-               <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Role <span style={{ color: 'red' }}>*</span></label>
-                <input
-                  type="text"
-                  name="role"
-                  value={newApplicationFormData.role}
-                  onChange={handleNewApplicationFormChange}
-                  style={modalInputStyle}
-                  placeholder="e.g., Software Engineer"
-                  required
-                />
-              </div>
+          
 
               <div style={modalFormFieldGroupStyle}>
                 <label style={modalLabelStyle}>Company <span style={{ color: 'red' }}>*</span></label>
@@ -3739,7 +3684,6 @@ const handleAcceptClient = async (clientToAccept) => {
           <Modal.Body style={modalBodyStyle}>
             <div style={modalViewDetailsGridStyle}>
               <p style={modalViewDetailItemStyle}><strong>Job Title:</strong> {viewedApplication.jobTitle}</p>
-              <p style={modalViewDetailItemStyle}><strong>Role:</strong> {viewedApplication.role}</p>
               <p style={modalViewDetailItemStyle}><strong>Company:</strong> {viewedApplication.company}</p>
               <p style={modalViewDetailItemStyle}><strong>Platform:</strong> {viewedApplication.platform}</p>
               <p style={modalViewDetailItemStyle}><strong>Job ID:</strong> {viewedApplication.jobId || '-'}</p> {/* Display Job ID */}
@@ -3947,16 +3891,16 @@ const handleAcceptClient = async (clientToAccept) => {
                     />
                   </div>
                   <div style={modalFormFieldGroupStyle}>
-        <label style={modalLabelStyle}>Interview Time<span style={{ color: 'red' }}>*</span></label>
-        <input
-          type="time"
-          name="interviewTime"
-          value={editedApplicationFormData.interviewTime || ''}
-          onChange={handleEditedApplicationFormChange}
-          style={modalInputStyle}
-        />
-      </div>
-                   
+                    <label style={modalLabelStyle}>Interview Time<span style={{ color: 'red' }}>*</span></label>
+                    <input
+                      type="time"
+                      name="interviewTime"
+                      value={editedApplicationFormData.interviewTime || ''}
+                      onChange={handleEditedApplicationFormChange}
+                      style={modalInputStyle}
+                    />
+                  </div>
+
                 </>
               )}
 
@@ -3964,12 +3908,12 @@ const handleAcceptClient = async (clientToAccept) => {
               <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
                 <label style={modalLabelStyle}>Attachments</label>
 
-                           {/* Preview area for pasted/selected files */}
+                {/* Preview area for pasted/selected files */}
                 {editedApplicationFormData.attachments.length > 0 && (
                   <div className="attachments-preview-container">
                     {editedApplicationFormData.attachments.map((file, index) => (
                       <div key={index} className="attachment-item">
-                        {file.file && typeof file.file.type === 'string' &&  file.file.type.startsWith('image/') ? (
+                        {file.file && typeof file.file.type === 'string' && file.file.type.startsWith('image/') ? (
                           <img src={URL.createObjectURL(file.file)} alt={file.name} className="attachment-image-preview" />
                         ) : (
                           <div className="attachment-file-icon">
@@ -3995,18 +3939,18 @@ const handleAcceptClient = async (clientToAccept) => {
                   </div>
                 )}
 
-              <div 
-                  className="custom-file-input-container" 
+                <div
+                  className="custom-file-input-container"
                 >
                   {/* This button is now the only way to trigger the file dialog */}
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     className="add-attachment-btn"
                     onClick={() => fileInputRef.current && fileInputRef.current.click()}
                   >
                     +
                   </button>
-                     <input
+                  <input
                     type="file"
                     multiple
                     ref={fileInputRef}
@@ -4343,70 +4287,70 @@ const handleAcceptClient = async (clientToAccept) => {
           <Modal.Title style={modalTitleStyle}>My Profile</Modal.Title>
         </Modal.Header>
         <Modal.Body style={{ ...modalBodyStyle, maxHeight: '70vh', overflowY: 'auto' }}>
-            <div style={modalFormGridStyle}>
-              {/* Personal Info Section */}
-              <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1', borderBottom: '1px solid #e2e8f0', paddingBottom: '15px', marginBottom: '15px' }}>
-                <h5 style={{ fontWeight: 600, color: '#3b82f6' }}>Personal Information</h5>
-              </div>
-              <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>First Name</label>
-                <input type="text" name="firstName" value={isEditingProfile ? editedEmployeeDetails.firstName : employeeDetails.firstName} onChange={handleProfileFormChange} style={modalInputStyle} disabled={!isEditingProfile} />
-              </div>
-              <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Last Name</label>
-                <input type="text" name="lastName" value={isEditingProfile ? editedEmployeeDetails.lastName : employeeDetails.lastName} onChange={handleProfileFormChange} style={modalInputStyle} disabled={!isEditingProfile} />
-              </div>
-              <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Date of Birth</label>
-                <input type="date" name="dateOfBirth" value={isEditingProfile ? editedEmployeeDetails.dateOfBirth : employeeDetails.dateOfBirth} onChange={handleProfileFormChange} style={modalInputStyle} disabled={!isEditingProfile} />
-              </div>
-              <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Gender</label>
-                <input type="text" name="gender" value={isEditingProfile ? editedEmployeeDetails.gender : employeeDetails.gender} onChange={handleProfileFormChange} style={modalInputStyle} disabled={!isEditingProfile} />
-              </div>
-
-              {/* Contact Info Section */}
-              <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1', borderBottom: '1px solid #e2e8f0', paddingBottom: '15px', margin: '15px 0' }}>
-                <h5 style={{ fontWeight: 600, color: '#3b82f6' }}>Contact Details</h5>
-              </div>
-              <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Personal Email</label>
-                <input type="email" name="personalEmail" value={isEditingProfile ? editedEmployeeDetails.personalEmail : employeeDetails.personalEmail} onChange={handleProfileFormChange} style={modalInputStyle} disabled={!isEditingProfile} />
-              </div>
-               <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Work Email</label>
-                <input type="email" name="workEmail" value={employeeDetails.workEmail} style={modalInputStyle} disabled />
-              </div>
-              <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Personal Number</label>
-                <input type="tel" name="personalNumber" value={isEditingProfile ? editedEmployeeDetails.personalNumber : employeeDetails.personalNumber} onChange={handleProfileFormChange} style={modalInputStyle} disabled={!isEditingProfile} />
-              </div>
-              <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Alternative Number</label>
-                <input type="tel" name="alternativeNumber" value={isEditingProfile ? editedEmployeeDetails.alternativeNumber : employeeDetails.alternativeNumber} onChange={handleProfileFormChange} style={modalInputStyle} disabled={!isEditingProfile} />
-              </div>
-               <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
-                <label style={modalLabelStyle}>Address</label>
-                <textarea name="address" value={isEditingProfile ? editedEmployeeDetails.address : employeeDetails.address} onChange={handleProfileFormChange} style={modalTextareaStyle} disabled={!isEditingProfile}></textarea>
-              </div>
-
-               {/* Employment Info Section */}
-              <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1', borderBottom: '1px solid #e2e8f0', paddingBottom: '15px', margin: '15px 0' }}>
-                <h5 style={{ fontWeight: 600, color: '#3b82f6' }}>Employment Details</h5>
-              </div>
-              <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Employee ID</label>
-                <input type="text" value={employeeDetails.firebaseKey} style={modalInputStyle} disabled />
-              </div>
-               <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Date of Joining</label>
-                <input type="date" name="dateOfJoin" value={employeeDetails.dateOfJoin} style={modalInputStyle} disabled />
-              </div>
-               <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Roles</label>
-                <input type="text" value={(employeeDetails.roles || []).join(', ')} style={modalInputStyle} disabled />
-              </div>
+          <div style={modalFormGridStyle}>
+            {/* Personal Info Section */}
+            <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1', borderBottom: '1px solid #e2e8f0', paddingBottom: '15px', marginBottom: '15px' }}>
+              <h5 style={{ fontWeight: 600, color: '#3b82f6' }}>Personal Information</h5>
             </div>
+            <div style={modalFormFieldGroupStyle}>
+              <label style={modalLabelStyle}>First Name</label>
+              <input type="text" name="firstName" value={isEditingProfile ? editedEmployeeDetails.firstName : employeeDetails.firstName} onChange={handleProfileFormChange} style={modalInputStyle} disabled={!isEditingProfile} />
+            </div>
+            <div style={modalFormFieldGroupStyle}>
+              <label style={modalLabelStyle}>Last Name</label>
+              <input type="text" name="lastName" value={isEditingProfile ? editedEmployeeDetails.lastName : employeeDetails.lastName} onChange={handleProfileFormChange} style={modalInputStyle} disabled={!isEditingProfile} />
+            </div>
+            <div style={modalFormFieldGroupStyle}>
+              <label style={modalLabelStyle}>Date of Birth</label>
+              <input type="date" name="dateOfBirth" value={isEditingProfile ? editedEmployeeDetails.dateOfBirth : employeeDetails.dateOfBirth} onChange={handleProfileFormChange} style={modalInputStyle} disabled={!isEditingProfile} />
+            </div>
+            <div style={modalFormFieldGroupStyle}>
+              <label style={modalLabelStyle}>Gender</label>
+              <input type="text" name="gender" value={isEditingProfile ? editedEmployeeDetails.gender : employeeDetails.gender} onChange={handleProfileFormChange} style={modalInputStyle} disabled={!isEditingProfile} />
+            </div>
+
+            {/* Contact Info Section */}
+            <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1', borderBottom: '1px solid #e2e8f0', paddingBottom: '15px', margin: '15px 0' }}>
+              <h5 style={{ fontWeight: 600, color: '#3b82f6' }}>Contact Details</h5>
+            </div>
+            <div style={modalFormFieldGroupStyle}>
+              <label style={modalLabelStyle}>Personal Email</label>
+              <input type="email" name="personalEmail" value={isEditingProfile ? editedEmployeeDetails.personalEmail : employeeDetails.personalEmail} onChange={handleProfileFormChange} style={modalInputStyle} disabled={!isEditingProfile} />
+            </div>
+            <div style={modalFormFieldGroupStyle}>
+              <label style={modalLabelStyle}>Work Email</label>
+              <input type="email" name="workEmail" value={employeeDetails.workEmail} style={modalInputStyle} disabled />
+            </div>
+            <div style={modalFormFieldGroupStyle}>
+              <label style={modalLabelStyle}>Personal Number</label>
+              <input type="tel" name="personalNumber" value={isEditingProfile ? editedEmployeeDetails.personalNumber : employeeDetails.personalNumber} onChange={handleProfileFormChange} style={modalInputStyle} disabled={!isEditingProfile} />
+            </div>
+            <div style={modalFormFieldGroupStyle}>
+              <label style={modalLabelStyle}>Alternative Number</label>
+              <input type="tel" name="alternativeNumber" value={isEditingProfile ? editedEmployeeDetails.alternativeNumber : employeeDetails.alternativeNumber} onChange={handleProfileFormChange} style={modalInputStyle} disabled={!isEditingProfile} />
+            </div>
+            <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
+              <label style={modalLabelStyle}>Address</label>
+              <textarea name="address" value={isEditingProfile ? editedEmployeeDetails.address : employeeDetails.address} onChange={handleProfileFormChange} style={modalTextareaStyle} disabled={!isEditingProfile}></textarea>
+            </div>
+
+            {/* Employment Info Section */}
+            <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1', borderBottom: '1px solid #e2e8f0', paddingBottom: '15px', margin: '15px 0' }}>
+              <h5 style={{ fontWeight: 600, color: '#3b82f6' }}>Employment Details</h5>
+            </div>
+            <div style={modalFormFieldGroupStyle}>
+              <label style={modalLabelStyle}>Employee ID</label>
+              <input type="text" value={employeeDetails.firebaseKey} style={modalInputStyle} disabled />
+            </div>
+            <div style={modalFormFieldGroupStyle}>
+              <label style={modalLabelStyle}>Date of Joining</label>
+              <input type="date" name="dateOfJoin" value={employeeDetails.dateOfJoin} style={modalInputStyle} disabled />
+            </div>
+            <div style={modalFormFieldGroupStyle}>
+              <label style={modalLabelStyle}>Roles</label>
+              <input type="text" value={(employeeDetails.roles || []).join(', ')} style={modalInputStyle} disabled />
+            </div>
+          </div>
         </Modal.Body>
         <Modal.Footer style={modalFooterStyle}>
           {isEditingProfile ? (
@@ -4494,15 +4438,15 @@ const handleAcceptClient = async (clientToAccept) => {
         </Modal>
       )}
 
-       <Modal show={showImageViewer} onHide={() => setShowImageViewer(false)} size="lg" centered>
+      <Modal show={showImageViewer} onHide={() => setShowImageViewer(false)} size="lg" centered>
         <Modal.Header closeButton style={modalHeaderStyle}>
           <Modal.Title style={modalTitleStyle}>Image Preview</Modal.Title>
         </Modal.Header>
         <Modal.Body style={{ ...modalBodyStyle, textAlign: 'center', padding: '10px' }}>
-          <img 
-            src={imageUrlToView} 
-            alt="Attachment Preview" 
-            style={{ maxWidth: '100%', maxHeight: '75vh', borderRadius: '8px' }} 
+          <img
+            src={imageUrlToView}
+            alt="Attachment Preview"
+            style={{ maxWidth: '100%', maxHeight: '75vh', borderRadius: '8px' }}
           />
         </Modal.Body>
       </Modal>
@@ -5200,7 +5144,7 @@ const fileActionsStyle = {
 };
 
 const editableSelectSmallStyle = {
-    padding: '4px 6px',
+  padding: '4px 6px',
   border: '1px solid #cbd5e1',
   borderRadius: '4px',
   fontSize: '0.75rem',
@@ -5544,18 +5488,18 @@ const clientDataDetailStyle = {
 };
 
 const selectClientButtonStyle = {
-          padding: '8px 16px',
-          border: '1px solid #cbd5e1',
-          borderRadius: '6px',
-          fontSize: '0.9rem',
-          color: '#1e293b',
-          backgroundColor: '#ffffff',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          minWidth: '250px',
-        };
+  padding: '8px 16px',
+  border: '1px solid #cbd5e1',
+  borderRadius: '6px',
+  fontSize: '0.9rem',
+  color: '#1e293b',
+  backgroundColor: '#ffffff',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  minWidth: '250px',
+};
 
 
 

@@ -95,11 +95,25 @@ const CyberSecurity = () => {
     <div className="cyber-security-container">
       <CustomNavbar />
       
-      {/* Header Section */}
-      <header className="header-section">
+
+         <header className="header-section">
         <div className="image-with-text-overlay">
           <img src={img1} alt="Cyber Security" className="header-image" />
-          <div className="overlay-text">Cyber Security</div>
+          {/* This new container will hold both the title and the buttons */}
+          <div className="glassy-mask"></div>
+          <div className="overlay-content">
+            <div className="overlay-text">Cyber Security</div>
+            
+            {/* Add the new button container here */}
+            <div className="header-button-container">
+              <button onClick={() => navigate('/contactus')} className="header-action-btn btn-contact">
+                Contact Us
+              </button>
+              <button onClick={handleApplyNow} className="header-action-btn btn-register">
+                Register Now
+              </button>
+            </div>
+          </div>
         </div>
       </header>
 

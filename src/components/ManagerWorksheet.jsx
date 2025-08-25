@@ -290,57 +290,80 @@ useEffect(() => {
     const usersRef = ref(database, 'users'); // Reference the 'users' node
 
     const unsubscribeClients = onValue(clientsRef, (snapshot) => {
-      const data = snapshot.val();
-      const clientsArray = data ? Object.keys(data).map(key => ({ firebaseKey: key, ...data[key] })) : [];
+  const clientsData = snapshot.val();
+      const allRegistrations = []; // We will create a flat list of registrations here.
+
+      if (clientsData) {
+        // Iterate over each client object from Firebase
+        Object.keys(clientsData).forEach(clientKey => {
+          const client = clientsData[clientKey];
+          // Check if the client has the nested serviceRegistrations
+          if (client.serviceRegistrations) {
+            // Iterate over each individual service registration
+            Object.keys(client.serviceRegistrations).forEach(regKey => {
+              const registration = client.serviceRegistrations[regKey];
+              // Create a new, combined object with both client and registration info
+              allRegistrations.push({
+                ...registration, // service, assignmentStatus, etc.
+                clientFirebaseKey: clientKey,
+                registrationKey: regKey,
+                email: client.email,
+                mobile: client.mobile,
+                // Use the name from the registration, fallback to the parent client's name
+                firstName: registration.firstName || client.firstName,
+                lastName: registration.lastName || client.lastName,
+              });
+            });
+          }
+        });
+      }
       
-      // Filter clients into "Unassigned" and "Assigned" specifically for the logged-in manager
-      const unassignedForManager = clientsArray.filter(c => c.assignedManager === managerFirebaseKey && c.assignmentStatus === 'pending_employee');
-      const assignedByManager = clientsArray.filter(c => c.assignedManager === managerFirebaseKey && ['pending_acceptance', 'active'].includes(c.assignmentStatus));
+      // Now, filter this complete list of registrations for the logged-in manager
+      const unassignedForManager = allRegistrations.filter(reg => 
+        reg.assignedManager === managerFirebaseKey && reg.assignmentStatus === 'pending_employee'
+      );
+      
+      const assignedByManager = allRegistrations.filter(reg => 
+        reg.assignedManager === managerFirebaseKey && ['pending_acceptance', 'active'].includes(reg.assignmentStatus)
+      );
 
       setUnassignedClients(unassignedForManager);
       setAssignedClients(assignedByManager);
 
-      // Process applications and interviews based ONLY on this manager's assigned clients
-      const allApplications = assignedByManager.flatMap(client => 
-          (client.jobApplications || []).map(app => ({
+      // The logic for applications and interviews can now also use the 'assignedByManager' list
+      // which is derived from the correctly filtered registrations.
+      const allApplications = assignedByManager.flatMap(clientReg => 
+          (clientReg.jobApplications || []).map(app => ({
               ...app,
-              clientName: `${client.firstName} ${client.lastName}`,
+              clientName: `${clientReg.firstName} ${clientReg.lastName}`,
+              assignedTo: clientReg.assignedTo
           }))
       );
       setApplicationData(allApplications);
 
-      const allInterviews = assignedByManager.flatMap(client => 
-          (client.jobApplications || [])
+      const allInterviews = assignedByManager.flatMap(clientReg => 
+          (clientReg.jobApplications || [])
               .filter(app => app.status === 'Interview')
-              .map(app => ({ ...app, clientName: `${client.firstName} ${client.lastName}`, assignedTo: client.assignedTo }))
+              .map(app => ({ ...app, clientName: `${clientReg.firstName} ${clientReg.lastName}`, assignedTo: clientReg.assignedTo }))
       );
       setInterviewData(allInterviews);
       
       setLoading(false);
-   
     });
 
     // --- MODIFIED: Fetch all users and filter for employees ---
-    const unsubscribeUsers = onValue(usersRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        const usersArray = Object.keys(data).map(key => ({
-          firebaseKey: key,
-          ...data[key]
-        }));
-        
-        // This list will be used for displaying details and general lookups
-        setAllEmployees(usersArray); 
-        
-        // Create a specific list for the assignment modal, containing only 'employees'
-        const employeesOnly = usersArray.filter(user => 
-          user.roles && Array.isArray(user.roles) && user.roles.includes('employee')
-        );
-        setEmployeesForAssignment(employeesOnly);
-      }
+      const unsubscribeUsers = onValue(usersRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          const usersArray = Object.keys(data).map(key => ({ firebaseKey: key, ...data[key] }));
+          setAllEmployees(usersArray); 
+          const employeesOnly = usersArray.filter(user => 
+            user.roles && Array.isArray(user.roles) && user.roles.includes('employee')
+          );
+          setEmployeesForAssignment(employeesOnly);
+        }
     });
 
-    // Cleanup listeners when the component unmounts
     return () => {
       unsubscribeClients();
       unsubscribeUsers();
@@ -1387,11 +1410,10 @@ useEffect(() => {
 
   // Handler for "Assign Client" or "Reassign Client" button submission
   const handleAssignmentSubmit = async () => {
-       const isReassignment = !!clientToReassign;
-    const clientToProcess = isReassignment ? clientToReassign : selectedClientToAssign;
+  const clientToProcess = clientToReassign || selectedClientToAssign;
     
-    if (!clientToProcess || !selectedEmployee) {
-      alert('Please select an employee.');
+   if (!clientToProcess || !selectedEmployee || !clientToProcess.clientFirebaseKey || !clientToProcess.registrationKey) {
+      alert('Error: Missing client, employee, or necessary keys to complete the assignment.');
       return;
     }
 
@@ -1406,7 +1428,7 @@ useEffect(() => {
    
    
     const employeeFullName = `${employeeInfo.firstName} ${employeeInfo.lastName}`;
-        const clientRef = ref(database, `clients/${clientToProcess.firebaseKey}`);
+    const registrationRef = ref(database, `clients/${clientToProcess.clientFirebaseKey}/serviceRegistrations/${clientToProcess.registrationKey}`);
 
 
     // Create a comprehensive client object with all necessary fields for the manager's view
@@ -1423,18 +1445,15 @@ useEffect(() => {
       // location: clientToProcess.address ? clientToProcess.address.split(',').slice(-2).join(', ').trim() : 'Not specified',
     };
     try {
-      await update(clientRef, updates);
+      await update(registrationRef, updates);
 
       // --- THE BLOCK OF CODE THAT SENT CLIENTS TO THE EMPLOYEE'S LOCALSTORAGE HAS BEEN REMOVED FROM HERE ---
       
       setSuccessMessage(`Successfully assigned ${clientToProcess.firstName} to ${employeeFullName}.`);
       setShowSuccessModal(true);
       
-         if (isReassignment) {
-        closeReassignClientModal();
-      } else {
-        closeAssignClientModal();
-      }
+    if (clientToReassign) closeReassignClientModal();
+      else closeAssignClientModal();
 
     } catch (error) {
         console.error("Firebase update failed:", error);
@@ -1627,29 +1646,68 @@ const filteredInterviewData = interviewData.filter(interview => {
   // NEW: Handle changes in the edit client form
   const handleEditClientChange = (e) => {
     const { name, value } = e.target;
-    setClientToEdit(prev => ({
-      ...prev,
-      [name]: value
-    }));
+
+    // Special handling for skills, which should be an array
+    if (name === 'technologySkills') {
+      setClientToEdit(prev => ({
+        ...prev,
+        [name]: value.split(',').map(skill => skill.trim())
+      }));
+    } else {
+      setClientToEdit(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   // NEW: Handle updating client details
-const handleUpdateClient = async () => {
-    if (clientToEdit && clientToEdit.firebaseKey) {
-      // Create a reference to the specific client in Firebase
-      const clientRef = ref(database, `clients/${clientToEdit.firebaseKey}`);
-      try {
-        await update(clientRef, clientToEdit);
-        setSuccessMessage(`Successfully updated details for ${clientToEdit.firstName} ${clientToEdit.lastName}.`);
+ const handleUpdateClient = async () => {
+    // 1. Check for the correct keys to ensure we can save.
+    if (!clientToEdit || !clientToEdit.clientFirebaseKey || !clientToEdit.registrationKey) {
+      console.error("Cannot update: missing client or registration key.");
+      alert("An error occurred while trying to save client details.");
+      return;
+    }
+
+    // 2. Separate the data: some fields belong to the main client profile,
+    //    and the rest belong to the specific service registration.
+    const {
+        clientFirebaseKey,
+        registrationKey,
+        // Parent client fields
+        firstName,
+        lastName,
+        email,
+        mobile,
+        // The rest of the data is for the registration
+        ...registrationData
+    } = clientToEdit;
+
+    // 3. Define the two paths we need to update in Firebase.
+    const registrationRef = ref(database, `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}`);
+    const clientProfileRef = ref(database, `clients/${clientFirebaseKey}`);
+
+    // 4. Prepare the objects for the two separate updates.
+    const profileUpdate = {
+        firstName,
+        lastName,
+        email,
+        mobile
+    };
+
+    try {
+        // 5. Perform both updates: one for the registration and one for the main profile.
+        await update(registrationRef, registrationData);
+        await update(clientProfileRef, profileUpdate);
+
+        setSuccessMessage(`Successfully updated details for ${firstName} ${lastName}.`);
         setShowSuccessModal(true);
         setIsEditingClient(false); // Switch back to view mode
-      } catch (error) {
+        closeEditClientModal(); // Close the modal on success
+    } catch (error) {
         console.error("Failed to update client details:", error);
         alert("Error updating client details.");
-      }
-    } else {
-      console.error("Cannot update client: missing client data or Firebase key.");
-      alert("An error occurred while trying to save client details.");
     }
   };
 
@@ -4783,7 +4841,7 @@ Please provide a summary no longer than 150 words.`;
             </div>
             <div className="assignment-cards-grid">
               {/* Unassigned Card - now clickable to open modal */}
-              <div className="assignment-card" onClick={openUnassignedClientsModal}>
+              <div className="assignment-card" onClick={() => setIsUnassignedClientsModalOpen(true)}>
                 <div className="assignment-card-value">{totalUnassignedCount}</div>
                 <div className="assignment-card-title">Clients Unassigned</div>
                 <div className="assignment-card-description">View all unassigned clients</div>
@@ -4975,7 +5033,7 @@ Please provide a summary no longer than 150 words.`;
       </div>
       {/* Unassigned Clients Modal */}
       {isUnassignedClientsModalOpen && (
-        <div className="modal-overlay">
+        <div className="modal-overlay open">
           <div className="modal-content">
             <div className="modal-header">
               <h3 className="modal-title">Unassigned Clients Management</h3>
@@ -5046,7 +5104,7 @@ Please provide a summary no longer than 150 words.`;
                 const clientSalary = client.salary || `$${client.expectedSalary || 'N/A'}`;
 
                 return (
-                  <div key={client.firebaseKey} className="modal-client-card">
+                  <div key={client.registrationKey} className="modal-client-card">
                     <div className="modal-client-card-header">
                       <span className="modal-client-name">{clientName}</span>
                       {client.priority && (
@@ -5102,7 +5160,7 @@ Please provide a summary no longer than 150 words.`;
       {/* Assign Client to Employee Modal (for NEW assignments) */}
       {/* Assign Client to Employee Modal (for NEW assignments) */}
       {isAssignClientModalOpen && selectedClientToAssign && (
-        <div className="modal-overlay">
+        <div className="modal-overlay open">
           <div className="assign-modal-content">
             <div className="assign-modal-header">
               <h3 className="assign-modal-title">
@@ -5162,7 +5220,7 @@ Please provide a summary no longer than 150 words.`;
 
       {/* NEW: Modal Popup for Selecting an Employee */}
       {isEmployeeSelectModalOpen && (
-        <div className="modal-overlay">
+        <div className="modal-overlay open">
           <div className="modal-content" style={{ maxWidth: '500px' }}>
             <div className="modal-header">
               <h3 className="modal-title">Select an Employee</h3>
@@ -5196,7 +5254,7 @@ Please provide a summary no longer than 150 words.`;
 
       {/* Total Clients Modal */}
       {isTotalClientsModalOpen && (
-        <div className="modal-overlay">
+        <div className="modal-overlay open">
           <div className="total-clients-modal-content">
             <div className="total-clients-modal-header">
               <div>
@@ -5227,7 +5285,7 @@ Please provide a summary no longer than 150 words.`;
                 </thead>
                 <tbody>
                   {assignedClients.map((client) => (
-                    <tr key={client.firebaseKey}>
+                    <tr key={client.registrationKey}>
                       <td>
                         <div className="employee-cell"> {/* Reusing employee-cell for client avatar/name layout */}
                           <div className="employee-avatar">
@@ -5288,7 +5346,7 @@ Please provide a summary no longer than 150 words.`;
 
       {/* NEW: Employee Clients Detail Modal */}
       {isEmployeeClientsModalOpen && selectedEmployeeForClients && (
-        <div className="modal-overlay">
+        <div className="modal-overlay open">
           <div className="employee-clients-modal-content">
             <div className="employee-clients-modal-header">
               <h3 className="employee-clients-modal-title">
@@ -5352,7 +5410,7 @@ Please provide a summary no longer than 150 words.`;
 
       {/* NEW: Reassign Client Modal (reusing assign-modal-content) */}
       {isReassignClientModalOpen && clientToReassign && (
-        <div className="modal-overlay">
+        <div className="modal-overlay open">
           <div className="assign-modal-content">
             <div className="assign-modal-header">
               <h3 className="assign-modal-title">Reassign Client: {clientToReassign.clientName}</h3>
@@ -5432,7 +5490,7 @@ Please provide a summary no longer than 150 words.`;
 
       {/* NEW: Client Edit Modal (repurposing the preview modal for editing) */}
       {isEditClientModalOpen && clientToEdit && (
-        <div className="modal-overlay">
+        <div className="modal-overlay open">
           <div className="assign-modal-content"> {/* Reusing assign-modal-content for its wider layout */}
             <div className="assign-modal-header">
               <h3 className="assign-modal-title">
@@ -6182,7 +6240,7 @@ Please provide a summary no longer than 150 words.`;
 
       {/* NEW: Notifications Modal */}
       {isNotificationsModalOpen && (
-        <div className="modal-overlay">
+        <div className="modal-overlay open">
           <div className="modal-content notification-modal-content">
             <div className="modal-header">
               <h3 className="modal-title">Notifications</h3>
@@ -6209,7 +6267,7 @@ Please provide a summary no longer than 150 words.`;
 
       {/* NEW: User Profile Modal */}
        {isUserProfileModalOpen && (
-        <div className="modal-overlay">
+        <div className="modal-overlay open">
           <div className="modal-content user-profile-modal-content" style={{ maxWidth: '800px', maxHeight: '80vh', overflowY: 'auto' }}>
             <div className="modal-header">
               <h3 className="modal-title">Manager Profile</h3>

@@ -84,17 +84,18 @@ const LandingPage = () => {
                 <div className="carousel-overlay-content position-absolute top-50 start-50 translate-middle text-center text-white">
                   <h3>{item.text}</h3>
                   
-                  {/* The "Book a Service" button now uses the new handler */}
-                  <button
-                    onClick={() => handleBookServiceClick(item)}
-                    className="btn btn-primary mt-3"
-                  >
-                    Book a Service
-                  </button>
-                  
-                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                  
-                  <Link to={item.path} className="btn btn-primary mt-3">Learn More</Link>
+                    <div className="header-button-container">
+                    
+                    <Link to={item.path} className="header-action-btn"> {/* Secondary button style */}
+                      Learn More
+                    </Link>
+                    <div
+                      onClick={() => handleBookServiceClick(item)}
+                      className="header-action-btn btn-book" // Primary button style
+                    >
+                      Book a Service
+                    </div>
+                  </div>
                 </div>
                 <img
                   className="d-block w-100 carousel-img"

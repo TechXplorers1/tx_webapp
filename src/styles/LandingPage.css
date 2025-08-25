@@ -48,6 +48,47 @@
   z-index: 2;
 }
 
+.carousel-overlay-content .header-button-container {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap; /* Allows buttons to stack on small screens */
+}
+
+.carousel-overlay-content .header-action-btn {
+  padding: 12px 28px;
+  border-radius: 50px; /* Pill shape */
+  font-size: 1rem;
+  font-weight: 600;
+  border: 2px solid white;
+  background-color: transparent;
+  color: white;
+  cursor: pointer;
+  text-decoration: none; /* For Link components */
+  display: inline-block;
+  transition: all 0.3s ease;
+}
+
+.carousel-overlay-content .header-action-btn:hover {
+  background-color: white;
+  color: #0d6efd; /* A common blue color */
+  transform: translateY(-3px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+/* Style for the primary action button */
+.carousel-overlay-content .header-action-btn.btn-book {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+}
+
+.carousel-overlay-content .header-action-btn.btn-book:hover {
+  background-color: #0b5ed7;
+  border-color: #0a58ca;
+  color: white;
+}
+
 /* Services Section */
 .services-section {
   padding: 20px 0;

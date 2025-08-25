@@ -128,82 +128,165 @@ export default function LoginPage() {
     setModalAlert({ type: "", message: "" });
   }
 
+  const styles = `
+    .login-page-wrapper {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Inter', sans-serif;
+      padding: 1rem;
+      background-color: #f8f9fa;
+    }
+    .login-card {
+      width: 100%;
+      max-width: 480px;
+      background-color: #ffffff;
+      padding: 2.5rem;
+      border: 1px solid #e9ecef;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    }
+    .login-title {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      color: #0d6efd;
+    }
+    .google-btn {
+      padding: 0.75rem;
+      border-radius: 8px;
+      font-weight: 500;
+      transition: background-color 0.2s ease;
+    }
+    .or-divider {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      color: #adb5bd;
+      margin: 1.5rem 0;
+    }
+    .or-divider::before, .or-divider::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid #dee2e6;
+    }
+    .or-divider:not(:empty)::before {
+      margin-right: .5em;
+    }
+    .or-divider:not(:empty)::after {
+      margin-left: .5em;
+    }
+    .form-label-modern {
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+      color: #495057;
+    }
+    .input-group-modern {
+      display: flex;
+      align-items: center;
+      border: 1px solid #ced4da;
+      border-radius: 8px;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .input-group-modern:focus-within {
+      border-color: #86b7fe;
+      box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    .input-group-icon {
+      padding: 0.75rem 1rem;
+      color: #6c757d;
+      font-size: 1.2rem;
+    }
+    .form-control-modern {
+      border: none;
+      box-shadow: none;
+      flex-grow: 1;
+      padding: 0.75rem 1rem;
+      padding-left: 0;
+    }
+    .form-control-modern:focus {
+      box-shadow: none;
+    }
+    .password-toggle-icon {
+      cursor: pointer;
+      padding-right: 1rem;
+      color: #6c757d;
+    }
+    .login-btn-modern {
+      padding: 0.8rem;
+      font-weight: 600;
+      border-radius: 8px;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+    .login-btn-modern:hover {
+      transform: translateY(-2px);
+    }
+  `;
+
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontFamily: "'Segoe UI', sans-serif",
-      padding: '1rem'
-    }}>
-      <JsNavbar />
-      <div style={{
-        width: '100%',
-        maxWidth: '500px',
-        padding: '2rem',
-        border: '2px solid white',
-        borderRadius: '12px',
-        boxShadow: '0 0 10px rgba(0,0,0,0.1)'
-      }}>
-        <h3 className="text-center text-primary fw-bold mb-4">Login to Your Account</h3>
-        <button
-          type="button"
-          className="btn btn-outline-secondary w-100 p-2 mb-3 d-flex align-items-center justify-content-center gap-2"
-          onClick={handleGoogleLogin} // Added onClick handler
-        >
+ <>
+      <style>{styles}</style>
+      <div className="login-page-wrapper">
+        <JsNavbar />
+        <div className="login-card">
+          <h3 className="text-center login-title">Login to Your Account</h3>
+          <Button
+            variant="outline-secondary"
+            className="w-100 mb-3 d-flex align-items-center justify-content-center gap-2 google-btn"
+            onClick={handleGoogleLogin}
+          >
           <FcGoogle size={22} /> Continue with Google
-        </button>
-        <div className="text-center mb-3">OR</div>
+        </Button>
+        <div className="or-divider">OR</div>
 
         <Form onSubmit={handleSubmit}>
           <Form.Group className="mb-3">
-            <Form.Label>Email</Form.Label>
-            <InputGroup>
-              <InputGroup.Text><MdEmail /></InputGroup.Text>
-              <Form.Control
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email"
-                autoComplete="email"
-              />
-            </InputGroup>
-          </Form.Group>
+              <Form.Label className="form-label-modern">Email</Form.Label>
+              <div className="input-group-modern">
+                <span className="input-group-icon"><MdEmail /></span>
+                <Form.Control
+                  className="form-control-modern"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email"
+                  autoComplete="email"
+                />
+              </div>
+            </Form.Group>
 
-          <Form.Group className="mb-3">
-            <Form.Label>Password</Form.Label>
-            <InputGroup>
-              <InputGroup.Text><RiLockPasswordFill /></InputGroup.Text>
-              <Form.Control
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                autoComplete="current-password"
-              />
-              <InputGroup.Text
-                style={{ cursor: "pointer" }}
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? <AiFillEye /> : <AiFillEyeInvisible />}
-              </InputGroup.Text>
-            </InputGroup>
-          </Form.Group>
+         <Form.Group className="mb-3">
+              <Form.Label className="form-label-modern">Password</Form.Label>
+              <div className="input-group-modern">
+                <span className="input-group-icon"><RiLockPasswordFill /></span>
+                <Form.Control
+                  className="form-control-modern"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  autoComplete="current-password"
+                />
+                <span className="password-toggle-icon" onClick={() => setShowPassword(!showPassword)}>
+                  {showPassword ? <AiFillEye size={20} /> : <AiFillEyeInvisible size={20} />}
+                </span>
+              </div>
+            </Form.Group>
 
           <div className="text-end mb-3">
-            <span
-              style={{ color: '#007bff', fontWeight: 600, cursor: 'pointer' }}
-              onClick={openForgotModal}
-            >
-              Forgot Password?
-            </span>
-          </div>
+              <span
+                style={{ color: '#007bff', fontWeight: 600, cursor: 'pointer' }}
+                onClick={openForgotModal}
+              >
+                Forgot Password?
+              </span>
+            </div>
 
           {loginError && <Alert variant="danger" className="py-2">{loginError}</Alert>}
 
-          <Button type="submit" className="w-100 btn btn-primary text-white fw-bold">Log In</Button>
+          <Button type="submit" className="w-100 btn btn-primary text-white fw-bold login-btn-modern">Log In</Button>
 
           <div className="text-center mt-3">
             <span>Don't have an account?</span>
@@ -238,5 +321,6 @@ export default function LoginPage() {
         </Modal.Footer>
       </Modal>
     </div>
+    </>
   );
 }

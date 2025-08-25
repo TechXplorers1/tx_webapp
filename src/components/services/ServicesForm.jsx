@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Modal, Button } from 'react-bootstrap';
+import { Modal, Button, Spinner } from 'react-bootstrap';
 import { database } from '../../firebase'; // Import your Firebase config
 import { ref, push, set, update } from "firebase/database";
 import { useAuth } from '../../components/AuthContext';
@@ -10,6 +10,7 @@ const ServicesForm = () => {
     const navigate = useNavigate();
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const { user } = useAuth();
+    const [isLoading, setIsLoading] = useState(false);
     
     const [formData, setFormData] = useState({
         firstName: '',
@@ -55,6 +56,8 @@ const ServicesForm = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+         setIsLoading(true);
         
         const newServiceRegistration = {
             service: readOnlyService,
@@ -98,6 +101,9 @@ const ServicesForm = () => {
         } catch (error) {
             console.error("Failed to save to Firebase", error);
             alert("Submission failed. Please try again.");
+        }finally {
+            // MODIFICATION: Set loading to false when submission is complete (or fails)
+            setIsLoading(false);
         }
     };
 
@@ -196,7 +202,22 @@ const ServicesForm = () => {
                     </div>
                 </div>
                 <div>
-                    <button type="submit" style={submitButtonStyle}>Submit</button>
+                     <button type="submit" style={submitButtonStyle} disabled={isLoading}>
+                        {isLoading ? (
+                            <>
+                                <Spinner
+                                    as="span"
+                                    animation="border"
+                                    size="sm"
+                                    role="status"
+                                    aria-hidden="true"
+                                />
+                                <span style={{ marginLeft: '8px' }}>Submitting...</span>
+                            </>
+                        ) : (
+                            'Submit'
+                        )}
+                    </button>
                 </div>
             </form>
             <Modal show={showSuccessModal} onHide={() => setShowSuccessModal(false)} centered>

@@ -34,8 +34,7 @@ const ClientManagement = () => {
   const [generatedPaymentLink, setGeneratedPaymentLink] = useState('');
 
   const [isManagerModalOpen, setIsManagerModalOpen] = useState(false);
-  onst [registrationForManager, setRegistrationForManager] = useState(null);
-  const [clientForManagerSelection, setClientForManagerSelection] = useState(null);
+  const [registrationForManager, setRegistrationForManager] = useState(null);
   const [managerSearchTerm, setManagerSearchTerm] = useState('');
 
   const [employees, setEmployees] = useState([]);
@@ -55,34 +54,29 @@ const ClientManagement = () => {
     const clientsRef = ref(database, 'clients');
     const usersRef = ref(database, 'users');
 
-    const unsubscribeClients = onValue(clientsRef, (snapshot) => {
+const unsubscribeClients = onValue(clientsRef, (snapshot) => {
       const clientsData = snapshot.val();
+      const allRegistrations = [];
       if (clientsData) {
-        const allRegistrations = [];
-        // Iterate over each client (e.g., by their firebaseKey)
         Object.keys(clientsData).forEach(clientKey => {
           const client = clientsData[clientKey];
-          // Check if the client has any service registrations
           if (client.serviceRegistrations) {
-            // Iterate over each service registration for that client
             Object.keys(client.serviceRegistrations).forEach(regKey => {
               const registration = client.serviceRegistrations[regKey];
-              // Create a new, flat object combining client and registration details
               allRegistrations.push({
-                ...registration, // service, assignmentStatus, subServices, etc.
-                clientFirebaseKey: clientKey,      // The main key for the parent client
-                registrationKey: regKey,         // The unique key for this specific registration
+                ...registration,
+                clientFirebaseKey: clientKey,
+                registrationKey: regKey,
                 email: client.email,
                 mobile: client.mobile,
-                // Use the name from the registration, fallback to the parent client's name
                 firstName: registration.firstName || client.firstName,
                 lastName: registration.lastName || client.lastName,
               });
             });
           }
         });
-        setServiceRegistrations(allRegistrations);
       }
+      setServiceRegistrations(allRegistrations);
       setLoading(false);
     }, (error) => {
       console.error("Firebase fetch error:", error);
@@ -279,7 +273,7 @@ const ClientManagement = () => {
 
   const handleCloseManagerModal = () => {
     setIsManagerModalOpen(false);
-    setClientForManagerSelection(null);
+    setRegistrationForManager(null);
     setManagerSearchTerm('');
   };
 
@@ -301,17 +295,17 @@ const ClientManagement = () => {
   };
 
   const getFilteredRegistrations = () => {
-  let filtered = clients;
+  let filtered = serviceRegistrations;
 
         if (clientFilter === 'registered') {
-      filtered = clients.filter(c => c.assignmentStatus === 'registered' || !c.assignmentStatus);
+      filtered = filtered.filter(c => c.assignmentStatus === 'registered' || !c.assignmentStatus);
     } else if (clientFilter === 'unassigned') {
-      filtered = clients.filter(c => c.assignmentStatus === 'pending_manager');
+      filtered = filtered.filter(c => c.assignmentStatus === 'pending_manager');
     } else if (clientFilter === 'active') {
       // "Active" for the admin means the client has been assigned to a manager
-      filtered = clients.filter(c => ['pending_employee', 'pending_acceptance', 'active'].includes(c.assignmentStatus));
+      filtered = filtered.filter(c => ['pending_employee', 'pending_acceptance', 'active'].includes(c.assignmentStatus));
     } else if (clientFilter === 'rejected') {
-        filtered = clients.filter(c => c.assignmentStatus === 'rejected');
+        filtered = filtered.filter(c => c.assignmentStatus === 'rejected');
     }
 
     if (selectedServiceFilter !== 'All') {
@@ -329,7 +323,7 @@ const ClientManagement = () => {
     );
   };
 
-  const filteredClients = getFilteredClients();
+  const filteredClients = getFilteredRegistrations();
 
   // --- Client Details and Edit Client Modals Handlers ---
   const handleViewClientDetails = (client) => {
@@ -400,39 +394,39 @@ const ClientManagement = () => {
           <thead><tr>{headers.map(h => <th key={h}>{h}</th>)}</tr></thead>
           <tbody>
             {registrationsToRender.length > 0 ? (
-              registrationsToRender.map(client => (
-                <tr key={client.firebaseKey}>
-                  <td>{client.firstName}</td>
-                  <td>{client.lastName}</td>
-                  <td>{client.mobile}</td>
-                  <td>{client.email}</td>
-                  <td>{client.service === 'Job Supporting' ? client.jobsApplyFor : client.service}</td>
-                  <td>{client.registeredDate}</td>
-                  <td>{client.country}</td>
-                  {client.service === 'Job Supporting' && <td>{client.visaStatus}</td>}
+              registrationsToRender.map(registration => (
+                <tr key={registration.registrationKey}>
+                  <td>{registration.firstName}</td>
+                  <td>{registration.lastName}</td>
+                  <td>{registration.mobile}</td>
+                  <td>{registration.email}</td>
+                  <td>{registration.service === 'Job Supporting' ? registration.jobsApplyFor : registration.service}</td>
+                  <td>{registration.registeredDate}</td>
+                  <td>{registration.country}</td>
+                  {registration.service === 'Job Supporting' && <td>{registration.visaStatus}</td>}
 
                   {(currentClientFilter === 'unassigned' || currentClientFilter === 'restored') && (
                     <td>
-                      <button onClick={() => handleOpenManagerModal(client)} className="action-button select-manager">
-                        {client.manager || 'Select Manager'}
+                      <button onClick={() => handleOpenManagerModal(registration)} className="action-button select-manager">
+                        {registration.manager || 'Select Manager'}
                       </button>
                     </td>
                   )}
                   {currentClientFilter === 'active' && (
                     <td>
-                      {client.manager || '-'}
+                      {registration.manager || '-'}
                     </td>
                   )}
-                  <td><button onClick={() => handleViewClientDetails(client)} className="action-button view">View</button></td>
+                  <td><button onClick={() => handleViewClientDetails(registration)} className="action-button view">View</button></td>
                   <td style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-start' }}>
                     <div className="action-buttons">
-                      {currentClientFilter === 'registered' && (<><button onClick={() => handleAcceptClient(client)} className="action-button accept">Accept</button><button onClick={() => handleDeclineClient(client)} className="action-button decline">Decline</button></>)}
-                      {(currentClientFilter === 'unassigned' || currentClientFilter === 'restored') && <button onClick={() => handleAssignClient(client)} className="action-button assign" disabled={!client.manager}>Save</button>}
-                      {currentClientFilter === 'active' && (<button onClick={() => handleOpenManagerModal(client)} className="action-button edit-manager">Edit Manager</button>)}                      {currentClientFilter === 'rejected' && (<><button onClick={() => handleRestoreClient(client)} className="action-button restore">Restore</button><button onClick={() => handleDeleteRejectedClient(client)} className="action-button delete-btn">Delete</button></>)}
+                      {currentClientFilter === 'registered' && (<><button onClick={() => handleAcceptClient(registration)} className="action-button accept">Accept</button><button onClick={() => handleDeclineClient(registration)} className="action-button decline">Decline</button></>)}
+                      {(currentClientFilter === 'unassigned' || currentClientFilter === 'restored') && <button onClick={() => handleAssignClient(registration)} className="action-button assign" disabled={!registration.manager}>Save</button>}
+                      {currentClientFilter === 'active' && (<button onClick={() => handleOpenManagerModal(registration)} className="action-button edit-manager">Edit Manager</button>)}                      {currentClientFilter === 'rejected' && (<><button onClick={() => handleRestoreClient(registration)} className="action-button restore">Restore</button><button onClick={() => handleDeleteRejectedClient(registration)} className="action-button delete-btn">Delete</button></>)}
                       </div>
                       {/* Send Payment Link Button */}
                       <button
-                        onClick={() => handleOpenPaymentModal(client)}
+                        onClick={() => handleOpenPaymentModal(registration)}
                         className="action-button send-payment-link"
                       >
                         {/* Credit Card Icon (from Screenshot 2025-07-02 at 7.33.16 PM.png) */}
@@ -463,25 +457,25 @@ const ClientManagement = () => {
     return (
       <div className="all-services-list">
         {servicesToDisplay.map(service => {
-          const clientsForService = clients.filter(client => {
+          const clientsForService = filteredClients.filter(registration => {
              let matchesFilter = false;
             if (clientFilter === 'registered') {
-              matchesFilter = client.assignmentStatus === 'registered' || !client.assignmentStatus;
+              matchesFilter = registration.assignmentStatus === 'registered' || !registration.assignmentStatus;
             } else if (clientFilter === 'unassigned') {
-              matchesFilter = client.assignmentStatus === 'pending_manager';
+              matchesFilter = registration.assignmentStatus === 'pending_manager';
             } else if (clientFilter === 'active') {
-              matchesFilter = ['pending_employee', 'pending_acceptance', 'active'].includes(client.assignmentStatus);
+              matchesFilter = ['pending_employee', 'pending_acceptance', 'active'].includes(registration.assignmentStatus);
             } else if (clientFilter === 'rejected') {
-                matchesFilter = client.assignmentStatus === 'rejected';
+                matchesFilter = registration.assignmentStatus === 'rejected';
             }
 
-            const matchesService = client.service === service;
+            const matchesService = registration.service === service;
             
             const searchTermLower = clientSearchTerm.toLowerCase();
             const matchesSearch = 
-              (client.firstName || '').toLowerCase().includes(searchTermLower) ||
-              (client.lastName || '').toLowerCase().includes(searchTermLower) ||
-              (client.email || '').toLowerCase().includes(searchTermLower);
+              (registration.firstName || '').toLowerCase().includes(searchTermLower) ||
+              (registration.lastName || '').toLowerCase().includes(searchTermLower) ||
+              (registration.email || '').toLowerCase().includes(searchTermLower);
 
             return matchesFilter && matchesService && matchesSearch;
           });
@@ -1343,10 +1337,10 @@ const ClientManagement = () => {
             {/* Client Filter Tabs */}
             <div className="client-filter-tabs">
               {[
-                { label: 'Registered Clients', value: 'registered', count: clients.filter(c => c.assignmentStatus === 'registered' || !c.assignmentStatus).length, activeBg: 'var(--client-filter-tab-bg-active-registered)', activeColor: 'var(--client-filter-tab-text-active-registered)', badgeBg: 'var(--client-filter-tab-badge-registered)' },
-                { label: 'Unassigned Clients', value: 'unassigned', count: clients.filter(c => c.assignmentStatus === 'pending_manager').length, activeBg: 'var(--client-filter-tab-bg-active-unassigned)', activeColor: 'var(--client-filter-tab-text-active-unassigned)', badgeBg: 'var(--client-filter-tab-badge-unassigned)' },
-                { label: 'Active Clients', value: 'active', count: clients.filter(c => ['pending_employee', 'pending_acceptance', 'active'].includes(c.assignmentStatus)).length, activeBg: 'var(--client-filter-tab-bg-active-active)', activeColor: 'var(--client-filter-tab-text-active-active)', badgeBg: 'var(--client-filter-tab-badge-active)' },
-                { label: 'Rejected Clients', value: 'rejected', count: clients.filter(c => c.assignmentStatus === 'rejected').length, activeBg: 'var(--client-filter-tab-bg-active-rejected)', activeColor: 'var(--client-filter-tab-text-active-rejected)', badgeBg: 'var(--client-filter-tab-badge-rejected)' },
+                { label: 'Registered Clients', value: 'registered', count: serviceRegistrations.filter(c => c.assignmentStatus === 'registered' || !c.assignmentStatus).length, activeBg: 'var(--client-filter-tab-bg-active-registered)', activeColor: 'var(--client-filter-tab-text-active-registered)', badgeBg: 'var(--client-filter-tab-badge-registered)' },
+                { label: 'Unassigned Clients', value: 'unassigned', count: serviceRegistrations.filter(c => c.assignmentStatus === 'pending_manager').length, activeBg: 'var(--client-filter-tab-bg-active-unassigned)', activeColor: 'var(--client-filter-tab-text-active-unassigned)', badgeBg: 'var(--client-filter-tab-badge-unassigned)' },
+                { label: 'Active Clients', value: 'active', count: serviceRegistrations.filter(c => ['pending_employee', 'pending_acceptance', 'active'].includes(c.assignmentStatus)).length, activeBg: 'var(--client-filter-tab-bg-active-active)', activeColor: 'var(--client-filter-tab-text-active-active)', badgeBg: 'var(--client-filter-tab-badge-active)' },
+                { label: 'Rejected Clients', value: 'rejected', count: serviceRegistrations.filter(c => c.assignmentStatus === 'rejected').length, activeBg: 'var(--client-filter-tab-bg-active-rejected)', activeColor: 'var(--client-filter-tab-text-active-rejected)', badgeBg: 'var(--client-filter-tab-badge-rejected)' },
                 // { label: 'Restore Clients', value: 'restored', count: clients.filter(c => c.displayStatuses.includes('restored')).length, activeBg: 'var(--client-filter-tab-bg-active-restored)', activeColor: 'var(--client-filter-tab-text-active-restored)', badgeBg: 'var(--client-filter-tab-badge-restored)' },
               ].map((option) => (
                 <label
@@ -1425,11 +1419,11 @@ const ClientManagement = () => {
                   {clientFilter === 'unassigned' && `Unassigned Clients`}
                   {clientFilter === 'active' && `Active Clients`}
                   {clientFilter === 'rejected' && `Rejected Clients`}
-                  {clientFilter === 'restored' && `Restored Clients`} ({filteredClients.length})
+                  {clientFilter === 'restored' && `Restored Clients`} ({getFilteredRegistrations().length})
                 </h4>
 
 
-                {renderClientTable(filteredClients, selectedServiceFilter, clientFilter)}
+                {renderClientTable(getFilteredRegistrations(), selectedServiceFilter, clientFilter)}
               </>
             )}
 
@@ -1454,11 +1448,11 @@ const ClientManagement = () => {
         </div>
       )}
 
-      {isManagerModalOpen && clientForManagerSelection && (
+      {isManagerModalOpen && registrationForManager && (
         <div className="modal-overlay open">
           <div className="modal-content manager-select-modal">
             <div className="modal-header">
-              <h3 className="modal-title">Select Manager for {clientForManagerSelection.firstName}</h3>
+              <h3 className="modal-title">Select Manager for {registrationForManager.firstName}</h3>
               <button className="modal-close-btn" onClick={handleCloseManagerModal}>&times;</button>
             </div>
 
@@ -1609,27 +1603,6 @@ const ClientManagement = () => {
                     <div className="assign-form-group">
                       <label>Country</label>
                       <div className="read-only-value">{selectedClientForDetails.country || '-'}</div>
-                    </div>
-                  </div>
-
-                  {/* Service Details */}
-                  <div className="client-preview-section">
-                    <h4 className="client-preview-section-title">Service Details</h4>
-                    <div className="assign-form-group">
-                      <label>Service</label>
-                      <div className="read-only-value">{selectedClientForDetails.service || '-'}</div>
-                    </div>
-                    {selectedClientForDetails.subServices && selectedClientForDetails.subServices.length > 0 && (
-                      <div className="assign-form-group">
-                        <label>What Service do you want?</label>
-                        <div className="read-only-value">
-                          {selectedClientForDetails.subServices.join(', ') || '-'}
-                        </div>
-                      </div>
-                    )}
-                    <div className="assign-form-group">
-                      <label>Who are you?</label>
-                      <div className="read-only-value">{selectedClientForDetails.userType || '-'}</div>
                     </div>
                   </div>
 

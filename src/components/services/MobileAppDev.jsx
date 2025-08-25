@@ -111,7 +111,19 @@ TechXplorers specializes in a wide range of mobile solutions including Bluetooth
       <header className="header-section">
         <div className="image-with-text-overlay">
           <img src={img1} alt="Mobile Application Development" className="header-image" />
+          <div className="glassy-mask"></div>
+          <div className="overlay-content">
           <div className="overlay-text">Mobile App Development</div>
+        
+          <div className="header-button-container">
+              <button onClick={() => navigate('/contactus')} className="header-action-btn btn-contact">
+                Contact Us
+              </button>
+              <button onClick={handleApplyNow} className="header-action-btn btn-register">
+                Register Now
+              </button>
+            </div>
+          </div>
         </div>
       </header>
 

@@ -69,7 +69,7 @@ function AboutUs() {
 
     .hero-about {
       background-color: var(--light-surface);
-      padding: 5rem 1rem;
+      padding: 2rem 1rem;
       text-align: center;
       border-bottom: 1px solid var(--light-border);
       transition: background-color 0.3s ease, border-color 0.3s ease;
@@ -80,7 +80,7 @@ function AboutUs() {
     }
 
     .hero-about-title {
-      font-size: 3.5rem;
+      font-size: 2rem;
       font-weight: 700;
       color: var(--light-text-primary);
       margin-bottom: 1rem;
@@ -91,7 +91,7 @@ function AboutUs() {
     }
 
     .hero-about-subtitle {
-      font-size: 1.25rem;
+      font-size: 1.2rem;
       color: var(--light-text-secondary);
       max-width: 800px;
       margin: 0 auto;
@@ -103,12 +103,12 @@ function AboutUs() {
     }
     
     .section-padding {
-      padding: 5rem 1rem;
+      padding: 1.5rem 1rem;
     }
 
     .section-title {
       text-align: center;
-      font-size: 2.5rem;
+      font-size: 2rem;
       font-weight: 600;
       margin-bottom: 3rem;
       color: var(--light-text-primary);
@@ -260,7 +260,7 @@ function AboutUs() {
 
         <section className="hero-about">
           <Container>
-            <h1 className="hero-about-title">Our Mission</h1>
+            <h3 className="hero-about-title">Our Mission</h3>
             <p className="hero-about-subtitle">
               TechXplorers is a technology-driven and innovation-focused consulting firm committed to
               delivering top-tier solutions in IT services, staffing, and software engineering. 

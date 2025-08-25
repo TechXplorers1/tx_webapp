@@ -95,12 +95,12 @@ const ContactPage = () => {
         }
         
         .section-padding {
-            padding: 4rem 1rem;
+            padding: 2rem 1rem;
         }
 
         .section-title {
             text-align: center;
-            font-size: 2.5rem;
+            font-size: 2rem;
             font-weight: 700;
             margin-bottom: 1rem;
             color: var(--light-text-primary);
@@ -112,7 +112,7 @@ const ContactPage = () => {
 
         .section-subtitle {
             text-align: center;
-            font-size: 1.15rem;
+            font-size: 1.13rem;
             color: var(--light-text-secondary);
             max-width: 700px;
             margin: 0 auto 3rem auto;
@@ -269,7 +269,7 @@ const ContactPage = () => {
 
                 <section className="section-padding">
                     <Container>
-                        <h1 className="section-title">Get In Touch</h1>
+                        <h3 className="section-title">Get In Touch</h3>
                         <p className="section-subtitle">
                             We're here to help and answer any question you might have. We look forward to hearing from you.
                         </p>

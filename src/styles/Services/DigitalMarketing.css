@@ -18,6 +18,36 @@ body {
  margin-top: 50px;
 }
 
+/* MODIFICATION: Add this new style for the glassy mask effect */
+.glassy-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 93%;
+  background-color: rgba(0, 0, 0, 0.426); /* A semi-transparent dark background */
+  
+  /* The key property for the glass effect */
+  -webkit-backdrop-filter: blur(0px); /* For Safari */
+  backdrop-filter: blur(0px); /* Standard blur effect */
+  
+  border-radius: 10px; /* Match the image's border-radius */
+  z-index: 1; /* Ensure it sits between the image and the text */
+}
+
+/* Make sure the text and buttons sit on top of the mask */
+.overlay-content {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2; /* Higher z-index than the mask */
+  color: white;
+  text-align: center;
+  width: 100%;
+  padding: 20px;
+}
+
 /* Animate Image */
 .header-image {
   max-width: 100%;

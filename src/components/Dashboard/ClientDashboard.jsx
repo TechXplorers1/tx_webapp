@@ -2483,10 +2483,42 @@ const ClientDashboard = () => {
       if (data) {
         setClientData(data);
 
-        // MODIFICATION: Process service registrations to categorize them
-        const registeredServiceNames = data.serviceRegistrations 
-          ? Object.values(data.serviceRegistrations).map(reg => reg.service) 
-          : [];
+             const registrations = data.serviceRegistrations ? Object.values(data.serviceRegistrations) : [];
+
+        // 2. Combine all job applications from all registrations into a single list.
+        const allApplications = registrations.flatMap(reg => reg.jobApplications || []);
+
+        // 3. Process the combined list for the dashboard.
+        const interviews = allApplications.filter(app => app.status === 'Interview');
+        setScheduledInterviews(interviews);
+        
+        // This logic groups applications by date for the worksheet view
+        const groupedApplications = allApplications.reduce((acc, app) => {
+          const date = app.appliedDate; // Use appliedDate
+          if (!acc[date]) {
+            acc[date] = [];
+          }
+          // Use correct property names from the form
+          acc[date].push({
+            id: app.id,
+            jobId: app.jobId,
+            website: app.platform,
+            position: app.jobTitle,
+            company: app.company,
+            link: app.jobUrl,
+            dateAdded: app.appliedDate,
+            jobDescription: app.notes,
+            status: app.status,
+            role: app.role // Include the new role field
+          });
+          return acc;
+        }, {});
+        setApplicationsData(groupedApplications);
+        
+        // --- FIX END ---
+        
+        // Process service registrations to categorize them (this part is correct)
+        const registeredServiceNames = registrations.map(reg => reg.service);
         
         const active = allServices.filter(service => registeredServiceNames.includes(service.title));
         const inactive = allServices.filter(service => !registeredServiceNames.includes(service.title));

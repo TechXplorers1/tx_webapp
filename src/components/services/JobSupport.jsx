@@ -78,10 +78,24 @@ Our comprehensive job support services are designed to assist IT professionals i
     <div className="jobsupport-container">
       <CustomNavbar />
       {/* Header Section */}
-      <header className="header-section">
+        <header className="header-section">
         <div className="image-with-text-overlay">
-          <img src={img1} alt="IT Consulting & Job Support" className="header-image" />
-          <div className="overlay-text">Job Support</div>
+          <img src={img1} alt="Job Support" className="header-image" />
+          {/* This new container will hold both the title and the buttons */}
+          <div className="glassy-mask"></div>
+          <div className="overlay-content">
+            <div className="overlay-text">Job Support</div>
+            
+            {/* Add the new button container here */}
+            <div className="header-button-container">
+              <button onClick={() => navigate('/contactus')} className="header-action-btn btn-contact">
+                Contact Us
+              </button>
+              <button onClick={handleRegisterNow} className="header-action-btn btn-register">
+                Register Now
+              </button>
+            </div>
+          </div>
         </div>
       </header>
 

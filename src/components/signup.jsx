@@ -184,122 +184,201 @@ export default function SignupPage() {
     cursor: 'pointer',
   };
 
+   const styles = `
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    
+    .signup-page-wrapper {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Inter', sans-serif;
+      padding: 1rem;
+      background-color: #f8f9fa;
+    }
+    .signup-card {
+      width: 100%;
+      max-width: 480px;
+      background-color: #ffffff;
+      padding: 2.5rem;
+      border: 1px solid #e9ecef;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+      margin: 2rem 0;
+    }
+    .signup-title {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      color: #0d6efd;
+    }
+    .google-btn {
+      padding: 0.75rem;
+      border-radius: 8px;
+      font-weight: 500;
+      transition: background-color 0.2s ease;
+    }
+    .or-divider {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      color: #adb5bd;
+      margin: 1.5rem 0;
+    }
+    .or-divider::before, .or-divider::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid #dee2e6;
+    }
+    .or-divider:not(:empty)::before {
+      margin-right: .5em;
+    }
+    .or-divider:not(:empty)::after {
+      margin-left: .5em;
+    }
+    .form-label-modern {
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+      color: #495057;
+    }
+    .input-group-modern {
+      display: flex;
+      align-items: center;
+      border: 1px solid #ced4da;
+      border-radius: 8px;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      background-color: #f8f9fa;
+    }
+    .input-group-modern:focus-within {
+      border-color: #86b7fe;
+      box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+      background-color: #ffffff;
+    }
+    .input-group-icon {
+      padding: 0.75rem 1rem;
+      color: #6c757d;
+      font-size: 1.2rem;
+    }
+    .form-control-modern {
+      border: none;
+      box-shadow: none;
+      background: transparent;
+      flex-grow: 1;
+      padding: 0.75rem 1rem;
+      padding-left: 0;
+    }
+    .form-control-modern:focus {
+      box-shadow: none;
+      background: transparent;
+    }
+    .password-toggle-icon {
+      cursor: pointer;
+      padding-right: 1rem;
+      color: #6c757d;
+    }
+    .signup-btn-modern {
+      padding: 0.8rem;
+      font-weight: 600;
+      border-radius: 8px;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+    .signup-btn-modern:hover {
+      transform: translateY(-2px);
+    }
+    .password-hint {
+      font-size: 0.8rem;
+      color: #6c757d;
+      margin-top: 0.25rem;
+    }
+  `;
+
   return (
-    <div style={{ minHeight: "100vh", marginBottom: "3rem" }}>
-      <JsNavbar />
+      <>
+      <style>{styles}</style>
+      <div className="signup-page-wrapper">
+        <JsNavbar />
+        <div className="signup-card">
+          <h3 className="text-center signup-title">Create an Account</h3>
+          <Button
+            variant="outline-secondary"
+            className="w-100 mb-3 d-flex align-items-center justify-content-center gap-2 google-btn"
+            onClick={handleGoogleLogin}
+          >
+            <FcGoogle size={22} /> Continue with Google
+          </Button>
+          <div className="or-divider">OR</div>
 
-      <div className="d-flex justify-content-center align-items-center py-5">
-        <Card
-          className="p-4 shadow-lg border my-5 w-100"
-          style={{
-            maxWidth: "570px",
-            borderRadius: "20px"
-          }}
-        >
-          <Card.Body>
-            <h3 className="text-center fw-bold mb-4 text-primary">Create Account</h3>
-
-            <Button 
-              variant="outline-secondary" 
-              className="w-100 mb-3 p-2 d-flex align-items-center justify-content-center gap-2"
-              onClick={handleGoogleLogin}
-            >
-              <FcGoogle size={20} /> Continue with Google
-            </Button>
-
-            <div className="text-center mb-3">OR</div>
-
-            <Form onSubmit={handleSubmit}>
-              <Form.Group className="mb-3">
-                <Form.Label style={{ fontWeight: "600", marginBottom: "6px" }}>Email</Form.Label>
-                <InputGroup>
-                  <InputGroup.Text style={inputGroupTextStyle}><MdEmail /></InputGroup.Text>
-                  <Form.Control
-                    type="email"
-                    placeholder="Enter your email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    isInvalid={!!emailError}
-                    style={{ ...formControlStyle, borderLeft: "none", borderRadius: "0 12px 12px 0" }}
-                  />
-                </InputGroup>
-                <Form.Control.Feedback type="invalid">{emailError}</Form.Control.Feedback>
-              </Form.Group>
+             <Form onSubmit={handleSubmit}>
+            <Form.Group className="mb-3">
+              <Form.Label className="form-label-modern">Email</Form.Label>
+              <div className={`input-group-modern ${emailError ? 'border-danger' : ''}`}>
+                <span className="input-group-icon"><MdEmail /></span>
+                <Form.Control
+                  className="form-control-modern"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  isInvalid={!!emailError}
+                />
+              </div>
+              <Form.Control.Feedback type="invalid">{emailError}</Form.Control.Feedback>
+            </Form.Group>
 
               <Form.Group className="mb-3">
-                <Form.Label style={{ fontWeight: "600", marginBottom: "6px" }}>Password</Form.Label>
-                <InputGroup>
-                  <InputGroup.Text style={inputGroupTextStyle}><RiLockPasswordFill /></InputGroup.Text>
-                  <Form.Control
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Create password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    isInvalid={!!passwordError}
-                    style={{ ...formControlStyle, borderLeft: "none", borderRadius: "0" }}
-                  />
-                  <InputGroup.Text
-                    style={inputRightTextStyle}
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <AiFillEye /> : <AiFillEyeInvisible />}
-                  </InputGroup.Text>
-                </InputGroup>
-                <div style={{ fontSize: "0.85rem", marginTop: "4px", color: "#6c757d" }}>
-                  At least 8 chars, incl. 1 uppercase, 1 lowercase, 1 number, 1 special (@, _, $, -)
-                </div>
-                <Form.Control.Feedback type="invalid">{passwordError}</Form.Control.Feedback>
-              </Form.Group>
-
-              <Form.Group className="mb-3">
-                <Form.Label style={{ fontWeight: "600", marginBottom: "6px" }}>Confirm Password</Form.Label>
-                <InputGroup>
-                  <InputGroup.Text style={inputGroupTextStyle}><RiLockPasswordFill /></InputGroup.Text>
-                  <Form.Control
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Confirm password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    isInvalid={!!confirmPasswordError}
-                    style={{ ...formControlStyle, borderLeft: "none", borderRadius: "0" }}
-                  />
-                  <InputGroup.Text
-                    style={inputRightTextStyle}
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <AiFillEye /> : <AiFillEyeInvisible />}
-                  </InputGroup.Text>
-                </InputGroup>
-                <Form.Control.Feedback type="invalid">{confirmPasswordError}</Form.Control.Feedback>
-              </Form.Group>
-
-              <Button
-                type="submit"
-                variant="primary"
-                className="w-100 fw-bold mt-3"
-                style={{
-                  borderRadius: "12px",
-                  fontSize: "1rem",
-                  padding: "12px 0",
-                  transition: "background-color 0.3s ease"
-                }}
-              >
-                Sign Up
-              </Button>
-
-              <div className="text-center mt-3">
-                Already Registered?{" "}
-                <span
-                  className="text-primary fw-bold"
-                  style={{ cursor: "pointer" }}
-                  onClick={() => navigate("/login")}
-                >
-                  Login
+              <Form.Label className="form-label-modern">Password</Form.Label>
+              <div className={`input-group-modern ${passwordError ? 'border-danger' : ''}`}>
+                <span className="input-group-icon"><RiLockPasswordFill /></span>
+                <Form.Control
+                  className="form-control-modern"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Create password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  isInvalid={!!passwordError}
+                />
+                <span className="password-toggle-icon" onClick={() => setShowPassword(!showPassword)}>
+                  {showPassword ? <AiFillEye size={20} /> : <AiFillEyeInvisible size={20} />}
                 </span>
               </div>
-            </Form>
-          </Card.Body>
-        </Card>
+              <div className="password-hint">
+                At least 8 chars, incl. uppercase, lowercase, number, and special character (@, _, $, -)
+              </div>
+              <Form.Control.Feedback type="invalid">{passwordError}</Form.Control.Feedback>
+            </Form.Group>
+
+               <Form.Group className="mb-4">
+              <Form.Label className="form-label-modern">Confirm Password</Form.Label>
+              <div className={`input-group-modern ${confirmPasswordError ? 'border-danger' : ''}`}>
+                <span className="input-group-icon"><RiLockPasswordFill /></span>
+                <Form.Control
+                  className="form-control-modern"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Confirm password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  isInvalid={!!confirmPasswordError}
+                />
+              </div>
+              <Form.Control.Feedback type="invalid">{confirmPasswordError}</Form.Control.Feedback>
+            </Form.Group>
+
+              <Button type="submit" className="w-100 btn btn-primary text-white fw-bold signup-btn-modern">
+              Sign Up
+            </Button>
+
+               <div className="text-center mt-3">
+              <span>Already have an account?</span>
+              <span
+                style={{ color: '#007bff', fontWeight: 600, marginLeft: '0.5rem', cursor: 'pointer' }}
+                onClick={() => navigate("/login")}
+              >
+                Login
+              </span>
+            </div>
+          </Form>
+        </div>
       </div>
 
       <Modal show={showSuccessModal} onHide={handleCloseSuccessModal} centered>
@@ -313,6 +392,6 @@ export default function SignupPage() {
                   <h5 className="mt-3 text-success">Account successfully created!</h5>
                 </Modal.Body>
       </Modal>
-    </div>
+    </>
   );
 }
