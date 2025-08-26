@@ -2021,14 +2021,51 @@ const Documents = ({ activeSubTab, handleSubTabChange, clientFiles = [] }) => {
   );
 };
 // Resumes Sub-Tab Content
+// In ClientDashboard.jsx, replace the existing Resumes component
+
 const Resumes = ({ files }) => {
   return (
-    <div style={{ display: "flex", flexDirection: "row", gap: "20px", flexWrap: 'wrap', marginTop: '20px', justifyContent: 'center' }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "15px", marginTop: '20px' }}>
       {files.length > 0 ? files.map(file => (
-        <div key={file.id} style={{ padding: "40px", border: "1px solid #ccc", borderRadius: "8px", width: "350px", textAlign: "center", boxShadow: '0 2px 4px rgba(0,0,0,0.05)', backgroundColor: '#fff' }}>
-          📄 {file.name}
+        <div 
+          key={file.id} 
+          style={{ 
+            padding: "15px", 
+            border: "1px solid #e2e8f0", 
+            borderRadius: "8px", 
+            boxShadow: '0 2px 4px rgba(0,0,0,0.05)', 
+            backgroundColor: '#fff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '1.5rem' }}>📄</span>
+            <div>
+              <p style={{ margin: 0, fontWeight: '600', color: '#1e293b' }}>{file.name}</p>
+              <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b' }}>
+                {file.size} | Uploaded: {file.uploadDate}
+              </p>
+            </div>
+          </div>
+          <a 
+            href={file.downloadUrl} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            style={{ 
+              padding: '8px 16px', 
+              backgroundColor: '#007bff', 
+              color: '#fff', 
+              textDecoration: 'none', 
+              borderRadius: '6px',
+              fontWeight: '500'
+            }}
+          >
+            Download
+          </a>
         </div>
-      )) : <p>No resumes found.</p>}
+      )) : <p style={{ textAlign: 'center', color: '#64748b' }}>No resumes have been uploaded for this client.</p>}
     </div>
   );
 };
@@ -2270,7 +2307,9 @@ const WorksheetView = ({ setActiveTab, activeWorksheetTab, setActiveWorksheetTab
         <Documents
           activeSubTab={activeSubTab}
           handleSubTabChange={setActiveSubTab}
-          clientFiles={clientData ? clientData.files : []}
+          clientFiles={clientData && clientData.serviceRegistrations
+        ? Object.values(clientData.serviceRegistrations).flatMap(reg => reg.files || [])
+        : []}
         />
       )}
     </div>
@@ -4933,6 +4972,7 @@ const ClientDashboard = () => {
                 allApplicationsFlattened={allApplicationsFlattened}
                 activeSubTab={activeSubTab} // Pass sub-tab state for Documents
                 setActiveSubTab={setActiveSubTab} // Pass sub-tab state for Documents
+                clientData={clientData}
                 setIsInWorksheetView={setIsInWorksheetView} // Pass down
               />
             )}
@@ -5013,6 +5053,7 @@ const ClientDashboard = () => {
             allApplicationsFlattened={allApplicationsFlattened}
             activeSubTab={activeSubTab} // Pass sub-tab state for Documents
             setActiveSubTab={setActiveSubTab} // Pass sub-tab state for Documents
+            clientData={clientData} // Pass the entire clientData object
             setIsInWorksheetView={setIsInWorksheetView} // Pass down
           />
         )}

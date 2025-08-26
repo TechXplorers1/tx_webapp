@@ -1751,6 +1751,31 @@ const unsubscribeClients = onValue(clientsRef, (snapshot) => {
                       <div className="read-only-value">{selectedClientForDetails.jobPortalCredentials || '-'}</div>
                     </div>
                   </div>
+
+                   {/* Resume Download Section */}
+                  <div className="client-preview-section">
+                    <h4 className="client-preview-section-title">Resume</h4>
+                    {selectedClientForDetails.resumeUrl ? (
+                      <div className="assign-form-group">
+                        <label>File Name</label>
+                        <div className="read-only-value" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span>{selectedClientForDetails.resumeFileName || 'resume.pdf'}</span>
+                          <a
+                            href={selectedClientForDetails.resumeUrl}
+                            download={selectedClientForDetails.resumeFileName || 'resume.pdf'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="action-button assign" // Re-using a button style
+                            style={{ textDecoration: 'none' }}
+                          >
+                            Download
+                          </a>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="read-only-value">No resume uploaded.</div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Skills section for viewing */}

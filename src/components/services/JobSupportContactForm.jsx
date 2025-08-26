@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Container, Form, Button, Row, Col, Alert, Modal, ProgressBar,Spinner } from 'react-bootstrap';
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useNavigate } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { database } from '../../firebase'; // Import your Firebase config
@@ -148,6 +149,31 @@ const JobSupportContactForm = () => {
     const countryData = countryCodes.find(c => c.dialCode === formData.countryCode);
     const countryName = countryData ? countryData.name : 'N/A';
 
+    try {
+      if (!user || !user.firebaseKey) {
+        throw new Error("You must be logged in to submit this form.");
+      }
+
+      // --- Start of New File Upload Logic ---
+      let resumeUrl = '';
+      let resumeFileName = '';
+      
+      // First, get a unique key for the new registration. This key will be used for both the database entry and the file path.
+      const newRegistrationRef = push(ref(database, `clients/${user.firebaseKey}/serviceRegistrations`));
+      const registrationKey = newRegistrationRef.key;
+
+      if (formData.resume) {
+        resumeFileName = formData.resume.name;
+        // Create a unique storage path: resumes/{userId}/{registrationId}/{fileName}
+        const fileRef = storageRef(getStorage(), `resumes/${user.firebaseKey}/${registrationKey}/${resumeFileName}`);
+        
+        // Upload the file
+        const uploadResult = await uploadBytes(fileRef, formData.resume);
+        
+        // Get the public download URL
+        resumeUrl = await getDownloadURL(uploadResult.ref);
+      }
+
     const newServiceRegistration = {
       name: `${formData.firstName} ${formData.lastName}`,
       mobile: `${formData.countryCode} ${formData.mobile}`,
@@ -201,13 +227,8 @@ const JobSupportContactForm = () => {
             mobile: `${formData.countryCode} ${formData.mobile}`,
             email: formData.email,
         };
-             try {
-            if (!user || !user.firebaseKey) {
-                throw new Error("You must be logged in to submit this form.");
-            }
             
-            // 1. Create a new, unique entry under the client's "serviceRegistrations"
-            const newRegistrationRef = push(ref(database, `clients/${user.firebaseKey}/serviceRegistrations`));
+            
             await set(newRegistrationRef, newServiceRegistration);
             
             // 2. Update the main client profile with the latest contact info

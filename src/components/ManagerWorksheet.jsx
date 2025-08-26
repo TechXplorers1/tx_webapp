@@ -4,6 +4,8 @@ import { Modal, Button } from 'react-bootstrap'; // Using react-bootstrap Modal
 import { getDatabase, ref, onValue, update, push, set } from "firebase/database"; // Import Firebase functions
 import { database, auth } from '../firebase'; // Import your Firebase config
 import { createUserWithEmailAndPassword } from "firebase/auth";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
+
 
 
 
@@ -445,6 +447,8 @@ useEffect(() => {
   // NEW: State for LLM response and loading status
   const [llmResponse, setLlmResponse] = useState('');
   const [isLoadingLLMResponse, setIsLoadingLLMResponse] = useState(false);
+    const [newResumeFile, setNewResumeFile] = useState(null);
+
 
 
   const [filterDateRange, setFilterDateRange] = useState({ startDate: '', endDate: '' });
@@ -1618,6 +1622,11 @@ const filteredInterviewData = interviewData.filter(interview => {
 
    const [employeesForAssignment, setEmployeesForAssignment] = useState([]);
 
+    const handleResumeFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setNewResumeFile(e.target.files[0]);
+    }
+  };
 
   // NEW: Function to open Client Preview/Edit Modal
   const openEditClientModal = (clientObject) => {
@@ -1629,6 +1638,7 @@ const filteredInterviewData = interviewData.filter(interview => {
       setIsEditingClient(false); // Set to read-only initially
       setIsEditClientModalOpen(true);
       setLlmResponse(''); // Clear previous LLM response
+      setNewResumeFile(null);
     } else {
       console.warn(`Client with name not found for editing.`);
       alert(`Client details for are not available for editing.`);
@@ -1641,6 +1651,7 @@ const filteredInterviewData = interviewData.filter(interview => {
     setClientToEdit(null);
     setIsEditingClient(false); // Reset edit mode on close
     setLlmResponse(''); // Clear LLM response on close
+    setNewResumeFile(null);
   };
 
   // NEW: Handle changes in the edit client form
@@ -1670,6 +1681,26 @@ const filteredInterviewData = interviewData.filter(interview => {
       return;
     }
 
+    let updatedClientData = { ...clientToEdit };
+
+    // Handle new resume upload if a file was selected
+    if (newResumeFile) {
+      try {
+        const fileRef = storageRef(getStorage(), `resumes/${clientToEdit.clientFirebaseKey}/${clientToEdit.registrationKey}/${newResumeFile.name}`);
+        const uploadResult = await uploadBytes(fileRef, newResumeFile);
+        const downloadURL = await getDownloadURL(uploadResult.ref);
+
+        // Update the data object with the new resume info
+        updatedClientData.resumeUrl = downloadURL;
+        updatedClientData.resumeFileName = newResumeFile.name;
+        
+      } catch (uploadError) {
+        console.error("Failed to upload new resume:", uploadError);
+        alert("Error uploading resume. Client details were not saved.");
+        return; // Stop the save process if upload fails
+      }
+    }
+
     // 2. Separate the data: some fields belong to the main client profile,
     //    and the rest belong to the specific service registration.
     const {
@@ -1682,7 +1713,7 @@ const filteredInterviewData = interviewData.filter(interview => {
         mobile,
         // The rest of the data is for the registration
         ...registrationData
-    } = clientToEdit;
+    } = updatedClientData;
 
     // 3. Define the two paths we need to update in Firebase.
     const registrationRef = ref(database, `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}`);
@@ -1703,7 +1734,7 @@ const filteredInterviewData = interviewData.filter(interview => {
 
         setSuccessMessage(`Successfully updated details for ${firstName} ${lastName}.`);
         setShowSuccessModal(true);
-        setIsEditingClient(false); // Switch back to view mode
+        // setIsEditingClient(false); // Switch back to view mode
         closeEditClientModal(); // Close the modal on success
     } catch (error) {
         console.error("Failed to update client details:", error);
@@ -5767,25 +5798,55 @@ Please provide a summary no longer than 150 words.`;
               {/* NEW: Resume Download Section */}
               <div className="client-preview-section">
                 <h4 className="client-preview-section-title">Resume</h4>
-                <div className="assign-form-group">
-                  <label htmlFor="resumeFileName">Resume File:</label>
-                  <input
-                    type="text"
-                    id="resumeFileName"
-                    name="resume"
-                    value={clientToEdit.resume || 'N/A'}
-                    readOnly
-                    style={{ cursor: 'not-allowed' }}
-                  />
-                </div>
-                <button
-                  className="assign-form-button assign"
-                  onClick={() => handleResumeDownload(clientToEdit.resume)}
-                  disabled={!clientToEdit.resume}
-                  style={{ marginTop: '10px' }}
-                >
-                  <i className="fas fa-download"></i> Download Resume
-                </button>
+               {isEditingClient ? (
+                  // EDIT MODE VIEW
+                  <div className="assign-form-group">
+                    <label htmlFor="resumeUpload">Upload New Resume (optional)</label>
+                    {newResumeFile ? (
+                      <p style={{ fontSize: '0.9em', color: '#28a745' }}>
+                        New file selected: <strong>{newResumeFile.name}</strong>
+                      </p>
+                    ) : (
+                      <p style={{ fontSize: '0.9em', color: 'var(--subtitle-color)' }}>
+                        Current file: {clientToEdit.resumeFileName ? (
+                          <a href={clientToEdit.resumeUrl} target="_blank" rel="noopener noreferrer">
+                            {clientToEdit.resumeFileName}
+                          </a>
+                        ) : 'No resume on file.'}
+                      </p>
+                    )}
+                    <input 
+                      type="file" 
+                      id="resumeUpload" 
+                      name="resume" 
+                      onChange={handleResumeFileChange} 
+                      accept=".pdf,.doc,.docx" 
+                    />
+                    <small style={{ color: 'var(--subtitle-color)', marginTop: '5px' }}>
+                      Uploading a new file will replace the current one upon saving.
+                    </small>
+                  </div>
+                ) : (
+                  // VIEW-ONLY MODE
+                  <div className="assign-form-group">
+                    <label>File Name</label>
+                    <div className="read-only-value" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>{clientToEdit.resumeFileName || 'No resume uploaded.'}</span>
+                      {clientToEdit.resumeUrl && (
+                        <a
+                          href={clientToEdit.resumeUrl}
+                          download={clientToEdit.resumeFileName}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="assign-form-button assign"
+                          style={{ textDecoration: 'none' }}
+                        >
+                          Download
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
             </div>

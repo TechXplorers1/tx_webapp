@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Modal } from 'react-bootstrap'; // Using react-bootstrap Modal
 import { getDatabase, ref, onValue, query, orderByChild, equalTo, update, remove, set } from "firebase/database";
 import { database } from '../../firebase'; // Import your Firebase config
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 
 
 const simplifiedServices = ['Mobile Development', 'Web Development', 'Digital Marketing', 'IT Talent Supply', 'Cyber Security'];
@@ -678,6 +679,10 @@ const EmployeeData = () => {
 
   const [isClientSelectModalOpen, setIsClientSelectModalOpen] = useState(false);
   const [clientSearchTermInModal, setClientSearchTermInModal] = useState('');
+    const [newResumeFile, setNewResumeFile] = useState(null);
+    const [fileToUpload, setFileToUpload] = useState(null);
+
+
 
   useEffect(() => {
     if (activeTab === 'New Clients') {
@@ -687,6 +692,7 @@ const EmployeeData = () => {
     } else if (activeTab === 'Inactive Clients') {
       setSelectedClient(inactiveClients[0] || null);
     }
+    setNewResumeFile(null);
   }, [activeTab, newClients, activeClients, inactiveClients]);
 
 
@@ -762,6 +768,51 @@ const EmployeeData = () => {
     }
     const latestDate = new Date(Math.max(...resumeTypeUpdates.map(update => new Date(update.date))));
     return latestDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  };
+
+    const handleResumeFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setNewResumeFile(e.target.files[0]);
+    }
+  };
+
+   const handleSaveNewResume = async () => {
+    if (!newResumeFile || !selectedClient) {
+      alert("Please select a file to upload.");
+      return;
+    }
+
+    const { clientFirebaseKey, registrationKey } = selectedClient;
+    if (!clientFirebaseKey || !registrationKey) {
+      alert("Error: Client information is missing. Cannot upload file.");
+      return;
+    }
+
+    try {
+      // 1. Create a unique path in Firebase Storage
+      const fileRef = storageRef(getStorage(), `resumes/${clientFirebaseKey}/${registrationKey}/${newResumeFile.name}`);
+      
+      // 2. Upload the new file
+      await uploadBytes(fileRef, newResumeFile);
+      
+      // 3. Get the public download URL
+      const downloadURL = await getDownloadURL(fileRef);
+
+      // 4. Update the client's registration in the Realtime Database with the new URL and file name
+      const registrationRef = ref(database, `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}`);
+      await update(registrationRef, {
+        resumeUrl: downloadURL,
+        resumeFileName: newResumeFile.name
+      });
+
+      // 5. Provide feedback and reset state
+      triggerNotification("Resume updated successfully!");
+      setNewResumeFile(null); // Clear the selected file
+
+    } catch (error) {
+      console.error("Error updating resume:", error);
+      alert("Failed to update resume. Please try again.");
+    }
   };
 
   const handleDownloadResume = (clientName) => {
@@ -1024,14 +1075,17 @@ const handleEditApplication = (application) => {
     setShowUploadFileModal(true);
   };
 
-  const handleNewFileFormChange = (e) => {
-    const { name, value, files } = e.target;
-    if (name === 'fileName' && files && files[0]) {
-      setNewFileFormData(prev => ({ ...prev, fileName: files[0].name }));
-    } else {
-      setNewFileFormData(prev => ({ ...prev, [name]: value }));
-    }
-  };
+const handleNewFileFormChange = (e) => {
+  const { name, value, files } = e.target;
+  if (name === 'fileName' && files && files[0]) {
+    // Store the actual file object for uploading
+    setFileToUpload(files[0]);
+    // Update the form data with the file's name for display
+    setNewFileFormData(prev => ({ ...prev, fileName: files[0].name }));
+  } else {
+    setNewFileFormData(prev => ({ ...prev, [name]: value }));
+  }
+};
 
   const handleOpenClientSelectModal = () => setIsClientSelectModalOpen(true);
   const handleCloseClientSelectModal = () => setIsClientSelectModalOpen(false);
@@ -1040,45 +1094,56 @@ const handleEditApplication = (application) => {
       handleCloseClientSelectModal();
   };
 
-  const handleSaveNewFile = () => {
-    if (!selectedClientForFile || !newFileFormData.fileType || !newFileFormData.fileName) {
-      alert('Please fill in all required fields (File Type, File).');
-      return;
-    }
+// In EmployeeData.jsx, replace the existing handleSaveNewFile function
 
-    const newFile = {
+const handleSaveNewFile = async () => {
+  // 1. Validation
+  if (!selectedClientForFile || !newFileFormData.fileType || !fileToUpload) {
+    alert('Please select a client, file type, and a file to upload.');
+    return;
+  }
+
+  const { clientFirebaseKey, registrationKey } = selectedClientForFile;
+
+  try {
+    triggerNotification("Uploading file, please wait..."); // Inform user
+
+    // 2. Upload the file to Firebase Storage
+    const storagePath = `client_files/${clientFirebaseKey}/${registrationKey}/${Date.now()}_${fileToUpload.name}`;
+    const fileRef = storageRef(getStorage(), storagePath);
+    await uploadBytes(fileRef, fileToUpload);
+    const downloadURL = await getDownloadURL(fileRef);
+
+    // 3. Prepare metadata for the Realtime Database
+    const newFileMetadata = {
       id: Date.now(),
-      clientId: selectedClientForFile.id, // Ensure clientId is set
-      name: newFileFormData.fileName,
-      size: `${(Math.random() * 5 + 0.1).toFixed(1)} MB`, // Simulate file size
+      downloadUrl: downloadURL,
+      name: fileToUpload.name,
+      size: `${(fileToUpload.size / 1024).toFixed(1)} KB`,
       type: newFileFormData.fileType,
-      status: 'Uploaded',
       uploadDate: new Date().toISOString().split('T')[0],
-      notes: newFileFormData.notes,
+      notes: newFileFormData.notes || '',
     };
 
-    const updateClientList = (prevClients) => {
-      return prevClients.map(client =>
-        client.id === selectedClientForFile.id
-          ? {
-            ...client,
-            files: [newFile, ...client.files], // Prepend new file
-          }
-          : client
-      );
-    };
+    // 4. Get existing files and add the new one
+    const filesRef = ref(database, `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}/files`);
+    const existingFiles = selectedClientForFile.files || [];
+    const updatedFiles = [newFileMetadata, ...existingFiles]; // Prepend new file to the list
 
-    if (selectedClientForFile.status === 'active') {
-      setActiveClients(updateClientList);
-    } else if (selectedClientForFile.status === 'inactive') {
-      setInactiveClients(updateClientList);
-    }
+    // 5. Save the updated file list back to the database
+    await set(filesRef, updatedFiles);
 
-
-
+    // 6. Reset UI and provide feedback
     setShowUploadFileModal(false);
-    triggerNotification("File uploaded successfully!"); // Trigger notification
-  };
+    setFileToUpload(null);
+    setNewFileFormData({ fileType: '', fileName: '', notes: '' });
+    triggerNotification("File uploaded successfully!");
+
+  } catch (error) {
+    console.error("Error uploading file:", error);
+    alert("File upload failed. Please try again.");
+  }
+};
 
   const handleViewFile = (file) => {
     // NEW LOGIC: Check if the file is an image
@@ -1173,7 +1238,7 @@ const handleEditApplication = (application) => {
   };
 
   const getFilteredAndSortedFiles = (files) => {
-    let filtered = files;
+    let filtered = files|| [];
 
     // Client filter (NEW) - This filter is now handled by passing the specific client's files
     // if (selectedClient) {
@@ -1847,7 +1912,7 @@ const handleEditApplication = (application) => {
                       </div>
                       <p style={cardLabelStyle}>Job Applications</p>
                       <p style={cardValueStyle}>
-                        {selectedClient.jobApplications.length}
+                        {(selectedClient.jobApplications || []).length}
                       </p>
                       <p style={cardSubLabelStyle}>Total submitted</p>
                     </div>
@@ -1861,7 +1926,7 @@ const handleEditApplication = (application) => {
                       </div>
                       <p style={cardLabelStyle}>Active Interviews</p>
                       <p style={cardValueStyle}>
-                        {selectedClient.jobApplications.filter(app => app.status === 'Interview').length}
+                        {(selectedClient.jobApplications || []).filter(app => app.status === 'Interview').length}
                       </p>
                       <p style={cardSubLabelStyle}>In progress</p>
                     </div>
@@ -1875,7 +1940,7 @@ const handleEditApplication = (application) => {
                       </div>
                       <p style={cardLabelStyle}>Files Uploaded</p>
                       <p style={cardValueStyle}>
-                        {selectedClient.files.length}
+                        {(selectedClient.files || []).length}
                       </p>
                       <p style={cardSubLabelStyle}>Resumes & screenshots</p>
                     </div>
@@ -1948,7 +2013,7 @@ const handleEditApplication = (application) => {
                           <div style={footerItemStyle}>
                             <span style={footerItemLabelStyle}>Resume</span>
                             {/* Conditionally render checkmark/cross based on resume availability */}
-                            {selectedClient.resumeUpdates.filter(u => u.type === 'Resume').length > 0 ? (
+                            {(selectedClient.resumeUpdates || []).filter(u => u.type === 'Resume').length > 0 ? (
                               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={footerItemIconStyle}>
                                 <polyline points="20 6 9 17 4 12"></polyline>
                               </svg>
@@ -1961,13 +2026,13 @@ const handleEditApplication = (application) => {
                             <button
                               onClick={() => handleDownloadResume(selectedClient.name)}
                               className="download-button"
-                              disabled={selectedClient.resumeUpdates.filter(u => u.type === 'Resume').length === 0}
+                              disabled={(selectedClient.resumeUpdates || []).filter(u => u.type === 'Resume').length === 0}
                             >
                               Download
                             </button>
-                            {getLatestResumeUpdateDate(selectedClient.resumeUpdates) && (
+                            {getLatestResumeUpdateDate(selectedClient.resumeUpdates || []) && (
                               <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px', textAlign: 'center' }}>
-                                Last updated: {getLatestResumeUpdateDate(selectedClient.resumeUpdates)}
+                                Last updated: {getLatestResumeUpdateDate(selectedClient.resumeUpdates || [])}
                               </p>
                             )}
                           </div>
@@ -2304,9 +2369,9 @@ const handleEditApplication = (application) => {
                       </div>
                       <div style={clientAppStatsStyle}> {/* Reusing for stats display */}
                         <span>Showing: <strong>{getFilteredAndSortedFiles(selectedClient.files).length}</strong></span>
-                        <span>Total Files: <strong>{selectedClient.files.length}</strong></span>
-                        <span>Resumes: <strong>{selectedClient.files.filter(file => file.type === 'resume').length}</strong></span>
-                        <span>Screenshots: <strong>{selectedClient.files.filter(file => file.type === 'interview screenshot').length}</strong></span>
+                        <span>Total Files: <strong>{(selectedClient.files || []).length}</strong></span>
+                        <span>Resumes: <strong>{(selectedClient.files || []).filter(file => file.type === 'resume').length}</strong></span>
+                        <span>Screenshots: <strong>{(selectedClient.files || []).filter(file => file.type === 'interview screenshot').length}</strong></span>
                       </div>
                       <button
                         style={addApplicationButtonStyle} // Reusing for consistent button style
@@ -2339,7 +2404,7 @@ const handleEditApplication = (application) => {
                         <option value="cover letter">Cover Letter</option>
                         <option value="interview screenshot">Interview Screenshot</option>
                         <option value="portfolio">Portfolio</option>
-                        <option value="report">Report</option>
+                        <option value="report">Offers</option>
                         <option value="other">Other</option>
                       </select>
                     </div>
@@ -2639,35 +2704,44 @@ const handleEditApplication = (application) => {
 
                       <div style={clientDataSectionStyle}>
                         <h3 style={clientDataSectionTitleStyle}>Resume</h3>
-                        <div style={{ display: 'flex', alignItems: 'center' }}>
-                          <p style={{ ...clientDataDetailStyle, margin: 0, flexGrow: 1 }}>
-                            {selectedClient.resume || 'No resume uploaded'}
+                    <div style={clientDataDetailStyle}>
+                      <strong>Current File:</strong>
+                      {selectedClient.resumeUrl ? (
+                        <a 
+                          href={selectedClient.resumeUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          style={{ marginLeft: '8px', color: '#3b82f6', textDecoration: 'underline' }}
+                        >
+                          {selectedClient.resumeFileName || 'Download File'}
+                        </a>
+                      ) : (
+                        <span style={{ marginLeft: '8px', color: '#64748b' }}>No resume on file.</span>
+                      )}
+                    </div>
+                    <div style={{ ...clientDataDetailStyle, marginTop: '15px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <label htmlFor="resumeUpload" style={{ fontWeight: '600' }}>Upload New Resume:</label>
+                      <input
+                        type="file"
+                        id="resumeUpload"
+                        onChange={handleResumeFileChange}
+                        accept=".pdf,.doc,.docx"
+                        style={{ ...modalInputStyle, maxWidth: '400px' }} // Re-using a style for consistency
+                      />
+                      {newResumeFile && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '5px' }}>
+                          <p style={{ margin: 0, fontSize: '0.9em', color: '#475569' }}>
+                            Selected: <strong>{newResumeFile.name}</strong>
                           </p>
-                          {selectedClient.resume && (
-                            <button
-                              style={{
-                                backgroundColor: '#28a745',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '5px',
-                                padding: '6px 12px',
-                                cursor: 'pointer',
-                                fontSize: '14px',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '5px'
-                              }}
-                              onClick={() => handleDownloadResume(selectedClient.resume)}
-                            >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                <polyline points="7 10 12 15 17 10"></polyline>
-                                <line x1="12" y1="15" x2="12" y2="3"></line>
-                              </svg>
-                              Download
-                            </button>
-                          )}
+                          <button
+                            onClick={handleSaveNewResume}
+                            style={{ ...acceptButtonStyle, padding: '6px 12px' }} // Re-using a style
+                          >
+                            Save New Resume
+                          </button>
                         </div>
+                      )}
+                    </div>
                       </div>
                     </div>
                   )}
@@ -3244,7 +3318,7 @@ const handleEditApplication = (application) => {
                         <option value="cover letter">Cover Letter</option>
                         <option value="interview screenshot">Interview Screenshot</option>
                         <option value="portfolio">Portfolio</option>
-                        <option value="report">Report</option>
+                        <option value="report">Offers</option>
                         <option value="other">Other</option>
                       </select>
                     </div>
@@ -4217,7 +4291,7 @@ const handleEditApplication = (application) => {
                   <option value="cover letter">Cover Letter</option>
                   <option value="interview screenshot">Interview Screenshot</option>
                   <option value="portfolio">Portfolio</option>
-                  <option value="report">Report</option>
+                  <option value="report">Offers</option>
                   <option value="other">Other</option>
                 </select>
               </div>
