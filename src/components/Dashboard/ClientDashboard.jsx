@@ -2494,24 +2494,24 @@ const ClientDashboard = () => {
         
         // This logic groups applications by date for the worksheet view
         const groupedApplications = allApplications.reduce((acc, app) => {
-          const date = app.appliedDate; // Use appliedDate
-          if (!acc[date]) {
-            acc[date] = [];
-          }
-          // Use correct property names from the form
-          acc[date].push({
-            id: app.id,
-            jobId: app.jobId,
-            website: app.platform,
-            position: app.jobTitle,
-            company: app.company,
-            link: app.jobUrl,
-            dateAdded: app.appliedDate,
-            jobDescription: app.notes,
-            status: app.status,
-            role: app.role // Include the new role field
-          });
-          return acc;
+           const dateKey = formatDate(app.appliedDate);
+            if (!acc[dateKey]) {
+                acc[dateKey] = [];
+            }
+            // Also, format the dateAdded property inside the object to be consistent
+            acc[dateKey].push({
+                id: app.id,
+                jobId: app.jobId,
+                website: app.platform,
+                position: app.jobTitle,
+                company: app.company,
+                link: app.jobUrl,
+                dateAdded: formatDate(app.appliedDate), // Format this property too
+                jobDescription: app.notes,
+                status: app.status,
+                role: app.role,
+            });
+            return acc;
         }, {});
         setApplicationsData(groupedApplications);
         
