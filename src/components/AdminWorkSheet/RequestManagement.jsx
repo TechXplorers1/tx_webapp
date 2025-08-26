@@ -432,6 +432,21 @@ const confirmRequestAction = async () => {
                       <button className="action-button download" onClick={() => handleDownloadResume(sub)}>{sub.resume}</button>
                     </td>
                     <td>
+                    {/* MODIFICATION: Make the resume a clickable link */}
+                    {sub.resumeURL ? (
+                      <a 
+                        href={sub.resumeURL} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="action-button download"
+                      >
+                        {sub.resume}
+                      </a>
+                    ) : (
+                      <span>{sub.resume}</span>
+                    )}
+                  </td>
+                    <td>
                       <div className="action-buttons">
                         <button className="action-button view" onClick={() => handleViewCareerDetails(sub)}>View</button>
                         {sub.status === 'Pending' && (

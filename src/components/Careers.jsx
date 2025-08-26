@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Container, Card, Button, Form, Modal, Row, Col } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import CustomNavbar from './Navbar';
-import { database, auth } from '../firebase';
-import { ref, push } from "firebase/database";
+import { database, auth, storage } from '../firebase';
+import { ref as dbRef, push } from "firebase/database";
+import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 
 // --- Data for Job Postings ---
 const jobs = [
@@ -76,7 +77,13 @@ function Careers() {
     e.preventDefault();
     if (!selectedJob) return;
 
+     if (!formData.resume) {
+        alert("Please select a resume file to upload.");
+        return;
+    }
+
         const currentUser = auth.currentUser;
+         let resumeUrl = '';
 
     const newSubmission = {
       id: Date.now(),
@@ -95,7 +102,34 @@ function Careers() {
     };
 
     try {
-      const careerSubmissionsRef = ref(database, 'submissions/careerApplications');
+           const file = formData.resume;
+      // Create a unique path for the file, e.g., resumes/resume_name_timestamp
+      const resumeStoragePath = `resumes/${file.name}_${Date.now()}`;
+      const fileRef = storageRef(storage, resumeStoragePath);
+      
+      const uploadTask = await uploadBytes(fileRef, file);
+      
+      // Step 2: Get the public download URL for the uploaded file
+      resumeUrl = await getDownloadURL(uploadTask.ref);
+
+      // Step 3: Create the submission object with the download URL
+      const newSubmission = {
+        id: Date.now(),
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        mobile: formData.mobile,
+        role: selectedJob.title,
+        experience: Number(formData.experience),
+        currentSalary: formData.currentSalary,
+        expectedSalary: formData.expectedSalary,
+        resume: file.name, // Still save the original filename
+        resumeURL: resumeUrl, // Save the public URL
+        status: 'Pending',
+        receivedDate: new Date().toISOString().split('T')[0],
+        userId: currentUser ? currentUser.uid : "guest"
+      };
+      const careerSubmissionsRef = ref(database, 'submissions/career_submissions');
       await push(careerSubmissionsRef, newSubmission);
 
       handleModalClose();

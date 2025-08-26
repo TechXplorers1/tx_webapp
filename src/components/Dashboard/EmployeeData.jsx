@@ -821,7 +821,7 @@ const EmployeeData = () => {
 
   // --- Applications Tab Functions ---
   const handleOpenAddApplicationModal = (client) => {
-    setSelectedClientForApplication(client);
+    setSelectedClient(client);
     setShowAddApplicationModal(true);
   };
 
@@ -3556,13 +3556,13 @@ const handleEditApplication = (application) => {
       )}
 
       {/* Add New Application Modal */}
-      {selectedClientForApplication && (
+      {selectedClient && (
         <Modal show={showAddApplicationModal} onHide={() => setShowAddApplicationModal(false)} size="lg" centered>
           <Modal.Header closeButton style={modalHeaderStyle}>
-            <Modal.Title style={modalTitleStyle}>Add Job Application for {selectedClientForApplication.name}</Modal.Title>
+            <Modal.Title style={modalTitleStyle}>Add Job Application for {selectedClient.name}</Modal.Title>
           </Modal.Header>
           <Modal.Body style={modalBodyStyle}>
-            <p style={{ textAlign: 'center', color: '#64748b', marginBottom: '20px' }}>Apply for a job on behalf of {selectedClientForApplication.name}. The application will be automatically sent to the client.</p>
+            <p style={{ textAlign: 'center', color: '#64748b', marginBottom: '20px' }}>Apply for a job on behalf of {selectedClient.name}. The application will be automatically sent to the client.</p>
             <div style={modalFormGridStyle}>
               <div style={modalFormFieldGroupStyle}>
                 <label style={modalLabelStyle}>Job Title <span style={{ color: 'red' }}>*</span></label>
@@ -4424,7 +4424,7 @@ const handleEditApplication = (application) => {
                   `${client.firstName} ${client.lastName}`.toLowerCase().includes(clientSearchTermInModal.toLowerCase())
                 )
                 .map(client => (
-                  <div key={client.firebaseKey} className="client-select-item" onClick={() => handleSelectClientFromModal(client)}>
+                  <div key={client.registrationKey} className="client-select-item" onClick={() => handleSelectClientFromModal(client)}>
                     <div className="client-select-avatar">{client.initials}</div>
                     <div className="client-select-info">
                       <div className="client-select-name">{`${client.firstName} ${client.lastName}`}</div>
