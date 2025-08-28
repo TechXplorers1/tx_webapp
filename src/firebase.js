@@ -14,7 +14,7 @@ const firebaseConfig = {
   authDomain: "tech-xplorers.firebaseapp.com",
   databaseURL: "https://tech-xplorers-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "tech-xplorers",
-  storageBucket: "tech-xplorers.appspot.com", // Corrected storage bucket format
+  storageBucket: "tech-xplorers.firebasestorage.app", // Corrected storage bucket format
   messagingSenderId: "120058263454",
   appId: "1:120058263454:web:f3ce43069e65b4c503c88f"
 };

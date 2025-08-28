@@ -4128,7 +4128,8 @@ const handleSaveNewFile = async () => {
                   <option value="resume">Resume</option>
                   <option value="cover letter">Cover Letter</option>
                   <option value="interview screenshot">Interview Screenshot</option>
-                  <option value="portfolio">Offers</option>
+                  <option value="portfolio">Portfolio</option>
+                  <option value="offers">Offers</option>
                   <option value="other">Others</option>
                 </select>
               </div>

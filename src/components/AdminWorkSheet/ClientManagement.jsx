@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { getDatabase, ref, onValue, query, orderByChild, equalTo, update, remove } from "firebase/database"; // Import Firebase functions
 import { database } from '../../firebase'; // Import your Firebase config
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
+
 
 const ClientManagement = () => {
   // --- Client Management States ---
@@ -20,8 +22,9 @@ const ClientManagement = () => {
   const [currentRegistrationToEdit, setCurrentRegistrationToEdit] = useState(null);
   const [selectedServiceFilter, setSelectedServiceFilter] = useState('All');
   const simplifiedServices = ['Mobile Development', 'Web Development', 'Digital Marketing', 'IT Talent Supply', 'Cyber Security'];
+  const [newResumeFile, setNewResumeFile] = useState(null);
 
-    const [serviceRegistrations, setServiceRegistrations] = useState([]);
+  const [serviceRegistrations, setServiceRegistrations] = useState([]);
 
   // State for Payment Management Modal
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -50,11 +53,11 @@ const ClientManagement = () => {
   // NEW: useEffect to load clients from localStorage or fetch from clients.json
 
 
-   useEffect(() => {
+  useEffect(() => {
     const clientsRef = ref(database, 'clients');
     const usersRef = ref(database, 'users');
 
-const unsubscribeClients = onValue(clientsRef, (snapshot) => {
+    const unsubscribeClients = onValue(clientsRef, (snapshot) => {
       const clientsData = snapshot.val();
       const allRegistrations = [];
       if (clientsData) {
@@ -85,12 +88,12 @@ const unsubscribeClients = onValue(clientsRef, (snapshot) => {
     });
 
     const unsubscribeUsers = onValue(usersRef, (snapshot) => {
-        const usersData = snapshot.val();
-        if (usersData) {
-            const usersArray = Object.keys(usersData).map(key => ({ firebaseKey: key, ...usersData[key] }));
-            const managers = usersArray.filter(user => user.roles && user.roles.includes('manager'));
-            setManagerList(managers);
-        }
+      const usersData = snapshot.val();
+      if (usersData) {
+        const usersArray = Object.keys(usersData).map(key => ({ firebaseKey: key, ...usersData[key] }));
+        const managers = usersArray.filter(user => user.roles && user.roles.includes('manager'));
+        setManagerList(managers);
+      }
     });
 
     return () => {
@@ -266,7 +269,7 @@ const unsubscribeClients = onValue(clientsRef, (snapshot) => {
     setTempSelectedManager('');
   };
 
- const handleOpenManagerModal = (registration) => {
+  const handleOpenManagerModal = (registration) => {
     setRegistrationForManager(registration);
     setIsManagerModalOpen(true);
   };
@@ -279,12 +282,12 @@ const unsubscribeClients = onValue(clientsRef, (snapshot) => {
 
   const handleSelectManager = (manager) => {
     if (registrationForManager) {
-        const updatedRegistrations = serviceRegistrations.map(reg => 
-            reg.registrationKey === registrationForManager.registrationKey
-            ? { ...reg, manager: `${manager.firstName} ${manager.lastName}`, managerFirebaseKey: manager.firebaseKey }
-            : reg
-        );
-        setServiceRegistrations(updatedRegistrations);
+      const updatedRegistrations = serviceRegistrations.map(reg =>
+        reg.registrationKey === registrationForManager.registrationKey
+          ? { ...reg, manager: `${manager.firstName} ${manager.lastName}`, managerFirebaseKey: manager.firebaseKey }
+          : reg
+      );
+      setServiceRegistrations(updatedRegistrations);
     }
     setIsManagerModalOpen(false);
     setRegistrationForManager(null);
@@ -295,9 +298,9 @@ const unsubscribeClients = onValue(clientsRef, (snapshot) => {
   };
 
   const getFilteredRegistrations = () => {
-  let filtered = serviceRegistrations;
+    let filtered = serviceRegistrations;
 
-        if (clientFilter === 'registered') {
+    if (clientFilter === 'registered') {
       filtered = filtered.filter(c => c.assignmentStatus === 'registered' || !c.assignmentStatus);
     } else if (clientFilter === 'unassigned') {
       filtered = filtered.filter(c => c.assignmentStatus === 'pending_manager');
@@ -305,7 +308,7 @@ const unsubscribeClients = onValue(clientsRef, (snapshot) => {
       // "Active" for the admin means the client has been assigned to a manager
       filtered = filtered.filter(c => ['pending_employee', 'pending_acceptance', 'active'].includes(c.assignmentStatus));
     } else if (clientFilter === 'rejected') {
-        filtered = filtered.filter(c => c.assignmentStatus === 'rejected');
+      filtered = filtered.filter(c => c.assignmentStatus === 'rejected');
     }
 
     if (selectedServiceFilter !== 'All') {
@@ -357,23 +360,37 @@ const unsubscribeClients = onValue(clientsRef, (snapshot) => {
 
   const handleSaveClientDetails = async (e) => {
     e.preventDefault();
-    if (!currentClientToEdit || !currentClientToEdit.firebaseKey) {
+    if (!currentClientToEdit || !currentClientToEdit.clientFirebaseKey) {
       alert("Error: No client selected or client is missing a key.");
       return;
     }
 
-    // Create a reference to the specific client in the Firebase database
-    const clientRef = ref(database, `clients/${currentClientToEdit.firebaseKey}`);
 
     try {
-      // Use the update function to save the changes
-      await update(clientRef, currentClientToEdit);
+      const updates = { ...currentClientToEdit };
 
-      // The onValue listener will automatically update the local 'clients' state,
-      // so you don't need to call setClients here.
+      // ✅ Handle resume upload if new file provided
+      if (newResumeFile) {
+        const storage = getStorage();
+        const filePath = `resumes/${currentClientToEdit.clientFirebaseKey}/${currentClientToEdit.registrationKey}/${newResumeFile.name}`;
+        const fileRef = storageRef(storage, filePath);
+
+        await uploadBytes(fileRef, newResumeFile);
+        const resumeUrl = await getDownloadURL(fileRef);
+
+        updates.resumeUrl = resumeUrl; // save new URL
+        updates.resumeFileName = newResumeFile.name;
+        delete updates.newResumeFile; // cleanup temp field
+      }
+
+      // Create a reference to the specific client in the Firebase database
+
+      const regRef = ref(database, `clients/${currentClientToEdit.clientFirebaseKey}/serviceRegistrations/${currentClientToEdit.registrationKey}`);
+      await update(regRef, updates);
 
       console.log("Client details updated successfully in Firebase.");
-      handleCloseEditClientModal(); // Close the modal on success
+      handleCloseEditClientModal(); // Close modal
+      setNewResumeFile(null); // Reset the file input state
     } catch (error) {
       console.error("Failed to update client details in Firebase:", error);
       alert("An error occurred while saving the changes. Please try again.");
@@ -423,19 +440,19 @@ const unsubscribeClients = onValue(clientsRef, (snapshot) => {
                       {currentClientFilter === 'registered' && (<><button onClick={() => handleAcceptClient(registration)} className="action-button accept">Accept</button><button onClick={() => handleDeclineClient(registration)} className="action-button decline">Decline</button></>)}
                       {(currentClientFilter === 'unassigned' || currentClientFilter === 'restored') && <button onClick={() => handleAssignClient(registration)} className="action-button assign" disabled={!registration.manager}>Save</button>}
                       {currentClientFilter === 'active' && (<button onClick={() => handleOpenManagerModal(registration)} className="action-button edit-manager">Edit Manager</button>)}                      {currentClientFilter === 'rejected' && (<><button onClick={() => handleRestoreClient(registration)} className="action-button restore">Restore</button><button onClick={() => handleDeleteRejectedClient(registration)} className="action-button delete-btn">Delete</button></>)}
-                      </div>
-                      {/* Send Payment Link Button */}
-                      <button
-                        onClick={() => handleOpenPaymentModal(registration)}
-                        className="action-button send-payment-link"
-                      >
-                        {/* Credit Card Icon (from Screenshot 2025-07-02 at 7.33.16 PM.png) */}
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '0.9rem', height: '0.9rem' }}>
+                    </div>
+                    {/* Send Payment Link Button */}
+                    <button
+                      onClick={() => handleOpenPaymentModal(registration)}
+                      className="action-button send-payment-link"
+                    >
+                      {/* Credit Card Icon (from Screenshot 2025-07-02 at 7.33.16 PM.png) */}
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '0.9rem', height: '0.9rem' }}>
                         <path d="M20 4H4C3.44772 4 3 4.44772 3 5V19C3 19.5523 3.44772 20 4 20H20C20.5523 20 21 19.5523 21 19V5C21 4.44772 20.5523 4 20 4ZM5 7H19V9H5V7ZM5 11H17V13H5V11ZM5 15H13V17H5V15Z" />
                       </svg>
                       Send Payment Link
-                      </button>
-                    
+                    </button>
+
                   </td>
                 </tr>
               ))
@@ -458,7 +475,7 @@ const unsubscribeClients = onValue(clientsRef, (snapshot) => {
       <div className="all-services-list">
         {servicesToDisplay.map(service => {
           const clientsForService = filteredClients.filter(registration => {
-             let matchesFilter = false;
+            let matchesFilter = false;
             if (clientFilter === 'registered') {
               matchesFilter = registration.assignmentStatus === 'registered' || !registration.assignmentStatus;
             } else if (clientFilter === 'unassigned') {
@@ -466,13 +483,13 @@ const unsubscribeClients = onValue(clientsRef, (snapshot) => {
             } else if (clientFilter === 'active') {
               matchesFilter = ['pending_employee', 'pending_acceptance', 'active'].includes(registration.assignmentStatus);
             } else if (clientFilter === 'rejected') {
-                matchesFilter = registration.assignmentStatus === 'rejected';
+              matchesFilter = registration.assignmentStatus === 'rejected';
             }
 
             const matchesService = registration.service === service;
-            
+
             const searchTermLower = clientSearchTerm.toLowerCase();
-            const matchesSearch = 
+            const matchesSearch =
               (registration.firstName || '').toLowerCase().includes(searchTermLower) ||
               (registration.lastName || '').toLowerCase().includes(searchTermLower) ||
               (registration.email || '').toLowerCase().includes(searchTermLower);
@@ -1541,10 +1558,7 @@ const unsubscribeClients = onValue(clientsRef, (snapshot) => {
                       </div>
                     </div>
                   )}
-                  <div className="assign-form-group">
-                    <label>Who are you?</label>
-                    <div className="read-only-value">{selectedClientForDetails.userType || '-'}</div>
-                  </div>
+
                 </div>
               </div>
             ) : (
@@ -1752,7 +1766,7 @@ const unsubscribeClients = onValue(clientsRef, (snapshot) => {
                     </div>
                   </div>
 
-                   {/* Resume Download Section */}
+                  {/* Resume Download Section */}
                   <div className="client-preview-section">
                     <h4 className="client-preview-section-title">Resume</h4>
                     {selectedClientForDetails.resumeUrl ? (
@@ -1965,11 +1979,12 @@ const unsubscribeClients = onValue(clientsRef, (snapshot) => {
                           ></textarea>
                         </div>
                       )}
-                    <div className="assign-form-group">
-                      <label htmlFor="userType">Who are you?</label>
-                      <input type="text" id="userType" name="userType" value={currentClientToEdit.userType || ''} onChange={handleEditClientChange} />
-                    </div>
+
                   </div>
+
+
+
+
 
                   {/* Job Preferences & Status */}
 
@@ -2135,6 +2150,40 @@ const unsubscribeClients = onValue(clientsRef, (snapshot) => {
                       <label htmlFor="referenceRole">Reference Role</label>
                       <input type="text" id="referenceRole" name="referenceRole" value={currentClientToEdit.referenceRole || ''} onChange={handleEditClientChange} />
                     </div>
+                  </div>
+
+                  <div className="client-preview-section">
+                    <h4 className="client-preview-section-title">Resume</h4>
+                    
+                    {/* MODIFICATION START: Add file input and download link */}
+                    <div className="assign-form-group">
+                      <label>Current Resume</label>
+                      {currentClientToEdit.resumeUrl ? (
+                        <a 
+                          href={currentClientToEdit.resumeUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="action-button download" // Re-using a style for consistency
+                          style={{ textDecoration: 'none', textAlign: 'center' }}
+                        >
+                          {currentClientToEdit.resumeFileName || 'Download File'}
+                        </a>
+                      ) : (
+                        <div className="read-only-value">No resume on file.</div>
+                      )}
+                    </div>
+
+                    <div className="assign-form-group">
+                      <label htmlFor="resumeUpload">Upload New Resume</label>
+                      <input
+                        type="file"
+                        id="resumeUpload"
+                        name="newResumeFile"
+                        onChange={(e) => setNewResumeFile(e.target.files[0])}
+                        accept=".pdf,.doc,.docx"
+                      />
+                    </div>
+                    {/* MODIFICATION END */}
                   </div>
 
                   {/* Job Portal Accounts */}

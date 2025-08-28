@@ -49,10 +49,10 @@ function Careers() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [selectedJob, setSelectedJob] = useState(null);
-  const [showResumeModal, setShowResumeModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const navigate = useNavigate();
 
+  // State to hold form data including the resume file
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -61,105 +61,107 @@ function Careers() {
     currentSalary: '',
     expectedSalary: '',
     experience: '',
-    resume: null,
+    resume: null, // Stores the File object
   });
 
+  // Handler for form input changes
   const handleFormChange = (e) => {
     const { name, value, files } = e.target;
     if (name === 'resume') {
+      // If the input is a file, store the first file
       setFormData((prev) => ({ ...prev, resume: files[0] }));
     } else {
+      // For other inputs, update the value
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
   };
 
+  // Handler for form submission
   const handleFormSubmit = async (e) => {
-    e.preventDefault();
-    if (!selectedJob) return;
+    e.preventDefault(); // Prevent default form submission behavior
 
-     if (!formData.resume) {
-        alert("Please select a resume file to upload.");
-        return;
+    // Ensure a job is selected and a resume file is provided
+    if (!selectedJob) {
+      alert("No job selected for application.");
+      return;
+    }
+    if (!formData.resume) {
+      alert("Please select a resume file to upload.");
+      return;
     }
 
-        const currentUser = auth.currentUser;
-         let resumeUrl = '';
-
-    const newSubmission = {
-      id: Date.now(),
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      email: formData.email,
-      mobile: formData.mobile,
-      role: selectedJob.title,
-      experience: Number(formData.experience),
-      currentSalary: formData.currentSalary,
-      expectedSalary: formData.expectedSalary,
-      resume: formData.resume ? formData.resume.name : 'N/A',
-      status: 'Pending',
-      receivedDate: new Date().toISOString().split('T')[0],
-      userId: currentUser ? currentUser.uid : "guest"
-    };
-
     try {
-           const file = formData.resume;
-      // Create a unique path for the file, e.g., resumes/resume_name_timestamp
-      const resumeStoragePath = `resumes/${file.name}_${Date.now()}`;
-      const fileRef = storageRef(storage, resumeStoragePath);
-      
-      const uploadTask = await uploadBytes(fileRef, file);
-      
-      // Step 2: Get the public download URL for the uploaded file
-      resumeUrl = await getDownloadURL(uploadTask.ref);
+      const currentUser = auth.currentUser; // Get current authenticated user
+      const file = formData.resume; // The resume file from state
 
-      // Step 3: Create the submission object with the download URL
+      // 1. Upload file to Firebase Storage with a unique name
+      // Appending timestamp to file name ensures uniqueness
+      const resumeFileName = file.name;
+      const fileRef = storageRef(storage, `resumes/${new Date().getTime()}_${resumeFileName}`);
+      
+      const uploadTask = await uploadBytes(fileRef, file); // Upload the file
+      
+      // 2. Get the public download URL for the uploaded file
+      const resumeURL = await getDownloadURL(uploadTask.ref);
+
+      // 3. Create the submission object with all form data and the resume URL/filename
       const newSubmission = {
-        id: Date.now(),
+        id: Date.now(), // Unique ID for the submission
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
         mobile: formData.mobile,
-        role: selectedJob.title,
+        role: selectedJob.title, // Job title from the selected job
         experience: Number(formData.experience),
         currentSalary: formData.currentSalary,
         expectedSalary: formData.expectedSalary,
-        resume: file.name, // Still save the original filename
-        resumeURL: resumeUrl, // Save the public URL
-        status: 'Pending',
-        receivedDate: new Date().toISOString().split('T')[0],
-        userId: currentUser ? currentUser.uid : "guest"
+        resume: resumeFileName, // Original name of the resume file
+        resumeURL: resumeURL, // Public download URL of the resume
+        status: 'Pending', // Initial status of the application
+        receivedDate: new Date().toISOString().split('T')[0], // Current date
+        userId: currentUser ? currentUser.uid : "guest" // User ID or "guest"
       };
-      const careerSubmissionsRef = ref(database, 'submissions/career_submissions');
-      await push(careerSubmissionsRef, newSubmission);
 
-      handleModalClose();
+      // 4. Save the submission data to the Realtime Database
+      const careerSubmissionsRef = dbRef(database, 'submissions/career_submissions');
+      await push(careerSubmissionsRef, newSubmission); // Push new submission to database
+
+      // Close the application modal and show success modal
+      setShowModal(false);
       setShowSuccessModal(true);
       
-      setFormData({ /* ... reset form ... */ });
+      // Reset form data after successful submission
+      setFormData({
+        firstName: '', lastName: '', email: '', mobile: '',
+        currentSalary: '', expectedSalary: '', experience: '', resume: null,
+      });
 
     } catch (error) {
       console.error("Failed to submit career application to Firebase", error);
-      alert("Submission failed. Please try again.");
+      alert("There was an error submitting your application. Please try again.");
     }
-    
-    setFormData({
-      firstName: '', lastName: '', email: '', mobile: '',
-      currentSalary: '', expectedSalary: '', experience: '', resume: null,
-    });
   };
 
+  // Filter jobs based on search term
   const filteredJobs = jobs.filter((job) =>
     job.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Handler for "Apply Now" button click
   const handleApplyClick = (job) => {
-    setSelectedJob(job);
-    setShowModal(true);
+    setSelectedJob(job); // Set the selected job
+    setShowModal(true); // Open the application modal
   };
 
+  // Handler for closing the main application modal
   const handleModalClose = () => {
-    setShowModal(false);
-    setSelectedJob(null);
+    setShowModal(false); // Close the modal
+    setSelectedJob(null); // Clear selected job
+    // Optionally reset form data when modal closes
+    setFormData({
+      firstName: '', lastName: '', email: '', mobile: '',
+      currentSalary: '', expectedSalary: '', experience: '', resume: null,
+    });
   };
 
   // --- Inline CSS Styles for a Modern Look ---
@@ -207,6 +209,7 @@ function Careers() {
       border-bottom: 1px solid var(--light-border);
       transition: background-color 0.3s ease, border-color 0.3s ease;
     }
+
     .dark-mode .hero-section {
       background-color: var(--dark-surface);
       border-bottom: 1px solid var(--dark-border);
@@ -219,6 +222,7 @@ function Careers() {
       margin-bottom: 1rem;
       transition: color 0.3s ease;
     }
+
     .dark-mode .hero-title {
       color: var(--dark-text-primary);
     }
@@ -230,6 +234,7 @@ function Careers() {
       margin: 0 auto 2rem auto;
       transition: color 0.3s ease;
     }
+
     .dark-mode .hero-subtitle {
       color: var(--dark-text-secondary);
     }
@@ -252,6 +257,7 @@ function Careers() {
       background-color: var(--light-surface);
       color: var(--light-text-primary);
     }
+
     .dark-mode .search-input {
       background-color: var(--dark-surface);
       color: var(--dark-text-primary);
@@ -591,7 +597,7 @@ function Careers() {
                 <Button
                   variant="outline-primary"
                   className="upload-resume-btn"
-                  onClick={() => setShowResumeModal(true)}
+                  onClick={() => setShowModal(true)} // Changed to open main modal directly
                 >
                   Upload Your Resume
                 </Button>
@@ -607,10 +613,10 @@ function Careers() {
         </footer>
       </div>
 
-      {/* --- Modals --- */}
+      {/* --- Main Job Application Modal --- */}
       <Modal show={showModal} onHide={handleModalClose} centered size="lg" dialogClassName="modal-modern">
         <Modal.Header closeButton>
-          <Modal.Title>{selectedJob?.title} Application</Modal.Title>
+          <Modal.Title>{selectedJob ? `Job Application: ${selectedJob.title}` : 'Upload Your Resume'}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form onSubmit={handleFormSubmit}>
@@ -666,44 +672,7 @@ function Careers() {
         </Modal.Body>
       </Modal>
 
-      <Modal show={showResumeModal} onHide={() => setShowResumeModal(false)} centered dialogClassName="modal-modern">
-        <Modal.Header closeButton>
-          <Modal.Title>Upload Your Resume</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form onSubmit={(e) => {
-            e.preventDefault();
-            setShowResumeModal(false);
-            setShowSuccessModal(true);
-          }}>
-            <Form.Group className="form-group-modern">
-              <Form.Label className="form-label-modern">Full Name<span className="text-danger">*</span></Form.Label>
-              <Form.Control className="form-control-modern" type="text" placeholder="Enter your name" required />
-            </Form.Group>
-            <Form.Group className="form-group-modern">
-              <Form.Label className="form-label-modern">Email<span className="text-danger">*</span></Form.Label>
-              <Form.Control className="form-control-modern" type="email" placeholder="you@example.com" required />
-            </Form.Group>
-            <Form.Group className="form-group-modern">
-              <Form.Label className="form-label-modern">Mobile Number<span className="text-danger">*</span></Form.Label>
-              <Form.Control className="form-control-modern" type="tel" placeholder="(123) 456-7890" required />
-            </Form.Group>
-            <Form.Group className="form-group-modern">
-              <Form.Label className="form-label-modern">Upload Resume<span className="text-danger">*</span></Form.Label>
-              <Form.Control className="form-control-modern" type="file" accept=".pdf,.doc,.docx" required />
-            </Form.Group>
-            <div className="d-flex justify-content-end mt-3">
-               <Button variant="secondary" onClick={() => setShowResumeModal(false)} className="me-2 rounded-pill px-4">
-                Cancel
-              </Button>
-              <Button type="submit" variant="primary" className="rounded-pill px-4">
-                Submit
-              </Button>
-            </div>
-          </Form>
-        </Modal.Body>
-      </Modal>
-
+      {/* Success Modal */}
       <Modal show={showSuccessModal} onHide={() => setShowSuccessModal(false)} centered dialogClassName="modal-modern">
         <Modal.Body className="text-center p-4">
           <i className="bi bi-check-circle-fill text-success" style={{fontSize: '4rem', marginBottom: '1rem'}}></i>

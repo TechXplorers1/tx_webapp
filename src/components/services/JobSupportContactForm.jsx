@@ -220,6 +220,8 @@ const JobSupportContactForm = () => {
       referenceEmail: formData.referenceEmail,
       referenceRole: formData.referenceRole,
       jobPortalAccountName: formData.jobPortalAccountNameandCredentials,
+      resumeUrl: resumeUrl,
+        resumeFileName: resumeFileName,
     };
     const clientProfileUpdate = {
             firstName: formData.firstName,
@@ -236,8 +238,9 @@ const JobSupportContactForm = () => {
             await update(clientProfileRef, clientProfileUpdate);
             
             console.log("Job Support registration saved successfully.");
-             setShowSuccessModal(true);
-      // Set a timeout to close the modal and navigate to the homepage
+ setSubmitStatus({ success: true, message: 'Form submitted successfully!' });
+      setShowSuccessModal(true);
+      setFormData(initialFormData);      // Set a timeout to close the modal and navigate to the homepage
       setTimeout(() => {
           setShowSuccessModal(false);
           navigate("/");
@@ -493,10 +496,10 @@ const JobSupportContactForm = () => {
             <Form.Group as={Col} controlId="formTechnologySkills"><Form.Label>Technology Skills <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="technologySkills" onChange={handleChange}  style={inputControlStyle} /></Form.Group>
           </Row>
           <Row className="mb-3">
-            <Form.Group as={Col} controlId="formCurrentSalary"><Form.Label>Current Salary <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="currentSalary" onChange={handleChange} required style={inputControlStyle} /></Form.Group>
-            <Form.Group as={Col} controlId="formExpectedSalary"><Form.Label>Expected Salary <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="expectedSalary" onChange={handleChange} required style={inputControlStyle} /></Form.Group>
-            <Form.Group as={Col} controlId="formVisaStatus"><Form.Label>Visa Status <span className="text-danger">*</span></Form.Label><Form.Select name="visaStatus" onChange={handleChange} required style={inputControlStyle}><option value="">Select Status</option><option value="us_citizen">US Citizen</option><option value="green_card">Green Card</option><option value="h1b">H1B</option><option value="opt">OPT</option><option value="cpt">CPT</option><option value="other">Other</option></Form.Select></Form.Group>
-            {formData.visaStatus === 'other' && (<Form.Group as={Col} controlId="formOtherVisaStatus"><Form.Label>Please specify <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="otherVisaStatus" onChange={handleChange} required style={inputControlStyle} /></Form.Group>)}
+            <Form.Group as={Col} controlId="formCurrentSalary"><Form.Label>Current Salary <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="currentSalary" onChange={handleChange}  style={inputControlStyle} /></Form.Group>
+            <Form.Group as={Col} controlId="formExpectedSalary"><Form.Label>Expected Salary <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="expectedSalary" onChange={handleChange}  style={inputControlStyle} /></Form.Group>
+            <Form.Group as={Col} controlId="formVisaStatus"><Form.Label>Visa Status <span className="text-danger">*</span></Form.Label><Form.Select name="visaStatus" onChange={handleChange}  style={inputControlStyle}><option value="">Select Status</option><option value="us_citizen">US Citizen</option><option value="green_card">Green Card</option><option value="h1b">H1B</option><option value="opt">OPT</option><option value="cpt">CPT</option><option value="other">Other</option></Form.Select></Form.Group>
+            {formData.visaStatus === 'other' && (<Form.Group as={Col} controlId="formOtherVisaStatus"><Form.Label>Please specify <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="otherVisaStatus" onChange={handleChange}  style={inputControlStyle} /></Form.Group>)}
           </Row>
           </section>
           )}

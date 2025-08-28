@@ -5221,8 +5221,8 @@ Please provide a summary no longer than 150 words.`;
               return (
                 <div className="selected-employee-details">
                   <h4>Selected Employee Details</h4>
-                  <p><strong>Name:</strong> {employeeDetails.fullName}</p>
-                  <p><strong>Role:</strong> {employeeDetails.role}</p>
+                  <p><strong>Name:</strong> {`${employeeDetails.firstName} ${employeeDetails.lastName}`}</p>
+                  <p><strong>Role:</strong> {employeeDetails.roles}</p>
                   <p><strong>Current Workload:</strong> {employeeDetails.assignedClients} assigned clients</p>
                 </div>
               );
@@ -5307,11 +5307,12 @@ Please provide a summary no longer than 150 words.`;
                   <tr>
                     <th>CLIENT</th>
                     <th>POSITION</th>
-                    <th>COMPANY</th>
+                    <th>SALARY</th>
                     <th>ASSIGNED TO</th>
                     <th>PRIORITY</th>
                     {/* REMOVED: <th>STATUS</th> */}
                     <th>ASSIGNED DATE</th>
+                    <th>DETAILS</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -5322,18 +5323,20 @@ Please provide a summary no longer than 150 words.`;
                           <div className="employee-avatar">
                             {getInitials(client.clientName)}</div>
                           <div className="client-info">
-                            <div className="main-text">{client.clientName}</div>
+                            <div className="main-text">{client.name}</div>
                             <div className="sub-text">{client.location}</div>
                           </div>
                         </div>
                       </td>
                       <td>
                         <div className="position-info">
-                          <div className="main-text">{client.position}</div>
+                          <div className="main-text">{client.
+jobsApplyFor}</div>
                           <div className="sub-text">{client.salary}</div>
                         </div>
                       </td>
-                      <td>{client.company}</td>
+                      <td>{client.
+currentSalary}</td>
                       <td>
                         <div className="employee-cell">
                           <div className="employee-avatar">
@@ -5359,6 +5362,11 @@ Please provide a summary no longer than 150 words.`;
                           <i className="fas fa-calendar-alt" style={{ marginRight: '5px' }}></i>{formatDateToDDMMYYYY(client.assignedDate)}
                         </div>
                       </td>
+                <td>
+                    <button className="modal-view-profile-button" onClick={() => openEditClientModal(client)}>
+                        <i className="fas fa-eye"></i> View Profile
+                      </button>
+                </td>
                     </tr>
                   ))}
                   {assignedClients.length === 0 && (

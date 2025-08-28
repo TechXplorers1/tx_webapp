@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { database } from '../../firebase';
+import { database } from '../../firebase'; // Corrected import path
 import { ref, onValue, update, remove } from "firebase/database";
 
 const RequestManagement = () => {
@@ -16,12 +16,11 @@ const RequestManagement = () => {
   const [showServiceRequestModal, setShowServiceRequestModal] = useState(false);
   const [selectedServiceRequest, setSelectedServiceRequest] = useState(null);
 
-
-    const [careerSubmissions, setCareerSubmissions] = useState([]);
+  const [careerSubmissions, setCareerSubmissions] = useState([]);
   const [contactSubmissions, setContactSubmissions] = useState([]);
   const [serviceRequests, setServiceRequests] = useState([]);
 
-// NEW: useEffect to fetch all submissions from Firebase in real-time
+  // useEffect to fetch all submissions from Firebase in real-time
   useEffect(() => {
     // Reference to the main submissions node
     const submissionsRef = ref(database, 'submissions');
@@ -38,7 +37,9 @@ const RequestManagement = () => {
           }));
 
         // Set state for each submission type
-        setCareerSubmissions(allSubmissions.careerApplications ? formatData(allSubmissions.careerApplications) : []);
+        setCareerSubmissions(allSubmissions.career_submissions
+ ? formatData(allSubmissions.career_submissions
+) : []);
         setContactSubmissions(allSubmissions.contactMessages ? formatData(allSubmissions.contactMessages) : []);
         setServiceRequests(allSubmissions.serviceRequests ? formatData(allSubmissions.serviceRequests) : []);
       } else {
@@ -53,12 +54,16 @@ const RequestManagement = () => {
     return () => unsubscribe();
   }, []);
 
-   const handleDownloadResume = (submission) => {
-    // For now, this is a placeholder. In a real app, you would integrate
-    // Firebase Storage to get a download URL for the resume file.
-    alert(`Initiating download for ${submission.resume}... (Storage integration required)`);
+  // Handler to download the resume file
+  const handleDownloadResume = (submission) => {
+    if (!submission || !submission.resumeURL) {
+        alert("No resume URL found for this submission.");
+        return;
+    }
+    // Directly open the URL in a new tab, which will trigger a download
+    // This is more reliable than fetching the blob.
+    window.open(submission.resumeURL, '_blank');
   };
-
 
   // --- Request Management Handlers ---
   const handleViewCareerDetails = (submission) => {
@@ -91,6 +96,7 @@ const RequestManagement = () => {
     setSelectedServiceRequest(null);
   };
 
+  // Handler for opening the confirmation modal for various actions
   const handleRequestAction = (action, item) => {
     setItemToProcess(item);
     setRequestConfirmAction(action);
@@ -103,17 +109,18 @@ const RequestManagement = () => {
     setShowRequestConfirmModal(true);
   };
 
-const confirmRequestAction = async () => {
+  // Handler for confirming and executing the action in the confirmation modal
+  const confirmRequestAction = async () => {
     if (!itemToProcess || !requestConfirmAction) return;
 
     let itemRef;
     try {
       if (requestConfirmAction === 'accept') {
-        itemRef = ref(database, `submissions/careerApplications/${itemToProcess.firebaseKey}`);
+        itemRef = ref(database, `submissions/career_submissions/${itemToProcess.firebaseKey}`);
         await update(itemRef, { status: 'Accepted' });
       }
       if (requestConfirmAction === 'reject') {
-        itemRef = ref(database, `submissions/careerApplications/${itemToProcess.firebaseKey}`);
+        itemRef = ref(database, `submissions/career_submissions/${itemToProcess.firebaseKey}`);
         await update(itemRef, { status: 'Rejected' });
       }
       if (requestConfirmAction === 'deleteContact') {
@@ -124,13 +131,14 @@ const confirmRequestAction = async () => {
         itemRef = ref(database, `submissions/serviceRequests/${itemToProcess.firebaseKey}`);
         await remove(itemRef);
       }
-      closeRequestConfirmModal();
+      closeRequestConfirmModal(); // Close modal after action
     } catch (error) {
       console.error("Firebase action failed", error);
       alert("The requested action failed. Please try again.");
     }
   };
 
+  // Handler for closing the confirmation modal
   const closeRequestConfirmModal = () => {
     setShowRequestConfirmModal(false);
     setRequestConfirmAction(null);
@@ -138,7 +146,7 @@ const confirmRequestAction = async () => {
     setItemToProcess(null);
   };
   
-  // --- Style Helper Functions ---
+  // --- Style Helper Functions for status tags ---
   const getRoleTagBg = (role) => {
     switch (role?.toLowerCase()) {
       case 'pending': return '#FEF3C7';
@@ -156,29 +164,6 @@ const confirmRequestAction = async () => {
       default: return '#374151';
     }
   };
-
-
-  useEffect(() => {
-    const handleStorageChange = (event) => {
-      if (event.key === 'career_submissions' && event.newValue) {
-        setCareerSubmissions(JSON.parse(event.newValue));
-      }
-      if (event.key === 'contact_submissions' && event.newValue) {
-        setContactSubmissions(JSON.parse(event.newValue));
-      }
-       if (event.key === 'service_submissions' && event.newValue) {
-        setContactSubmissions(JSON.parse(event.newValue));
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-
-    // Cleanup the event listener when the component unmounts
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, []); 
-
 
   return (
     <div className="add-body-container">
@@ -373,8 +358,7 @@ const confirmRequestAction = async () => {
             background-color: var(--create-employee-btn-bg);
             color: white;
         }
-      `}
-      </style>
+      `}</style>
       <div className="request-management-container">
         <div className="request-tabs">
           <button
@@ -414,9 +398,9 @@ const confirmRequestAction = async () => {
               </thead>
               <tbody>
                 {careerSubmissions.map((sub, index) => (
-                  <tr key={sub.id}>
+                  <tr key={sub.firebaseKey}>
                     <td>{index + 1}</td>
-                    <td>{sub.firstName} {sub.lastName}</td>
+                    <td>{`${sub.firstName} ${sub.lastName}`}</td>
                     <td>
                       <div>{sub.email}</div>
                       <div style={{color: 'var(--text-secondary)', fontSize: '0.8rem'}}>{sub.mobile}</div>
@@ -429,23 +413,13 @@ const confirmRequestAction = async () => {
                       </span>
                     </td>
                     <td>
-                      <button className="action-button download" onClick={() => handleDownloadResume(sub)}>{sub.resume}</button>
+                      {sub.resumeURL ? (
+                        <button className="action-button download" onClick={() => handleDownloadResume(sub)}>{sub.resume}</button>
+                      ) : (
+                        <span>No Resume</span>
+                      )}
                     </td>
-                    <td>
-                    {/* MODIFICATION: Make the resume a clickable link */}
-                    {sub.resumeURL ? (
-                      <a 
-                        href={sub.resumeURL} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="action-button download"
-                      >
-                        {sub.resume}
-                      </a>
-                    ) : (
-                      <span>{sub.resume}</span>
-                    )}
-                  </td>
+              
                     <td>
                       <div className="action-buttons">
                         <button className="action-button view" onClick={() => handleViewCareerDetails(sub)}>View</button>
@@ -479,7 +453,7 @@ const confirmRequestAction = async () => {
               </thead>
               <tbody>
                 {contactSubmissions.map((sub, index) => (
-                  <tr key={sub.id}>
+                  <tr key={sub.firebaseKey}>
                     <td>{index + 1}</td>
                     <td>{sub.firstName} {sub.lastName}</td>
                     <td>
@@ -515,7 +489,7 @@ const confirmRequestAction = async () => {
               </thead>
               <tbody>
                 {serviceRequests.map((req, index) => (
-                  <tr key={req.id}>
+                  <tr key={req.firebaseKey}>
                     <td>{index + 1}</td>
                     <td>{req.email}</td>
                     <td className="message-cell" title={req.message} onClick={() => handleViewServiceRequestDetails(req)}>{req.message}</td>
@@ -551,12 +525,21 @@ const confirmRequestAction = async () => {
                   <div className="detail-item"><span className="detail-label">Experience:</span> <span>{selectedCareerSubmission.experience} years</span></div>
                   <div className="detail-item"><span className="detail-label">Current Salary:</span> <span>${selectedCareerSubmission.currentSalary}</span></div>
                   <div className="detail-item"><span className="detail-label">Expected Salary:</span> <span>${selectedCareerSubmission.expectedSalary}</span></div>
-                   <div className="detail-item"><span className="detail-label">Resume:</span> <span className="detail-value"><button className="action-button download">{selectedCareerSubmission.resume}</button></span></div>
                   <div className="detail-item"><span className="detail-label">Status:</span> <span className="detail-value">
                     <span className="status-tag" style={{ backgroundColor: getRoleTagBg(selectedCareerSubmission.status), color: getRoleTagText(selectedCareerSubmission.status) }}>
                       {selectedCareerSubmission.status}
                     </span>
                   </span></div>
+                  {/* Display the resume link if it exists */}
+                  {selectedCareerSubmission.resumeURL && (
+                    <div className="detail-item">
+                        <span className="detail-label">Resume:</span>
+                        <a href={selectedCareerSubmission.resumeURL} target="_blank" rel="noopener noreferrer">
+                            {selectedCareerSubmission.resume || 'View Resume'}
+                        </a>
+                        <button onClick={() => handleDownloadResume(selectedCareerSubmission)} className="download-btn mt-2">Download Resume</button>
+                    </div>
+                  )}
                 </div>
             </div>
             <div className="modal-footer">
