@@ -924,18 +924,67 @@ const handleEditApplication = (application) => {
   };
 
    const handleSaveEditedApplication = async () => {
-      if (!editedApplicationFormData || !selectedClient) return;
-      const updatedApplications = (selectedClient.jobApplications || []).map(app =>
-          app.id === editedApplicationFormData.id ? editedApplicationFormData : app
-      );
-      const registrationRef = ref(database, `clients/${selectedClient.clientFirebaseKey}/serviceRegistrations/${selectedClient.registrationKey}/jobApplications`);
-      try {
-          await set(registrationRef, updatedApplications);
-          setShowEditApplicationModal(false);
-          triggerNotification("Application updated successfully!");
-      } catch (error) {
-          console.error("Failed to save edited application:", error);
+    if (!editedApplicationFormData || !selectedClient) return;
+
+    try {
+      // Create a mutable copy of the form data to work with
+      const applicationDataToSave = { ...editedApplicationFormData };
+      const attachmentsToSave = [];
+      let hasNewUploads = false;
+
+      // Iterate through attachments to find and upload new files
+      for (const attachment of applicationDataToSave.attachments || []) {
+        // A new file will have a 'file' property and no 'downloadUrl'
+        if (attachment.file && !attachment.downloadUrl) {
+          hasNewUploads = true;
+          const { clientFirebaseKey, registrationKey } = selectedClient;
+          const appId = applicationDataToSave.id;
+          const fileName = `${Date.now()}_${attachment.file.name}`;
+          
+          // Create a storage path
+          const attachmentRef = storageRef(getStorage(), `application_attachments/${clientFirebaseKey}/${registrationKey}/${appId}/${fileName}`);
+          
+          // Upload the file
+          const uploadResult = await uploadBytes(attachmentRef, attachment.file);
+          const downloadURL = await getDownloadURL(uploadResult.ref);
+
+          // Create a clean metadata object for the database (without the local 'file' object)
+          attachmentsToSave.push({
+            name: attachment.name,
+            size: attachment.size,
+            type: attachment.type,
+            uploadDate: attachment.uploadDate,
+            downloadUrl: downloadURL, // Save the URL instead of the file
+          });
+        } else {
+          // This is an existing attachment, so keep it as is
+          attachmentsToSave.push(attachment);
+        }
       }
+      
+      if (hasNewUploads) {
+          triggerNotification("Uploading attachments...");
+      }
+
+      // Replace the old attachments array with the new one containing URLs
+      applicationDataToSave.attachments = attachmentsToSave;
+
+      // Now, update the Realtime Database with the final application data
+      const updatedApplications = (selectedClient.jobApplications || []).map(app =>
+        app.id === applicationDataToSave.id ? applicationDataToSave : app
+      );
+      
+      const registrationRef = ref(database, `clients/${selectedClient.clientFirebaseKey}/serviceRegistrations/${selectedClient.registrationKey}/jobApplications`);
+      
+      await set(registrationRef, updatedApplications);
+      
+      setShowEditApplicationModal(false);
+      triggerNotification("Application updated successfully!");
+
+    } catch (error) {
+      console.error("Failed to save edited application or upload file:", error);
+      alert("Error saving application. Please try again.");
+    }
   };
 
 
@@ -948,13 +997,13 @@ const handleEditApplication = (application) => {
     let pastedFiles = [];
 
     for (const item of items) {
-      if (item.kind === 'file') {
+      if (item.kind === 'file' && item.type.startsWith('image/')) { // Only handle pasted images
         const file = item.getAsFile();
         // Create a new file object matching your state's structure
         const newFileObject = {
-          name: file.name || `Pasted Image ${Date.now()}.${file.type.split('/')[1] || 'png'}`,
+          name: `Pasted Screenshot ${Date.now()}.${file.type.split('/')[1] || 'png'}`,
           size: `${(file.size / 1024).toFixed(1)} KB`,
-          type: 'pasted screenshot',
+          type: 'interview screenshot', // <-- CORRECTED TYPE
           uploadDate: new Date().toISOString().split('T')[0],
           file: file, // The actual File object
         };
@@ -970,7 +1019,7 @@ const handleEditApplication = (application) => {
       }));
       triggerNotification(`${pastedFiles.length} file(s) pasted successfully!`);
     }
-  }, [showEditApplicationModal, setEditedApplicationFormData, triggerNotification]); // Dependencies for useCallback
+  }, [showEditApplicationModal]); // Dependencies for useCallback
 
   // This useEffect adds and removes the paste event listener
   useEffect(() => {
@@ -3775,45 +3824,33 @@ const handleSaveNewFile = async () => {
               <div style={{ ...modalViewDetailItemStyle, gridColumn: '1 / -1' }}>
                 <strong>Attachments:</strong>
                 {viewedApplication.attachments && viewedApplication.attachments.length > 0 ? (
-                  <div style={{ marginTop: '10px' }}>
-                    {viewedApplication.attachments.map((file, index) => (
-                      <div key={index} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '8px',
-                        background: '#f8fafc',
-                        borderRadius: '6px',
-                        marginBottom: '8px'
-                      }}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ marginRight: '10px' }}>
-                          <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
-                          <polyline points="13 2 13 9 20 9"></polyline>
-                        </svg>
-                        <div style={{ flexGrow: 1 }}>
-                          <div>{file.name}</div>
-                          <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                            {file.size} • {file.uploadDate}
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => {
-                            setViewedFile(file);
-                            setShowViewApplicationModal(false);
-                            setShowViewFileModal(true);
-                          }}
-                          style={{
-                            background: '#3b82f6',
-                            color: 'white',
-                            border: 'none',
-                            padding: '5px 10px',
-                            borderRadius: '4px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          View
-                        </button>
-                      </div>
-                    ))}
+                <div style={{ marginTop: '10px' }}>
+                  {viewedApplication.attachments.map((file, index) => (
+                    <div key={index} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '8px',
+                      background: '#f8fafc',
+                      borderRadius: '6px',
+                      marginBottom: '8px'
+                    }}>
+                      {/* ... file icon and info ... */}
+                      <div style={{ flexGrow: 1 }}>{file.name}</div>
+                      <button
+                        onClick={() => {
+                          // Open the image viewer with the download URL
+                          setImageUrlToView(file.downloadUrl);
+                          setShowImageViewer(true);
+                        }}
+                        style={{
+                          background: '#3b82f6', color: 'white', border: 'none',
+                          padding: '5px 10px', borderRadius: '4px', cursor: 'pointer'
+                        }}
+                      >
+                        View
+                      </button>
+                    </div>
+                  ))}
                   </div>
                 ) : 'N/A'}
               </div>
@@ -4024,7 +4061,7 @@ const handleSaveNewFile = async () => {
                   >
                     +
                   </button>
-                  <input
+                <input
                     type="file"
                     multiple
                     ref={fileInputRef}
@@ -4033,7 +4070,8 @@ const handleSaveNewFile = async () => {
                       const newFiles = Array.from(e.target.files).map(file => ({
                         name: file.name,
                         size: `${(file.size / 1024).toFixed(1)} KB`,
-                        type: file.type,
+                        // If it's an image, classify it; otherwise, it's a general attachment.
+                        type: file.type.startsWith('image/') ? 'interview screenshot' : 'application attachment',
                         uploadDate: new Date().toLocaleString(),
                         file: file
                       }));
