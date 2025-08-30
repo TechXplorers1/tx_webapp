@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { getDatabase, ref, onValue, query, orderByChild, equalTo, update, remove } from "firebase/database"; // Import Firebase functions
 import { database } from '../../firebase'; // Import your Firebase config
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
+import { Spinner } from 'react-bootstrap'; 
 
 
 const ClientManagement = () => {
@@ -25,6 +26,9 @@ const ClientManagement = () => {
   const [newResumeFile, setNewResumeFile] = useState(null);
 
   const [serviceRegistrations, setServiceRegistrations] = useState([]);
+
+  const [isSaving, setIsSaving] = useState(false);
+const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // State for Payment Management Modal
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -364,6 +368,7 @@ const ClientManagement = () => {
       alert("Error: No client selected or client is missing a key.");
       return;
     }
+    setIsSaving(true); 
 
 
     try {
@@ -391,9 +396,19 @@ const ClientManagement = () => {
       console.log("Client details updated successfully in Firebase.");
       handleCloseEditClientModal(); // Close modal
       setNewResumeFile(null); // Reset the file input state
+
+      // Show the success modal
+      setShowSuccessModal(true);
+      // Automatically hide the success modal after 3 seconds
+      setTimeout(() => {
+        setShowSuccessModal(false);
+      }, 3000);
+
     } catch (error) {
       console.error("Failed to update client details in Firebase:", error);
       alert("An error occurred while saving the changes. Please try again.");
+    } finally {
+      setIsSaving(false); // Stop the spinner
     }
   };
 
@@ -2219,17 +2234,43 @@ const ClientManagement = () => {
               </>
             )}
 
-            <div className="assign-form-actions">
-              <button className="assign-form-button cancel" onClick={handleCloseEditClientModal}>
-                Cancel
-              </button>
-              <button className="assign-form-button assign" onClick={handleSaveClientDetails}>
-                Save Changes
-              </button>
-            </div>
+
+<div className="assign-form-actions">
+    <button className="assign-form-button cancel" onClick={handleCloseEditClientModal}>
+        Cancel
+    </button>
+    <button className="assign-form-button assign" onClick={handleSaveClientDetails} disabled={isSaving}>
+        {isSaving ? (
+            <>
+                <Spinner
+                    as="span"
+                    animation="border"
+                    size="sm"
+                    role="status"
+                    aria-hidden="true"
+                />
+                <span style={{ marginLeft: '8px' }}>Saving...</span>
+            </>
+        ) : (
+            'Save Changes'
+        )}
+    </button>
+</div>
           </div>
         </div>
       )}
+
+
+{/* Success Modal */}
+{showSuccessModal && (
+    <div className="modal-overlay open">
+        <div className="modal-content" style={{ maxWidth: '400px', textAlign: 'center' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>✅</div>
+            <h3 className="modal-title" style={{ marginBottom: '0.5rem' }}>Successfully Submitted!</h3>
+            <p className="modal-subtitle">Client details have been updated.</p>
+        </div>
+    </div>
+)}
 
       {/* Payment Management Modal */}
       {isPaymentModalOpen && selectedClientForPayment && (

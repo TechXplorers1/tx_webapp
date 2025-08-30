@@ -148,91 +148,384 @@ const ServicesForm = () => {
         ],
     };
 
-    return (
-        <div style={formContainerStyle}>
-            <button onClick={handleBackClick} style={backButtonStyle}>
-                <span style={backArrowStyle}>&larr;</span> Back
-            </button>
-            <h2 style={titleStyle}>Application Form</h2>
-            <form onSubmit={handleSubmit} style={formStyle}>
-                <div style={formGroupStyle}>
-                    <label htmlFor="firstName" style={labelStyle}>First Name <span style={requiredStyle}>*</span></label>
-                    <input type="text" id="firstName" name="firstName" value={formData.firstName} onChange={handleChange} required style={inputStyle} />
-                </div>
-                <div style={formGroupStyle}>
-                    <label htmlFor="lastName" style={labelStyle}>Last Name <span style={requiredStyle}>*</span></label>
-                    <input type="text" id="lastName" name="lastName" value={formData.lastName} onChange={handleChange} required style={inputStyle} />
-                </div>
-                <div style={formGroupStyle}>
-                    <label htmlFor="mobile" style={labelStyle}>Mobile<span style={requiredStyle}>*</span></label>
-                    <input type="tel" id="mobile" name="mobile" value={formData.mobile} onChange={handleChange} required style={inputStyle} />
-                </div>
-                <div style={formGroupStyle}>
-                    <label htmlFor="email" style={labelStyle}>Email ID <span style={requiredStyle}>*</span></label>
-                    <input type="email" id="email" name="email" value={formData.email} onChange={handleChange} required style={inputStyle} />
-                </div>
-                <div style={formGroupStyle}>
-                    <label htmlFor="service" style={labelStyle}>Service <span style={requiredStyle}>*</span></label>
-                    <input type="text" id="service" name="service" value={readOnlyService} readOnly style={{ ...inputStyle, backgroundColor: '#f0f0f0', cursor: 'not-allowed' }}/>
-                </div>
-                <div style={sectionStyle}>
-                    <h3 style={subsectionTitleStyle}>What service do you want?</h3>
-                    {readOnlyService && (
-                        <div style={checkboxGroupStyle}>
-                            {serviceMapping[readOnlyService]?.map((service) => (
-                                <label key={service} style={customCheckboxContainerStyle}>
-                                    <input type="checkbox" id={service} name="selectedServices" value={service} checked={formData.selectedServices?.includes(service)} onChange={(e) => handleServiceChange(e, service)} style={hiddenCheckboxStyle} />
-                                    <span style={{ ...customCheckboxStyle, backgroundColor: formData.selectedServices?.includes(service) ? "#007bff" : "#fff", borderColor: formData.selectedServices?.includes(service) ? "#007bff" : "#ccc", }}>
-                                        {formData.selectedServices?.includes(service) && <span style={checkmarkStyle}>✔</span>}
-                                    </span>
-                                    <span style={checkboxLabelStyle}>{service}</span>
-                                </label>
+// In ServicesForm.jsx, REPLACE the entire `return (...)` block.
+
+return (
+    <>
+        <style>{modernStyles}</style>
+        <div className="service-form-wrapper">
+            <div className="form-container-modern">
+                <button onClick={handleBackClick} className="back-button-modern">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                    Back
+                </button>
+                <h2 className="form-header-modern">Application Form</h2>
+                <form onSubmit={handleSubmit}>
+                    <div className="form-group-modern">
+                        <label htmlFor="firstName" className="form-label-modern">First Name <span style={{color: 'red'}}>*</span></label>
+                        <input type="text" id="firstName" name="firstName" value={formData.firstName} onChange={handleChange} required className="form-control-modern" />
+                    </div>
+                    <div className="form-group-modern">
+                        <label htmlFor="lastName" className="form-label-modern">Last Name <span style={{color: 'red'}}>*</span></label>
+                        <input type="text" id="lastName" name="lastName" value={formData.lastName} onChange={handleChange} required className="form-control-modern" />
+                    </div>
+                    <div className="form-group-modern">
+                        <label htmlFor="mobile" className="form-label-modern">Mobile<span style={{color: 'red'}}>*</span></label>
+                        <input type="tel" id="mobile" name="mobile" value={formData.mobile} onChange={handleChange} required className="form-control-modern" />
+                    </div>
+                    <div className="form-group-modern">
+                        <label htmlFor="email" className="form-label-modern">Email ID <span style={{color: 'red'}}>*</span></label>
+                        <input type="email" id="email" name="email" value={formData.email} onChange={handleChange} required className="form-control-modern" />
+                    </div>
+                    <div className="form-group-modern">
+                        <label htmlFor="service" className="form-label-modern">Service <span style={{color: 'red'}}>*</span></label>
+                        <input type="text" id="service" name="service" value={readOnlyService} readOnly className="form-control-modern form-control-readonly" />
+                    </div>
+
+                    <div>
+                        <h3 className="section-header-modern">What service do you want?</h3>
+                        {readOnlyService && (
+                            <div className="custom-checkbox-group">
+                                {serviceMapping[readOnlyService]?.map((service) => (
+                                    <label key={service} className="custom-checkbox-label">
+                                        <input type="checkbox" id={service} name="selectedServices" value={service} checked={formData.selectedServices?.includes(service)} onChange={(e) => handleServiceChange(e, service)} className="custom-checkbox-input" />
+                                        <span className="custom-checkbox-display"></span>
+                                        {service}
+                                    </label>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <div>
+                        <h3 className="section-header-modern">Who are you?</h3>
+                        <div className="user-type-group">
+                            {roles.map((role) => (
+                                <button key={role} type="button" onClick={() => handleUserTypeChange(role)} className={`user-type-button ${formData.userType === role ? "selected" : ""}`}>
+                                    {role}
+                                </button>
                             ))}
                         </div>
-                    )}
-                </div>
-                <div style={sectionStyle}>
-                    <h3 style={subsectionTitleStyle}>Who are you?</h3>
-                    <div style={buttonGroupStyle}>
-                        {roles.map((role) => (
-                            <button key={role} type="button" onClick={() => handleUserTypeChange(role)} style={{ ...buttonStyle, backgroundColor: formData.userType === role ? "#007bff" : "#fff", color: formData.userType === role ? "#fff" : "#007bff", }}>
-                                {role}
-                            </button>
-                        ))}
                     </div>
-                </div>
-                <div>
-                     <button type="submit" style={submitButtonStyle} disabled={isLoading}>
-                        {isLoading ? (
-                            <>
-                                <Spinner
-                                    as="span"
-                                    animation="border"
-                                    size="sm"
-                                    role="status"
-                                    aria-hidden="true"
-                                />
-                                <span style={{ marginLeft: '8px' }}>Submitting...</span>
-                            </>
-                        ) : (
-                            'Submit'
-                        )}
-                    </button>
-                </div>
-            </form>
-            <Modal show={showSuccessModal} onHide={() => setShowSuccessModal(false)} centered>
-                <Modal.Header closeButton />
-                <Modal.Body style={successModalStyle}>
-                    <div style={successAnimationContainerStyle}>
-                        <span style={tickStyle}>✅</span>
+
+                    <div>
+                        <button type="submit" className="submit-button-modern" disabled={isLoading}>
+                            {isLoading ? (
+                                <>
+                                    <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
+                                    <span style={{ marginLeft: '8px' }}>Submitting...</span>
+                                </>
+                            ) : 'Submit'}
+                        </button>
                     </div>
-                    <h4 style={successTitleStyle}>Form Successfully Submitted!</h4>
-                    <p style={successMessageStyle}>Your form has been submitted successfully.</p>
-                </Modal.Body>
-            </Modal>
+                </form>
+                <Modal show={showSuccessModal} onHide={() => setShowSuccessModal(false)} centered>
+                    <Modal.Header closeButton />
+                    <Modal.Body style={successModalStyle}>
+                        <div style={successAnimationContainerStyle}>
+                            <span style={tickStyle}>✅</span>
+                        </div>
+                        <h4 className="success-modal-title">Form Successfully Submitted!</h4>
+                        <p className="success-modal-message">Your form has been submitted successfully.</p>
+                    </Modal.Body>
+                </Modal>
+            </div>
         </div>
-    );
+    </>
+);
 };
+
+// In ServicesForm.jsx, add this constant before the `return` statement.
+
+// In ServicesForm.jsx, REPLACE your existing `modernStyles` constant with this one.
+
+const modernStyles = `
+  /* --- LIGHT MODE STYLES (BASE) --- */
+  .service-form-wrapper {
+    background-color: #f8f9fa;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Inter', sans-serif;
+    transition: background-color 0.3s ease;
+  }
+  .form-container-modern {
+    background-color: #ffffff;
+    padding: 2.5rem 3rem;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    position: relative;
+    width: 100%;
+    max-width: 700px;
+    animation: fadeIn 0.5s ease-out;
+    border: 1px solid transparent;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+  }
+  @media (max-width: 768px) {
+    .form-container-modern {
+      padding: 2rem 1.5rem;
+    }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .back-button-modern {
+    position: absolute;
+    top: 25px;
+    left: 25px;
+    background: transparent;
+    border: none;
+    color: #6c757d;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: color 0.2s ease;
+  }
+  .back-button-modern:hover {
+    color: #0d6efd;
+  }
+  .form-header-modern {
+    color: #212529;
+    margin-bottom: 2rem;
+    text-align: center;
+    font-size: 2.25rem;
+    font-weight: 700;
+    transition: color 0.3s ease;
+  }
+  .form-group-modern {
+    margin-bottom: 1.25rem;
+  }
+  .form-label-modern {
+    display: block;
+    font-weight: 500;
+    color: #495057;
+    margin-bottom: 0.5rem;
+    transition: color 0.3s ease;
+  }
+  .form-control-modern {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    border: 1px solid #ced4da;
+    border-radius: 8px;
+    background-color: #fff;
+    color: #212529;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.3s, color 0.3s;
+  }
+  .form-control-modern:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    outline: none;
+  }
+  .form-control-readonly { /* NEW CLASS for the read-only service field */
+    background-color: #e9ecef;
+    cursor: not-allowed;
+  }
+  .section-header-modern {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #343a40;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #e9ecef;
+    transition: color 0.3s ease, border-color 0.3s ease;
+  }
+  .custom-checkbox-group {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+  @media (max-width: 576px) {
+    .custom-checkbox-group {
+      grid-template-columns: 1fr;
+    }
+  }
+  .custom-checkbox-label {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color 0.2s, background-color 0.2s, color 0.2s;
+    color: #212529;
+  }
+  .custom-checkbox-label:hover {
+    background-color: #f8f9fa;
+  }
+  .custom-checkbox-input {
+    display: none;
+  }
+  .custom-checkbox-display {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #adb5bd;
+    border-radius: 4px;
+    margin-right: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s;
+  }
+  .custom-checkbox-input:checked + .custom-checkbox-display {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+  }
+  .custom-checkbox-input:checked + .custom-checkbox-display::before {
+    content: '✔';
+    color: white;
+    font-size: 12px;
+  }
+  .user-type-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .user-type-button {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    border: 1px solid #ced4da;
+    border-radius: 50px;
+    cursor: pointer;
+    background-color: #fff;
+    color: #495057;
+    transition: all 0.2s ease;
+  }
+  .user-type-button:hover {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+  }
+  .user-type-button.selected {
+    background-color: #0d6efd;
+    color: white;
+    border-color: #0d6efd;
+  }
+  .submit-button-modern {
+    width: 100%;
+    padding: 0.8rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #fff;
+    background: linear-gradient(45deg, #0d6efd, #0b5ed7);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    margin-top: 1.5rem;
+  }
+  .submit-button-modern:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(13, 110, 253, 0.3);
+  }
+  .submit-button-modern:disabled {
+    background: #6c757d;
+    cursor: not-allowed;
+  }
+  .success-modal-title { /* NEW CLASS */
+    font-size: 24px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 10px;
+  }
+  .success-modal-message { /* NEW CLASS */
+    font-size: 16px;
+    color: #555;
+    margin-bottom: 20px;
+  }
+
+  /* --- DARK MODE STYLES --- */
+  html.dark-mode .service-form-wrapper {
+    background-color: #1a202c;
+  }
+  html.dark-mode .form-container-modern {
+    background-color: #2d3748;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    border: 1px solid #4a5568;
+  }
+  html.dark-mode .back-button-modern {
+    color: #a0aec0;
+  }
+  html.dark-mode .back-button-modern:hover {
+    color: #90cdf4;
+  }
+  html.dark-mode .form-header-modern,
+  html.dark-mode .section-header-modern,
+  html.dark-mode .custom-checkbox-label {
+    color: #e2e8f0;
+  }
+  html.dark-mode .form-label-modern {
+    color: #cbd5e1;
+  }
+  html.dark-mode .form-control-modern {
+    background-color: #1f2937;
+    border-color: #4a5568;
+    color: #e2e8f0;
+  }
+  html.dark-mode .form-control-modern::placeholder {
+    color: #a0aec0;
+  }
+  html.dark-mode .form-control-modern:focus {
+    border-color: #4299e1;
+    box-shadow: 0 0 0 0.25rem rgba(66, 153, 225, 0.25);
+  }
+  html.dark-mode .form-control-readonly { /* DARK MODE for read-only */
+    background-color: #374151;
+    color: #a0aec0;
+  }
+  html.dark-mode .section-header-modern {
+    border-bottom-color: #4a5568;
+  }
+  html.dark-mode .custom-checkbox-label {
+    border-color: #4a5568;
+  }
+  html.dark-mode .custom-checkbox-label:hover {
+    background-color: #374151;
+  }
+  html.dark-mode .custom-checkbox-display {
+    border-color: #a0aec0;
+  }
+  html.dark-mode .custom-checkbox-input:checked + .custom-checkbox-display {
+    background-color: #3182ce;
+    border-color: #3182ce;
+  }
+  html.dark-mode .user-type-button {
+    background-color: transparent;
+    border-color: #4a5568;
+    color: #cbd5e1;
+  }
+  html.dark-mode .user-type-button:hover {
+    background-color: #374151;
+  }
+  html.dark-mode .user-type-button.selected {
+    background-color: #3182ce;
+    border-color: #3182ce;
+    color: #e2e8f0;
+  }
+  html.dark-mode .modal-content {
+    background-color: #2d3748;
+    color: #e2e8f0;
+  }
+  html.dark-mode .modal-header {
+    border-bottom-color: #4a5568;
+  }
+  html.dark-mode .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+  }
+  html.dark-mode .success-modal-title { /* NEW */
+    color: #e2e8f0;
+  }
+  html.dark-mode .success-modal-message { /* NEW */
+    color: #cbd5e1;
+  }
+`;
 
 // Styles
 const formContainerStyle = { maxWidth: '600px', margin: '40px auto', padding: '30px', border: '1px solid #ddd', borderRadius: '12px', boxShadow: '0 8px 25px rgba(0, 0, 0, 0.1)', position: 'relative' };

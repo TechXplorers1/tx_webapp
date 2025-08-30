@@ -21,8 +21,16 @@ const AdminPage = () => {
     email: 'admin@techxplorers.com',
     mobile: '+91 99999 88888',
     lastLogin: new Date().toLocaleString(),
+        // Add default values for all profile fields
+    firstName: 'Admin',
+    lastName: 'User',
+    dateOfBirth: '',
+    gender: '',
+    personalEmail: '',
+    personalNumber: '',
+    address: ''
   });
-  
+
   // States for the profile modal
   const [isUserProfileModalOpen, setIsUserProfileModalOpen] = useState(false);
   const [editableProfile, setEditableProfile] = useState({});
@@ -32,9 +40,18 @@ const AdminPage = () => {
   useEffect(() => {
     const loggedInUserData = sessionStorage.getItem('loggedInEmployee');
     if (loggedInUserData) {
-        const userData = JSON.parse(loggedInUserData);
-        // Set the full user object to state
-        setUserProfile(userData);
+      const userData = JSON.parse(loggedInUserData);
+        // Ensure all profile fields have values
+      // Set the full user object to state
+      const completeUserData = {
+        ...userProfile, // Use defaults as fallback
+        ...userData,    // Override with actual user data
+        // Make sure name is properly split if needed
+        firstName: userData.firstName || (userData.name ? userData.name.split(' ')[0] : 'Admin'),
+        lastName: userData.lastName || (userData.name && userData.name.split(' ').length > 1
+                  ? userData.name.split(' ').slice(1).join(' ') : 'User')
+      };
+      setUserProfile(completeUserData);
     }
   }, []);
 
@@ -45,13 +62,21 @@ const AdminPage = () => {
     return nameParts[0]?.charAt(0).toUpperCase() || '';
   };
 
-  // --- Profile Modal Handlers ---
-  const openUserProfileModal = () => {
-    setEditableProfile({ ...userProfile }); // Initialize with current data
-    setIsEditingUserProfile(false); // Start in view-only mode
-    setIsUserProfileModalOpen(true);
-    setIsProfileDropdownOpen(false); // Close dropdown when modal opens
-  };
+// In AdminPage.jsx, ADD this new useEffect hook
+
+  // This effect handles the setup when the profile modal is opened.
+  useEffect(() => {
+    if (isUserProfileModalOpen) {
+      // 1. Close the profile dropdown automatically
+      setIsProfileDropdownOpen(false);
+
+      // 2. Initialize the editable profile with the current user's data
+      setEditableProfile({ ...userProfile });
+
+      // 3. Ensure the modal starts in view-only mode
+      setIsEditingUserProfile(false);
+    }
+  }, [isUserProfileModalOpen, userProfile]);
 
   const closeUserProfileModal = () => {
     setIsUserProfileModalOpen(false);
@@ -63,24 +88,29 @@ const AdminPage = () => {
     setEditableProfile(prev => ({ ...prev, [name]: value }));
   };
 
-   const handleSaveProfile = async () => {
-    if (!userProfile.firebaseKey) {
-        alert("Error: Cannot update profile. User key is missing.");
-        return;
-    }
+  const handleSaveProfile = async () => {
     try {
-        const userRef = ref(database, `employees/${userProfile.firebaseKey}`);
-        await update(userRef, editableProfile); // Use update to save only changed fields
-
-        // Update local state and session storage to reflect changes immediately
-        setUserProfile(editableProfile);
-        sessionStorage.setItem('loggedInEmployee', JSON.stringify(editableProfile));
-
-        setIsEditingUserProfile(false);
-        alert('Profile updated successfully!');
+      // Update the name field by combining first and last names
+      const updatedProfile = {
+        ...editableProfile,
+        name: `${editableProfile.firstName} ${editableProfile.lastName}`.trim()
+      };
+      
+      // If we have a firebaseKey, update in Firebase
+      if (userProfile.firebaseKey) {
+        const userRef = ref(database, `users/${userProfile.firebaseKey}`);
+        await update(userRef, updatedProfile);
+      }
+      
+      // Update local state and session storage to reflect changes immediately
+      setUserProfile(updatedProfile);
+      sessionStorage.setItem('loggedInEmployee', JSON.stringify(updatedProfile));
+      
+      setIsEditingUserProfile(false);
+      alert('Profile updated successfully!');
     } catch (error) {
-        console.error("Error updating profile in Firebase:", error);
-        alert("Failed to update profile. Please try again.");
+      console.error("Error updating profile:", error);
+      alert("Failed to update profile. Please try again.");
     }
   };
 
@@ -91,13 +121,13 @@ const AdminPage = () => {
         setIsProfileDropdownOpen(false);
       }
     };
-    
-        document.addEventListener('mousedown', handleClickOutside);
-    
+
+    document.addEventListener('mousedown', handleClickOutside);
+
     return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isProfileDropdownOpen]);
+  }, []);
 
   const adminViewOptions = [
     { value: 'clientManagement', label: 'Client Management' },
@@ -291,7 +321,7 @@ const AdminPage = () => {
             </div>
             {isProfileDropdownOpen && (
               <ul className="profile-dropdown-menu">
-                <li className="profile-dropdown-item" onClick={openUserProfileModal}>
+<li className="profile-dropdown-item" onClick={() => setIsUserProfileModalOpen(true)}>
                   Profile
                 </li>
                 <li className="profile-dropdown-item logout" onClick={() => navigate('/')}>
@@ -311,26 +341,26 @@ const AdminPage = () => {
               <p className="ad-subtitle">System administration and Employee management</p>
             </div>
           </div>
-        <div className="custom-radio-group-container">
-          {adminViewOptions.map((option) => (
-            <label className="custom-radio-item" key={option.value}>
-              <input type="radio" name="adminView" value={option.value} checked={currentView === option.value} onChange={() => setCurrentView(option.value)} />
-              <span className="custom-radio-label">{option.label}</span>
-            </label>
-          ))}
-        </div>
-        <div className="ad-content-wrapper">
+          <div className="custom-radio-group-container">
+            {adminViewOptions.map((option) => (
+              <label className="custom-radio-item" key={option.value}>
+                <input type="radio" name="adminView" value={option.value} checked={currentView === option.value} onChange={() => setCurrentView(option.value)} />
+                <span className="custom-radio-label">{option.label}</span>
+              </label>
+            ))}
+          </div>
+          <div className="ad-content-wrapper">
             {currentView === 'clientManagement' && <ClientManagement />}
             {currentView === 'departments' && <DepartmentManagement />}
             {currentView === 'employeeManagement' && <EmployeeManagement />}
             {currentView === 'assetManagement' && <AssetManagement />}
             {currentView === 'requestManagement' && <RequestManagement />}
-        </div>
+          </div>
         </div>
       </main>
 
       {/* User Profile Modal */}
-         {isUserProfileModalOpen && (
+      {isUserProfileModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content" style={{ maxWidth: '800px', maxHeight: '80vh', overflowY: 'auto' }}>
             <div className="modal-header">
@@ -375,16 +405,46 @@ const AdminPage = () => {
                 <label className="profile-detail-label" htmlFor="address">Address:</label>
                 <input type="text" id="address" name="address" value={editableProfile.address || ''} onChange={handleProfileChange} readOnly={!isEditingUserProfile} />
               </div>
+                 {/* Work Info Section (Read-only) */}
+              <div style={{ gridColumn: '1 / -1', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px', margin: '15px 0' }}>
+                <h5 style={{ fontWeight: 600, color: '#2563eb' }}>Work Information</h5>
+              </div>
+              <div className="profile-detail-item">
+                <label className="profile-detail-label">Employee ID:</label>
+                <input type="text" value={userProfile.employeeId || ''} readOnly />
+              </div>
+              <div className="profile-detail-item">
+                <label className="profile-detail-label">Work Email:</label>
+                <input type="text" value={userProfile.email || ''} readOnly />
+              </div>
+              <div className="profile-detail-item">
+                <label className="profile-detail-label">Work Number:</label>
+                <input type="text" value={userProfile.mobile || ''} readOnly />
+              </div>
+              <div className="profile-detail-item">
+                <label className="profile-detail-label">Last Login:</label>
+                <input type="text" value={userProfile.lastLogin || ''} readOnly />
+              </div>
             </div>
             <div className="profile-actions">
               {isEditingUserProfile ? (
+                  <>
                 <button className="edit-button" onClick={handleSaveProfile}>
                   Save Changes
                 </button>
+                 <button className="close-button" onClick={() => setIsEditingUserProfile(false)}>
+                    Cancel
+                  </button>
+                </>
               ) : (
+                <>
                 <button className="edit-button" onClick={() => setIsEditingUserProfile(true)}>
                   Edit Profile
                 </button>
+                <button className="close-button" onClick={closeUserProfileModal}>
+                    Close
+                  </button>
+                </>
               )}
               <button className="close-button" onClick={closeUserProfileModal}>
                 Close

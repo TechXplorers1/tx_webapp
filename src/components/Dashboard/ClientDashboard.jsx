@@ -1179,6 +1179,9 @@ const NotificationModal = ({ notifications, onClose }) => {
 };
 
 // --- AttachmentModal Component ---
+// In ClientDashboard.jsx, replace the existing AttachmentModal with this version.
+
+// --- AttachmentModal Component ---
 const AttachmentModal = ({ attachments, onClose }) => {
   return (
     <div className="modal-overlay">
@@ -1196,14 +1199,40 @@ const AttachmentModal = ({ attachments, onClose }) => {
         ) : (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: 'center' }}>
             {attachments.map((attachment, index) => (
-              <div key={index} style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', width: '200px', height: '150px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc' }}>
+              // MODIFICATION: Wrap image in an anchor (<a>) tag to make it clickable
+              <a
+                key={attachment.downloadUrl || index}
+                href={attachment.downloadUrl} // <-- Set link destination
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ textDecoration: 'none' }}
+              >
+                <div style={{ 
+                  border: '1px solid #e2e8f0', 
+                  borderRadius: '8px', 
+                  overflow: 'hidden', 
+                  width: '200px', 
+                  height: '150px', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  backgroundColor: '#f8fafc',
+                  cursor: 'pointer', // <-- Add pointer cursor
+                  transition: 'transform 0.2s ease'
+                }}
+                onMouseOver={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
+              >
                 <img
-                  src={attachment}
-                  alt={`Attachment ${index + 1}`}
+                  // FIX: Use the 'downloadUrl' property from the attachment object
+                  src={attachment.downloadUrl}
+                  // MODIFICATION: Use the attachment name for better accessibility
+                  alt={attachment.name || `Attachment ${index + 1}`}
                   style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
                   onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/200x150/e2e8f0/64748B?text=Image+Error'; }}
                 />
               </div>
+              </a>
             ))}
           </div>
         )}
@@ -3047,6 +3076,296 @@ const ClientServiceDetailsModal = ({ show, onHide, serviceDetails }) => {
 
 // ... inside the ClientDashboard main component
 
+// In ClientDashboard.jsx, add this constant before the return statement.
+
+const modernWorksheetStyles = `
+  /* --- Main Worksheet & Tab Styles --- */
+  .worksheet-view {
+    max-width: 100%; /* Use full width available */
+    margin: 0 auto;
+    padding: 1.5rem;
+    background-color: var(--bg-card);
+    border-radius: 16px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.07);
+    border: 1px solid var(--border-color);
+  }
+  .worksheet-tabs {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
+  }
+  .worksheet-tab-button {
+    padding: 0.75rem 1.5rem;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    background-color: transparent;
+    color: var(--text-secondary);
+  }
+  .worksheet-tab-button:hover {
+    background-color: var(--bg-nav-link-hover);
+    color: var(--text-primary);
+  }
+  .worksheet-tab-button--active {
+    background-color: #3b82f6;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+  }
+
+  /* --- Applications Tab Styles --- */
+  .applications-container {
+    font-family: 'Inter', sans-serif;
+  }
+  .date-ribbon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+    background-color: var(--bg-body);
+    padding: 0.75rem;
+    border-radius: 12px;
+  }
+  .date-ribbon__nav-button {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    flex-shrink: 0;
+    transition: background-color 0.2s;
+  }
+  .date-ribbon__nav-button:hover {
+    background: #2563eb;
+  }
+  .date-ribbon__scroll-container {
+    overflow-x: auto;
+    white-space: nowrap;
+    padding: 0.5rem 0;
+    flex-grow: 1;
+    scrollbar-width: none; /* Firefox */
+  }
+  .date-ribbon__scroll-container::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+  .date-ribbon__date-item {
+    display: inline-block;
+    padding: 0.75rem 1.25rem;
+    border-radius: 8px;
+    background-color: var(--bg-card);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    min-width: 120px;
+    text-align: center;
+    transition: all 0.2s ease;
+    margin: 0 0.25rem;
+  }
+  .date-ribbon__date-item--active {
+    background-color: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+    transform: translateY(-2px);
+  }
+  .worksheet-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .worksheet-search {
+    display: flex;
+    align-items: center;
+    background-color: var(--bg-card);
+    border-radius: 25px;
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    width: 100%;
+    max-width: 300px;
+  }
+  .worksheet-search input {
+    border: none;
+    outline: none;
+    flex-grow: 1;
+    font-size: 1rem;
+    background: transparent;
+    color: var(--text-primary);
+  }
+  .worksheet-table-container {
+    overflow-x: auto;
+  }
+  .worksheet-table {
+    width: 100%;
+    min-width: 700px;
+    border-collapse: collapse;
+  }
+  .worksheet-table th, .worksheet-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .worksheet-table thead th {
+    background-color: var(--bg-body);
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+  }
+  .worksheet-table tbody tr:hover {
+    background-color: var(--bg-nav-link-hover);
+  }
+
+  /* --- Documents Tab Styles --- */
+  .documents-container {
+    text-align: center;
+  }
+  .documents-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+  }
+  .documents-subtabs {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 2rem;
+  }
+  .documents-subtab-button {
+    padding: 0.6rem 1.2rem;
+    border: 1px solid var(--border-color);
+    border-radius: 50px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    background-color: var(--bg-card);
+    color: var(--text-secondary);
+  }
+  .documents-subtab-button:hover {
+    border-color: #3b82f6;
+    color: #3b82f6;
+  }
+  .documents-subtab-button--active {
+    background-color: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+  }
+  .document-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1rem;
+  }
+  .document-card {
+    text-decoration: none;
+    color: inherit;
+  }
+  .document-card__content {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .document-card__content:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+  }
+  .document-card__image {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+  }
+  .document-card__title {
+    margin: 0;
+    font-weight: 600;
+    word-break: break-word;
+    color: var(--text-primary);
+  }
+  .document-card__placeholder {
+    font-size: 3rem; /* Larger icon */
+    color: #3b82f6;
+    margin-bottom: 1rem;
+  }
+
+  /* --- Dark Mode Styles --- */
+  html.dark-mode .worksheet-view {
+    background-color: #2d3748;
+    border-color: #4a5568;
+  }
+  html.dark-mode .worksheet-tab-button {
+    color: #a0aec0;
+  }
+  html.dark-mode .worksheet-tab-button:hover {
+    background-color: #4a5568;
+    color: #e2e8f0;
+  }
+  html.dark-mode .worksheet-tab-button--active {
+    background-color: #4299e1;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(66, 153, 225, 0.2);
+  }
+  html.dark-mode .date-ribbon {
+    background-color: #1a202c;
+  }
+  html.dark-mode .date-ribbon__date-item {
+    background-color: #2d3748;
+    color: #a0aec0;
+    border-color: #4a5568;
+  }
+  html.dark-mode .date-ribbon__date-item--active {
+    background-color: #4299e1;
+    color: #ffffff;
+    border-color: #4299e1;
+  }
+  html.dark-mode .worksheet-search {
+    background-color: #2d3748;
+    border-color: #4a5568;
+  }
+  html.dark-mode .worksheet-table thead th {
+    background-color: #1a202c;
+    color: #a0aec0;
+  }
+  html.dark-mode .worksheet-table tbody tr:hover {
+    background-color: #4a5568;
+  }
+  html.dark-mode .documents-subtab-button {
+    background-color: #2d3748;
+    border-color: #4a5568;
+    color: #a0aec0;
+  }
+  html.dark-mode .documents-subtab-button:hover {
+    border-color: #4299e1;
+    color: #4299e1;
+  }
+  html.dark-mode .documents-subtab-button--active {
+    background-color: #4299e1;
+    color: #ffffff;
+    border-color: #4299e1;
+  }
+  html.dark-mode .document-card__content {
+    background-color: #2d3748;
+    border-color: #4a5568;
+  }
+`;
+
   return (
     <div className="client-dashboard-container">
       {/* Dynamic Styles injected here */}
@@ -4336,7 +4655,6 @@ const ClientServiceDetailsModal = ({ show, onHide, serviceDetails }) => {
                     <th className="modal-table-header">Time</th>
                     <th className="modal-table-header">Job ID</th>
                     <th className="modal-table-header">Company</th>
-                    <th className="modal-table-header">Role</th>
                     <th className="modal-table-header">Recruiter Mail ID</th>
                     <th className="modal-table-header">Round</th>
                     <th className="modal-table-header">Attachment</th>
@@ -4346,13 +4664,12 @@ const ClientServiceDetailsModal = ({ show, onHide, serviceDetails }) => {
                   {scheduledInterviews.map((interview) => (
                     <tr key={interview.id} className="modal-table-row">
                       <td className="modal-table-cell">
-                        <div style={{ fontWeight: '500' }}>{interview.date}</div>
+                        <div style={{ fontWeight: '500' }}>{interview.appliedDate}</div>
                       </td>
-                      <td className="modal-table-cell">{interview.time}</td>
+                      <td className="modal-table-cell">{interview.interviewTime}</td>
                       <td className="modal-table-cell">{interview.jobId}</td>
                       <td style={{ fontWeight: '600' }} className="modal-table-cell">{interview.company}</td>
-                      <td className="modal-table-cell">{interview.role}</td>
-                      <td className="modal-table-cell">{interview.recruiterMailId}</td>
+                      <td className="modal-table-cell">{interview.recruiterMail}</td>
                       <td className="modal-table-cell">
                         <div style={{
                           display: 'inline-flex',
@@ -4670,7 +4987,7 @@ const ClientServiceDetailsModal = ({ show, onHide, serviceDetails }) => {
             {/* Content for main dashboard tabs */}
             {activeTab === "Dashboard" && (
               <>
-                <h1>Welcome {clientUserName} </h1>
+                <h1 style={{ textAlign: 'center', marginBottom: '32px' }}>Welcome, {clientUserName} </h1>
 
                 <div style={{ textAlign: 'center', marginBottom: '32px' }}>
                   <button
