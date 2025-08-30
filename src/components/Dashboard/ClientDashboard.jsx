@@ -672,7 +672,7 @@ const ClientProfile = ({
 }) => {
   return (
     <div className="modal-overlay">
-      </div>
+    </div>
   );
 };
 
@@ -1207,31 +1207,31 @@ const AttachmentModal = ({ attachments, onClose }) => {
                 rel="noopener noreferrer"
                 style={{ textDecoration: 'none' }}
               >
-                <div style={{ 
-                  border: '1px solid #e2e8f0', 
-                  borderRadius: '8px', 
-                  overflow: 'hidden', 
-                  width: '200px', 
-                  height: '150px', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
+                <div style={{
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  width: '200px',
+                  height: '150px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   backgroundColor: '#f8fafc',
                   cursor: 'pointer', // <-- Add pointer cursor
                   transition: 'transform 0.2s ease'
                 }}
-                onMouseOver={e => e.currentTarget.style.transform = 'scale(1.05)'}
-                onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
-              >
-                <img
-                  // FIX: Use the 'downloadUrl' property from the attachment object
-                  src={attachment.downloadUrl}
-                  // MODIFICATION: Use the attachment name for better accessibility
-                  alt={attachment.name || `Attachment ${index + 1}`}
-                  style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
-                  onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/200x150/e2e8f0/64748B?text=Image+Error'; }}
-                />
-              </div>
+                  onMouseOver={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                  onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                  <img
+                    // FIX: Use the 'downloadUrl' property from the attachment object
+                    src={attachment.downloadUrl}
+                    // MODIFICATION: Use the attachment name for better accessibility
+                    alt={attachment.name || `Attachment ${index + 1}`}
+                    style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                    onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/200x150/e2e8f0/64748B?text=Image+Error'; }}
+                  />
+                </div>
               </a>
             ))}
           </div>
@@ -1864,7 +1864,7 @@ const CoverLetters = ({ files }) => {
   return (
     <div style={{ display: "flex", flexDirection: "row", gap: "20px", flexWrap: 'wrap', marginTop: '20px', justifyContent: 'center' }}>
       {files.length > 0 ? files.map(file => (
-         <a key={file.id || file.name} href={file.downloadUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
+        <a key={file.id || file.name} href={file.downloadUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
           <div style={{ padding: "40px", border: "1px solid #ccc", borderRadius: "8px", width: "350px", textAlign: "center", boxShadow: '0 2px 4px rgba(0,0,0,0.05)', backgroundColor: '#fff', cursor: 'pointer' }}>
             📄 {file.name}
           </div>
@@ -1879,26 +1879,26 @@ const Interviews = ({ files }) => { // onImageView is no longer needed here
   return (
     <div style={{ display: "flex", flexDirection: "row", gap: "20px", flexWrap: 'wrap', marginTop: '20px', justifyContent: 'center' }}>
       {files.length > 0 ? files.map(file => (
-        <a 
-          key={file.id || file.name} 
+        <a
+          key={file.id || file.name}
           href={file.downloadUrl}
           target="_blank"
           rel="noopener noreferrer"
           style={{ textDecoration: 'none', color: 'inherit' }}
         >
-          <div 
-            style={{ 
-              padding: "20px", border: "1px solid #ccc", borderRadius: "8px", 
-              width: "250px", textAlign: "center", boxShadow: '0 2px 4px rgba(0,0,0,0.05)', 
+          <div
+            style={{
+              padding: "20px", border: "1px solid #ccc", borderRadius: "8px",
+              width: "250px", textAlign: "center", boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
               backgroundColor: '#fff', cursor: 'pointer', transition: 'transform 0.2s'
             }}
             onMouseOver={e => e.currentTarget.style.transform = 'scale(1.03)'}
             onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
           >
-            <img 
-              src={file.downloadUrl} 
-              alt={file.name} 
-              style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: '4px', marginBottom: '10px' }} 
+            <img
+              src={file.downloadUrl}
+              alt={file.name}
+              style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: '4px', marginBottom: '10px' }}
             />
             <p style={{ margin: 0, fontWeight: '500', wordBreak: 'break-word' }}>{file.name}</p>
           </div>
@@ -1913,7 +1913,7 @@ const Offers = ({ files }) => {
   return (
     <div style={{ display: "flex", flexDirection: "row", gap: "20px", flexWrap: 'wrap', marginTop: '20px', justifyContent: 'center' }}>
       {files.length > 0 ? files.map(file => (
-         <a key={file.id || file.name} href={file.downloadUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
+        <a key={file.id || file.name} href={file.downloadUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
           <div style={{ padding: "40px", border: "1px solid #ccc", borderRadius: "8px", width: "350px", textAlign: "center", boxShadow: '0 2px 4px rgba(0,0,0,0.05)', backgroundColor: '#fff', cursor: 'pointer' }}>
             📄 {file.name}
           </div>
@@ -1924,10 +1924,10 @@ const Offers = ({ files }) => {
 };
 
 const Portfolio = ({ files }) => {
-   return (
+  return (
     <div style={{ display: "flex", flexDirection: "row", gap: "20px", flexWrap: 'wrap', marginTop: '20px', justifyContent: 'center' }}>
       {files.length > 0 ? files.map(file => (
-         <a key={file.id || file.name} href={file.downloadUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
+        <a key={file.id || file.name} href={file.downloadUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
           <div style={{ padding: "40px", border: "1px solid #ccc", borderRadius: "8px", width: "350px", textAlign: "center", boxShadow: '0 2px 4px rgba(0,0,0,0.05)', backgroundColor: '#fff', cursor: 'pointer' }}>
             📄 {file.name}
           </div>
@@ -1941,7 +1941,7 @@ const Others = ({ files }) => {
   return (
     <div style={{ display: "flex", flexDirection: "row", gap: "20px", flexWrap: 'wrap', marginTop: '20px', justifyContent: 'center' }}>
       {files.length > 0 ? files.map(file => (
-         <a key={file.id || file.name} href={file.downloadUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
+        <a key={file.id || file.name} href={file.downloadUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
           <div style={{ padding: "40px", border: "1px solid #ccc", borderRadius: "8px", width: "350px", textAlign: "center", boxShadow: '0 2px 4px rgba(0,0,0,0.05)', backgroundColor: '#fff', cursor: 'pointer' }}>
             📄 {file.name}
           </div>
@@ -2161,6 +2161,21 @@ const ClientDashboard = () => {
     return savedTab || "Dashboard";
   });
 
+  const [showUnderDevelopment, setShowUnderDevelopment] = useState(false);
+  const [developmentService, setDevelopmentService] = useState('');
+  const [showNotifyMessage, setShowNotifyMessage] = useState(false);
+
+  // ADD this new handler for the "Notify me" button
+  const handleNotifyMeClick = () => {
+    setShowNotifyMessage(true);
+  };
+
+  // ADD this new handler for the "Go Back" button
+  const handleGoBack = () => {
+    setShowUnderDevelopment(false);
+    setShowNotifyMessage(false);
+  };
+
 
   // Effect to save activeTab to localStorage whenever it changes
   useEffect(() => {
@@ -2221,7 +2236,7 @@ const ClientDashboard = () => {
     { title: "Cyber Security", path: "/services/cyber-security" },
   ];
 
- const clientUserName = useMemo(() => {
+  const clientUserName = useMemo(() => {
     if (clientData) {
       return `${clientData.firstName || ''} ${clientData.lastName || ''}`.trim() || 'Client';
     }
@@ -2402,12 +2417,12 @@ const ClientDashboard = () => {
 
         const registrations = data.serviceRegistrations ? Object.values(data.serviceRegistrations) : [];
 
-                const generalFiles = registrations.flatMap(reg => reg.files || []);
+        const generalFiles = registrations.flatMap(reg => reg.files || []);
 
         // 2. Get attachment files from within each job application
         const applicationAttachments = registrations
-            .flatMap(reg => reg.jobApplications || []) // Get all applications from all registrations
-            .flatMap(app => app.attachments || []);    // Then get all attachments from each application
+          .flatMap(reg => reg.jobApplications || []) // Get all applications from all registrations
+          .flatMap(app => app.attachments || []);    // Then get all attachments from each application
 
         // 3. Combine both sources into one array and set the state
         const combinedFiles = [...generalFiles, ...applicationAttachments];
@@ -2893,6 +2908,121 @@ const ClientDashboard = () => {
     return 'Job Applications'; // Default title if nothing selected/filtered
   };
 
+  // In ClientDashboard.jsx, add this new handler function.
+
+  // In ClientDashboard.jsx, add this array before the return statement.
+
+  const servicesData = [
+    {
+      key: 'Job Application',
+      title: 'Job Supporting',
+      description: 'Streamline your hiring process with our job application tracking system.',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect>
+          <path d="M16 2a4 4 0 0 0-4 4v1h-2v-1a4 4 0 0 0-4-4"></path>
+        </svg>
+      ),
+      iconClass: 'job-app-icon',
+    },
+    {
+      key: 'Mobile Development',
+      title: 'Mobile Development',
+      description: 'Track project progress, bug reports, and user engagement for your mobile applications.',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+          <path d="M12 18h.01"></path>
+        </svg>
+      ),
+      iconClass: 'mobile-app-icon',
+    },
+    {
+      key: 'Web Development',
+      title: 'Web Development',
+      description: 'Monitor website uptime, user engagement, and feature deployment for your web projects.',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M2 12h20"></path>
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+        </svg>
+      ),
+      iconClass: 'web-app-icon',
+    },
+    {
+      key: 'Digital Marketing',
+      title: 'Digital Marketing',
+      description: 'Analyze campaign performance, conversion rates, and social media reach.',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M2 12a10 10 0 1 0 20 0 10 10 0 0 0-20 0z"></path>
+          <path d="M12 8l4 4-4 4V8z"></path>
+          <path d="M12 8l-4 4 4 4-4-4z"></path>
+        </svg>
+      ),
+      iconClass: 'digital-marketing-icon',
+    },
+    {
+      key: 'IT Talent Supply',
+      title: 'IT Talent Supply',
+      description: 'Manage talent placement, skill matching, and client satisfaction metrics.',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+      ),
+      iconClass: 'it-talent-icon',
+    },
+    {
+      key: 'Cyber Security',
+      title: 'Cyber Security',
+      description: 'View security health scores, threat detection rates, and compliance status.',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+          <polyline points="22 4 12 14.01 9 11.01"></polyline>
+        </svg>
+      ),
+      iconClass: 'cybersecurity-icon',
+    }
+  ];
+
+  // In ClientDashboard.jsx, replace the existing handleViewDashboardClick function.
+
+  const handleViewDashboardClick = (serviceName) => {
+    // Find the service from the master list to get its path for navigation
+    const service = allServices.find(s => s.title === serviceName);
+    if (!service) {
+      if (serviceName === 'Job Application') {
+        setIsInWorksheetView(true);
+        setActiveWorksheetTab("Applications");
+      }
+      return;
+    }
+
+    const isActive = activeServices.some(active => active.title === service.title);
+
+    if (isActive) {
+      // If the active service is "Job Supporting", show the main worksheet view
+      if (service.title === 'Job Supporting') {
+        setIsInWorksheetView(true);
+        setActiveWorksheetTab("Applications");
+      } else {
+        // For all other active services, show the "under development" page
+        setDevelopmentService(service.title);
+        setShowUnderDevelopment(true);
+      }
+    } else {
+      // If the service is inactive, navigate to its sign-up page
+      handleInactiveServiceClick(service.path);
+    }
+  };
+
+
 
   // Apply all filters to the relevant base set of applications
   const filteredApplicationsForDisplay = useMemo(() => {
@@ -2967,103 +3097,103 @@ const ClientDashboard = () => {
     showNotificationsModal, showAttachmentModal, showDateRangeModal, showJobDescriptionModal, showFilterModal, showPaymentOptionsModal]);
 
 
-    // ClientDashboard.jsx
+  // ClientDashboard.jsx
 
-// ... after other component definitions like Radio, ClientHeader etc.
+  // ... after other component definitions like Radio, ClientHeader etc.
 
-// ADD this new component for displaying service details
-const ClientServiceDetailsModal = ({ show, onHide, serviceDetails }) => {
-  if (!serviceDetails) return null;
+  // ADD this new component for displaying service details
+  const ClientServiceDetailsModal = ({ show, onHide, serviceDetails }) => {
+    if (!serviceDetails) return null;
 
-  const isSimpleService = simplifiedServices.includes(serviceDetails.service);
+    const isSimpleService = simplifiedServices.includes(serviceDetails.service);
 
-  const renderSimpleDetails = () => (
-    <>
-      <h4 className="border-bottom pb-2 mb-3">Service Request Details</h4>
-      <Row>
-        <Col md={6} className="mb-3"><Form.Label>First Name</Form.Label><div className="previewValueDisplay">{serviceDetails.firstName || 'N/A'}</div></Col>
-        <Col md={6} className="mb-3"><Form.Label>Last Name</Form.Label><div className="previewValueDisplay">{serviceDetails.lastName || 'N/A'}</div></Col>
-      </Row>
-      <Row>
-        <Col md={6} className="mb-3"><Form.Label>Mobile</Form.Label><div className="previewValueDisplay">{serviceDetails.mobile || 'N/A'}</div></Col>
-        <Col md={6} className="mb-3"><Form.Label>Email</Form.Label><div className="previewValueDisplay">{serviceDetails.email || 'N/A'}</div></Col>
-      </Row>
-      <Row>
-        <Col className="mb-3"><Form.Label>Service</Form.Label><div className="previewValueDisplay">{serviceDetails.service || 'N/A'}</div></Col>
-      </Row>
-      <Row>
-         <Col className="mb-3"><Form.Label>Sub-Services</Form.Label><div className="previewTextAreaDisplay">{(serviceDetails.subServices || []).join(', ') || 'N/A'}</div></Col>
-      </Row>
-       <Row>
-        <Col className="mb-3"><Form.Label>User Type</Form.Label><div className="previewValueDisplay">{serviceDetails.userType || 'N/A'}</div></Col>
-      </Row>
-    </>
-  );
+    const renderSimpleDetails = () => (
+      <>
+        <h4 className="border-bottom pb-2 mb-3">Service Request Details</h4>
+        <Row>
+          <Col md={6} className="mb-3"><Form.Label>First Name</Form.Label><div className="previewValueDisplay">{serviceDetails.firstName || 'N/A'}</div></Col>
+          <Col md={6} className="mb-3"><Form.Label>Last Name</Form.Label><div className="previewValueDisplay">{serviceDetails.lastName || 'N/A'}</div></Col>
+        </Row>
+        <Row>
+          <Col md={6} className="mb-3"><Form.Label>Mobile</Form.Label><div className="previewValueDisplay">{serviceDetails.mobile || 'N/A'}</div></Col>
+          <Col md={6} className="mb-3"><Form.Label>Email</Form.Label><div className="previewValueDisplay">{serviceDetails.email || 'N/A'}</div></Col>
+        </Row>
+        <Row>
+          <Col className="mb-3"><Form.Label>Service</Form.Label><div className="previewValueDisplay">{serviceDetails.service || 'N/A'}</div></Col>
+        </Row>
+        <Row>
+          <Col className="mb-3"><Form.Label>Sub-Services</Form.Label><div className="previewTextAreaDisplay">{(serviceDetails.subServices || []).join(', ') || 'N/A'}</div></Col>
+        </Row>
+        <Row>
+          <Col className="mb-3"><Form.Label>User Type</Form.Label><div className="previewValueDisplay">{serviceDetails.userType || 'N/A'}</div></Col>
+        </Row>
+      </>
+    );
 
-  const renderJobSupportDetails = () => (
-     <>
-          <h4 className="border-bottom pb-2 mb-3">Personal Information</h4>
-          <Row className="mb-3"><Col><Form.Label>First Name:</Form.Label><div className="previewValueDisplay">{serviceDetails.firstName || 'N/A'}</div></Col><Col><Form.Label>Middle Name:</Form.Label><div className="previewValueDisplay">{serviceDetails.middleName || 'N/A'}</div></Col><Col><Form.Label>Last Name:</Form.Label><div className="previewValueDisplay">{serviceDetails.lastName || 'N/A'}</div></Col></Row>
-          <Row className="mb-3"><Col><Form.Label>Date of Birth:</Form.Label><div className="previewValueDisplay">{serviceDetails.dob || 'N/A'}</div></Col><Col><Form.Label>Gender:</Form.Label><div className="previewValueDisplay">{serviceDetails.gender || 'N/A'}</div></Col><Col><Form.Label>Ethnicity:</Form.Label><div className="previewValueDisplay">{serviceDetails.ethnicity || 'N/A'}</div></Col></Row>
-          
-          <h4 className="border-bottom pb-2 mb-3 mt-4">Contact Information</h4>
-          <Row className="mb-3"><Col><Form.Label>Address:</Form.Label><div className="previewValueDisplay">{serviceDetails.address || 'N/A'}</div></Col><Col md={4}><Form.Label>Zip Code:</Form.Label><div className="previewValueDisplay">{serviceDetails.zipCode || 'N/A'}</div></Col></Row>
-          <Row className="mb-3"><Col><Form.Label>Country:</Form.Label><div className="previewValueDisplay">{serviceDetails.country || 'N/A'}</div></Col><Col><Form.Label>Mobile:</Form.Label><div className="previewValueDisplay">{serviceDetails.mobile || 'N/A'}</div></Col><Col><Form.Label>Email:</Form.Label><div className="previewValueDisplay">{serviceDetails.email || 'N/A'}</div></Col></Row>
-          
-          <h4 className="border-bottom pb-2 mb-3 mt-4">Employment Information</h4>
-          <Row className="mb-3"><Col><Form.Label>Security Clearance:</Form.Label><div className="previewValueDisplay">{serviceDetails.securityClearance || 'N/A'}</div></Col>{serviceDetails.securityClearance === 'yes' && (<Col><Form.Label>Clearance Level:</Form.Label><div className="previewValueDisplay">{serviceDetails.clearanceLevel || 'N/A'}</div></Col>)}<Col><Form.Label>Willing to Relocate:</Form.Label><div className="previewValueDisplay">{serviceDetails.willingToRelocate || 'N/A'}</div></Col></Row>
-          <Row className="mb-3">
-              <Col><Form.Label>Work Preference:</Form.Label><div className="previewValueDisplay">{serviceDetails.workPreference || 'N/A'}</div></Col>
-              <Col><Form.Label>Years of Experience:</Form.Label><div className="previewValueDisplay">{serviceDetails.yearsOfExperience || 'N/A'}</div></Col>
-          </Row>
-          <Row className="mb-3">
-            <Col><Form.Label>Restricted Companies:</Form.Label><div className="previewValueDisplay">{serviceDetails.restrictedCompanies || 'N/A'}</div></Col>
-          </Row>
+    const renderJobSupportDetails = () => (
+      <>
+        <h4 className="border-bottom pb-2 mb-3">Personal Information</h4>
+        <Row className="mb-3"><Col><Form.Label>First Name:</Form.Label><div className="previewValueDisplay">{serviceDetails.firstName || 'N/A'}</div></Col><Col><Form.Label>Middle Name:</Form.Label><div className="previewValueDisplay">{serviceDetails.middleName || 'N/A'}</div></Col><Col><Form.Label>Last Name:</Form.Label><div className="previewValueDisplay">{serviceDetails.lastName || 'N/A'}</div></Col></Row>
+        <Row className="mb-3"><Col><Form.Label>Date of Birth:</Form.Label><div className="previewValueDisplay">{serviceDetails.dob || 'N/A'}</div></Col><Col><Form.Label>Gender:</Form.Label><div className="previewValueDisplay">{serviceDetails.gender || 'N/A'}</div></Col><Col><Form.Label>Ethnicity:</Form.Label><div className="previewValueDisplay">{serviceDetails.ethnicity || 'N/A'}</div></Col></Row>
 
-          <h4 className="border-bottom pb-2 mb-3 mt-4">Job Preferences</h4>
-          <Row className="mb-3"><Col><Form.Label>Jobs to Apply For:</Form.Label><div className="previewValueDisplay">{serviceDetails.jobsApplyFor || 'N/A'}</div></Col><Col><Form.Label>Technology Skills:</Form.Label><div className="previewValueDisplay">{Array.isArray(serviceDetails.technologySkills) ? serviceDetails.technologySkills.join(', ') : (serviceDetails.technologySkills || 'N/A')}</div></Col></Row>
-          <Row className="mb-3"><Col><Form.Label>Current Salary:</Form.Label><div className="previewValueDisplay">{serviceDetails.currentSalary || 'N/A'}</div></Col><Col><Form.Label>Expected Salary:</Form.Label><div className="previewValueDisplay">{serviceDetails.expectedSalary || 'N/A'}</div></Col><Col><Form.Label>Visa Status:</Form.Label><div className="previewValueDisplay">{serviceDetails.visaStatus || 'N/A'}</div></Col></Row>
-          
-          <h4 className="border-bottom pb-2 mb-3 mt-4">Education</h4>
-          <Row className="mb-3"><Col><Form.Label>University Name:</Form.Label><div className="previewValueDisplay">{serviceDetails.schoolName || 'N/A'}</div></Col><Col><Form.Label>University Address:</Form.Label><div className="previewValueDisplay">{serviceDetails.schoolAddress || 'N/A'}</div></Col><Col><Form.Label>Course of Study:</Form.Label><div className="previewValueDisplay">{serviceDetails.courseOfStudy || 'N/A'}</div></Col></Row>
-          <Row className="mb-3"><Col><Form.Label>Graduation Date:</Form.Label><div className="previewValueDisplay">{serviceDetails.graduationDate || 'N/A'}</div></Col></Row>
-          
-          <h4 className="border-bottom pb-2 mb-3 mt-4">Current Employment</h4>
-          <Row className="mb-3"><Col><Form.Label>Current Company:</Form.Label><div className="previewValueDisplay">{serviceDetails.currentCompany || 'N/A'}</div></Col><Col><Form.Label>Current Designation:</Form.Label><div className="previewValueDisplay">{serviceDetails.currentDesignation || 'N/A'}</div></Col></Row>
-          <Row className="mb-3"><Col><Form.Label>Preferred Interview Time:</Form.Label><div className="previewValueDisplay">{serviceDetails.preferredInterviewTime || 'N/A'}</div></Col><Col><Form.Label>Earliest Joining Date:</Form.Label><div className="previewValueDisplay">{serviceDetails.earliestJoiningDate || 'N/A'}</div></Col><Col><Form.Label>Relieving Date:</Form.Label><div className="previewValueDisplay">{serviceDetails.relievingDate || 'N/A'}</div></Col></Row>
-          
-          <h4 className="border-bottom pb-2 mb-3 mt-4">References</h4>
-          <Row className="mb-3"><Col><Form.Label>Reference Name:</Form.Label><div className="previewValueDisplay">{serviceDetails.referenceName || 'N/A'}</div></Col><Col><Form.Label>Reference Phone:</Form.Label><div className="previewValueDisplay">{serviceDetails.referencePhone || 'N/A'}</div></Col><Col><Form.Label>Reference Address:</Form.Label><div className="previewValueDisplay">{serviceDetails.referenceAddress || 'N/A'}</div></Col></Row>
-          <Row className="mb-3"><Col><Form.Label>Reference Email:</Form.Label><div className="previewValueDisplay">{serviceDetails.referenceEmail || 'N/A'}</div></Col><Col><Form.Label>Reference Role:</Form.Label><div className="previewValueDisplay">{serviceDetails.referenceRole || 'N/A'}</div></Col></Row>
-          
-          <h4 className="border-bottom pb-2 mb-3 mt-4">Job Portal Information</h4>
-          <Form.Group className="mb-3"><Form.Label>Job Portal Account Name & Credentials:</Form.Label><div className="previewTextAreaDisplay">{serviceDetails.jobPortalAccountName || 'N/A'}</div></Form.Group>
-          
-          <h4 className="border-bottom pb-2 mb-3 mt-4">Uploaded Resume</h4>
-          <Form.Group className="mb-3"><Form.Label>Resume File Name:</Form.Label><div className="previewValueDisplay">{serviceDetails.resumeFileName ? <a href={serviceDetails.resumeUrl} target="_blank" rel="noopener noreferrer">{serviceDetails.resumeFileName}</a> : 'N/A'}</div></Form.Group>
-    </>
-  );
+        <h4 className="border-bottom pb-2 mb-3 mt-4">Contact Information</h4>
+        <Row className="mb-3"><Col><Form.Label>Address:</Form.Label><div className="previewValueDisplay">{serviceDetails.address || 'N/A'}</div></Col><Col md={4}><Form.Label>Zip Code:</Form.Label><div className="previewValueDisplay">{serviceDetails.zipCode || 'N/A'}</div></Col></Row>
+        <Row className="mb-3"><Col><Form.Label>Country:</Form.Label><div className="previewValueDisplay">{serviceDetails.country || 'N/A'}</div></Col><Col><Form.Label>Mobile:</Form.Label><div className="previewValueDisplay">{serviceDetails.mobile || 'N/A'}</div></Col><Col><Form.Label>Email:</Form.Label><div className="previewValueDisplay">{serviceDetails.email || 'N/A'}</div></Col></Row>
 
-  return (
-    <Modal show={show} onHide={onHide} centered size="lg">
-      <Modal.Header closeButton>
-        <Modal.Title>Your Profile Details for "{serviceDetails.service}"</Modal.Title>
-      </Modal.Header>
-      <Modal.Body style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-        {isSimpleService ? renderSimpleDetails() : renderJobSupportDetails()}
-      </Modal.Body>
-      <Modal.Footer>
-        <Button variant="secondary" onClick={onHide}>Close</Button>
-      </Modal.Footer>
-    </Modal>
-  );
-};
+        <h4 className="border-bottom pb-2 mb-3 mt-4">Employment Information</h4>
+        <Row className="mb-3"><Col><Form.Label>Security Clearance:</Form.Label><div className="previewValueDisplay">{serviceDetails.securityClearance || 'N/A'}</div></Col>{serviceDetails.securityClearance === 'yes' && (<Col><Form.Label>Clearance Level:</Form.Label><div className="previewValueDisplay">{serviceDetails.clearanceLevel || 'N/A'}</div></Col>)}<Col><Form.Label>Willing to Relocate:</Form.Label><div className="previewValueDisplay">{serviceDetails.willingToRelocate || 'N/A'}</div></Col></Row>
+        <Row className="mb-3">
+          <Col><Form.Label>Work Preference:</Form.Label><div className="previewValueDisplay">{serviceDetails.workPreference || 'N/A'}</div></Col>
+          <Col><Form.Label>Years of Experience:</Form.Label><div className="previewValueDisplay">{serviceDetails.yearsOfExperience || 'N/A'}</div></Col>
+        </Row>
+        <Row className="mb-3">
+          <Col><Form.Label>Restricted Companies:</Form.Label><div className="previewValueDisplay">{serviceDetails.restrictedCompanies || 'N/A'}</div></Col>
+        </Row>
 
- const handleImageView = (url) => {
+        <h4 className="border-bottom pb-2 mb-3 mt-4">Job Preferences</h4>
+        <Row className="mb-3"><Col><Form.Label>Jobs to Apply For:</Form.Label><div className="previewValueDisplay">{serviceDetails.jobsApplyFor || 'N/A'}</div></Col><Col><Form.Label>Technology Skills:</Form.Label><div className="previewValueDisplay">{Array.isArray(serviceDetails.technologySkills) ? serviceDetails.technologySkills.join(', ') : (serviceDetails.technologySkills || 'N/A')}</div></Col></Row>
+        <Row className="mb-3"><Col><Form.Label>Current Salary:</Form.Label><div className="previewValueDisplay">{serviceDetails.currentSalary || 'N/A'}</div></Col><Col><Form.Label>Expected Salary:</Form.Label><div className="previewValueDisplay">{serviceDetails.expectedSalary || 'N/A'}</div></Col><Col><Form.Label>Visa Status:</Form.Label><div className="previewValueDisplay">{serviceDetails.visaStatus || 'N/A'}</div></Col></Row>
+
+        <h4 className="border-bottom pb-2 mb-3 mt-4">Education</h4>
+        <Row className="mb-3"><Col><Form.Label>University Name:</Form.Label><div className="previewValueDisplay">{serviceDetails.schoolName || 'N/A'}</div></Col><Col><Form.Label>University Address:</Form.Label><div className="previewValueDisplay">{serviceDetails.schoolAddress || 'N/A'}</div></Col><Col><Form.Label>Course of Study:</Form.Label><div className="previewValueDisplay">{serviceDetails.courseOfStudy || 'N/A'}</div></Col></Row>
+        <Row className="mb-3"><Col><Form.Label>Graduation Date:</Form.Label><div className="previewValueDisplay">{serviceDetails.graduationDate || 'N/A'}</div></Col></Row>
+
+        <h4 className="border-bottom pb-2 mb-3 mt-4">Current Employment</h4>
+        <Row className="mb-3"><Col><Form.Label>Current Company:</Form.Label><div className="previewValueDisplay">{serviceDetails.currentCompany || 'N/A'}</div></Col><Col><Form.Label>Current Designation:</Form.Label><div className="previewValueDisplay">{serviceDetails.currentDesignation || 'N/A'}</div></Col></Row>
+        <Row className="mb-3"><Col><Form.Label>Preferred Interview Time:</Form.Label><div className="previewValueDisplay">{serviceDetails.preferredInterviewTime || 'N/A'}</div></Col><Col><Form.Label>Earliest Joining Date:</Form.Label><div className="previewValueDisplay">{serviceDetails.earliestJoiningDate || 'N/A'}</div></Col><Col><Form.Label>Relieving Date:</Form.Label><div className="previewValueDisplay">{serviceDetails.relievingDate || 'N/A'}</div></Col></Row>
+
+        <h4 className="border-bottom pb-2 mb-3 mt-4">References</h4>
+        <Row className="mb-3"><Col><Form.Label>Reference Name:</Form.Label><div className="previewValueDisplay">{serviceDetails.referenceName || 'N/A'}</div></Col><Col><Form.Label>Reference Phone:</Form.Label><div className="previewValueDisplay">{serviceDetails.referencePhone || 'N/A'}</div></Col><Col><Form.Label>Reference Address:</Form.Label><div className="previewValueDisplay">{serviceDetails.referenceAddress || 'N/A'}</div></Col></Row>
+        <Row className="mb-3"><Col><Form.Label>Reference Email:</Form.Label><div className="previewValueDisplay">{serviceDetails.referenceEmail || 'N/A'}</div></Col><Col><Form.Label>Reference Role:</Form.Label><div className="previewValueDisplay">{serviceDetails.referenceRole || 'N/A'}</div></Col></Row>
+
+        <h4 className="border-bottom pb-2 mb-3 mt-4">Job Portal Information</h4>
+        <Form.Group className="mb-3"><Form.Label>Job Portal Account Name & Credentials:</Form.Label><div className="previewTextAreaDisplay">{serviceDetails.jobPortalAccountName || 'N/A'}</div></Form.Group>
+
+        <h4 className="border-bottom pb-2 mb-3 mt-4">Uploaded Resume</h4>
+        <Form.Group className="mb-3"><Form.Label>Resume File Name:</Form.Label><div className="previewValueDisplay">{serviceDetails.resumeFileName ? <a href={serviceDetails.resumeUrl} target="_blank" rel="noopener noreferrer">{serviceDetails.resumeFileName}</a> : 'N/A'}</div></Form.Group>
+      </>
+    );
+
+    return (
+      <Modal show={show} onHide={onHide} centered size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title>Your Profile Details for "{serviceDetails.service}"</Modal.Title>
+        </Modal.Header>
+        <Modal.Body style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+          {isSimpleService ? renderSimpleDetails() : renderJobSupportDetails()}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={onHide}>Close</Button>
+        </Modal.Footer>
+      </Modal>
+    );
+  };
+
+  const handleImageView = (url) => {
     setImageUrlToView(url);
     setShowImageViewer(true);
   };
-  
+
   // Add this useMemo hook to combine data efficiently
   const updatedClientData = useMemo(() => {
     if (!clientData) return null;
@@ -3074,11 +3204,11 @@ const ClientServiceDetailsModal = ({ show, onHide, serviceDetails }) => {
   }, [clientData, allFiles]);
 
 
-// ... inside the ClientDashboard main component
+  // ... inside the ClientDashboard main component
 
-// In ClientDashboard.jsx, add this constant before the return statement.
+  // In ClientDashboard.jsx, add this constant before the return statement.
 
-const modernWorksheetStyles = `
+  const modernWorksheetStyles = `
   /* --- Main Worksheet & Tab Styles --- */
   .worksheet-view {
     max-width: 100%; /* Use full width available */
@@ -3475,6 +3605,70 @@ const modernWorksheetStyles = `
 
         .previewValueDisplay { padding: 0.4rem 0.6rem; font-size: 0.95rem; background-color: #e9ecef; border-radius: 5px; border: 1px solid #ced4da; min-height: 38px; display: flex; align-items: center; word-break: break-word; }
 .previewTextAreaDisplay { padding: 0.4rem 0.6rem; font-size: 0.95rem; background-color: #e9ecef; border-radius: 5px; border: 1px solid #ced4da; min-height: 80px; align-items: flex-start; display: flex; word-break: break-word; }
+
+       /* --- Under Development Page Styles --- */
+.under-development-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh;
+  text-align: center;
+  padding: 20px;
+}
+.back-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background-color: #f0f0f0;
+  color: #333;
+  transition: background-color 0.3s ease;
+  font-weight: 600;
+  margin-bottom: 30px;
+}
+html.dark-mode .back-btn {
+  background-color: #4a5568;
+  color: #e2e8f0;
+}
+.back-btn:hover {
+  background-color: #e0e0e0;
+}
+html.dark-mode .back-btn:hover {
+  background-color: #64748B;
+}
+.development-message h2 {
+  font-size: 32px;
+  margin-bottom: 10px;
+  color: var(--text-primary);
+}
+.development-message p {
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+.notify-btn {
+  background-color: #007bff;
+  color: white;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  margin-top: 20px;
+  transition: background-color 0.3s ease;
+}
+.notify-btn:hover {
+  background-color: #0056b3;
+}
+.notify-success-message {
+  color: #28a745;
+  font-weight: 500;
+  margin-top: 20px;
+}
+html.dark-mode .notify-success-message {
+  color: #9ae6b4;
+}
 
         /* Styles for various buttons and cards */
         .download-button {
@@ -4587,12 +4781,107 @@ const modernWorksheetStyles = `
                 font-size: 0.85rem;
             }
         }
+         /* --- NEW STYLES FOR SERVICES SECTION --- */
+        .services-browse {
+            margin-top: 50px;
+            text-align: center;
+        }
+        .services-browse h2 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 5px;
+            color: var(--text-primary);
+        }
+        .services-browse p {
+            font-size: 16px;
+            margin-bottom: 30px;
+            color: var(--text-secondary);
+        }
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .service-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .service-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .card-icon-container {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .card-icon-container svg {
+            width: 28px;
+            height: 28px;
+        }
+        .job-app-icon { background-color: #e0f2fe; color: #0ea5e9; }
+        .mobile-app-icon { background-color: #e0e7ff; color: #6366f1; }
+        .web-app-icon { background-color: #dcfce7; color: #22c55e; }
+        .digital-marketing-icon { background-color: #ffedd5; color: #f97316; }
+        .it-talent-icon { background-color: #f3e8ff; color: #a855f7; }
+        .cybersecurity-icon { background-color: #fee2e2; color: #ef4444; }
+
+        .service-card h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 15px 0 5px;
+            color: var(--text-primary);
+        }
+        .service-card p {
+            font-size: 14px;
+            line-height: 1.5;
+            margin: 0;
+            color: var(--text-secondary);
+            flex-grow: 1; /* Makes sure the text takes available space */
+        }
+        .dashboard-btn, .book-now-btn {
+            color: #ffffff;
+            padding: 12px 0;
+            width: 100%;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background-color 0.3s ease;
+        }
+        .book-now-btn { background-color: #10b981; }
+        .book-now-btn:hover { background-color: #059669; }
+        .dashboard-btn { background-color: #3b82f6; }
+        .dashboard-btn:hover { background-color: #2563eb; }
+        
+        /* Dark mode styles for new section */
+        html.dark-mode .services-browse p { color: #a0aec0; }
+        html.dark-mode .service-card { background-color: #2d3748; border-color: #4a5568; }
+        html.dark-mode .service-card:hover { box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+
+        /* In ClientDashboard.jsx, add these styles to one of your existing <style> blocks. */
+
+
+
         `}
       </style>
 
       {/* Client Header */}
       <ClientHeader
-       clientUserName={clientUserName}
+        clientUserName={clientUserName}
         clientInitials={clientInitials}
         isDarkMode={isDarkMode}
         toggleTheme={toggleTheme}
@@ -4967,7 +5256,22 @@ const modernWorksheetStyles = `
       {/* Main Content Area */}
       <div className="main-content-area">
         {/* Conditional rendering for Client Module vs. Worksheet View */}
-        {!isInWorksheetView ? (
+          {showUnderDevelopment ? (
+          // If true, render the "under development" container
+          <div className="under-development-container">
+            <button className="back-btn" onClick={handleGoBack}>← Go Back to Dashboard</button>
+            <div className="development-message">
+              <h2>{developmentService} Dashboard</h2>
+              <p>This dashboard is currently under development. We will update you as soon as it's ready!</p>
+              {!showNotifyMessage ? (
+                <button className="notify-btn" onClick={handleNotifyMeClick}>Notify me</button>
+              ) : (
+                <p className="notify-success-message">Once it's ready, we will send you an email notification. Thank you!</p>
+              )}
+            </div>
+          </div>
+        ) : (
+        !isInWorksheetView ? (
           <>
             <h2 className="dashboard-title">
               Client Module
@@ -4989,7 +5293,7 @@ const modernWorksheetStyles = `
               <>
                 <h1 style={{ textAlign: 'center', marginBottom: '32px' }}>Welcome, {clientUserName} </h1>
 
-                <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+                {/* <div style={{ textAlign: 'center', marginBottom: '32px' }}>
                   <button
                     onClick={() => {
                       setIsInWorksheetView(true); // Switch to worksheet view
@@ -4999,7 +5303,49 @@ const modernWorksheetStyles = `
                   >
                     View Your Job Applications
                   </button>
-                </div>
+                </div> */}
+
+                {/* --- NEW SECTION INSERTED HERE --- */}
+                {/* In the return block, under the "Dashboard" tab, replace the entire services-browse section. */}
+
+                <section className="services-browse">
+                  <h2>Browse Our Services</h2>
+                  <p>Find the right tools to accelerate your growth.</p>
+                  <div className="services-grid">
+                    {servicesData.map((service) => {
+                      // Check if the current service title exists in the list of active services
+                      const isActive = activeServices.some(active => active.title === service.title);
+
+                      return (
+                        <div key={service.key} className="service-card">
+                          <div className={`card-icon-container ${service.iconClass}`}>
+                            {service.icon}
+                          </div>
+                          <h3>{service.title}</h3>
+                          <p>{service.description}</p>
+
+                          {isActive ? (
+                            // If the service is active, show the "View Dashboard" button
+                            <button
+                              className="dashboard-btn"
+                              onClick={() => handleViewDashboardClick(service.title)}
+                            >
+                              View Dashboard →
+                            </button>
+                          ) : (
+                            // If the service is inactive, show the "Book Now" button
+                            <button
+                              className="book-now-btn"
+                              onClick={() => handleViewDashboardClick(service.title)}
+                            >
+                              Book Now
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
 
                 <div className="cards-section">
                   <div
@@ -5243,17 +5589,17 @@ const modernWorksheetStyles = `
                 setActiveSubTab={setActiveSubTab} // Pass sub-tab state for Documents
                 setIsInWorksheetView={setIsInWorksheetView} // Pass down
                 clientData={updatedClientData}
-          onImageView={handleImageView}
+                onImageView={handleImageView}
               />
             )}
             <Modal show={showImageViewer} onHide={() => setShowImageViewer(false)} size="lg" centered>
-        <Modal.Header closeButton>
-          <Modal.Title>Image Preview</Modal.Title>
-        </Modal.Header>
-        <Modal.Body style={{ textAlign: 'center', padding: '10px' }}>
-          <img src={imageUrlToView} alt="Document Preview" style={{ maxWidth: '100%', maxHeight: '75vh', borderRadius: '8px' }}/>
-        </Modal.Body>
-      </Modal>
+              <Modal.Header closeButton>
+                <Modal.Title>Image Preview</Modal.Title>
+              </Modal.Header>
+              <Modal.Body style={{ textAlign: 'center', padding: '10px' }}>
+                <img src={imageUrlToView} alt="Document Preview" style={{ maxWidth: '100%', maxHeight: '75vh', borderRadius: '8px' }} />
+              </Modal.Body>
+            </Modal>
           </>
         ) : (
           // Render the WorksheetView when isInWorksheetView is true
@@ -5333,8 +5679,9 @@ const modernWorksheetStyles = `
             setActiveSubTab={setActiveSubTab} // Pass sub-tab state for Documents
             setIsInWorksheetView={setIsInWorksheetView} // Pass down
             clientData={updatedClientData}
-          onImageView={handleImageView}
+            onImageView={handleImageView}
           />
+          )
         )}
 
       </div>
