@@ -600,7 +600,7 @@ const EmployeeData = () => {
   // States for Modals (Applications Tab)
   const [showAddApplicationModal, setShowAddApplicationModal] = useState(false);
   const [newApplicationFormData, setNewApplicationFormData] = useState({
-    jobTitle: '', company: '', platform: '', jobUrl: '', salaryRange: '', location: '', notes: '', jobId: '', role: '' // Added jobId
+    jobTitle: '', company: '',jobType: '', platform: '', jobUrl: '', location: '', notes: '', jobId: '', role: '' // Added jobId
   });
   const [selectedClientForApplication, setSelectedClientForApplication] = useState(null);
 
@@ -1912,7 +1912,7 @@ const handleSaveNewFile = async () => {
                   Currently viewing data for: {`${selectedClient.firstName} ${selectedClient.lastName}`}
                 </p>
                 <p style={{ fontSize: '0.9rem', color: '#475569', margin: 0 }}>
-                  Role: {selectedClient.role} | Location: {selectedClient.location} | Salary: {selectedClient.salaryRange}
+                  Role: {selectedClient.role} | Job Location: {selectedClient.location} | Salary: {selectedClient.jobType}
                 </p>
               </div>
 
@@ -2036,7 +2036,7 @@ const handleSaveNewFile = async () => {
                             <line x1="12" y1="1" x2="12" y2="23"></line>
                             <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
                           </svg>
-                          {selectedClient.salaryRange}
+                          {selectedClient.jobType}
                         </p>
                         <p style={clientDetailStyle}>
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={clientDetailIconStyle}>
@@ -2234,6 +2234,7 @@ const handleSaveNewFile = async () => {
                             <th style={applicationTableHeaderCellStyle}>S.No</th>
                             <th style={applicationTableHeaderCellStyle}>Job Title</th>
                             <th style={applicationTableHeaderCellStyle}>Company</th>
+                            <th style={applicationTableHeaderCellStyle}>Job Type</th>
                             <th style={applicationTableHeaderCellStyle}>Platform</th>
                             <th style={applicationTableHeaderCellStyle}>Job ID</th> {/* New Job ID Header */}
                             <th style={applicationTableHeaderCellStyle}>Link</th>
@@ -2257,6 +2258,7 @@ const handleSaveNewFile = async () => {
                                 </td> {/* S.No. in decreasing order */}
                                 <td style={applicationTableDataCellStyle}>{app.jobTitle}</td>
                                 <td style={applicationTableDataCellStyle}>{app.company}</td>
+                                <td style={applicationTableDataCellStyle}>{app.jobType}</td>
                                 <td style={applicationTableDataCellStyle}>{app.platform}</td>
                                 <td style={applicationTableDataCellStyle}>{app.jobId || '-'}</td> {/* Display Job ID */}
                                 <td style={applicationTableDataCellStyle}>
@@ -2453,7 +2455,7 @@ const handleSaveNewFile = async () => {
                         <option value="cover letter">Cover Letter</option>
                         <option value="interview screenshot">Interview Screenshot</option>
                         <option value="portfolio">Portfolio</option>
-                        <option value="report">Offers</option>
+                        <option value="offers">Offers</option>
                         <option value="other">Other</option>
                       </select>
                     </div>
@@ -2826,7 +2828,7 @@ const handleSaveNewFile = async () => {
                   Currently viewing data for: {selectedClient.name} (Inactive)
                 </p>
                 <p style={{ fontSize: '0.9rem', color: '#475569', margin: 0 }}>
-                  Role: {selectedClient.role} | Location: {selectedClient.location} | Salary: {selectedClient.salaryRange}
+                  Role: {selectedClient.role} | Job Location: {selectedClient.location} | Salary: {selectedClient.jobType}
                 </p>
               </div>
 
@@ -2949,7 +2951,7 @@ const handleSaveNewFile = async () => {
                             <line x1="12" y1="1" x2="12" y2="23"></line>
                             <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
                           </svg>
-                          {selectedClient.salaryRange}
+                          {selectedClient.jobType}
                         </p>
                         <p style={clientDetailStyle}>
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={clientDetailIconStyle}>
@@ -3736,19 +3738,22 @@ const handleSaveNewFile = async () => {
                   required
                 />
               </div>
-              <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Salary Range</label>
-                <input
-                  type="text"
-                  name="salaryRange"
-                  value={newApplicationFormData.salaryRange}
+                        <div style={modalFormFieldGroupStyle}>
+                <label style={modalLabelStyle}>Job Type</label>
+                <select
+                  name="jobType"
+                  value={newApplicationFormData.jobType}
                   onChange={handleNewApplicationFormChange}
-                  style={modalInputStyle}
-                  placeholder="e.g., $90,000 - $120,000"
-                />
+                  style={modalSelectStyle}
+                >
+                  <option value="">Select Job Type</option>
+                  <option value="Remote">Remote</option>
+                  <option value="On-site">On-site</option>
+                  <option value="Hybrid">Hybrid</option>
+                </select>
               </div>
               <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Location</label>
+                <label style={modalLabelStyle}>Job Location</label>
                 <input
                   type="text"
                   name="location"
@@ -3811,8 +3816,8 @@ const handleSaveNewFile = async () => {
               <p style={modalViewDetailItemStyle}><strong>Platform:</strong> {viewedApplication.platform}</p>
               <p style={modalViewDetailItemStyle}><strong>Job ID:</strong> {viewedApplication.jobId || '-'}</p> {/* Display Job ID */}
               <p style={modalViewDetailItemStyle}><strong>Job URL:</strong> <a href={viewedApplication.jobUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6' }}>{viewedApplication.jobUrl}</a></p>
-              <p style={modalViewDetailItemStyle}><strong>Salary Range:</strong> {viewedApplication.salaryRange || '-'}</p>
-              <p style={modalViewDetailItemStyle}><strong>Location:</strong> {viewedApplication.location || '-'}</p>
+              <p style={modalViewDetailItemStyle}><strong>Job Type:</strong> {viewedApplication.jobType || '-'}</p>
+              <p style={modalViewDetailItemStyle}><strong>Job Location:</strong> {viewedApplication.location || '-'}</p>
               <p style={modalViewDetailItemStyle}><strong>Status:</strong> <span style={{ ...applicationStatusBadgeStyle, ...getApplicationStatusStyle(viewedApplication.status) }}>{viewedApplication.status}</span></p>
               {viewedApplication.status === 'Interview' && (
                 <>
@@ -3920,18 +3925,22 @@ const handleSaveNewFile = async () => {
                   required
                 />
               </div>
-              <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Salary Range</label>
-                <input
-                  type="text"
-                  name="salaryRange"
-                  value={editedApplicationFormData.salaryRange}
+               <div style={modalFormFieldGroupStyle}>
+                <label style={modalLabelStyle}>Job Type</label>
+                <select
+                  name="jobType"
+                  value={editedApplicationFormData.jobType}
                   onChange={handleEditedApplicationFormChange}
-                  style={modalInputStyle}
-                />
+                  style={modalSelectStyle}
+                >
+                  <option value="">Select Job Type</option>
+                  <option value="Remote">Remote</option>
+                  <option value="On-site">On-site</option>
+                  <option value="Hybrid">Hybrid</option>
+                </select>
               </div>
               <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Location</label>
+                <label style={modalLabelStyle}>Job Location</label>
                 <input
                   type="text"
                   name="location"
@@ -4330,7 +4339,7 @@ const handleSaveNewFile = async () => {
                   <option value="cover letter">Cover Letter</option>
                   <option value="interview screenshot">Interview Screenshot</option>
                   <option value="portfolio">Portfolio</option>
-                  <option value="report">Offers</option>
+                  <option value="offers">Offers</option>
                   <option value="other">Other</option>
                 </select>
               </div>
@@ -5216,7 +5225,7 @@ const getFileTypeBadgeStyle = (type) => {
       return { backgroundColor: '#fffbeb', color: '#f59e0b' };
     case 'portfolio':
       return { backgroundColor: '#f3e8ff', color: '#8b5cf6' };
-    case 'report':
+    case 'Offers':
       return { backgroundColor: '#ffe4e6', color: '#ef4444' };
     case 'application attachment':
       return { backgroundColor: '#dbeafe', color: '#1d4ed8' };

@@ -1647,6 +1647,7 @@ const Applications = ({
                   <th style={{ padding: '12px', textAlign: 'center' }}>Job Title</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Job ID</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Company</th>
+                  <th style={{ padding: '12px', textAlign: 'center' }}>Job Type</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Link</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Job Description</th>
                 </tr>
@@ -1668,6 +1669,7 @@ const Applications = ({
                     <td style={{ padding: '12px' }}>{app.position}</td>
                     <td style={{ padding: '12px' }}>{app.jobId}</td>
                     <td style={{ padding: '12px' }}>{app.company}</td>
+                    <td style={{ padding: '12px' }}>{app.jobType || 'N/A'}</td>
                     <td style={{ padding: '12px' }}>
                       <a href={app.link} target="_blank" rel="noopener noreferrer" style={{ color: '#007bff', textDecoration: 'none' }}>
                         Link
@@ -2276,10 +2278,13 @@ const ClientDashboard = () => {
   const [filterWebsites, setFilterWebsites] = useState([]);
   const [filterPositions, setFilterPositions] = useState([]);
   const [filterCompanies, setFilterCompanies] = useState([]);
+    const [filtereJobType, setFilterJobType] = useState([]);
+
 
   const [uniqueWebsites, setUniqueWebsites] = useState([]);
   const [uniquePositions, setUniquePositions] = useState([]);
   const [uniqueCompanies, setUniqueCompanies] = useState([]);
+  const [uniqueJobType, setUniqueJobType] = useState([]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [startDateFilter, setStartDateFilter] = useState('');
@@ -2449,6 +2454,7 @@ const ClientDashboard = () => {
             position: app.jobTitle,
             company: app.company,
             link: app.jobUrl,
+            jobType: app.jobType || 'N/A', 
             dateAdded: formatDate(app.appliedDate), // Format this property too
             jobDescription: app.notes,
             status: app.status,
@@ -2727,18 +2733,21 @@ const ClientDashboard = () => {
     const allWebsites = new Set();
     const allPositions = new Set();
     const allCompanies = new Set();
+    const allJobType = new Set();
 
     Object.values(applicationsData).forEach(dateApps => {
       dateApps.forEach(app => {
         allWebsites.add(app.website);
         allPositions.add(app.position);
         allCompanies.add(app.company);
+        allJobType.add(app.jobType);
       });
     });
 
     setUniqueWebsites(Array.from(allWebsites).sort());
     setUniquePositions(Array.from(allPositions).sort());
     setUniqueCompanies(Array.from(allCompanies).sort());
+     setUniqueJobType(Array.from(allJobType).sort());
   }, []);
 
   // Flatten all applications once and add their original date for Applications tab
@@ -2860,6 +2869,7 @@ const ClientDashboard = () => {
       'Job Title': app.position,
       'Job ID': jobId,
       'Company': app.company,
+      'Job Type': app.jobType || 'N/A',
       'Link': app.link,
       'Job Description': app.jobDescription
     }));
@@ -4944,6 +4954,7 @@ html.dark-mode .notify-success-message {
                     <th className="modal-table-header">Time</th>
                     <th className="modal-table-header">Job ID</th>
                     <th className="modal-table-header">Company</th>
+                    <th className="modal-table-header">Job Type</th>
                     <th className="modal-table-header">Recruiter Mail ID</th>
                     <th className="modal-table-header">Round</th>
                     <th className="modal-table-header">Attachment</th>
@@ -4958,6 +4969,7 @@ html.dark-mode .notify-success-message {
                       <td className="modal-table-cell">{interview.interviewTime}</td>
                       <td className="modal-table-cell">{interview.jobId}</td>
                       <td style={{ fontWeight: '600' }} className="modal-table-cell">{interview.company}</td>
+                       <td style={{ fontWeight: '600' }} className="modal-table-cell">{interview.jobType}</td>
                       <td className="modal-table-cell">{interview.recruiterMail}</td>
                       <td className="modal-table-cell">
                         <div style={{
