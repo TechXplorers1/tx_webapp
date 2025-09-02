@@ -7,6 +7,7 @@ import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
 import JsNavbar from './JsNavbar';
 import { Card, Button, Form, InputGroup, Modal } from 'react-bootstrap';
 import { useAuth } from '../components/AuthContext';
+import '../styles/AuthForm.css'; // Import the new shared CSS file
 
 
 // Import Firebase auth and database services
@@ -161,145 +162,12 @@ export default function SignupPage() {
     navigate('/login');
   };
 
-  const formControlStyle = {
-    borderRadius: '12px',
-    padding: '12px 16px',
-    border: '1px solid #ccc',
-    fontSize: '1rem',
-    boxShadow: 'none',
-  };
-
-  const inputGroupTextStyle = {
-    borderRadius: '12px 0 0 12px',
-    backgroundColor: '#f8f9fa',
-    border: '1px solid #ccc',
-    fontSize: '1.2rem',
-    padding: '0.75rem 1rem',
-  };
-
-  const inputRightTextStyle = {
-    ...inputGroupTextStyle,
-    borderRadius: '0 12px 12px 0',
-    borderLeft: 'none',
-    cursor: 'pointer',
-  };
-
-   const styles = `
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-    
-    .signup-page-wrapper {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      font-family: 'Inter', sans-serif;
-      padding: 1rem;
-      background-color: #f8f9fa;
-    }
-    .signup-card {
-      width: 100%;
-      max-width: 480px;
-      background-color: #ffffff;
-      padding: 2.5rem;
-      border: 1px solid #e9ecef;
-      border-radius: 16px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-      margin: 2rem 0;
-    }
-    .signup-title {
-      font-size: 1.8rem;
-      font-weight: 700;
-      margin-bottom: 1.5rem;
-      color: #0d6efd;
-    }
-    .google-btn {
-      padding: 0.75rem;
-      border-radius: 8px;
-      font-weight: 500;
-      transition: background-color 0.2s ease;
-    }
-    .or-divider {
-      display: flex;
-      align-items: center;
-      text-align: center;
-      color: #adb5bd;
-      margin: 1.5rem 0;
-    }
-    .or-divider::before, .or-divider::after {
-      content: '';
-      flex: 1;
-      border-bottom: 1px solid #dee2e6;
-    }
-    .or-divider:not(:empty)::before {
-      margin-right: .5em;
-    }
-    .or-divider:not(:empty)::after {
-      margin-left: .5em;
-    }
-    .form-label-modern {
-      font-weight: 500;
-      margin-bottom: 0.5rem;
-      color: #495057;
-    }
-    .input-group-modern {
-      display: flex;
-      align-items: center;
-      border: 1px solid #ced4da;
-      border-radius: 8px;
-      transition: border-color 0.2s ease, box-shadow 0.2s ease;
-      background-color: #f8f9fa;
-    }
-    .input-group-modern:focus-within {
-      border-color: #86b7fe;
-      box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-      background-color: #ffffff;
-    }
-    .input-group-icon {
-      padding: 0.75rem 1rem;
-      color: #6c757d;
-      font-size: 1.2rem;
-    }
-    .form-control-modern {
-      border: none;
-      box-shadow: none;
-      background: transparent;
-      flex-grow: 1;
-      padding: 0.75rem 1rem;
-      padding-left: 0;
-    }
-    .form-control-modern:focus {
-      box-shadow: none;
-      background: transparent;
-    }
-    .password-toggle-icon {
-      cursor: pointer;
-      padding-right: 1rem;
-      color: #6c757d;
-    }
-    .signup-btn-modern {
-      padding: 0.8rem;
-      font-weight: 600;
-      border-radius: 8px;
-      transition: background-color 0.3s ease, transform 0.2s ease;
-    }
-    .signup-btn-modern:hover {
-      transform: translateY(-2px);
-    }
-    .password-hint {
-      font-size: 0.8rem;
-      color: #6c757d;
-      margin-top: 0.25rem;
-    }
-  `;
-
   return (
       <>
-      <style>{styles}</style>
-      <div className="signup-page-wrapper">
+      <div className="auth-page-wrapper">
         <JsNavbar />
-        <div className="signup-card">
-          <h3 className="text-center signup-title">Create an Account</h3>
+        <div className="auth-card">
+          <h3 className="text-center auth-title">Create an Account</h3>
           <Button
             variant="outline-secondary"
             className="w-100 mb-3 d-flex align-items-center justify-content-center gap-2 google-btn"
@@ -364,12 +232,12 @@ export default function SignupPage() {
               <Form.Control.Feedback type="invalid">{confirmPasswordError}</Form.Control.Feedback>
             </Form.Group>
 
-              <Button type="submit" className="w-100 btn btn-primary text-white fw-bold signup-btn-modern">
+              <Button type="submit" className="w-100 btn btn-primary text-white fw-bold auth-btn-modern">
               Sign Up
             </Button>
 
                <div className="text-center mt-3">
-              <span>Already have an account?</span>
+              <span className="auth-link-text">Already have an account?</span>
               <span
                 style={{ color: '#007bff', fontWeight: 600, marginLeft: '0.5rem', cursor: 'pointer' }}
                 onClick={() => navigate("/login")}

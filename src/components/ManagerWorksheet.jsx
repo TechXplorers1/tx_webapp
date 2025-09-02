@@ -55,29 +55,6 @@ const FilterComponent = ({
         </select>
       </div>
 
-      <div className="filter-group-style">
-        <label className="filter-label-style">Quick Filters</label>
-        <div className="quick-filter-buttons-style">
-          <button
-            onClick={() => handleQuickFilterChange('Last 7 Days')}
-            className={`quick-filter-button-style ${quickFilter === 'Last 7 Days' ? 'active' : ''}`}
-          >
-            Last 7 Days
-          </button>
-          <button
-            onClick={() => handleQuickFilterChange('Last 30 Days')}
-            className={`quick-filter-button-style ${quickFilter === 'Last 30 Days' ? 'active' : ''}`}
-          >
-            Last 30 Days
-          </button>
-          <button
-            onClick={() => handleQuickFilterChange('All Time')}
-            className={`quick-filter-button-style ${quickFilter === 'All Time' ? 'active' : ''}`}
-          >
-            All Time
-          </button>
-        </div>
-      </div>
 
       {areFiltersActive() && (
         <div className="clear-filters-button-container-style">
@@ -1907,6 +1884,13 @@ Please provide a summary no longer than 150 words.`;
  const ApplicationsTab = ({ 
     applicationData, 
     employees,
+    uniqueClientNames,
+    applicationSearchQuery,
+    handleApplicationSearchChange,
+    applicationFilterEmployee,
+    handleApplicationFilterEmployeeChange,
+    applicationFilterClient,
+    handleApplicationFilterClientChange,
     filterDateRange,
     handleDateRangeChange,
     sortOrder,
@@ -1940,7 +1924,7 @@ Please provide a summary no longer than 150 words.`;
     <section className="applications-management-section">
       <h2 className="client-assignment-title">Client Applications</h2>
        <FilterComponent
-              filterDateRange={filterDateRange}
+             filterDateRange={filterDateRange}
               handleDateRangeChange={handleDateRangeChange}
               sortOrder={sortOrder}
               setSortOrder={setSortOrder}
@@ -1950,6 +1934,38 @@ Please provide a summary no longer than 150 words.`;
               handleClearFilters={handleClearFilters}
               sortOptions={['Newest First', 'Oldest First', 'Job Title A-Z', 'Company A-Z']}
             />
+
+            {/* Search and Filter Section */}
+      <div className="applications-filters">
+        <div className="search-input-wrapper">
+          <i className="fas fa-search"></i>
+          <input
+            type="text"
+            placeholder="Search by Employee, Client, Job Title..."
+            value={applicationSearchQuery}
+            onChange={handleApplicationSearchChange}
+          />
+        </div>
+        <div className="filter-dropdown">
+          <select value={applicationFilterEmployee} onChange={handleApplicationFilterEmployeeChange}>
+            <option value="">Filter by Employee</option>
+            {employees.map(emp => (
+              <option key={emp.firebaseKey} value={emp.fullName}>{emp.fullName}</option>
+            ))}
+          </select>
+          <i className="fas fa-chevron-down"></i>
+        </div>
+        <div className="filter-dropdown">
+          <select value={applicationFilterClient} onChange={handleApplicationFilterClientChange}>
+            <option value="">Filter by Client</option>
+            {uniqueClientNames.map(name => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+          </select>
+          <i className="fas fa-chevron-down"></i>
+        </div>
+      </div>
+
       <div className="table-responsive">
         <table className="applications-table">
           <thead>
@@ -2012,6 +2028,13 @@ Please provide a summary no longer than 150 words.`;
                 </React.Fragment>
               );
             })}
+             {Object.keys(groupedByClient).length === 0 && (
+                <tr>
+                  <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-color)' }}>
+                    No applications found matching your criteria.
+                  </td>
+                </tr>
+              )}
           </tbody>
         </table>
       </div>
@@ -2759,6 +2782,7 @@ Please provide a summary no longer than 150 words.`;
     display: flex;
     flex-direction: column;
     gap: 8px;
+    margin-bottom:10px;
   }
   .filter-label-style {
     font-size: 0.875rem;
@@ -2786,12 +2810,14 @@ Please provide a summary no longer than 150 words.`;
     font-size: 0.9rem;
     color: var(--text-color);
     background-color: var(--card-bg);
-    width: 100%;
+    width: 50%;
+     margin-bottom: 10px;
+    
   }
   .quick-filter-buttons-style {
-    display: flex;
+   
     gap: 8px;
-    flex-wrap: wrap;
+    
   }
   .quick-filter-button-style {
     background-color: var(--button-hover-bg);
@@ -2812,7 +2838,8 @@ Please provide a summary no longer than 150 words.`;
     display: flex;
     flex-direction: column;
     gap: 8px;
-    justify-self: end;
+    justify-self: start;
+     margin-bottom: 10px;
   }
   .clear-filters-button-style {
     background: #fef2f2;
@@ -4952,8 +4979,15 @@ Please provide a summary no longer than 150 words.`;
        {/* --- NEW Applications Tab UI --- */}
         {activeTab === 'Applications' && (
           <ApplicationsTab
-            applicationData={applicationData}
+            applicationData={filteredApplicationData}
             employees={displayEmployees}
+            uniqueClientNames={uniqueAssignedClientNames}
+            applicationSearchQuery={applicationSearchQuery}
+            handleApplicationSearchChange={handleApplicationSearchChange}
+            applicationFilterEmployee={applicationFilterEmployee}
+            handleApplicationFilterEmployeeChange={handleApplicationFilterEmployeeChange}
+            applicationFilterClient={applicationFilterClient}
+            handleApplicationFilterClientChange={handleApplicationFilterClientChange}
             filterDateRange={filterDateRange}
             handleDateRangeChange={handleDateRangeChange}
             sortOrder={sortOrder}
@@ -4963,6 +4997,7 @@ Please provide a summary no longer than 150 words.`;
             areFiltersActive={areFiltersActive}
             handleClearFilters={handleClearFilters}
           />
+
         )}
 
         {activeTab === 'Interviews' && (

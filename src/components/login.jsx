@@ -7,6 +7,7 @@ import { MdEmail } from "react-icons/md";
 import { RiLockPasswordFill } from "react-icons/ri";
 import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
 import { useAuth } from '../components/AuthContext';
+import '../styles/AuthForm.css'; // Import the new shared CSS file
 
 // Import Firebase services
 import { auth, database } from "../../src/firebase";
@@ -32,7 +33,7 @@ export default function LoginPage() {
   const [forgotEmail, setForgotEmail] = useState("");
   const [modalAlert, setModalAlert] = useState({ type: "", message: "" });
 
-  // --- 🔀 Unified Login Processor ---
+  // --- 楳 Unified Login Processor ---
   const processLogin = async (user) => {
     const dbRef = ref(database);
     const snapshot = await get(child(dbRef, `users/${user.uid}`));
@@ -72,7 +73,7 @@ export default function LoginPage() {
   };
 
 
-  // --- 🔐 Firebase Email/Password Login Handler ---
+  // --- 柏 Firebase Email/Password Login Handler ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoginError("");
@@ -95,7 +96,7 @@ export default function LoginPage() {
     }
   };
 
-  // --- 🇬 Google Login Handler ---
+  // ---  Google Login Handler ---
   const handleGoogleLogin = async () => {
     const provider = new GoogleAuthProvider();
     try {
@@ -107,7 +108,7 @@ export default function LoginPage() {
     }
   };
 
-  // --- 🔁 Firebase Password Reset Handler ---
+  // --- 煤 Firebase Password Reset Handler ---
   const handlePasswordReset = async () => {
     if (!forgotEmail.includes("@")) {
       setModalAlert({ type: "danger", message: "Please enter a valid email address." });
@@ -128,110 +129,12 @@ export default function LoginPage() {
     setModalAlert({ type: "", message: "" });
   }
 
-  const styles = `
-    .login-page-wrapper {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      font-family: 'Inter', sans-serif;
-      padding: 1rem;
-      background-color: #f8f9fa;
-    }
-    .login-card {
-      width: 100%;
-      max-width: 480px;
-      background-color: #ffffff;
-      padding: 2.5rem;
-      border: 1px solid #e9ecef;
-      border-radius: 16px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-    }
-    .login-title {
-      font-size: 1.8rem;
-      font-weight: 700;
-      margin-bottom: 1.5rem;
-      color: #0d6efd;
-    }
-    .google-btn {
-      padding: 0.75rem;
-      border-radius: 8px;
-      font-weight: 500;
-      transition: background-color 0.2s ease;
-    }
-    .or-divider {
-      display: flex;
-      align-items: center;
-      text-align: center;
-      color: #adb5bd;
-      margin: 1.5rem 0;
-    }
-    .or-divider::before, .or-divider::after {
-      content: '';
-      flex: 1;
-      border-bottom: 1px solid #dee2e6;
-    }
-    .or-divider:not(:empty)::before {
-      margin-right: .5em;
-    }
-    .or-divider:not(:empty)::after {
-      margin-left: .5em;
-    }
-    .form-label-modern {
-      font-weight: 500;
-      margin-bottom: 0.5rem;
-      color: #495057;
-    }
-    .input-group-modern {
-      display: flex;
-      align-items: center;
-      border: 1px solid #ced4da;
-      border-radius: 8px;
-      transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    }
-    .input-group-modern:focus-within {
-      border-color: #86b7fe;
-      box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-    }
-    .input-group-icon {
-      padding: 0.75rem 1rem;
-      color: #6c757d;
-      font-size: 1.2rem;
-    }
-    .form-control-modern {
-      border: none;
-      box-shadow: none;
-      flex-grow: 1;
-      padding: 0.75rem 1rem;
-      padding-left: 0;
-    }
-    .form-control-modern:focus {
-      box-shadow: none;
-    }
-    .password-toggle-icon {
-      cursor: pointer;
-      padding-right: 1rem;
-      color: #6c757d;
-    }
-    .login-btn-modern {
-      padding: 0.8rem;
-      font-weight: 600;
-      border-radius: 8px;
-      transition: background-color 0.3s ease, transform 0.2s ease;
-    }
-    .login-btn-modern:hover {
-      transform: translateY(-2px);
-    }
-  `;
-
   return (
  <>
-      <style>{styles}</style>
-      <div className="login-page-wrapper">
+      <div className="auth-page-wrapper">
         <JsNavbar />
-        <div className="login-card">
-          <h3 className="text-center login-title">Login to Your Account</h3>
+        <div className="auth-card">
+          <h3 className="text-center auth-title">Login to Your Account</h3>
           <Button
             variant="outline-secondary"
             className="w-100 mb-3 d-flex align-items-center justify-content-center gap-2 google-btn"
@@ -286,10 +189,10 @@ export default function LoginPage() {
 
           {loginError && <Alert variant="danger" className="py-2">{loginError}</Alert>}
 
-          <Button type="submit" className="w-100 btn btn-primary text-white fw-bold login-btn-modern">Log In</Button>
+          <Button type="submit" className="w-100 btn btn-primary text-white fw-bold auth-btn-modern">Log In</Button>
 
           <div className="text-center mt-3">
-            <span>Don't have an account?</span>
+            <span className="auth-link-text">Don't have an account?</span>
             <span
               style={{ color: '#007bff', fontWeight: 600, marginLeft: '0.5rem', cursor: 'pointer' }}
               onClick={() => navigate('/signup')}

@@ -64,11 +64,13 @@ body {
 }
 
 
+/* In index.css, REPLACE the .dark-mode .form-control block */
+
 .dark-mode .form-control,
 .dark-mode .form-select {
-  background-color: #fff !important;
-  color: #fff !important;
-  border: 1px solid #666 !important;
+  background-color: #4a4a4a !important; /* Corrected background color */
+  color: #f1f1f1 !important;
+  /* border: 1px solid #666 !important; */
 }
 
 .dark-mode .form-check-input:checked {

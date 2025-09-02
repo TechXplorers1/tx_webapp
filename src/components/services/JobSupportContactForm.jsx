@@ -280,6 +280,8 @@ const JobSupportContactForm = () => {
 
 // In JobSupportContactForm.jsx, REPLACE your existing `modernStyles` variable with this one.
 
+  // In JobSupportContactForm.jsx, REPLACE your existing `modernStyles` variable with this one.
+
   const modernStyles = `
     .job-support-form-wrapper {
       background: #f8f9fa; /* Light grey background for the whole page */
@@ -295,7 +297,7 @@ const JobSupportContactForm = () => {
       background-color: #ffffff;
       padding: 2rem 2.5rem;
       border-radius: 16px;
-      box-shadow: 0 10px B30px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
       margin-top: 50px;
       margin-bottom: 50px;
       position: relative;
@@ -453,6 +455,97 @@ const JobSupportContactForm = () => {
       border: 1px solid #ced4da;
       border-radius: 4px;
       padding: 6px;
+    }
+    
+    /* --- DARK MODE STYLES --- */
+    .dark-mode .job-support-form-wrapper {
+        background: #1a202c !important;
+    }
+    .dark-mode .form-container-modern {
+        background-color: #2d3748 !important;
+        color: #e2e8f0 !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
+    }
+    .dark-mode .back-button-modern,
+    .dark-mode .form-header-modern,
+    .dark-mode .step-header-modern,
+    .dark-mode .form-label {
+        color: #e2e8f0 !important;
+    }
+    .dark-mode .form-control,
+    .dark-mode .form-select {
+        background-color: #1f2937 !important;
+        color: #e2e8f0 !important;
+        border-color: #4a5568 !important;
+    }
+    .dark-mode .form-control::placeholder {
+        color: #a0aec0 !important;
+    }
+    .dark-mode .form-control:focus,
+    .dark-mode .form-select:focus {
+        border-color: #4299e1 !important;
+        box-shadow: 0 0 0 0.25rem rgba(66, 153, 225, 0.25) !important;
+    }
+    .dark-mode .form-select {
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23a0aec0' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
+    }
+    .dark-mode .progress-bar-modern .progress {
+        background-color: #4a5568 !important;
+    }
+    .dark-mode .navigation-buttons,
+    .dark-mode .step-header-modern {
+        border-color: #4a5568 !important;
+    }
+    .dark-mode .nav-button.prev {
+        background-color: transparent !important;
+        border-color: #a0aec0 !important;
+        color: #a0aec0 !important;
+    }
+    .dark-mode .nav-button.prev:hover {
+        background-color: #a0aec0 !important;
+        color: #1a202c !important;
+    }
+    .dark-mode .country-dropdown-list {
+        background: #1f2937 !important;
+        border-color: #4a5568 !important;
+    }
+    .dark-mode .country-dropdown-item {
+        color: #e2e8f0 !important;
+    }
+    .dark-mode .country-dropdown-item:hover {
+        background-color: #374151 !important;
+    }
+    .dark-mode .country-dropdown-search input {
+        background-color: #2d3748 !important;
+        color: #e2e8f0 !important;
+        border-color: #4a5568 !important;
+    }
+    .dark-mode .modal-content {
+        background-color: #2d3748 !important;
+        color: #e2e8f0 !important;
+    }
+    .dark-mode .modal-header, .dark-mode .modal-footer {
+        border-color: #4a5568 !important;
+    }
+    .dark-mode .modal-title, .dark-mode .modal-body h4 {
+        color: #e2e8f0 !important;
+    }
+    .dark-mode .btn-close {
+        filter: invert(1) grayscale(100%) brightness(200%);
+    }
+    .dark-mode div[style*="background-color: rgb(248, 249, 250)"] {
+        background-color: #1f2937 !important;
+    }
+    .dark-mode div[style*="background-color: rgb(233, 236, 239)"] {
+        background-color: #374151 !important;
+        color: #e2e8f0 !important;
+        border-color: #4a5568 !important;
+    }
+    .dark-mode .text-danger {
+        color: #f56565 !important;
+    }
+    .dark-mode .text-muted {
+        color: #a0aec0 !important;
     }
   `;
 
