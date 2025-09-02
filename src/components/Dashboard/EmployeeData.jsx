@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Modal } from 'react-bootstrap'; // Using react-bootstrap Modal
+import { Modal, Spinner } from 'react-bootstrap'; // Using react-bootstrap Modal
 import { getDatabase, ref, onValue, query, orderByChild, equalTo, update, remove, set } from "firebase/database";
 import { database } from '../../firebase'; // Import your Firebase config
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject  } from "firebase/storage";
 
 
 const simplifiedServices = ['Mobile Development', 'Web Development', 'Digital Marketing', 'IT Talent Supply', 'Cyber Security'];
@@ -394,6 +394,7 @@ const EmployeeData = () => {
   });
 
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const profileDropdownRef = useRef(null);
 
   // NEW: State for controlling the visibility of the Employee Profile Modal
@@ -627,6 +628,10 @@ const EmployeeData = () => {
   const [showImageViewer, setShowImageViewer] = useState(false);
   const [imageUrlToView, setImageUrlToView] = useState('');
 
+ const [showDeleteFileModal, setShowDeleteFileModal] = useState(false);
+  const [fileToDelete, setFileToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   // NEW: State for new clients awaiting acceptance
   const [newClients, setNewClients] = useState([]);
 
@@ -814,6 +819,60 @@ const EmployeeData = () => {
       alert("Failed to update resume. Please try again.");
     }
   };
+
+  const handleRequestDeleteFile = (client, file) => {
+    // Store all necessary info for deletion
+    setFileToDelete({
+      clientFirebaseKey: client.clientFirebaseKey,
+      registrationKey: client.registrationKey,
+      file: file, // Pass the whole file object
+    });
+    setShowDeleteFileModal(true);
+  };
+
+  const handleConfirmDeleteFile = async () => {
+    if (!fileToDelete) return;
+
+
+     setIsDeleting(true);
+    const { clientFirebaseKey, registrationKey, file } = fileToDelete;
+
+    try {
+      // 1. Create a reference from the download URL and delete from Firebase Storage
+      const fileStorageRef = storageRef(getStorage(), file.downloadUrl);
+      await deleteObject(fileStorageRef);
+
+      // 2. Get the current list of files from the Realtime Database
+      const filesRef = ref(database, `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}/files`);
+      onValue(ref(database, `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}`), (snapshot) => {
+        const registrationData = snapshot.val();
+        const currentFiles = registrationData.files || [];
+        
+        // 3. Filter out the deleted file and update the list in the Realtime Database
+        const updatedFiles = currentFiles.filter(f => f.id !== file.id);
+        set(filesRef, updatedFiles);
+
+      }, { onlyOnce: true }); // Fetch the data once to perform the update
+
+      triggerNotification("File deleted successfully from storage and database!");
+
+    } catch (error) {
+      console.error("Error deleting file:", error);
+      // Handle specific Firebase Storage errors if needed
+      if (error.code === 'storage/object-not-found') {
+        alert("File not found in storage, but removing from database.");
+        // You might still want to proceed with database removal here
+      } else {
+        alert("Failed to delete file. Please check permissions or try again.");
+      }
+    } finally {
+      // 4. Close the modal and reset the state
+      setShowDeleteFileModal(false);
+      setFileToDelete(null);
+      setIsDeleting(false);
+    }
+  };
+
 
   const handleDownloadResume = (clientName) => {
     // Placeholder for actual resume download logic
@@ -1152,6 +1211,7 @@ const handleSaveNewFile = async () => {
     return;
   }
 
+  setIsUploading(true);
   const { clientFirebaseKey, registrationKey } = selectedClientForFile;
 
   try {
@@ -1191,6 +1251,8 @@ const handleSaveNewFile = async () => {
   } catch (error) {
     console.error("Error uploading file:", error);
     alert("File upload failed. Please try again.");
+  } finally {
+    setIsUploading(false); // Stop loading spinner regardless of outcome
   }
 };
 
@@ -1255,35 +1317,49 @@ const handleSaveNewFile = async () => {
   };
 
 
-  const handleDeleteFile = (clientId, fileId) => {
+  const openDeleteConfirmModal = (client, file) => {
+    setFileToDelete({ client, file });
+    setShowDeleteConfirmModal(true);
+  };
+
+  // 2. New function to handle the actual deletion after confirmation
+  const confirmDeleteFile = () => {
+    if (!fileToDelete) return;
+
+    const { client, file } = fileToDelete;
+
     const updateClientList = (prevClients) => {
-      return prevClients.map(client =>
-        client.id === clientId
+      return prevClients.map(c =>
+        c.id === client.id
           ? {
-            ...client,
-            files: client.files.filter(file => file.id !== fileId),
+            ...c,
+            files: c.files.filter(f => f.id !== file.id),
           }
-          : client
+          : c
       );
     };
 
-    const targetClient = [...activeClients, ...inactiveClients].find(c => c.id === clientId);
-    if (targetClient && targetClient.status === 'active') {
+    if (client.status === 'active') {
       setActiveClients(updateClientList);
-    } else if (targetClient && targetClient.status === 'inactive') {
+    } else if (client.status === 'inactive') {
       setInactiveClients(updateClientList);
     }
 
-    // Update selectedClient to reference the newly updated client object
     setSelectedClient(prevSelected => {
-      if (prevSelected && prevSelected.id === clientId) {
-        const updatedClient = updateClientList([prevSelected]).find(c => c.id === prevSelected.id);
-        return updatedClient || null;
+      if (prevSelected && prevSelected.id === client.id) {
+        return updateClientList([prevSelected])[0] || null;
       }
       return prevSelected;
     });
-
-    triggerNotification("File deleted successfully!"); // Trigger notification
+    
+    triggerNotification("File deleted successfully!");
+    closeDeleteConfirmModal(); // Close modal after deleting
+  };
+  
+  // 3. New helper function to close the modal and reset state
+  const closeDeleteConfirmModal = () => {
+    setShowDeleteConfirmModal(false);
+    setFileToDelete(null);
   };
 
   const getFilteredAndSortedFiles = (files) => {
@@ -2167,10 +2243,9 @@ const handleSaveNewFile = async () => {
                           onClick={handleClearFilters}
                           style={clearFiltersButtonStyle}
                         >
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21 4H8l-7 16 7 16h13a2 0 0 0 2-2V6a2 0 0 0-2-2z"></path>
-                            <line x1="18" y1="9" x2="12" y2="15"></line>
-                            <line x1="12" y1="9" x2="18" y2="15"></line>
+                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
                           </svg>
                           Clear Filters
                         </button>
@@ -2236,7 +2311,7 @@ const handleSaveNewFile = async () => {
                             <th style={applicationTableHeaderCellStyle}>Company</th>
                             <th style={applicationTableHeaderCellStyle}>Job Type</th>
                             <th style={applicationTableHeaderCellStyle}>Platform</th>
-                            <th style={applicationTableHeaderCellStyle}>Job ID</th> {/* New Job ID Header */}
+                            <th style={applicationTableHeaderCellStyle}>Job ID</th>
                             <th style={applicationTableHeaderCellStyle}>Link</th>
                             <th style={applicationTableHeaderCellStyle}>Applied Date</th>
                             <th style={applicationTableHeaderCellStyle}>Attachments</th>
@@ -2255,7 +2330,7 @@ const handleSaveNewFile = async () => {
                               <tr key={app.id}>
                                 <td style={applicationTableDataCellStyle}>
                                   {getFilteredAndSortedApplications(selectedClient.jobApplications).length - index}
-                                </td> {/* S.No. in decreasing order */}
+                                </td>
                                 <td style={applicationTableDataCellStyle}>{app.jobTitle}</td>
                                 <td style={applicationTableDataCellStyle}>{app.company}</td>
                                 <td style={applicationTableDataCellStyle}>{app.jobType}</td>
@@ -2398,9 +2473,8 @@ const handleSaveNewFile = async () => {
                           style={clearFiltersButtonStyle}
                         >
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21 4H8l-7 16 7 16h13a2 2 0 0 0 2-2V6a2 0 0 0-2-2z"></path>
-                            <line x1="18" y1="9" x2="12" y2="15"></line>
-                            <line x1="12" y1="9" x2="18" y2="15"></line>
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
                           </svg>
                           Clear Filters
                         </button>
@@ -2429,7 +2503,7 @@ const handleSaveNewFile = async () => {
                         onClick={() => handleOpenUploadFileModal(selectedClient)}
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M21 15v4a2 0 0 1-2 2H5a2 0 0 1-2-2v-4"></path>
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                           <polyline points="17 8 12 3 7 8"></polyline>
                           <line x1="12" y1="3" x2="12" y2="15"></line>
                         </svg>
@@ -2470,7 +2544,7 @@ const handleSaveNewFile = async () => {
                           <div key={file.id} style={fileCardStyle}>
                             <div style={fileCardHeaderStyle}>
                               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={fileIconStyle}>
-                                <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 0 0 0 2-2V9z"></path>
+                                <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
                                 <polyline points="13 2 13 9 20 9"></polyline>
                               </svg>
                               <div style={{ flexGrow: 1 }}>
@@ -2502,10 +2576,10 @@ const handleSaveNewFile = async () => {
                                   <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
                                 </svg>
                               </button>
-                              <button onClick={() => handleDeleteFile(selectedClient.id, file.id)} style={deleteButtonAppStyle}>
+                              <button onClick={() => handleRequestDeleteFile(selectedClient, file)} style={deleteButtonAppStyle}>
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                   <polyline points="3 6 5 6 21 6"></polyline>
-                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                                   <line x1="10" y1="11" x2="10" y2="17"></line>
                                   <line x1="14" y1="11" x2="14" y2="17"></line>
                                 </svg>
@@ -2603,7 +2677,7 @@ const handleSaveNewFile = async () => {
 
                   <h2 style={sectionTitleStyle}>
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px', verticalAlign: 'middle', color: '#3b82f6' }}>
-                      <path d="M13 10L3 14 10 21 21 3 13 10z"></path>
+                      <polygon points="13 10 3 14 10 21 21 3 13 10"></polygon>
                     </svg>
                     Recent Activity Timeline
                   </h2>
@@ -2911,7 +2985,7 @@ const handleSaveNewFile = async () => {
                     </div>
                   </div>
 
-                  {/* Client Details Section (for the selected inactive client) */}
+                 
                   <h2 style={sectionTitleStyle}>
                     Client Details
                   </h2>
@@ -3082,10 +3156,9 @@ const handleSaveNewFile = async () => {
                           onClick={handleClearFilters}
                           style={clearFiltersButtonStyle}
                         >
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21 4H8l-7 16 7 16h13a2 2 0 0 0 2-2V6a2 0 0 0-2-2z"></path>
-                            <line x1="18" y1="9" x2="12" y2="15"></line>
-                            <line x1="12" y1="9" x2="18" y2="15"></line>
+                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
                           </svg>
                           Clear Filters
                         </button>
@@ -4031,7 +4104,7 @@ const handleSaveNewFile = async () => {
                 {/* Preview area for pasted/selected files */}
                 {editedApplicationFormData.attachments.length > 0 && (
                   <div className="attachments-preview-container">
-                    {editedApplicationFormData.attachments.map((file, index) => (
+                    {(editedApplicationFormData.attachments || []).map((file, index) => (
                       <div key={index} className="attachment-item">
                         {file.file && typeof file.file.type === 'string' && file.file.type.startsWith('image/') ? (
                           <img src={URL.createObjectURL(file.file)} alt={file.name} className="attachment-image-preview" />
@@ -4213,8 +4286,22 @@ const handleSaveNewFile = async () => {
             <button
               onClick={handleSaveNewFile}
               style={modalAddButtonPrimaryStyle}
+              disabled={isUploading}
             >
-              Upload File
+              {isUploading ? (
+                <>
+                  <Spinner
+                    as="span"
+                    animation="border"
+                    size="sm"
+                    role="status"
+                    aria-hidden="true"
+                  />
+                  <span style={{ marginLeft: '5px' }}>Uploading...</span>
+                </>
+              ) : (
+                'Upload File'
+              )}
             </button>
           </Modal.Footer>
         </Modal>
@@ -4571,6 +4658,54 @@ const handleSaveNewFile = async () => {
             style={{ maxWidth: '100%', maxHeight: '75vh', borderRadius: '8px' }}
           />
         </Modal.Body>
+      </Modal>
+
+            {/* Delete File Confirmation Modal */}
+      <Modal show={showDeleteFileModal} onHide={() => setShowDeleteFileModal(false)} centered size="md">
+        <Modal.Header closeButton style={modalHeaderStyle}>
+          <Modal.Title style={modalTitleStyle}>Confirm Deletion</Modal.Title>
+        </Modal.Header>
+        <Modal.Body style={modalBodyStyle}>
+          <p style={{ textAlign: 'center', fontSize: '1.1rem', color: '#475569' }}>
+            Are you sure you want to permanently delete this file?
+          </p>
+          {fileToDelete && (
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 15px', textAlign: 'center', color: '#1e293b', wordBreak: 'break-all' }}>
+              <strong>{fileToDelete.file.name}</strong>
+            </div>
+          )}
+          <p style={{ textAlign: 'center', fontSize: '0.9rem', color: '#ef4444', marginTop: '15px' }}>
+            This action cannot be undone.
+          </p>
+        </Modal.Body>
+        <Modal.Footer style={modalFooterStyle}>
+          <button
+            onClick={() => setShowDeleteFileModal(false)}
+            style={modalCancelButtonStyle}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleConfirmDeleteFile}
+            style={{...modalAddButtonPrimaryStyle, backgroundColor: '#ef4444' }}
+            disabled={isDeleting} // Disable the button while loading
+          >
+            {isDeleting ? (
+              <>
+                <Spinner
+                  as="span"
+                  animation="border"
+                  size="sm"
+                  role="status"
+                  aria-hidden="true"
+                />
+                <span style={{ marginLeft: '5px' }}>Deleting...</span>
+              </>
+            ) : (
+              'Confirm Delete'
+            )}
+          </button>
+        </Modal.Footer>
       </Modal>
 
     </div>
