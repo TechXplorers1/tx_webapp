@@ -74,6 +74,67 @@ body{
   box-shadow: none;
 }
 
+/* In Navbar.css, add the following code at the end of the file */
+
+/* --- Dark Mode Styles --- */
+
+/* Main Navbar background */
+.dark-navbar {
+  background-color: #2d3748 !important;
+  border-bottom-color: #4a5568 !important;
+}
+
+/* Brand/Logo text color */
+.dark-navbar .navbar-brand,
+.dark-navbar .brand-small {
+  color: #e2e8f0 !important;
+}
+
+/* Nav links text color */
+.dark-navbar .nav-link-custom {
+  color: #cbd5e1 !important;
+}
+
+/* Nav links hover/focus state in dark mode */
+.dark-navbar .nav-link-custom:hover,
+.dark-navbar .nav-link-custom:focus {
+  background-color: #4299e1 !important;
+  color: #ffffff !important;
+}
+
+/* Active nav link color in dark mode */
+.dark-navbar .nav-link-custom.active {
+  color: #90cdf4 !important;
+}
+
+/* Profile Dropdown Menu */
+.dark-navbar .profile-dropdown-menu {
+  background-color: #2d3748;
+  border: 1px solid #4a5568;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.dark-navbar .profile-dropdown-menu .dropdown-item {
+  color: #e2e8f0;
+}
+
+.dark-navbar .profile-dropdown-menu .dropdown-item:hover {
+  background-color: #4a5568;
+  color: #ffffff;
+}
+
+.dark-navbar .dropdown-divider {
+  border-top: 1px solid #4a5568;
+}
+
+/* Mobile (collapsed) menu background */
+@media (max-width: 992px) {
+  .dark-navbar .navbar-collapse {
+    background-color: #2d3748;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.3);
+  }
+}
+
 /* Responsive Adjustments */
 @media (max-width: 992px) {
   .navbar-collapse {

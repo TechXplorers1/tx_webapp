@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
-  FaBars, FaSearch, FaBell, FaEdit, FaTrashAlt, FaCheckCircle, FaTimesCircle, FaPlus, FaSun, FaMoon,
-  FaShieldAlt, FaUsers, FaCog, FaUser
+  FaBars, FaSearch, FaBell, FaEdit, FaTrashAlt, FaPlus, FaShieldAlt, FaUsers, FaCog, FaUser, FaUserPlus, FaUserMinus
 } from 'react-icons/fa';
+import { FiSun, FiMoon } from 'react-icons/fi'; // Import FiSun and FiMoon
 import { Toaster, toast } from 'sonner';
 
 // Reusable Tooltip Component
@@ -17,38 +17,66 @@ const Tooltip = ({ text, tooltipId, currentHoveredTooltipId }) => {
   );
 };
 
+// ToggleButton Component
+const ToggleButton = ({ checked, onChange, ariaLabel }) => {
+  return (
+    <label className="um-toggle-switch">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={onChange}
+        aria-label={ariaLabel}
+      />
+      <span className="um-slider"></span>
+    </label>
+  );
+};
+
 const WorkGroups = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
-  const [isConfirmModalForStatus, setIsConfirmModalForStatus] = useState(false);
-  const [isDeleteConfirmModalOpen, setIsDeleteConfirmModalOpen] = useState(false);
+  const [isDeleteConfirmModalOpen, setIsDeleteConfirmModalOpen] = useState(false); // For user deletion
+  const [isDeleteDesignationConfirmModalOpen, setIsDeleteDesignationConfirmModalOpen] = useState(false); // For designation deletion
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [currentView, setCurrentView] = useState('userManagement');
   const [isCreateSecurityGroupModalOpen, setIsCreateSecurityGroupModalOpen] = useState(false);
+  const [isManageSecurityGroupModalOpen, setIsManageSecurityGroupModalOpen] = useState(false); // New state for manage modal
+  const [selectedDesignationForManage, setSelectedDesignationForManage] = useState(null); // Stores the designation object being managed
 
   const [editingUser, setEditingUser] = useState(null);
-  const [userToToggleStatus, setUserToToggleStatus] = useState(null);
-  const [userToDelete, setUserToDelete] = useState(null);
+  const [userToDelete, setUserToDelete] = useState(null); // For user deletion
+  const [designationToDelete, setDesignationToDelete] = useState(null); // For designation deletion
 
   const [hoveredTooltipId, setHoveredTooltipId] = useState(null);
-
 
   const [searchTerm, setSearchTerm] = useState('');
   const [newUser, setNewUser] = useState({
     name: '',
     email: '',
     department: '',
-    designations: [], // This will now store an array of selected designation names
+    designations: [], // Reverted to array
     status: 'active',
-    // Removed lastLogin from initial state for new user
   });
 
   const [newSecurityGroup, setNewSecurityGroup] = useState({
     name: '',
     description: '',
-    permissions: [], // Stores selected permission IDs/names
+    permissions: [],
   });
-  const [currentPermissionTab, setCurrentPermissionTab] = useState('Administration'); // State for managing active tab
+  const [currentPermissionTab, setCurrentPermissionTab] = useState('Administration');
+
+  // State for search within the manage users modal
+  const [manageUsersSearchTerm, setManageUsersSearchTerm] = useState('');
+
+  // State to manage visibility of permissions in Manage Security Group modal
+  // Each key corresponds to a permission category, value is the number of visible items
+  const [visiblePermissionCounts, setVisiblePermissionCounts] = useState({
+    Administration: 5,
+    Asset: 5,
+    Work: 5,
+    Inventory: 5,
+  });
+
 
   const permissionsData = {
     Administration: [
@@ -56,28 +84,41 @@ const WorkGroups = () => {
       { id: 'user-admin', name: 'User Administration', description: 'Manage user accounts' },
       { id: 'security-mgmt', name: 'Security Management', description: 'Manage security settings' },
       { id: 'backup-recovery', name: 'Backup & Recovery', description: 'System backup and recovery' },
+      { id: 'sys-audit', name: 'System Audit', description: 'Access system audit logs' }, // Added from image
+      { id: 'sys-logs', name: 'System Logs', description: 'View and manage system logs' },
+      { id: 'app-deploy', name: 'Application Deployment', description: 'Deploy and manage applications' },
+      { id: 'db-access', name: 'Database Access', description: 'Direct database access' },
     ],
     Asset: [
-      { id: 'asset-view', name: 'Asset View', description: 'View asset details' },
-      { id: 'asset-edit', name: 'Asset Edit', description: 'Modify asset information' },
-      { id: 'asset-create', name: 'Asset Create', description: 'Register new assets' },
-      { id: 'asset-delete', name: 'Asset Delete', description: 'Remove assets from system' },
+      { id: 'asset-view', name: 'Asset View', description: 'View asset information' }, // Updated description
+      { id: 'asset-edit', name: 'Asset Edit', description: 'Modify asset details' }, // Updated description
+      { id: 'asset-create', name: 'Asset Create', description: 'Create new assets' }, // Updated description
+      { id: 'asset-delete', name: 'Asset Delete', description: 'Delete assets' }, // Updated description
+      { id: 'asset-approve', name: 'Asset Approval', description: 'Approve asset changes' }, // Added from image
+      { id: 'asset-track', name: 'Asset Tracking', description: 'Track asset locations and status' },
+      { id: 'asset-audit', name: 'Asset Audit', description: 'Conduct asset audits' },
     ],
     Work: [
       { id: 'wo-create', name: 'Work Order Create', description: 'Create new work orders' },
       { id: 'wo-assign', name: 'Work Order Assign', description: 'Assign work orders to personnel' },
       { id: 'wo-approve', name: 'Work Order Approve', description: 'Approve or reject work orders' },
       { id: 'wo-track', name: 'Work Order Track', description: 'Track work order progress' },
+      { id: 'wo-close', name: 'Work Order Close', description: 'Close completed work orders' },
+      { id: 'wo-report', name: 'Work Order Reporting', description: 'Generate reports on work orders' },
     ],
     Inventory: [
       { id: 'inv-view', name: 'Inventory View', description: 'View inventory levels' },
       { id: 'inv-adjust', name: 'Inventory Adjust', description: 'Adjust inventory counts' },
       { id: 'inv-transfer', name: 'Inventory Transfer', description: 'Transfer inventory between locations' },
       { id: 'inv-order', name: 'Inventory Order', description: 'Place new inventory orders' },
+      { id: 'inv-receive', name: 'Inventory Receive', description: 'Receive new inventory shipments' },
+      { id: 'inv-dispose', name: 'Inventory Dispose', description: 'Dispose of old or damaged inventory' },
     ],
   };
 
-  // Dummy Data for Employee Directory
+  // New state for the active tab inside the Manage Security Group modal
+  const [currentManageSecurityGroupTab, setCurrentManageSecurityGroupTab] = useState('Permissions');
+
   const [users, setUsers] = useState([
     { id: 1, name: 'Michael Rodriguez', email: 'michael.rodriguez@company.com', department: 'IT Administration', designations: ['ADMIN'], status: 'active', lastLogin: '2024-06-24 14:30' },
     { id: 2, name: 'Sarah Chen', email: 'sarah.chen@company.com', department: 'Human Resources', designations: ['JOB APPLICATION SPECIALIST', 'MANAGER'], status: 'active', lastLogin: '2024-06-24 09:15' },
@@ -89,7 +130,6 @@ const WorkGroups = () => {
     { id: 8, name: 'Amanda Foster', email: 'amanda.foster@company.com', department: 'Human Resources', designations: ['JOB APPLICATION SPECIALIST', 'TEAM LEAD'], status: 'inactive', lastLogin: '2024-06-20 14:20' },
   ]);
 
-  // Dummy Data for Company Designations (for checkboxes in Add User form)
   const [designations, setDesignations] = useState([
     {
       id: 1,
@@ -98,19 +138,35 @@ const WorkGroups = () => {
       secondaryType: 'executive',
       description: 'Full system administration and configuration privileges',
       employees: 1,
-      permissions: 13,
-      keyPermissions: ['SYS CONFIG', 'SYS USERS', 'SYS SECURITY', '+10 more'],
+      permissions: Object.keys(permissionsData).reduce((acc, curr) => acc + permissionsData[curr].length, 0), // Count all permissions
+      keyPermissions: ['SYS CONFIG', 'USER ADMIN', 'SECURITY MGMT', '+ countless more'],
+      permissionIds: [ // All permissions for ADMIN
+        'sys-config', 'user-admin', 'security-mgmt', 'backup-recovery', 'sys-audit', 'sys-logs', 'app-deploy', 'db-access',
+        'asset-view', 'asset-edit', 'asset-create', 'asset-delete', 'asset-approve', 'asset-track', 'asset-audit',
+        'wo-create', 'wo-assign', 'wo-approve', 'wo-track', 'wo-close', 'wo-report',
+        'inv-view', 'inv-adjust', 'inv-transfer', 'inv-order', 'inv-receive', 'inv-dispose'
+      ],
       deletable: false,
+      settingField1: '1000000', // Example setting for Admin
+      settingField2: 'ABCDEFGH' // Example setting for Admin
     },
     {
       id: 2,
       name: 'MANAGER',
       type: 'core',
       description: 'Management level access with approval and oversight capabilities',
-      employees: 3,
-      permissions: 13,
+      employees: 4, // Corrected from 3 to 4 based on actual user data
+      permissions: 13, // This number needs to match the permissionIds array length
       keyPermissions: ['ASSET APPROVE', 'ASSET TRANSFER', 'WO APPROVE', '+10 more'],
+      permissionIds: [ // Example 13 permissions for MANAGER
+        'asset-view', 'asset-edit', 'asset-approve', 'asset-track',
+        'wo-create', 'wo-assign', 'wo-approve', 'wo-track',
+        'inv-view', 'inv-adjust', 'inv-transfer',
+        'sys-audit', 'user-admin' // Example for 13
+      ],
       deletable: false,
+      settingField1: '2000000',
+      settingField2: 'IJKLMNOP'
     },
     {
       id: 3,
@@ -120,7 +176,14 @@ const WorkGroups = () => {
       employees: 2,
       permissions: 15,
       keyPermissions: ['ASSET VIEW', 'ASSET EDIT', 'ASSET CREATE', '+12 more'],
+      permissionIds: [
+        'asset-view', 'asset-edit', 'asset-create', 'asset-delete', 'asset-approve', 'asset-track', 'asset-audit',
+        'inv-view', 'inv-adjust', 'inv-transfer', 'inv-order', 'inv-receive', 'inv-dispose',
+        'wo-create', 'wo-track'
+      ],
       deletable: true,
+      settingField1: '3000000',
+      settingField2: 'QRSTUVWX'
     },
     {
       id: 4,
@@ -130,7 +193,16 @@ const WorkGroups = () => {
       employees: 3,
       permissions: 13,
       keyPermissions: ['TEAM VIEW', 'TEAM ASSIGN', 'TEAM SCHEDULE', '+10 more'],
+      permissionIds: [
+        'user-admin', 'sys-audit',
+        'wo-create', 'wo-assign', 'wo-track', 'wo-report',
+        'asset-view', 'asset-track',
+        'inv-view', 'inv-adjust', 'inv-order',
+        'app-deploy', 'db-access'
+      ],
       deletable: false,
+      settingField1: '4000000',
+      settingField2: 'YZABCDEF'
     },
     {
       id: 5,
@@ -140,16 +212,24 @@ const WorkGroups = () => {
       employees: 2,
       permissions: 8,
       keyPermissions: ['HR CANDIDATE', 'HR ONBOARD', 'HR ACCESS', '+5 more'],
+      permissionIds: [ // Example 8 permissions
+        'user-admin', 'sys-audit', // For user administration oversight related to HR
+        'wo-report', // Maybe for tracking HR related work orders
+        'asset-view', // To view employee assets if needed
+        'inv-view', // To view general inventory if relevant
+        'sys-logs', // To check HR system logs
+        'app-deploy', 'db-access' // Assuming they might need specific system access for HR apps
+      ],
       deletable: true,
+      settingField1: '5000000',
+      settingField2: 'GHIJKLMN'
     },
   ]);
 
 
-  // Admin user data for header display
   const adminUserName = "Admin User";
   const adminUserEmail = "administrator@company.com";
 
-  // Function to get initials from a name
   const getInitials = (name) => {
     if (!name) return '';
     const nameParts = name.split(' ').filter(part => part.length > 0);
@@ -163,7 +243,6 @@ const WorkGroups = () => {
 
   const adminInitials = getInitials(adminUserName);
 
-  // Load theme preference from localStorage on initial render
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark') {
@@ -171,7 +250,6 @@ const WorkGroups = () => {
     }
   }, []);
 
-  // Apply or remove dark-mode class to the html element
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark-mode');
@@ -180,7 +258,6 @@ const WorkGroups = () => {
     }
   }, [isDarkMode]);
 
-  // Toggle theme function
   const toggleTheme = () => {
     setIsDarkMode(prevMode => {
       const newMode = !prevMode;
@@ -189,7 +266,6 @@ const WorkGroups = () => {
     });
   };
 
-  // Filtered users based on search term
   const filteredUsers = users.filter(user =>
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -207,9 +283,8 @@ const WorkGroups = () => {
       name: '',
       email: '',
       department: '',
-      designations: [], // Initialize empty for new user
+      designations: [], // Reverted to empty array for new user
       status: 'active',
-      // lastLogin is removed as it's not relevant for new user creation in this context
     });
     setIsAddUserModalOpen(true);
   };
@@ -226,7 +301,7 @@ const WorkGroups = () => {
     }));
   };
 
-  // Updated handler for designation checkboxes
+  // Reverted to original handleDesignationCheckboxChange
   const handleDesignationCheckboxChange = (designationName) => {
     setNewUser(prevUser => {
       const updatedDesignations = prevUser.designations.includes(designationName)
@@ -245,8 +320,6 @@ const WorkGroups = () => {
       toast.success(`User ${newUser.name} updated successfully!`);
     } else {
       const newId = users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1;
-      // When adding a new user, set lastLogin to "N/A" or current date/time if desired
-      // For this request, we'll set it to "N/A" as the field is removed from input
       setUsers([...users, { ...newUser, id: newId, lastLogin: 'N/A' }]);
       toast.success(`User ${newUser.name} added successfully!`);
     }
@@ -255,40 +328,25 @@ const WorkGroups = () => {
 
   const handleEditUser = (user) => {
     setEditingUser(user);
-    // Ensure designations is an array for editing
     setNewUser({
       name: user.name,
       email: user.email,
       department: user.department,
-      designations: Array.isArray(user.designations) ? user.designations : [],
+      designations: Array.isArray(user.designations) ? user.designations : [], // Keep as array
       status: user.status,
-      lastLogin: user.lastLogin, // Keep lastLogin for editing existing users
+      lastLogin: user.lastLogin,
     });
     setIsAddUserModalOpen(true);
   };
 
-  // Original function to open the confirmation modal for status change
-  const openConfirmModal = (user) => {
-    setUserToToggleStatus(user);
-    setIsConfirmModalForStatus(true);
-  };
-
-  const confirmToggleStatus = () => {
-    if (userToToggleStatus) {
-      setUsers(users.map(user =>
-        user.id === userToToggleStatus.id
-          ? { ...user, status: user.status === 'active' ? 'inactive' : 'active' }
-          : user
-      ));
-      toast.success(`User ${userToToggleStatus.name} status changed to ${userToToggleStatus.status === 'active' ? 'inactive' : 'active'}!`);
-      setIsConfirmModalForStatus(false);
-      setUserToToggleStatus(null);
-    }
-  };
-
-  const closeConfirmModal = () => {
-    setIsConfirmModalForStatus(false);
-    setUserToToggleStatus(null);
+  // New function for direct status toggle
+  const handleStatusToggle = (userToUpdate) => {
+    setUsers(users.map(user =>
+      user.id === userToUpdate.id
+        ? { ...user, status: user.status === 'active' ? 'inactive' : 'active' }
+        : user
+    ));
+    toast.success(`User ${userToUpdate.name} status changed to ${userToUpdate.status === 'active' ? 'inactive' : 'active'}!`);
   };
 
   const handleDeleteUserClick = (user) => {
@@ -310,16 +368,28 @@ const WorkGroups = () => {
     setUserToDelete(null);
   };
 
-  // Function to handle designation deletion (placeholder)
   const handleDeleteDesignation = (designation) => {
-    toast.info(`Attempting to delete ${designation.name}. (Not fully implemented)`);
-    // Implement actual deletion logic here, possibly with a confirmation modal
+    setDesignationToDelete(designation);
+    setIsDeleteDesignationConfirmModalOpen(true);
   };
 
-  // Functions for Create Work Group Modal
-  const openCreateSecurityGroupModal = () => { // Function name remains consistent, but context changes
+  const confirmDeleteDesignation = () => {
+    if (designationToDelete) {
+      setDesignations(designations.filter(d => d.id !== designationToDelete.id));
+      toast.success(`Designation '${designationToDelete.name}' deleted successfully!`);
+      setIsDeleteDesignationConfirmModalOpen(false);
+      setDesignationToDelete(null);
+    }
+  };
+
+  const cancelDeleteDesignation = () => {
+    setIsDeleteDesignationConfirmModalOpen(false);
+    setDesignationToDelete(null);
+  };
+
+  const openCreateSecurityGroupModal = () => {
     setNewSecurityGroup({ name: '', description: '', permissions: [] });
-    setCurrentPermissionTab('Administration'); // Reset to first tab
+    setCurrentPermissionTab('Administration');
     setIsCreateSecurityGroupModalOpen(true);
   };
 
@@ -346,10 +416,186 @@ const WorkGroups = () => {
 
   const handleCreateSecurityGroupSubmit = (e) => {
     e.preventDefault();
-    console.log("New Work Group Data:", newSecurityGroup);
+
+    const newId = designations.length > 0 ? Math.max(...designations.map(d => d.id)) + 1 : 1;
+
+    // Aggregate all permissions by ID for easy lookup
+    const allPermissionsById = {};
+    for (const category in permissionsData) {
+        permissionsData[category].forEach(p => {
+            allPermissionsById[p.id] = p.name;
+        });
+    }
+
+    const selectedPermissionNames = newSecurityGroup.permissions.map(id => allPermissionsById[id] || id);
+
+    const keyPermissionsDisplay = selectedPermissionNames.slice(0, 3);
+    if (selectedPermissionNames.length > 3) {
+      keyPermissionsDisplay.push(`+${selectedPermissionNames.length - 3} more`);
+    }
+
+    const newDesignation = {
+      id: newId,
+      name: newSecurityGroup.name.toUpperCase(),
+      type: 'custom',
+      secondaryType: 'n/a',
+      description: newSecurityGroup.description,
+      employees: 0,
+      permissions: newSecurityGroup.permissions.length,
+      keyPermissions: keyPermissionsDisplay,
+      // Store the actual permission IDs for managing later
+      permissionIds: newSecurityGroup.permissions,
+      deletable: true,
+      settingField1: '', // Initialize settings for new groups
+      settingField2: ''
+    };
+
+    setDesignations(prevDesignations => [...prevDesignations, newDesignation]);
     toast.success(`Work Group '${newSecurityGroup.name}' created!`);
-    // Here you would typically send this data to a backend or update global state
     closeCreateSecurityGroupModal();
+  };
+
+  // --- Manage Security Group Modal functions ---
+  const handleManageDesignationClick = (designation) => {
+    setSelectedDesignationForManage(designation);
+    setManageUsersSearchTerm(''); // Clear search term when opening modal
+    setIsManageSecurityGroupModalOpen(true);
+    setCurrentManageSecurityGroupTab('Permissions'); // Always open to Permissions tab
+
+    // Reset visible permission counts when opening the modal for a new designation
+    const initialCounts = {};
+    Object.keys(permissionsData).forEach(category => {
+      initialCounts[category] = 5;
+    });
+    setVisiblePermissionCounts(initialCounts);
+  };
+
+  const closeManageSecurityGroupModal = () => {
+    setIsManageSecurityGroupModalOpen(false);
+    setSelectedDesignationForManage(null);
+  };
+
+  const handleManagePermissionsChange = (permissionId) => {
+    if (!selectedDesignationForManage) return;
+
+    setSelectedDesignationForManage(prevDesignation => {
+        const currentPermissions = prevDesignation.permissionIds || []; // Ensure it's an array
+
+        const updatedPermissions = currentPermissions.includes(permissionId)
+            ? currentPermissions.filter(id => id !== permissionId)
+            : [...currentPermissions, permissionId];
+
+        // Update keyPermissionsDisplay based on new selection (simplified for display)
+        const allPermissionsById = {};
+        for (const category in permissionsData) {
+            permissionsData[category].forEach(p => {
+                allPermissionsById[p.id] = p.name;
+            });
+        }
+        const selectedPermissionNames = updatedPermissions.map(id => allPermissionsById[id] || id);
+        const keyPermissionsDisplay = selectedPermissionNames.slice(0, 3);
+        if (selectedPermissionNames.length > 3) {
+            keyPermissionsDisplay.push(`+${selectedPermissionNames.length - 3} more`);
+        }
+
+        return {
+            ...prevDesignation,
+            permissionIds: updatedPermissions,
+            permissions: updatedPermissions.length, // Update count
+            keyPermissions: keyPermissionsDisplay, // Update display array
+        };
+    });
+  };
+
+  // Handler for settings tab inputs
+  const handleManageSettingsChange = (e) => {
+    const { name, value } = e.target;
+    setSelectedDesignationForManage(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+
+  // Toggle function for "Show More/Show Less" permissions
+  const toggleShowPermissions = (category) => {
+    setVisiblePermissionCounts(prevCounts => {
+      const currentCount = prevCounts[category];
+      const totalCount = permissionsData[category].length;
+      return {
+        ...prevCounts,
+        [category]: currentCount === totalCount ? 5 : totalCount // Toggle between 5 and all
+      };
+    });
+  };
+
+  const saveManagedDesignation = () => {
+    if (selectedDesignationForManage) {
+        setDesignations(designations.map(d =>
+            d.id === selectedDesignationForManage.id ? selectedDesignationForManage : d
+        ));
+        toast.success(`Work Group '${selectedDesignationForManage.name}' updated!`);
+    }
+    closeManageSecurityGroupModal();
+  };
+
+  // --- User Assignment Logic within Manage Security Group Modal ---
+  const handleAssignUnassignUser = (userToUpdate, action) => {
+    if (!selectedDesignationForManage) return;
+
+    const designationName = selectedDesignationForManage.name;
+
+    setUsers(prevUsers => {
+      return prevUsers.map(user => {
+        if (user.id === userToUpdate.id) {
+          const updatedDesignations = new Set(user.designations);
+          if (action === 'assign') {
+            updatedDesignations.add(designationName);
+            toast.success(`Assigned ${designationName} to ${user.name}`);
+          } else { // action === 'unassign'
+            updatedDesignations.delete(designationName);
+            toast.success(`Unassigned ${designationName} from ${user.name}`);
+          }
+          return { ...user, designations: Array.from(updatedDesignations) };
+        }
+        return user;
+      });
+    });
+
+    // Update the employees count for the selected designation
+    setDesignations(prevDesignations => {
+        return prevDesignations.map(designation => {
+            if (designation.id === selectedDesignationForManage.id) {
+                const newEmployeeCount = action === 'assign' ? designation.employees + 1 : designation.employees - 1;
+                return { ...designation, employees: Math.max(0, newEmployeeCount) }; // Ensure count doesn't go below 0
+            }
+            return designation;
+        });
+    });
+
+    // Update the selectedDesignationForManage in state immediately to reflect count in modal
+    setSelectedDesignationForManage(prev => {
+        const newEmployeeCount = action === 'assign' ? prev.employees + 1 : prev.employees - 1;
+        return {...prev, employees: Math.max(0, newEmployeeCount)};
+    });
+  };
+
+  const getAssignedUsers = () => {
+    if (!selectedDesignationForManage) return [];
+    return users.filter(user =>
+      user.designations.includes(selectedDesignationForManage.name) &&
+      (user.name.toLowerCase().includes(manageUsersSearchTerm.toLowerCase()) ||
+       user.email.toLowerCase().includes(manageUsersSearchTerm.toLowerCase()))
+    );
+  };
+
+  const getAvailableUsers = () => {
+    if (!selectedDesignationForManage) return [];
+    return users.filter(user =>
+      !user.designations.includes(selectedDesignationForManage.name) &&
+      (user.name.toLowerCase().includes(manageUsersSearchTerm.toLowerCase()) ||
+       user.email.toLowerCase().includes(manageUsersSearchTerm.toLowerCase()))
+    );
   };
 
 
@@ -398,10 +644,10 @@ const WorkGroups = () => {
           --tag-team-lead-text: #166534;
           --tag-default-bg: #f0f4f8;
           --tag-default-text: #606f7b;
-          --status-active-bg: #d1fae5;
-          --status-active-text: #047857;
-          --status-inactive-bg: #e5e7eb;
-          --status-inactive-text: #374151;
+          --status-active-bg: #10b981; /* Darker green */
+          --status-inactive-bg: #ef4444; /* Red */
+          --status-active-text: #ffffff; /* Text color for active status, adjust if needed */
+          --status-inactive-text: #ffffff; /* Text color for inactive status, adjust if needed */
           --action-hover-bg: #f3f4f6;
           --action-yellow: #ca8a04;
           --action-yellow-hover: #a16207;
@@ -437,13 +683,28 @@ const WorkGroups = () => {
           --key-permission-tag-text: #4b5563;
 
           /* Security Group Modal specific styles */
-          --tab-bg: #f3f4f6;
-          --tab-text: #6b7280;
-          --tab-active-bg: #ffffff;
-          --tab-active-text: #1f2937;
           --tab-border: #e5e7eb;
           --permission-item-bg-hover: #f9fafb;
           --permission-border-bottom: #e5e7eb;
+
+          /* Custom Radio Button Tabs Styles */
+          --radio-group-bg: #EEE;
+          --radio-group-shadow: rgba(0, 0, 0, 0.06);
+          --radio-item-color: rgba(51, 65, 85, 1);
+          --radio-item-bg-checked: #fff;
+
+          /* User card in manage modal */
+          --user-card-border: #e5e7eb;
+          --user-card-shadow: rgba(0,0,0,0.05);
+          --user-card-hover: #f9fafb;
+          --user-card-name-color: #1f2937;
+          --user-card-email-color: #6b7280;
+          --user-card-dept-color: #4b5563;
+          --user-card-action-icon: #2563eb;
+          --user-card-action-icon-hover: #1d4ed8;
+          --user-card-no-users-bg: #f0f4f8;
+          --user-card-no-users-text: #6b7280;
+          --user-card-no-users-icon: #9ca3af;
         }
 
         html.dark-mode {
@@ -482,10 +743,10 @@ const WorkGroups = () => {
           --tag-team-lead-text: #2f855a;
           --tag-default-bg: #4a5568;
           --tag-default-text: #e2e8f0;
-          --status-active-bg: #48bb78;
+          --status-active-bg: #10b981; /* Darker green for dark mode */
+          --status-inactive-bg: #dc2626; /* Darker red for dark mode */
           --status-active-text: #ffffff;
-          --status-inactive-bg: #a0aec0;
-          --status-inactive-text: #2d3748;
+          --status-inactive-text: #ffffff;
           --action-hover-bg: #4a5568;
           --action-yellow: #ecc94b;
           --action-yellow-hover: #d69e2e;
@@ -509,6 +770,25 @@ const WorkGroups = () => {
           --tooltip-bg: #555;
           --tooltip-text-color: #eee;
           --logo-x-color: #4299e1; /* Dark mode blue for the 'X' */
+
+          /* Custom Radio Button Tabs Styles */
+          --radio-group-bg: #4a5568;
+          --radio-group-shadow: rgba(0, 0, 0, 0.2);
+          --radio-item-color: #e2e8f0;
+          --radio-item-bg-checked: #2d3748;
+
+          /* User card in manage modal */
+          --user-card-border: #4a5568;
+          --user-card-shadow: rgba(0,0,0,0.2);
+          --user-card-hover: #3f4c60;
+          --user-card-name-color: #e2e8f0;
+          --user-card-email-color: #a0aec0;
+          --user-card-dept-color: #cbd5e0;
+          --user-card-action-icon: #4299e1;
+          --user-card-action-icon-hover: #3182ce;
+          --user-card-no-users-bg: #4a5568;
+          --user-card-no-users-text: #cbd5e0;
+          --user-card-no-users-icon: #a0aec0;
         }
 
         /* Base styles */
@@ -760,7 +1040,7 @@ const WorkGroups = () => {
           padding: 1.5rem;
           display: flex;
           flex-direction: column;
-          gap: 1.5rem;
+          gap: 1.5rem; /* Gap between direct children */
         }
 
         @media (min-width: 768px) {
@@ -820,23 +1100,19 @@ const WorkGroups = () => {
           background-color: var(--add-btn-hover-bg);
         }
 
-        /* Employee Directory Card Styling */
-        .um-employee-directory-card {
-            background-color: var(--bg-card);
-            padding: 1.5rem;
-            border-radius: 0.5rem;
-            box-shadow: 0 4px 6px -1px var(--shadow-color-1), 0 2px 4px -1px var(--shadow-color-3);
-            border: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
+        /* Removed .um-employee-directory-card styling as the wrapper is removed */
+        /* Its children (header row, search, table) will now be direct children of um-content-wrapper */
 
-        /* Layout for Employee Directory Header and Search */
+        /* Layout for Employee Directory Header and Search (now direct inside content-wrapper) */
         .um-employee-directory-header-row {
             display: flex;
             flex-direction: column;
             gap: 1rem;
+            background-color: var(--bg-card); /* Added background for clarity */
+            padding: 1.5rem; /* Added padding */
+            border-radius: 0.5rem; /* Added border-radius */
+            box-shadow: 0 4px 6px -1px var(--shadow-color-1), 0 2px 4px -1px var(--shadow-color-3);
+            border: 1px solid var(--border-color);
         }
 
         @media (min-width: 768px) {
@@ -915,6 +1191,8 @@ const WorkGroups = () => {
           border: 1px solid var(--border-color);
           max-height: 400px; /* Added max-height */
           overflow-y: auto;  /* Added vertical scroll */
+          background-color: var(--bg-card); /* Added background for consistency */
+          padding: 0; /* Table wrapper handles its own padding internally now */
         }
 
         .um-table {
@@ -933,11 +1211,15 @@ const WorkGroups = () => {
           padding: 0.75rem 1.5rem;
           text-align: center;
           font-size: 0.75rem;
-          font-weight: 500;
-          color: var(--text-secondary);
+          font-weight: 700; /* Made bold */
+          color: var(--text-primary); /* Changed to text-primary for darker color */
           text-transform: uppercase;
           letter-spacing: 0.05em;
           white-space: nowrap;
+        }
+        /* New: Left-align specific table headers and cells */
+        .um-text-left {
+          text-align: left !important; /* Use !important to override .um-table-th centering */
         }
 
         .um-table-tbody {
@@ -946,10 +1228,21 @@ const WorkGroups = () => {
 
         .um-table-tr {
           border-bottom: 1px solid var(--border-color);
+          transition: background-color 150ms ease-in-out; /* Add transition for smooth hover */
         }
         .um-table-tr:last-child {
             border-bottom: none;
         }
+
+        /* Hover effect for table rows */
+        .um-table-tr:hover {
+            background-color: var(--action-hover-bg); /* Use an existing color variable for hover, or define a new one */
+        }
+        /* Ensure hover works in dark mode too */
+        html.dark-mode .um-table-tr:hover {
+            background-color: #3f4c60; /* A darker shade for dark mode hover */
+        }
+
 
         .um-table-td {
           padding: 1rem 1.5rem;
@@ -1021,7 +1314,7 @@ const WorkGroups = () => {
             color: var(--tag-default-text);
         }
 
-        /* Status Tags (for users table) */
+        /* Status Tags (for users table) - Keeping the old definition for possible reuse, but adding toggle styles */
         .um-status-container {
             display: inline-block;
         }
@@ -1044,6 +1337,66 @@ const WorkGroups = () => {
           color: var(--status-inactive-text);
         }
 
+        /* Toggle Button Styles */
+        .um-toggle-switch {
+          position: relative;
+          display: inline-block;
+          width: 44px; /* Increased width for better appearance */
+          height: 24px; /* Increased height */
+          vertical-align: middle;
+        }
+
+        .um-toggle-switch input {
+          display: none;
+        }
+
+        .um-slider {
+          position: absolute;
+          cursor: pointer;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: var(--status-inactive-bg); /* Use inactive color for off state */
+          transition: .4s;
+          border-radius: 24px; /* Half of height for rounded corners */
+        }
+
+        .um-slider:before {
+          position: absolute;
+          content: "";
+          height: 18px; /* Slightly smaller than slider height */
+          width: 18px; /* Make it a circle */
+          left: 3px; /* Margin from left */
+          bottom: 3px; /* Margin from bottom */
+          background-color: white;
+          transition: .4s;
+          border-radius: 50%;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.2); /* Small shadow for the thumb */
+        }
+
+        input:checked + .um-slider {
+          background-color: var(--status-active-bg); /* Use active color for on state */
+        }
+
+        input:checked + .um-slider:before {
+          transform: translateX(20px); /* Move thumb to the right (44 - 18 - 2*3 = 20) */
+        }
+
+        /* Dark mode adjustments for toggle */
+        html.dark-mode .um-slider {
+          background-color: var(--status-inactive-bg); /* Ensure dark mode color for inactive */
+        }
+
+        html.dark-mode input:checked + .um-slider {
+          background-color: var(--status-active-bg); /* Ensure dark mode color for active */
+        }
+
+        html.dark-mode .um-slider:before {
+          background-color: var(--bg-card); /* White thumb in dark mode too, or a contrasting color */
+        }
+
+
         /* Action Buttons */
         .um-action-buttons {
           display: flex;
@@ -1051,6 +1404,7 @@ const WorkGroups = () => {
           font-size: 0.875rem;
           font-weight: 500;
           white-space: nowrap;
+          align-items: center; /* Align items vertically in action buttons */
         }
 
         .um-action-btn-wrapper {
@@ -1161,6 +1515,11 @@ const WorkGroups = () => {
           display: flex; /* Make content a flex container */
           flex-direction: column; /* Stack children vertically */
         }
+        /* Adjusted max-width for Manage Security Group modal to match image */
+        .um-manage-modal-content {
+            max-width: 40rem; /* Increased width for managing security groups */
+        }
+
 
         .um-modal-close-btn {
           position: absolute;
@@ -1185,7 +1544,7 @@ const WorkGroups = () => {
           margin-bottom: 0.5rem; /* Reduced margin for subtitle */
         }
 
-        .um-modal-subtitle { /* New style for modal subtitle */
+        .um-modal-subtitle {
             font-size: 0.875rem;
             color: var(--text-secondary);
             margin-bottom: 1.5rem;
@@ -1201,6 +1560,17 @@ const WorkGroups = () => {
           padding-bottom: 0.5rem; /* Little padding at the bottom inside scroll */
           margin-bottom: 1.5rem; /* Space between scrollable area and actions */
         }
+        /* Specific height for manage permissions to match image */
+        .um-manage-permissions-scrollable {
+            max-height: 300px; /* Adjust height as needed */
+            padding-bottom: 0; /* Remove bottom padding if categories handle spacing */
+        }
+        /* Scrollable area for users tab */
+        .um-manage-users-scrollable {
+            max-height: 450px; /* Adjust height for users list */
+            padding-bottom: 1rem;
+        }
+
 
         /* New: Wrapper for form groups inside the scrollable area */
         .um-modal-form-fields-group {
@@ -1213,9 +1583,6 @@ const WorkGroups = () => {
         .um-modal-form {
           display: flex;
           flex-direction: column;
-          /* Gap is now primarily for spacing between .um-modal-body-scrollable and .um-modal-form-actions */
-          /* Removed direct gap to be applied within .um-modal-form-fields-group */
-          /* No gap needed here as margin-bottom on scrollable takes care of it */
         }
 
         .um-modal-form-group {
@@ -1292,25 +1659,25 @@ const WorkGroups = () => {
         .um-checkbox-group {
             display: flex;
             flex-direction: column;
-            gap: 0.5rem; /* Spacing between checkboxes */
-            margin-top: 0.5rem; /* Space between label and first checkbox */
+            gap: 0.5rem;
+            margin-top: 0.5rem;
         }
 
         .um-checkbox-item {
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            color: var(--text-primary); /* Color for checkbox label text */
+            color: var(--text-primary);
             font-size: 0.875rem;
         }
         .um-checkbox-item input[type="checkbox"] {
             width: 1.15rem;
             height: 1.15rem;
-            accent-color: #2563eb; /* Blue checkbox color */
+            accent-color: #2563eb;
             border: 1px solid var(--modal-input-border);
             border-radius: 0.25rem;
             cursor: pointer;
-            flex-shrink: 0; /* Prevent checkbox from shrinking */
+            flex-shrink: 0;
         }
 
         /* Confirm/Alert Modal specific (reused styles) */
@@ -1390,8 +1757,8 @@ const WorkGroups = () => {
 
         .designation-header {
           display: flex;
-          align-items: flex-start; /* Align items to the start to make tags float right */
-          justify-content: space-between; /* Space between name/icon and tags */
+          align-items: flex-start;
+          justify-content: space-between;
           gap: 0.5rem;
           margin-bottom: 0.5rem;
         }
@@ -1414,20 +1781,20 @@ const WorkGroups = () => {
           font-size: 0.9rem;
           color: var(--text-secondary);
           line-height: 1.5;
-          flex-grow: 1; /* Allows description to take up available space */
+          flex-grow: 1;
         }
 
         .designation-stats {
           display: flex;
           gap: 1rem;
           margin-top: 0.5rem;
-          align-items: center; /* Vertically align stat items */
+          align-items: center;
         }
 
         .designation-stat-item {
           display: flex;
           align-items: center;
-          gap: 0.5rem; /* Increased gap for icon and text */
+          gap: 0.5rem;
           font-size: 0.85rem;
           color: var(--text-secondary);
         }
@@ -1441,7 +1808,7 @@ const WorkGroups = () => {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          gap: 1rem; /* Space between manage and delete */
+          gap: 1rem;
           margin-top: 1rem;
           padding-top: 1rem;
           border-top: 1px solid var(--border-color);
@@ -1449,8 +1816,8 @@ const WorkGroups = () => {
 
         .designation-manage-btn {
           padding: 0.6rem 1.2rem;
-          background-color: var(--bg-card); /* White background */
-          border: 1px solid var(--border-color); /* Border */
+          background-color: var(--bg-card);
+          border: 1px solid var(--border-color);
           border-radius: 0.5rem;
           color: var(--text-primary);
           font-weight: 500;
@@ -1458,9 +1825,9 @@ const WorkGroups = () => {
           transition: background-color 150ms, border-color 150ms;
           display: flex;
           align-items: center;
-          justify-content: center; /* Center text and icon */
+          justify-content: center;
           gap: 0.5rem;
-          flex-grow: 1; /* Allow manage button to grow */
+          flex-grow: 1;
         }
 
         .designation-manage-btn:hover {
@@ -1468,69 +1835,134 @@ const WorkGroups = () => {
           border-color: var(--text-secondary);
         }
 
-        /* Updated styles for the delete button to match the image */
         .designation-delete-btn {
-          background-color: var(--bg-card); /* White background */
-          border: 1px solid var(--border-color); /* Border */
-          color: var(--action-red); /* Red icon color */
-          font-size: 1.125rem; /* Icon size */
+          background-color: var(--bg-card);
+          border: 1px solid var(--border-color);
+          color: var(--action-red);
+          font-size: 1.125rem;
           cursor: pointer;
-          padding: 0.6rem 0.8rem; /* Adjusted padding to make it a small rectangle */
-          border-radius: 0.5rem; /* Rounded corners for rectangular shape */
+          padding: 0.6rem 0.8rem;
+          border-radius: 0.5rem;
           transition: background-color 150ms, border-color 150ms;
-          display: flex; /* Use flex to center the icon */
+          display: flex;
           align-items: center;
           justify-content: center;
-          flex-shrink: 0; /* Prevent button from stretching */
+          flex-shrink: 0;
         }
 
         .designation-delete-btn:hover {
           background-color: var(--action-hover-bg);
-          border-color: var(--action-red); /* Border color changes on hover for emphasis */
+          border-color: var(--action-red);
         }
 
-        /* Security Group Modal specific styles - REINTRODUCED */
-        .um-security-group-tab-nav {
-            display: flex;
-            border-bottom: 1px solid var(--tab-border);
-            margin-bottom: 1rem;
+        /* Custom Radio Button Tabs Styles */
+        .um-radio-inputs {
+          position: relative;
+          display: flex;
+          flex-wrap: wrap;
+          border-radius: 0.5rem;
+          background-color: var(--radio-group-bg);
+          box-sizing: border-box;
+          box-shadow: 0 0 0px 1px var(--radio-group-shadow);
+          padding: 0.25rem;
+          width: 100%;
+          max-width: 450px;
+          font-size: 0.875rem;
+          margin-bottom: 1rem;
+          min-width: 200px;
+        }
+        .um-radio-inputs-modal {
+            max-width: unset;
+            justify-content: flex-start;
+            padding: 0;
+            box-shadow: none;
+            background-color: transparent;
+            border-bottom: 1px solid var(--border-color);
+            border-radius: 0;
+            margin-bottom: 1.5rem;
+        }
+        .um-radio-inputs-modal .um-radio-item {
+            flex: unset;
+            padding-bottom: 0.75rem;
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+            border-bottom: 2px solid transparent;
+            border-radius: 0;
+        }
+        .um-radio-inputs-modal .um-radio-item .um-radio-name {
+            padding: 0.5rem 1rem;
+            background-color: transparent;
+        }
+        .um-radio-inputs-modal .um-radio-item input:checked + .um-radio-name {
+            background-color: transparent;
+            color: var(--text-primary);
+        }
+        .um-radio-inputs-modal .um-radio-item:has(input:checked) {
+            border-bottom: 2px solid #2563eb;
+        }
+        .um-radio-inputs-modal .um-radio-item:hover .um-radio-name {
+            background-color: var(--bg-nav-link-hover);
+        }
+        html.dark-mode .um-radio-inputs-modal .um-radio-item:hover .um-radio-name {
+            background-color: var(--action-hover-bg);
         }
 
-        .um-security-group-tab-btn {
-            padding: 0.75rem 1rem;
-            background-color: var(--tab-bg);
-            color: var(--tab-text);
-            border: 1px solid var(--tab-border);
-            border-bottom: none;
-            border-top-left-radius: 0.375rem;
-            border-top-right-radius: 0.375rem;
-            cursor: pointer;
-            transition: background-color 150ms, color 150ms;
-            margin-right: 0.25rem; /* Space between tabs */
+
+        .um-radio-inputs .um-radio-item {
+          flex: 1 1 auto;
+          text-align: center;
         }
 
-        .um-security-group-tab-btn:last-child {
-            margin-right: 0;
+        .um-radio-inputs .um-radio-item input {
+          display: none;
         }
 
-        .um-security-group-tab-btn.um-tab-active {
-            background-color: var(--tab-active-bg);
-            color: var(--tab-active-text);
-            border-color: var(--tab-active-bg);
-            transform: translateY(1px); /* Visually connect to the content area */
-            z-index: 1; /* Bring active tab to front */
+        .um-radio-inputs .um-radio-item .um-radio-name {
+          display: flex;
+          cursor: pointer;
+          align-items: center;
+          justify-content: center;
+          border-radius: 0.5rem;
+          border: none;
+          padding: .5rem 0;
+          color: var(--radio-item-color);
+          transition: all .15s ease-in-out;
+        }
+
+        .um-radio-inputs .um-radio-item input:checked + .um-radio-name {
+          background-color: var(--radio-item-bg-checked);
+          font-weight: 600;
         }
 
         .um-security-group-permissions-content {
             border: 1px solid var(--tab-border);
-            border-top-right-radius: 0.5rem;
-            border-bottom-left-radius: 0.5rem;
-            border-bottom-right-radius: 0.5rem;
+            border-radius: 0.5rem;
             padding: 1rem;
             background-color: var(--bg-card);
-            min-height: 10rem; /* Reduced height for scrollability */
+            min-height: 10rem;
             overflow-y: auto;
         }
+
+        /* Specific styles for permission sections within the modal */
+        .um-permission-section {
+            border: 1px solid var(--tab-border);
+            border-radius: 0.5rem;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+            background-color: var(--bg-card);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .um-permission-section-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            padding: 0.75rem 1rem;
+            background-color: var(--table-header-bg);
+            border-bottom: 1px solid var(--tab-border);
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+
 
         .um-permission-item {
             display: flex;
@@ -1580,6 +2012,134 @@ const WorkGroups = () => {
             color: var(--text-secondary);
             line-height: 1.4;
         }
+
+        /* Styles for user cards within manage modal */
+        .um-user-section-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .um-user-list-card {
+            border: 1px solid var(--user-card-border);
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px var(--user-card-shadow);
+            padding: 1rem;
+            background-color: var(--bg-card);
+        }
+
+        .um-user-list-card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.75rem;
+            font-size: 1rem;
+        }
+
+        .um-user-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .um-user-card-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 0.5rem;
+            border: 1px solid var(--user-card-border);
+            border-radius: 0.5rem;
+            transition: background-color 150ms ease-in-out;
+        }
+        .um-user-card-item:hover {
+            background-color: var(--user-card-hover);
+        }
+
+        .um-user-card-details {
+            // flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.1rem;
+        }
+        .um-user-card-name {
+            font-weight: 600;
+            color: var(--user-card-name-color);
+            font-size: 0.9rem;
+        }
+        .um-user-card-email {
+            color: var(--user-card-email-color);
+            font-size: 0.8rem;
+        }
+        .um-user-card-dept {
+            color: var(--user-card-dept-color);
+            font-size: 0.75rem;
+            margin-top: 0.25rem;
+        }
+        .um-user-card-designations {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+            margin-top: 0.4rem;
+        }
+        .um-user-card-status-tag {
+            padding: 0.1rem 0.4rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            border-radius: 9999px;
+            text-transform: uppercase;
+        }
+        .um-user-card-status-active {
+            background-color: var(--status-active-bg);
+            color: var(--status-active-text);
+        }
+        .um-user-card-status-inactive {
+            background-color: var(--status-inactive-bg);
+            color: var(--status-inactive-text);
+        }
+
+        .um-user-card-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-shrink: 0;
+            margin-left: 1rem;
+        }
+        .um-user-card-action-btn {
+            background: none;
+            border: none;
+            color: var(--user-card-action-icon);
+            font-size: 1.15rem;
+            cursor: pointer;
+            padding: 0.4rem;
+            border-radius: 9999px;
+            transition: background-color 150ms, color 150ms;
+        }
+        .um-user-card-action-btn:hover {
+            background-color: var(--action-hover-bg);
+            color: var(--user-card-action-icon-hover);
+        }
+
+        .um-no-users-message {
+            text-align: center;
+            padding: 2rem;
+            background-color: var(--user-card-no-users-bg);
+            border-radius: 0.5rem;
+            color: var(--user-card-no-users-text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            min-height: 8rem;
+            font-size: 0.9rem;
+        }
+        .um-no-users-icon {
+            font-size: 2rem;
+            color: var(--user-card-no-users-icon);
+        }
         `}
       </style>
 
@@ -1597,7 +2157,7 @@ const WorkGroups = () => {
               onClick={() => setCurrentView('userManagement')}
               className={`um-nav-link ${currentView === 'userManagement' ? 'um-nav-link-active' : ''}`}
             >
-              User Management
+              Employee Management
             </a>
             <a
               href="#"
@@ -1624,7 +2184,7 @@ const WorkGroups = () => {
             className="um-icon-btn"
             aria-label={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
           >
-            {isDarkMode ? <FaSun /> : <FaMoon />}
+            {isDarkMode ? <FiSun /> : <FiMoon />} {/* Changed icons here */}
           </button>
           <div className="um-user-info">
             <div className="um-user-info-text">
@@ -1661,7 +2221,7 @@ const WorkGroups = () => {
             onClick={() => setCurrentView('userManagement')}
             className={`um-nav-link ${currentView === 'userManagement' ? 'um-nav-link-active' : ''}`}
           >
-            User Management
+            Employee Management
           </a>
           <a
             href="#"
@@ -1683,166 +2243,149 @@ const WorkGroups = () => {
             <>
               <div className="um-header-section">
                 <div>
-                  <h1 className="um-title">User Management</h1>
-                  <p className="um-subtitle">Manage user accounts and designation assignments</p>
+                  <h1 className="um-title">Employee Management</h1>
+                  <p className="um-subtitle">Manage employee accounts and designation assignments</p>
                 </div>
                 <button
                   onClick={openAddUserModal}
                   className="um-add-btn"
                 >
                   <FaPlus />
-                  <span>Add New User</span>
+                  <span>Add New Employee</span>
                 </button>
               </div>
 
-              {/* Employee Directory Section */}
-              <div className="um-employee-directory-card">
-                <div className="um-employee-directory-header-row">
-                    <div className="um-directory-text-content">
-                        <h2 className="um-section-heading">Employee Directory</h2>
-                        <p className="um-section-description">Manage employee accounts and their role designations</p>
-                    </div>
+              {/* Employee Directory Section - NOW WITHOUT THE OUTER CARD */}
+              <div className="um-employee-directory-header-row"> {/* This div now acts as the header/search container */}
+                  <div className="um-directory-text-content">
+                      <h2 className="um-section-heading">Employee Directory</h2>
+                      <p className="um-section-description">Manage employee accounts and their role designations</p>
+                  </div>
 
-                    <div className="um-search-container">
-                        <div className="um-search-input-wrapper">
-                            <input
-                                type="text"
-                                placeholder="Search users, departments, or designations..."
-                                className="um-search-input"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                            <FaSearch className="um-search-icon" />
-                        </div>
-                    </div>
-                </div>
+                  <div className="um-search-container">
+                      <div className="um-search-input-wrapper">
+                          <input
+                              type="text"
+                              placeholder="Search employees, departments, or designations..."
+                              className="um-search-input"
+                              value={searchTerm}
+                              onChange={(e) => setSearchTerm(e.target.value)}
+                          />
+                          <FaSearch className="um-search-icon" />
+                      </div>
+                  </div>
+              </div>
 
-                {/* User Table */}
-                <div className="um-table-wrapper">
-                  <table className="um-table">
-                    <thead className="um-table-thead">
-                      <tr>
-                        <th scope="col" className="um-table-th">
-                          Employee
-                        </th>
-                        <th scope="col" className="um-table-th">
-                          Department
-                        </th>
-                        <th scope="col" className="um-table-th">
-                          Designations
-                        </th>
-                        <th scope="col" className="um-table-th">
-                          Status
-                        </th>
-                        <th scope="col" className="um-table-th">
-                          Last Login
-                        </th>
-                        <th scope="col" className="um-table-th">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="um-table-tbody">
-                      {filteredUsers.length > 0 ? (
-                        filteredUsers.map((user) => (
-                          <tr key={user.id} className="um-table-tr">
-                            <td className="um-table-td um-cell-responsive">
-                              <div className="um-employee-name">{user.name}</div>
-                              <div className="um-employee-email">{user.email}</div>
-                            </td>
-                            <td className="um-table-td um-cell-responsive">
-                              <div className="um-employee-name">{user.department}</div>
-                            </td>
-                            <td className="um-table-td um-cell-responsive">
-                              <div className="um-designation-container">
-                                {user.designations.map((designation, index) => (
-                                  <span key={index} className={`um-designation-tag ${
-                                    designation === 'ADMIN' ? 'um-tag-admin' :
-                                    designation === 'JOB APPLICATION SPECIALIST' ? 'um-tag-job-application-specialist' :
-                                    designation === 'MANAGER' ? 'um-tag-manager' :
-                                    designation === 'ASSET MANAGER' ? 'um-tag-asset-manager' :
-                                    designation === 'TEAM LEAD' ? 'um-tag-team-lead' :
-                                    'um-tag-default'
-                                  }`}>
-                                    {designation}
-                                  </span>
-                                ))}
-                              </div>
-                            </td>
-                            <td className="um-table-td um-cell-responsive">
-                              {/* Original Status Tag */}
-                              <div className="um-status-container">
-                                <span className={`um-status-tag ${user.status === 'active' ? 'um-status-active' : 'um-status-inactive'}`}>
-                                  {user.status}
+              {/* User Table (no changes needed here, as it had its own styling) */}
+              <div className="um-table-wrapper">
+                <table className="um-table">
+                  <thead className="um-table-thead">
+                    <tr>
+                      <th scope="col" className="um-table-th um-text-left"> {/* Added um-text-left class */}
+                        Employee
+                      </th>
+                      <th scope="col" className="um-table-th">
+                        Department
+                      </th>
+                      <th scope="col" className="um-table-th">
+                        Designations
+                      </th>
+                      <th scope="col" className="um-table-th">
+                        Status
+                      </th>
+                      <th scope="col" className="um-table-th">
+                        Last Login
+                      </th>
+                      <th scope="col" className="um-table-th">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="um-table-tbody">
+                    {filteredUsers.length > 0 ? (
+                      filteredUsers.map((user) => (
+                        <tr key={user.id} className="um-table-tr">
+                          <td className="um-table-td um-cell-responsive um-text-left"> {/* Added um-text-left class */}
+                            <div className="um-employee-name">{user.name}</div>
+                            <div className="um-employee-email">{user.email}</div>
+                          </td>
+                          <td className="um-table-td um-cell-responsive">
+                            <div className="um-employee-name">{user.department}</div>
+                          </td>
+                          <td className="um-table-td um-cell-responsive">
+                            <div className="um-designation-container">
+                              {/* Display all designations a user has from their array */}
+                              {user.designations.map((designation, index) => (
+                                <span key={index} className={`um-designation-tag ${
+                                  designation === 'ADMIN' ? 'um-tag-admin' :
+                                  designation === 'JOB APPLICATION SPECIALIST' ? 'um-tag-job-application-specialist' :
+                                  designation === 'MANAGER' ? 'um-tag-manager' :
+                                  designation === 'ASSET MANAGER' ? 'um-tag-asset-manager' :
+                                  designation === 'TEAM LEAD' ? 'um-tag-team-lead' :
+                                  'um-tag-default'
+                                }`}>
+                                  {designation}
                                 </span>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="um-table-td um-cell-responsive">
+                            {/* Replaced status text with ToggleButton */}
+                            <ToggleButton
+                              checked={user.status === 'active'}
+                              onChange={() => handleStatusToggle(user)}
+                              ariaLabel={`Toggle status for ${user.name}`}
+                            />
+                          </td>
+                          <td className="um-table-td um-cell-responsive">
+                            <div className="um-employee-name">{user.lastLogin}</div>
+                          </td>
+                          <td className="um-table-td um-cell-responsive">
+                            <div className="um-action-buttons">
+                              {/* Edit Button with Custom Tooltip */}
+                              <div
+                                className="um-action-btn-wrapper"
+                                onMouseEnter={() => setHoveredTooltipId(`${user.id}-edit`)}
+                                onMouseLeave={() => setHoveredTooltipId(null)}
+                              >
+                                <button
+                                  onClick={() => handleEditUser(user)}
+                                  className="um-action-btn um-action-btn-yellow"
+                                  aria-label="Edit"
+                                >
+                                  <FaEdit />
+                                  </button>
+                                <Tooltip text="Edit" tooltipId={`${user.id}-edit`} currentHoveredTooltipId={hoveredTooltipId} />
                               </div>
-                            </td>
-                            <td className="um-table-td um-cell-responsive">
-                              <div className="um-employee-name">{user.lastLogin}</div>
-                            </td>
-                            <td className="um-table-td um-cell-responsive">
-                              <div className="um-action-buttons">
-                                {/* Edit Button with Custom Tooltip */}
-                                <div
-                                  className="um-action-btn-wrapper"
-                                  onMouseEnter={() => setHoveredTooltipId(`${user.id}-edit`)}
-                                  onMouseLeave={() => setHoveredTooltipId(null)}
-                                >
-                                  <button
-                                    onClick={() => handleEditUser(user)}
-                                    className="um-action-btn um-action-btn-yellow"
-                                    aria-label="Edit"
-                                  >
-                                    <FaEdit />
-                                  </button>
-                                  <Tooltip text="Edit" tooltipId={`${user.id}-edit`} currentHoveredTooltipId={hoveredTooltipId} />
-                                </div>
 
-                                {/* Delete Button with Custom Tooltip */}
-                                <div
-                                  className="um-action-btn-wrapper"
-                                  onMouseEnter={() => setHoveredTooltipId(`${user.id}-delete`)}
-                                  onMouseLeave={() => setHoveredTooltipId(null)}
+                              {/* Delete Button with Custom Tooltip */}
+                              <div
+                                className="um-action-btn-wrapper"
+                                onMouseEnter={() => setHoveredTooltipId(`${user.id}-delete`)}
+                                onMouseLeave={() => setHoveredTooltipId(null)}
+                              >
+                                <button
+                                  onClick={() => handleDeleteUserClick(user)}
+                                  className="um-action-btn um-action-btn-red"
+                                  aria-label="Delete"
                                 >
-                                  <button
-                                    onClick={() => handleDeleteUserClick(user)}
-                                    className="um-action-btn um-action-btn-red"
-                                    aria-label="Delete"
-                                  >
-                                    <FaTrashAlt />
-                                  </button>
-                                  <Tooltip text="Delete" tooltipId={`${user.id}-delete`} currentHoveredTooltipId={hoveredTooltipId} />
-                                </div>
-
-                                {/* Status Toggle Button (back to original icon button) with Custom Tooltip */}
-                                <div
-                                  className="um-action-btn-wrapper"
-                                  onMouseEnter={() => setHoveredTooltipId(`${user.id}-status`)}
-                                  onMouseLeave={() => setHoveredTooltipId(null)}
-                                >
-                                  <button
-                                    onClick={() => openConfirmModal(user)}
-                                    className={`um-action-btn ${user.status === 'active' ? 'um-action-btn-red' : 'um-action-btn-green'}`}
-                                    aria-label={user.status === 'active' ? 'Inactivate' : 'Activate'}
-                                  >
-                                    {user.status === 'active' ? <FaTimesCircle /> : <FaCheckCircle />}
-                                  </button>
-                                  <Tooltip text={user.status === 'active' ? 'Inactivate User' : 'Activate User'} tooltipId={`${user.id}-status`} currentHoveredTooltipId={hoveredTooltipId} />
-                                </div>
+                                  <FaTrashAlt />
+                                </button>
+                                <Tooltip text="Delete" tooltipId={`${user.id}-delete`} currentHoveredTooltipId={hoveredTooltipId} />
                               </div>
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr className="um-table-tr">
-                          <td colSpan="6" className="um-table-td um-cell-responsive" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
-                            No users found matching your search.
+                            </div>
                           </td>
                         </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                      ))
+                    ) : (
+                      <tr className="um-table-tr">
+                        <td colSpan="6" className="um-table-td um-cell-responsive" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
+                          No users found matching your search.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </>
           )}
@@ -1854,13 +2397,12 @@ const WorkGroups = () => {
                   <h1 className="um-title">Company Designations</h1>
                   <p className="um-subtitle">Manage role designations and their system permissions</p>
                 </div>
-                {/* Button text changed to "Create Work Group" */}
                 <button
                   onClick={openCreateSecurityGroupModal}
                   className="um-add-btn"
                 >
                   <FaPlus />
-                  <span>Create Work Group</span> {/* Changed button text */}
+                  <span>Create Work Group</span>
                 </button>
               </div>
 
@@ -1869,10 +2411,9 @@ const WorkGroups = () => {
                   <div key={designation.id} className="designation-card">
                     <div className="designation-header">
                       <div className="designation-title-group">
-                        <FaShieldAlt style={{ color: 'var(--icon-color)', fontSize: '1.25rem' }} /> {/* Shield Icon */}
+                        <FaShieldAlt style={{ color: 'var(--icon-color)', fontSize: '1.25rem' }} />
                         <h3 className="designation-name">{designation.name}</h3>
                       </div>
-                      {/* Removed designation-tags-group div that contained type tags */}
                     </div>
                     <p className="designation-description">{designation.description}</p>
                     <div className="designation-stats">
@@ -1883,12 +2424,13 @@ const WorkGroups = () => {
                         <FaCog style={{color: 'var(--text-secondary)'}} /> {designation.permissions} <span className="designation-stat-value">permissions</span>
                       </div>
                     </div>
-                    {/* Removed Key Permissions Section */}
                     <div className="designation-card-actions">
-                      <button className="designation-manage-btn">
+                      <button
+                        onClick={() => handleManageDesignationClick(designation)} // Updated onClick
+                        className="designation-manage-btn"
+                      >
                         <FaEdit /> Manage
                       </button>
-                      {/* Delete button now rendered for all designations, without the 'deletable' condition */}
                       <button
                         onClick={() => handleDeleteDesignation(designation)}
                         className="designation-delete-btn"
@@ -1920,10 +2462,10 @@ const WorkGroups = () => {
             </h3>
             <p className="um-modal-subtitle">
               Create a new user account with designation assignment
-            </p> {/* New Subtitle */}
+            </p>
             <form onSubmit={saveUser} className="um-modal-form">
-              <div className="um-modal-body-scrollable"> {/* New: Scrollable area for form fields */}
-                <div className="um-modal-form-fields-group"> {/* New: Group to apply gap to fields */}
+              <div className="um-modal-body-scrollable">
+                <div className="um-modal-form-fields-group">
                   <div className="um-modal-form-group">
                     <label className="um-modal-label" htmlFor="name">
                       Full Name
@@ -1964,10 +2506,8 @@ const WorkGroups = () => {
                       value={newUser.department}
                       onChange={handleNewUserChange}
                       className="um-modal-select"
-                      required
                     >
                       <option value="">Select Department</option>
-                      {/* You would dynamically load departments here */}
                       <option value="IT Administration">IT Administration</option>
                       <option value="Human Resources">Human Resources</option>
                       <option value="Operations">Operations</option>
@@ -1999,7 +2539,6 @@ const WorkGroups = () => {
                       ))}
                     </div>
                   </div>
-                  {/* Status field is always visible, but lastLogin is removed */}
                   <div className="um-modal-form-group">
                     <label className="um-modal-label" htmlFor="status">
                       Status
@@ -2037,41 +2576,7 @@ const WorkGroups = () => {
         </div>
       )}
 
-      {/* Confirm Status Change Modal */}
-      {isConfirmModalForStatus && userToToggleStatus && (
-        <div className="um-modal-overlay">
-          <div className="um-modal-content um-confirm-modal-content">
-            <button
-              onClick={closeConfirmModal}
-              className="um-modal-close-btn"
-            >
-              &times;
-            </button>
-            <h3 className="um-confirm-modal-title">
-              Confirm {userToToggleStatus.status === 'active' ? 'Inactivation' : 'Activation'}
-            </h3>
-            <p className="um-confirm-modal-message">
-              Are you sure you want to {userToToggleStatus.status === 'active' ? 'inactivate' : 'activate'} {userToToggleStatus.name}?
-            </p>
-            <div className="um-confirm-modal-actions">
-              <button
-                onClick={closeConfirmModal}
-                className="um-modal-cancel-btn"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmToggleStatus}
-                className={userToToggleStatus.status === 'active' ? 'um-confirm-modal-deactivate-btn' : 'um-confirm-modal-activate-btn'}
-              >
-                {userToToggleStatus.status === 'active' ? 'Inactivate' : 'Activate'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation Modal */}
+      {/* User Delete Confirmation Modal (kept as it is not for status toggle) */}
       {isDeleteConfirmModalOpen && userToDelete && (
         <div className="um-modal-overlay">
           <div className="um-modal-content um-confirm-modal-content">
@@ -2103,6 +2608,40 @@ const WorkGroups = () => {
         </div>
       )}
 
+      {/* Designation Delete Confirmation Modal */}
+      {isDeleteDesignationConfirmModalOpen && designationToDelete && (
+        <div className="um-modal-overlay">
+          <div className="um-modal-content um-confirm-modal-content">
+            <button
+              onClick={cancelDeleteDesignation}
+              className="um-modal-close-btn"
+            >
+              &times;
+            </button>
+            <h3 className="um-confirm-modal-title">Confirm Deletion</h3>
+            <p className="um-confirm-modal-message">
+              Are you sure you want to delete designation "{designationToDelete.name}"? This action cannot be undone.
+              <br/><br/>
+              Note: This will not unassign users from this designation.
+            </p>
+            <div className="um-confirm-modal-actions">
+              <button
+                onClick={cancelDeleteDesignation}
+                className="um-modal-cancel-btn"
+                >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteDesignation}
+                className="um-confirm-delete-btn"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Create New Work Group Modal */}
       {isCreateSecurityGroupModalOpen && (
         <div className="um-modal-overlay">
@@ -2113,14 +2652,14 @@ const WorkGroups = () => {
             >
               &times;
             </button>
-            <h3 className="um-modal-title">Create New Work Group</h3> {/* Changed title */}
-            <p className="um-modal-subtitle">Define a new work group with specific permissions</p> {/* New subtitle */}
+            <h3 className="um-modal-title">Create New Work Group</h3>
+            <p className="um-modal-subtitle">Define a new work group with specific permissions</p>
             <form onSubmit={handleCreateSecurityGroupSubmit} className="um-modal-form">
-              <div className="um-modal-body-scrollable"> {/* Scrollable body for form fields */}
-                <div className="um-modal-form-fields-group"> {/* Group to apply gap to fields */}
+              <div className="um-modal-body-scrollable">
+                <div className="um-modal-form-fields-group">
                   <div className="um-modal-form-group">
                     <label className="um-modal-label" htmlFor="securityGroupName">
-                      Security Group Name
+                      Work Group Name
                     </label>
                     <input
                       type="text"
@@ -2129,12 +2668,12 @@ const WorkGroups = () => {
                       value={newSecurityGroup.name}
                       onChange={handleSecurityGroupInputChange}
                       className="um-modal-input"
-                      placeholder="Security Group Name"
+                      placeholder="Work Group Name"
                       required
                     />
                   </div>
                   <div className="um-modal-form-group">
-                    <label className="um-modal-label" htmlFor="securityGroupDescription">
+                    <label className="um-modal-label" style={{marginBottom: '0'}}>
                       Description
                     </label>
                     <textarea
@@ -2148,21 +2687,23 @@ const WorkGroups = () => {
                     ></textarea>
                   </div>
 
-                  {/* Permissions Section - Tabbed */}
+                  {/* Permissions Section - Styled Radio Buttons */}
                   <div className="um-modal-form-group">
                     <label className="um-modal-label" style={{marginBottom: '0'}}>
                       Permissions
                     </label>
-                    <div className="um-security-group-tab-nav">
+                    <div className="um-radio-inputs"> {/* Main wrapper for radio group */}
                       {Object.keys(permissionsData).map(tabName => (
-                        <button
-                          key={tabName}
-                          type="button"
-                          className={`um-security-group-tab-btn ${currentPermissionTab === tabName ? 'um-tab-active' : ''}`}
-                          onClick={() => setCurrentPermissionTab(tabName)}
-                        >
-                          {tabName}
-                        </button>
+                        <label key={tabName} className="um-radio-item">
+                          <input
+                            type="radio"
+                            name="permissionCategory"
+                            value={tabName}
+                            checked={currentPermissionTab === tabName}
+                            onChange={(e) => setCurrentPermissionTab(e.target.value)}
+                          />
+                          <span className="um-radio-name">{tabName}</span>
+                        </label>
                       ))}
                     </div>
                     <div className="um-security-group-permissions-content">
@@ -2189,8 +2730,8 @@ const WorkGroups = () => {
                       ))}
                     </div>
                   </div>
-                </div> {/* End um-modal-form-fields-group */}
-              </div> {/* End um-modal-body-scrollable */}
+                </div>
+              </div>
               <div className="um-modal-form-actions">
                 <button
                   type="button"
@@ -2204,9 +2745,281 @@ const WorkGroups = () => {
                   className="um-modal-save-btn"
                 >
                   Create Work Group
-                </button> {/* Changed button text */}
+                </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Manage Security Group Modal */}
+      {isManageSecurityGroupModalOpen && selectedDesignationForManage && (
+        <div className="um-modal-overlay">
+          <div className="um-modal-content um-manage-modal-content">
+            <button
+              onClick={closeManageSecurityGroupModal}
+              className="um-modal-close-btn"
+            >
+              &times;
+            </button>
+            <h3 className="um-modal-title">
+              Manage Security Group: {selectedDesignationForManage.name} ({selectedDesignationForManage.employees} Users)
+            </h3>
+            <p className="um-modal-subtitle">
+              Edit permissions and settings for this security group
+            </p>
+
+            <div className="um-radio-inputs um-radio-inputs-modal">
+                <label className="um-radio-item">
+                  <input
+                    type="radio"
+                    name="manageSecurityGroupTab"
+                    value="Permissions"
+                    checked={currentManageSecurityGroupTab === 'Permissions'}
+                    onChange={() => setCurrentManageSecurityGroupTab('Permissions')}
+                  />
+                  <span className="um-radio-name">Permissions</span>
+                </label>
+                <label className="um-radio-item">
+                  <input
+                    type="radio"
+                    name="manageSecurityGroupTab"
+                    value="Users"
+                    checked={currentManageSecurityGroupTab === 'Users'}
+                    onChange={() => setCurrentManageSecurityGroupTab('Users')}
+                  />
+                  <span className="um-radio-name" style={{color: '#EF4444'}}>Users ({selectedDesignationForManage.employees})</span>
+                </label>
+                <label className="um-radio-item">
+                  <input
+                    type="radio"
+                    name="manageSecurityGroupTab"
+                    value="Settings"
+                    checked={currentManageSecurityGroupTab === 'Settings'}
+                    onChange={() => setCurrentManageSecurityGroupTab('Settings')}
+                  />
+                  <span className="um-radio-name">Settings</span>
+                </label>
+            </div>
+
+            <div className="um-modal-body-scrollable um-manage-permissions-scrollable um-manage-users-scrollable">
+              {currentManageSecurityGroupTab === 'Permissions' && (
+                <div className="um-modal-form-fields-group">
+                  {Object.keys(permissionsData).map(category => {
+                    const categoryPermissions = permissionsData[category];
+                    const currentVisibleCount = visiblePermissionCounts[category] || 5;
+                    const displayedPermissions = categoryPermissions.slice(0, currentVisibleCount);
+                    const hasMorePermissions = categoryPermissions.length > currentVisibleCount;
+
+                    return (
+                      <div key={category} className="um-permission-section">
+                        <div className="um-permission-section-title">{category}</div>
+                        {displayedPermissions.map(permission => (
+                          <div key={permission.id} className="um-permission-item">
+                            <div className="um-permission-checkbox-wrapper">
+                              <input
+                                type="checkbox"
+                                id={`manage-permission-${selectedDesignationForManage.id}-${permission.id}`}
+                                className="um-permission-checkbox"
+                                checked={selectedDesignationForManage.permissionIds && selectedDesignationForManage.permissionIds.includes(permission.id)}
+                                onChange={() => handleManagePermissionsChange(permission.id)}
+                              />
+                            </div>
+                            <div className="um-permission-details">
+                              <label htmlFor={`manage-permission-${selectedDesignationForManage.id}-${permission.id}`} className="um-permission-name">
+                                {permission.name}
+                              </label>
+                              <p className="um-permission-description">
+                                {permission.description}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                        {/* {categoryPermissions.length > 5 && ( // Only show button if there are more than 5 permissions
+                          <button
+                            type="button"
+                            onClick={() => toggleShowPermissions(category)}
+                            className="um-show-more-btn"
+                          >
+                            {currentVisibleCount === categoryPermissions.length ? 'Show Less' : 'Show More'}
+                          </button>
+                        )} */}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {currentManageSecurityGroupTab === 'Users' && (
+                <div className="um-modal-form-fields-group">
+                  {/* Search bar for users in modal */}
+                  <div className="um-search-container" style={{maxWidth: '100%', marginBottom: '1rem'}}>
+                      <div className="um-search-input-wrapper">
+                          <input
+                              type="text"
+                              placeholder="Search users..."
+                              className="um-search-input"
+                              value={manageUsersSearchTerm}
+                              onChange={(e) => setManageUsersSearchTerm(e.target.value)}
+                          />
+                          <FaSearch className="um-search-icon" />
+                      </div>
+                  </div>
+
+                  {/* Assigned Users Section */}
+                  <div className="um-user-section-container">
+                    <div className="um-user-list-card-header">
+                       Assigned Users ({getAssignedUsers().length})
+                    </div>
+                    {getAssignedUsers().length > 0 ? (
+                      <div className="um-user-list">
+                        {getAssignedUsers().map(user => (
+                          <div key={user.id} className="um-user-card-item">
+                            <div className="um-user-card-details">
+                              <div className="um-user-card-name">{user.name}</div>
+                              <div className="um-user-card-email">{user.email}</div>
+                              <div className="um-user-card-dept">{user.department}</div>
+                              <div className="um-user-card-designations">
+                                {user.designations.map((designation, idx) => (
+                                  <span key={idx} className={`um-designation-tag ${
+                                    designation === 'ADMIN' ? 'um-tag-admin' :
+                                    designation === 'JOB APPLICATION SPECIALIST' ? 'um-tag-job-application-specialist' :
+                                    designation === 'MANAGER' ? 'um-tag-manager' :
+                                    designation === 'ASSET MANAGER' ? 'um-tag-asset-manager' :
+                                    designation === 'TEAM LEAD' ? 'um-tag-team-lead' :
+                                    'um-tag-default'
+                                  }`}>
+                                    {designation}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="um-user-card-actions">
+                              <span className={`um-user-card-status-tag ${user.status === 'active' ? 'um-user-card-status-active' : 'um-user-card-status-inactive'}`}>
+                                {user.status}
+                              </span>
+                              <button
+                                onClick={() => handleAssignUnassignUser(user, 'unassign')}
+                                className="um-user-card-action-btn"
+                                aria-label={`Unassign ${user.name} from ${selectedDesignationForManage.name}`}
+                              >
+                                <FaUserMinus />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="um-no-users-message">
+                        <FaUsers className="um-no-users-icon" />
+                        No users assigned to this group
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Available Users Section */}
+                  <div className="um-user-section-container" style={{marginTop: '2rem'}}>
+                    <div className="um-user-list-card-header">
+                      Available Users ({getAvailableUsers().length})
+                    </div>
+                    {getAvailableUsers().length > 0 ? (
+                      <div className="um-user-list">
+                        {getAvailableUsers().map(user => (
+                          <div key={user.id} className="um-user-card-item">
+                            <div className="um-user-card-details">
+                              <div className="um-user-card-name">{user.name}</div>
+                              <div className="um-user-card-email">{user.email}</div>
+                              <div className="um-user-card-dept">{user.department}</div>
+                              <div className="um-user-card-designations">
+                                {user.designations.map((designation, idx) => (
+                                  <span key={idx} className={`um-designation-tag ${
+                                    designation === 'ADMIN' ? 'um-tag-admin' :
+                                    designation === 'JOB APPLICATION SPECIALIST' ? 'um-tag-job-application-specialist' :
+                                    designation === 'MANAGER' ? 'um-tag-manager' :
+                                    designation === 'ASSET MANAGER' ? 'um-tag-asset-manager' :
+                                    designation === 'TEAM LEAD' ? 'um-tag-team-lead' :
+                                    'um-tag-default'
+                                  }`}>
+                                    {designation}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="um-user-card-actions">
+                              <span className={`um-user-card-status-tag ${user.status === 'active' ? 'um-user-card-status-active' : 'um-user-card-status-inactive'}`}>
+                                {user.status}
+                              </span>
+                              <button
+                                onClick={() => handleAssignUnassignUser(user, 'assign')}
+                                className="um-user-card-action-btn"
+                                aria-label={`Assign ${user.name} to ${selectedDesignationForManage.name}`}
+                              >
+                                <FaUserPlus />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="um-no-users-message">
+                        <FaUsers className="um-no-users-icon" />
+                        All users are assigned to this group, or no unassigned users match the search.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {currentManageSecurityGroupTab === 'Settings' && (
+                <div className="um-modal-form-fields-group">
+                  <div className="um-modal-form-group">
+                    <label className="um-modal-label" htmlFor="groupNameSetting">
+                      Group Name
+                    </label>
+                    <input
+                      type="text"
+                      id="groupNameSetting"
+                      name="name" // Map to 'name' property of selectedDesignationForManage
+                      value={selectedDesignationForManage.name}
+                      onChange={handleManageSettingsChange}
+                      className="um-modal-input"
+                      placeholder="Group Name"
+                      required
+                    />
+                  </div>
+                  <div className="um-modal-form-group">
+                    <label className="um-modal-label" htmlFor="groupDescriptionSetting">
+                      Description
+                    </label>
+                    <textarea
+                      id="groupDescriptionSetting"
+                      name="description" // Map to 'description' property
+                      value={selectedDesignationForManage.description}
+                      onChange={handleManageSettingsChange}
+                      className="um-modal-textarea"
+                      placeholder="Group Description"
+                      rows="3"
+                    ></textarea>
+                  </div>
+                  {/* Any other settings fields can be added here */}
+                </div>
+              )}
+            </div>
+
+            <div className="um-modal-form-actions">
+                <button
+                  type="button"
+                  onClick={closeManageSecurityGroupModal}
+                  className="um-modal-cancel-btn"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={saveManagedDesignation}
+                  className="um-modal-save-btn"
+                >
+                  Save Changes
+                </button>
+            </div>
           </div>
         </div>
       )}

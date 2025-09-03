@@ -4,9 +4,11 @@ import '../../styles/Services/MobileAppDev.css';
 import { useNavigate } from 'react-router-dom';
 import CustomNavbar from '../Navbar';
 import { Modal, Button, Form } from 'react-bootstrap';
+import { useAuth } from '../../components/AuthContext'; // Corrected the import path
 
 const MobileAppDev = () => {
   const navigate = useNavigate();
+  const { isLoggedIn } = useAuth(); // Step 2: Get auth status
 
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
@@ -18,7 +20,7 @@ const MobileAppDev = () => {
     userType: '',
   });
 
-  const cardsData = [
+    const cardsData = [
     {
       title: 'Android App Development',
       description: (
@@ -63,6 +65,15 @@ TechXplorers specializes in a wide range of mobile solutions including Bluetooth
     },
   ];
 
+  // Step 3: Update the handler to check for login status
+  const handleApplyNow = () => {
+    if (isLoggedIn) {
+      navigate('/services/servicesForm', { state: { service: 'Mobile Development' } });
+    } else {
+      navigate('/login');
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
@@ -79,8 +90,9 @@ TechXplorers specializes in a wide range of mobile solutions including Bluetooth
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log('Form submitted:', formData);
-    alert('Form submitted successfully!');
+    // Using a custom modal or toast notification is better than alert()
     setShowModal(false);
+    // Reset form
     setFormData({
       firstName: '',
       lastName: '',
@@ -92,19 +104,32 @@ TechXplorers specializes in a wide range of mobile solutions including Bluetooth
   };
 
   return (
-    <div className="mobile-app-dev-container">
+    <div className="web-app-dev-container">
       <CustomNavbar />
+
       {/* Header Section */}
       <header className="header-section">
         <div className="image-with-text-overlay">
           <img src={img1} alt="Mobile Application Development" className="header-image" />
+          <div className="glassy-mask"></div>
+          <div className="overlay-content">
           <div className="overlay-text">Mobile App Development</div>
+        
+          <div className="header-button-container">
+              <button onClick={() => navigate('/contactus')} className="header-action-btn btn-contact">
+                Contact Us
+              </button>
+              <button onClick={handleApplyNow} className="header-action-btn btn-register">
+                Register Now
+              </button>
+            </div>
+          </div>
         </div>
       </header>
 
       {/* Flip Cards Section */}
       <section className="cards-section">
-        <h2 className="section-title">Explore Our Services</h2>
+        <h2 className="section-title">Explore Our Web Services</h2>
         <div className="cards-wrapper">
           {cardsData.map((card, index) => (
             <div key={index} className="flip-card">
@@ -127,17 +152,17 @@ TechXplorers specializes in a wide range of mobile solutions including Bluetooth
           <h2 className="headline mb-3">Want to know more or work with us?</h2>
           <button onClick={() => navigate('/contactus')} className="contact-button btn-lg btn-primary">
             Contact Us
-          </button>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;------or------ &nbsp; &nbsp; &nbsp;
-          <button onClick={() => setShowModal(true)} className="contact-button btn-lg btn-primary mb-5">
-            Apply Now
+          </button>
+          &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;------or------ &nbsp; &nbsp; &nbsp;
+          <button onClick={handleApplyNow} className="contact-button btn-lg btn-primary mb-5">
+            Register Now
           </button>
         </div>
       </section>
 
       {/* Modal Form */}
       <Modal show={showModal} onHide={() => setShowModal(false)} centered>
-        <div className=''>
-        <Modal.Header className=" modal-service " closeButton>
+        <Modal.Header closeButton>
           <Modal.Title>Mobile App Development</Modal.Title>
         </Modal.Header>
         <Modal.Body>
@@ -182,7 +207,6 @@ TechXplorers specializes in a wide range of mobile solutions including Bluetooth
                 required
               />
             </div>
-
             <div className="mb-3">
               <Form.Label className="fw-bold">
                 Email <span className="text-danger">*</span>
@@ -200,13 +224,13 @@ TechXplorers specializes in a wide range of mobile solutions including Bluetooth
             <div className="mb-3">
               <label><strong>What service do you want?</strong></label>
               <div className="d-flex flex-wrap gap-2 mt-2">
-                {[1, 2, 3, 4, 5, 6].map(num => (
+                {['Service 1', 'Service 2', 'Service 3', 'Service 4', 'Service 5', 'Service 6'].map(service => (
                   <Button
-                    key={num}
-                    variant={formData.service === `Service ${num}` ? 'primary' : 'outline-primary'}
-                    onClick={() => handleServiceSelect(`Service ${num}`)}
+                    key={service}
+                    variant={formData.service === service ? 'primary' : 'outline-primary'}
+                    onClick={() => handleServiceSelect(service)}
                   >
-                    Service {num}
+                    {service}
                   </Button>
                 ))}
               </div>
@@ -232,7 +256,6 @@ TechXplorers specializes in a wide range of mobile solutions including Bluetooth
             </Button>
           </Form>
         </Modal.Body>
-        </div>
       </Modal>
     </div>
   );

@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import img1 from '../../assets/DigiMark.png';
-import '../../styles/Services/DigitalMarketing.css';
+import img1 from '../../assets/CyberSecurity.png';
+import '../../styles/Services/CyberSecurity.css';
 import { useNavigate } from 'react-router-dom';
 import CustomNavbar from '../Navbar';
 import { Modal, Button, Form } from 'react-bootstrap';
 import { useAuth } from '../../components/AuthContext'; // Step 1: Import useAuth
 
-const DigitalMarketing = () => {
+const CyberSecurity = () => {
   const navigate = useNavigate();
   const { isLoggedIn } = useAuth(); // Step 2: Get auth status
   const [showModal, setShowModal] = useState(false);
@@ -22,7 +22,7 @@ const DigitalMarketing = () => {
   // Step 3: Update the handler to check for login status
   const handleApplyNow = () => {
     if (isLoggedIn) {
-      navigate('/services/servicesForm', { state: { service: 'Digital Marketing' } });
+      navigate('/services/servicesForm', { state: { service: 'Cyber Security' } });
     } else {
       navigate('/login');
     }
@@ -58,32 +58,33 @@ const DigitalMarketing = () => {
 
   const cardsData = [
     {
-      title: 'Our Digital Marketing Services',
+      title: 'Our Cyber Security Services',
       description: (
-        <p>TechXplorers offers a wide range of digital marketing services, including Search Engine Optimization (SEO) to improve website visibility on search engines, Social Media Marketing (SMM) to engage audiences across platforms, and Content Marketing to deliver valuable, targeted information. We also specialize in Influencer & Affiliate Marketing to amplify brand reach through trusted voices, along with Online Reputation Management (ORM) to maintain and enhance your brand’s image in the digital world.</p>
+        <p>TechXplorers provides comprehensive cyber security solutions designed to protect your digital assets. Our services include Vulnerability Assessment & Penetration Testing (VAPT) to identify and fix security weaknesses, Managed Detection and Response (MDR) for real-time threat monitoring, and Endpoint Security to safeguard devices across your network. We also offer Security Information and Event Management (SIEM), Identity and Access Management (IAM), and tailored Cyber Security Consulting to ensure your organization stays ahead of evolving threats.</p>
       ),
     },
     {
       title: 'Industries We Serve',
       description: (
         <ul className="flip-card-list">
-         TechXplorers offers services across a diverse range of industries, including E-Commerce & Retail, Healthcare & Pharmaceuticals, Finance & Banking, Real Estate & Construction, Education & Training, Technology & SaaS, Hospitality & Travel, and Automotive & Manufacturing.
+         TechXplorers delivers cyber security services to a broad spectrum of industries, including Banking, Financial Services & Insurance (BFSI), Healthcare & Pharmaceuticals, Government & Defense, E-Commerce & Retail, Energy & Utilities, Education, Technology & SaaS, and Manufacturing.
 
         </ul>
       ),
     },
     {
-      title: 'Our Digital Marketing Process',
+      title: 'Our Cyber Security Process',
       description: (
-        <p>The process includes <b>Market Research & Analysis</b>, followed by Strategy Development to outline a clear roadmap. Once the strategy is in place, focus shifts to **Implementation & Execution**, ensuring all plans are put into action effectively. This is supported by continuous **Monitoring & Optimization** to enhance performance, and culminates in comprehensive **Reporting & Insights** that inform future decisions.
+        <p>Our approach begins with a thorough <b>Security Assessment</b> to understand your current posture. This is followed by <b>Risk Analysis & Planning</b> to prioritize threats and define mitigation strategies. Next, we move to <b>Implementation & Hardening</b> of systems and policies, ensuring robust protection. Continuous <b>Monitoring, Detection & Response</b> keeps your environment secure, supported by regular <b>Audits & Compliance Reporting</b> to meet industry standards.
+
 </p>
       ),
     },
     {
-      title: 'Why Choose TechXplorers for Digital Marketing?',
+      title: 'Why Choose TechXplorers for Cyber Security?',
       description: (
         <ul className="flip-card-list">
-         TechXplorers stands out through its **expertise and experience**, offering clients **custom strategies** tailored to their unique goals. With a strong **data-driven approach**, we ensure every decision is backed by analytics. Our **multi-channel marketing** capabilities help businesses reach audiences effectively across platforms, all while maintaining **transparent reporting** to keep clients informed and empowered.
+         TechXplorers brings deep <strong>technical expertise</strong> and certified professionals to every engagement. We deliver <strong>customized security frameworks</strong> aligned with your business needs, backed by a <strong>proactive threat intelligence</strong> system. Our <strong>24/7 monitoring and incident response</strong> ensures rapid action when needed, and we maintain <strong>full compliance</strong> with global standards like ISO 27001, GDPR, and HIPAA, all with <strong>transparent communication</strong> throughout the partnership.
 
         </ul>
       ),
@@ -91,17 +92,17 @@ const DigitalMarketing = () => {
   ];
 
   return (
-    <div className="digital-marketing-container">
+    <div className="cyber-security-container">
       <CustomNavbar />
       
-      {/* Header Section */}
-       <header className="header-section">
+
+         <header className="header-section">
         <div className="image-with-text-overlay">
-          <img src={img1} alt="Digital Marketing" className="header-image" />
+          <img src={img1} alt="Cyber Security" className="header-image" />
           {/* This new container will hold both the title and the buttons */}
           <div className="glassy-mask"></div>
           <div className="overlay-content">
-            <div className="overlay-text">Digital Marketing</div>
+            <div className="overlay-text">Cyber Security</div>
             
             {/* Add the new button container here */}
             <div className="header-button-container">
@@ -148,7 +149,7 @@ const DigitalMarketing = () => {
       {/* Modal Form */}
       <Modal show={showModal} onHide={() => setShowModal(false)} centered>
         <Modal.Header closeButton>
-          <Modal.Title>Digital Marketing</Modal.Title>
+          <Modal.Title>Cyber Security</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form onSubmit={handleSubmit}>
@@ -210,4 +211,4 @@ const DigitalMarketing = () => {
   );
 };
 
-export default DigitalMarketing;
+export default CyberSecurity;

@@ -23,14 +23,33 @@ body {
   line-height: 1.8;
 }
 
+.carousel-item-custom {
+  position: relative; /* Crucial for positioning the overlay */
+}
+
 .carousel-img {
-  height: 400px;
+  height: 450px; /* You can adjust the height */
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: 10px; /* Consistent rounded corners */
+}
+
+.carousel-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4); /* Dark overlay */
+  z-index: 1;
+  border-radius: 10px;
+}
+
+.carousel-overlay-content {
+  z-index: 2; /* Ensures text is on top of the mask */
 }
 
 .carousel-shadow {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  box-shadow: 0 6px 15px rgba(0,0,0,0.15);
 }
 
 .carousel-item img {

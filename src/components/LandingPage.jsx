@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Container, Row, Col, Carousel } from 'react-bootstrap';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import CustomNavbar from './Navbar';
 import '../styles/LandingPage.css';
 import { useTheme } from '../context/ThemeContext';
-
+import { useAuth } from '../components/AuthContext'; // Import useAuth
 
 // Import images
 import Image1 from '../assets/MobileDev.png';
@@ -14,6 +14,7 @@ import Image2 from '../assets/WebDev.png';
 import Image3 from '../assets/DigiMark.png';
 import Image4 from '../assets/JobApply.png';
 import Image5 from '../assets/ItTalentSupply.png';
+import Image6 from '../assets/CyberSecurity.png';
 
 // Service images
 import WebAnalyticsImg from '../assets/WebAnalytics&Reporting.png';
@@ -24,32 +25,52 @@ import techSupportImg from '../assets/tech_support.png';
 import { useInView } from 'react-intersection-observer';
 
 const LandingPage = () => {
+  const { isLoggedIn } = useAuth(); // Get authentication status
+  const navigate = useNavigate();
+
   const offices = [
     { name: 'USA', position: [40.7128, -74.006] },
     { name: 'Canada', position: [43.6532, -79.3832] },
     { name: 'UK', position: [51.505, -0.09] },
     { name: 'Nigeria', position: [6.5244, 3.3792] },
     { name: 'Australia', position: [-33.8688, 151.2093] },
-    { name: 'India', position: [28.6139, 77.209] },
+    { name: 'India', position: [14.666386222572966, 77.59006709376247] },
   ];
-
-  const [selectedOffice, setSelectedOffice] = useState(null);
 
   const carouselItems = [
-    { id: 1, image: Image1, alt: "TechXplorers Service 1", text: "Mobile Application Development", path: "/services/mobile-app-development" },
-    { id: 2, image: Image2, alt: "TechXplorers Service 2", text: "Web Application Development", path: "/services/web-app-development" },
-    { id: 3, image: Image3, alt: "TechXplorers Service 3", text: "Digital Marketing", path: "/services/digital-marketing" },
-    { id: 4, image: Image4, alt: "TechXplorers Service 4", text: "Job Support", path: "/services/job-support" },
-    { id: 5, image: Image5, alt: "TechXplorers Service 5", text: "IT Talent Supply", path: "/services/it-talent-supply" }
+    { id: 1, image: Image1, alt: "TechXplorers Service 1", text: "Mobile App Development", path: "/services/mobile-app-development", service: "Mobile Development" },
+    { id: 2, image: Image2, alt: "TechXplorers Service 2", text: "Web Application Development", path: "/services/web-app-development", service: "Web Development" },
+    { id: 3, image: Image3, alt: "TechXplorers Service 3", text: "Digital Marketing", path: "/services/digital-marketing", service: "Digital Marketing" },
+    { id: 4, image: Image4, alt: "Job Support Profile", text: "Job Support", path: "/services/job-support", isJobSupport: true },
+    { id: 5, image: Image5, alt: "TechXplorers Service 5", text: "IT Talent Supply", path: "/services/it-talent-supply", service: "IT Talent Supply" },
+    { id: 6, image: Image6, alt: "TechXplorers Service 6", text: "Cyber Security", path: "/services/cyber-security", service: "Cyber Security" }
   ];
 
-  // UseInView with triggerOnce: false for re-animation on re-entry
   const [carouselRef, carouselInView] = useInView({ triggerOnce: false, threshold: 0.1 });
   const [servicesRef, servicesInView] = useInView({ triggerOnce: false, threshold: 0.1 });
   const [worldRef, worldInView] = useInView({ triggerOnce: true, threshold: 0.1 });
-
   const { isDarkMode } = useTheme();
 
+  /**
+   * Handles the click on the "Book a Service" button.
+   * If the user is logged in, it navigates to the appropriate service form.
+   * If not logged in, it redirects to the login page.
+   * @param {object} item - The carousel item object.
+   */
+  const handleBookServiceClick = (item) => {
+    if (isLoggedIn) {
+      // User is logged in, proceed to the form
+      if (item.isJobSupport) {
+        navigate("/services/job-contact-form");
+      } else {
+        navigate('/services/servicesForm', { state: { service: item.service } });
+      }
+    } else {
+      // User is not logged in, redirect to the login page
+      // You can also pass the intended destination to redirect back after login
+      navigate('/login', { state: { from: window.location.pathname } });
+    }
+  };
 
   return (
     <div className={`landing-page mt-4 ${isDarkMode ? 'dark-mode' : ''}`}>
@@ -62,8 +83,19 @@ const LandingPage = () => {
               <Carousel.Item key={item.id} className="carousel-item-custom position-relative">
                 <div className="carousel-overlay-content position-absolute top-50 start-50 translate-middle text-center text-white">
                   <h3>{item.text}</h3>
-                  <button className="btn btn-primary mt-3">Book a Service</button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                  <Link to={item.path} className="btn btn-primary mt-3">Learn More</Link>
+                  
+                    <div className="header-button-container">
+                    
+                    <Link to={item.path} className="header-action-btn"> {/* Secondary button style */}
+                      Learn More
+                    </Link>
+                    <div
+                      onClick={() => handleBookServiceClick(item)}
+                      className="header-action-btn btn-book" // Primary button style
+                    >
+                      Book a Service
+                    </div>
+                  </div>
                 </div>
                 <img
                   className="d-block w-100 carousel-img"
@@ -86,7 +118,11 @@ const LandingPage = () => {
         <Container fluid className="px-0">
           <Row className="gx-3 mx-auto">
             <Col md={4} className="service-card">
-              <div className="service-overlay-container position-relative">
+              <div
+                className="service-overlay-container position-relative"
+                onClick={() => navigate("/services/web-app-development")}
+                style={{ cursor: 'pointer' }}
+              >
                 <img
                   src={WebAnalyticsImg}
                   alt="WebAnalytics Service"
@@ -98,7 +134,11 @@ const LandingPage = () => {
               </div>
             </Col>
             <Col md={4} className="service-card">
-              <div className="service-overlay-container position-relative">
+              <div
+                className="service-overlay-container position-relative"
+                onClick={() => navigate("/services/digital-marketing")}
+                style={{ cursor: 'pointer' }}
+              >
                 <img
                   src={ProjectPlanningImg}
                   alt="Project Planning"
@@ -110,7 +150,11 @@ const LandingPage = () => {
               </div>
             </Col>
             <Col md={4} className="service-card">
-              <div className="service-overlay-container position-relative">
+              <div
+                className="service-overlay-container position-relative"
+                onClick={() => navigate("/services/job-support")}
+                style={{ cursor: 'pointer' }}
+              >
                 <img
                   src={techSupportImg}
                   alt="Tech Support"

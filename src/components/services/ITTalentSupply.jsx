@@ -4,9 +4,11 @@ import '../../styles/Services/MobileAppDev.css'; // Reusing styles
 import { useNavigate } from 'react-router-dom';
 import CustomNavbar from '../Navbar';
 import { Modal, Button, Form } from 'react-bootstrap';
+import { useAuth } from '../../components/AuthContext'; // Step 1: Import useAuth
 
 const ITTalentSupply = () => {
   const navigate = useNavigate();
+  const { isLoggedIn } = useAuth(); // Step 2: Get auth status
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
     firstName: '',
@@ -16,6 +18,15 @@ const ITTalentSupply = () => {
     service: '',
     userType: '',
   });
+
+   // Step 3: Update the handler to check for login status
+   const handleApplyNow = () => {
+    if (isLoggedIn) {
+      navigate('/services/servicesForm', { state: { service: 'IT Talent Supply' } });
+    } else {
+      navigate('/login');
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -33,7 +44,7 @@ const ITTalentSupply = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log('Form submitted:', formData);
-    alert('Form submitted successfully!');
+    // A custom modal or toast is better than alert()
     setShowModal(false);
     setFormData({
       firstName: '',
@@ -97,11 +108,25 @@ const ITTalentSupply = () => {
     <div className="ittalent-supply-container">
       <CustomNavbar />
       
-      {/* Header Section */}
-      <header className="header-section">
+
+         <header className="header-section">
         <div className="image-with-text-overlay">
           <img src={img1} alt="IT Talent Supply" className="header-image" />
-          <div className="overlay-text">IT Talent Supply</div>
+          {/* This new container will hold both the title and the buttons */}
+          <div className="glassy-mask"></div>
+          <div className="overlay-content">
+            <div className="overlay-text">IT Talent Supply</div>
+            
+            {/* Add the new button container here */}
+            <div className="header-button-container">
+              <button onClick={() => navigate('/contactus')} className="header-action-btn btn-contact">
+                Contact Us
+              </button>
+              <button onClick={handleApplyNow} className="header-action-btn btn-register">
+                Register Now
+              </button>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -130,8 +155,8 @@ const ITTalentSupply = () => {
             Contact Us
           </button>
           &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;------or------ &nbsp; &nbsp; &nbsp;
-          <button onClick={() => setShowModal(true)} className="contact-button btn-lg btn-primary">
-            Apply Now
+          <button onClick={handleApplyNow} className="contact-button btn-lg btn-primary">
+            Register Now
           </button>
         </div>
       </section>
@@ -166,13 +191,13 @@ const ITTalentSupply = () => {
             <div className="mb-3">
               <Form.Label className="fw-bold">What service do you want?</Form.Label>
               <div className="d-flex flex-wrap gap-2 mt-2">
-                {[1, 2, 3, 4, 5, 6].map(num => (
+                {['Service 1', 'Service 2', 'Service 3', 'Service 4', 'Service 5', 'Service 6'].map(service => (
                   <Button
-                    key={num}
-                    variant={formData.service === `Service ${num}` ? 'primary' : 'outline-primary'}
-                    onClick={() => handleServiceSelect(`Service ${num}`)}
+                    key={service}
+                    variant={formData.service === service ? 'primary' : 'outline-primary'}
+                    onClick={() => handleServiceSelect(service)}
                   >
-                    Service {num}
+                    {service}
                   </Button>
                 ))}
               </div>

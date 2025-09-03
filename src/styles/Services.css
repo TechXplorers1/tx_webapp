@@ -121,6 +121,28 @@
   opacity: 1 !important;
 }
 
+/* ADD THIS to the end of Services.css */
+
+.dark-mode .services-right {
+  background-color: #2c2c2c;
+  color: #f1f1f1;
+}
+
+.dark-mode .services-input {
+  background-color: #4a4a4a;
+  color: #f1f1f1;
+  border: 1px solid #666;
+}
+
+.dark-mode .services-submit-btn {
+  background-color: #00bcd4;
+  color: #000;
+}
+
+.dark-mode .services-submit-btn:hover {
+  background-color: #0097a7;
+}
+
 /* Responsive Design */
 @media (max-width: 1020px) {
   .services-dropdown {
@@ -215,7 +237,4 @@
   }
 }
 
-.contact-us-page {
-  animation: fadeSlideIn 1s ease-out;
-}
 

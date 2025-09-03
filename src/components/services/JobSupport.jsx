@@ -3,9 +3,11 @@ import img1 from '../../assets/JobApply.png';
 import '../../styles/Services/MobileAppDev.css'; // Reusing MobileAppDev styles
 import { useNavigate } from 'react-router-dom';
 import CustomNavbar from '../Navbar';
+import { useAuth } from '../../components/AuthContext'; // Step 1: Import useAuth
 
 const JobSupport = () => {
   const navigate = useNavigate();
+  const { isLoggedIn } = useAuth(); // Step 2: Get auth status
 
   const cardsData = [
     {
@@ -63,14 +65,37 @@ Our comprehensive job support services are designed to assist IT professionals i
     }
   ];
 
+  // Step 3: Update the handler to check for login status
+  const handleRegisterNow = () => {
+    if (isLoggedIn) {
+      navigate('/services/job-contact-form');
+    } else {
+      navigate('/login');
+    }
+  };
+
   return (
     <div className="jobsupport-container">
       <CustomNavbar />
       {/* Header Section */}
-      <header className="header-section">
+        <header className="header-section">
         <div className="image-with-text-overlay">
-          <img src={img1} alt="IT Consulting & Job Support" className="header-image" />
-          <div className="overlay-text">Job Support</div>
+          <img src={img1} alt="Job Support" className="header-image" />
+          {/* This new container will hold both the title and the buttons */}
+          <div className="glassy-mask"></div>
+          <div className="overlay-content">
+            <div className="overlay-text">Job Support</div>
+            
+            {/* Add the new button container here */}
+            <div className="header-button-container">
+              <button onClick={() => navigate('/contactus')} className="header-action-btn btn-contact">
+                Contact Us
+              </button>
+              <button onClick={handleRegisterNow} className="header-action-btn btn-register">
+                Register Now
+              </button>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -92,9 +117,6 @@ Our comprehensive job support services are designed to assist IT professionals i
           ))}
         </div>
       
-
-   
-
         {/* Embedded YouTube video */}
         <div className="contact-container">
           <h2 className="headline">To know more - Watch the video</h2>
@@ -119,9 +141,9 @@ Our comprehensive job support services are designed to assist IT professionals i
           </a>&nbsp; &nbsp; &nbsp;OR &nbsp; &nbsp; &nbsp;
           <button
             className="contact-button btn-lg btn-primary"
-            onClick={() => navigate('/services/job-contact-form')}
+             onClick={handleRegisterNow}
           >
-            Apply Now
+            Register Now
           </button>
         </div>
       </section>

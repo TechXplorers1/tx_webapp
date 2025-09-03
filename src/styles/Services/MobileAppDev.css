@@ -54,21 +54,99 @@ body {
   margin-bottom: 2rem;
 }
 
-.overlay-text {
+.overlay-content {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 2rem;
-  font-weight: bold;
+  z-index: 2;
   color: white;
-  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.7);
-  white-space: nowrap;
+  text-align: center;
   width: 100%;
-  padding: 10px 20px;
-  box-sizing: border-box;
+  padding: 20px;
 }
 
+.overlay-text {
+  font-size: 2.5rem; /* Example: adjust size as needed */
+  font-weight: bold;
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.7);
+  margin-bottom: 1.5rem; /* Add space between title and buttons */
+}
+
+.header-button-container {
+  margin-top: 100px;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap; /* Allows buttons to stack on small screens */
+}
+
+.header-action-btn {
+  padding: 12px 28px;
+  border-radius: 50px; /* Pill shape */
+  font-size: 1rem;
+  font-weight: 600;
+  border: 2px solid white;
+  background-color: transparent;
+  color: white;
+  cursor: pointer;
+  text-decoration: none; /* For Link components if you use them */
+  display: inline-block;
+  transition: all 0.3s ease;
+}
+
+/* MobileAppDev.css */
+
+/* ... (all your existing CSS rules remain the same) ... */
+
+
+/* MODIFICATION: Add this new style for the glassy mask effect */
+.glassy-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 93%;
+  background-color: rgba(0, 0, 0, 0.426); /* A semi-transparent dark background */
+  
+  /* The key property for the glass effect */
+  -webkit-backdrop-filter: blur(0px); /* For Safari */
+  backdrop-filter: blur(0px); /* Standard blur effect */
+  
+  border-radius: 10px; /* Match the image's border-radius */
+  z-index: 1; /* Ensure it sits between the image and the text */
+}
+
+/* Make sure the text and buttons sit on top of the mask */
+.overlay-content {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2; /* Higher z-index than the mask */
+  color: white;
+  text-align: center;
+  width: 100%;
+  padding: 20px;
+}
+
+.header-action-btn:hover {
+  background-color: white;
+  color: #0d6efd; /* A common blue color */
+  transform: translateY(-3px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.header-action-btn.btn-register {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+}
+
+.header-action-btn.btn-register:hover {
+  background-color: #0b5ed7;
+  border-color: #0a58ca;
+  color: white;
+}
 
 .cards-section {
   padding: 2rem 0;
@@ -133,9 +211,8 @@ body {
 }
 
 .flip-card-front {
-  background-color: rgba(94, 179, 202, 0.829);
+  background-color: rgba(141, 94, 202, 0.829);
   color: white;
-
 }
 
 .flip-card-back {
