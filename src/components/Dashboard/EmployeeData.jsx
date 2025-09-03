@@ -420,10 +420,11 @@ const EmployeeData = () => {
       return;
     }
     setEmployeeDetails(loggedInUserData);
-    const employeeFullName = loggedInUserData ? `${loggedInUserData.firstName} ${loggedInUserData.lastName}` : null;
 
-    if (!employeeFullName) {
-      console.warn("No employee is logged in.");
+        const employeeFirebaseKey = loggedInUserData.firebaseKey;
+
+    if (!employeeFirebaseKey) {
+      console.warn("No employee firebaseKey found in session storage.");
       return;
     }
 
@@ -459,7 +460,7 @@ const EmployeeData = () => {
       }
 
       // Filter for clients assigned to THIS employee
-      const myRegistrations = allRegistrations.filter(client => client.assignedTo === employeeFullName);
+      const myRegistrations = allRegistrations.filter(reg => reg.assignedTo === employeeFirebaseKey);
 
       // --- Separate clients into tabs based on their status ---
       const newAssigned = myRegistrations.filter(c => c.assignmentStatus === 'pending_acceptance'); // 'assigned' is the "New" status for employees

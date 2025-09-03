@@ -70,7 +70,7 @@ body {
 .dark-mode .form-select {
   background-color: #4a4a4a !important; /* Corrected background color */
   color: #f1f1f1 !important;
-  /* border: 1px solid #666 !important; */
+  border: 1px solid #666 !important;
 }
 
 .dark-mode .form-check-input:checked {

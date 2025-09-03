@@ -54,7 +54,7 @@ export default function SignupPage() {
         // Create a new record for them in the database
         userDataFromDb = {
             email: user.email,
-            roles: ['client'], // Assign a default role
+            roles: ['employee'], // Assign a default role
         };
         await set(ref(database, 'users/' + user.uid), userDataFromDb);
     }
@@ -62,7 +62,7 @@ export default function SignupPage() {
     const finalUserData = {
         uid: user.uid,
         email: user.email,
-        roles: userDataFromDb.roles || ['client'],
+        roles: userDataFromDb.roles || ['employee'],
         avatar: user.photoURL || `https://placehold.co/40x40/007bff/white?text=${user.email.charAt(0).toUpperCase()}`
     };
 
@@ -112,7 +112,7 @@ export default function SignupPage() {
 
          const userRecord = {
           email: user.email,
-          roles: ['client'],
+          roles: ['employee'],
         };
 
          await set(ref(database, 'users/' + user.uid), userRecord);

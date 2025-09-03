@@ -1414,7 +1414,7 @@ useEffect(() => {
 
     // Create a comprehensive client object with all necessary fields for the manager's view
     const updates = {
-      assignedTo: employeeFullName,
+      assignedTo: selectedEmployee,
       assignmentStatus: 'pending_acceptance', // Status for the manager's "Total assigned Clients" view
       assignedDate: new Date().toISOString().split('T')[0],
       priority: assignmentPriority, // Add priority from the modal's state
@@ -1921,10 +1921,10 @@ Please provide a summary no longer than 150 words.`;
   }, {});
 
   return (
-    <section className="applications-management-section">
+<section className="applications-management-section">
       <h2 className="client-assignment-title">Client Applications</h2>
        <FilterComponent
-             filterDateRange={filterDateRange}
+              filterDateRange={filterDateRange}
               handleDateRangeChange={handleDateRangeChange}
               sortOrder={sortOrder}
               setSortOrder={setSortOrder}
@@ -1934,8 +1934,8 @@ Please provide a summary no longer than 150 words.`;
               handleClearFilters={handleClearFilters}
               sortOptions={['Newest First', 'Oldest First', 'Job Title A-Z', 'Company A-Z']}
             />
-
-            {/* Search and Filter Section */}
+      
+      {/* Search and Filter Section */}
       <div className="applications-filters">
         <div className="search-input-wrapper">
           <i className="fas fa-search"></i>
@@ -1950,7 +1950,7 @@ Please provide a summary no longer than 150 words.`;
           <select value={applicationFilterEmployee} onChange={handleApplicationFilterEmployeeChange}>
             <option value="">Filter by Employee</option>
             {employees.map(emp => (
-              <option key={emp.firebaseKey} value={emp.fullName}>{emp.fullName}</option>
+              <option key={emp.firebaseKey} value={emp.firebaseKey}>{emp.fullName}</option>
             ))}
           </select>
           <i className="fas fa-chevron-down"></i>
@@ -1979,14 +1979,15 @@ Please provide a summary no longer than 150 words.`;
           </thead>
           <tbody>
             {Object.entries(groupedByClient).map(([clientName, data]) => {
-              const employee = employees.find(e => e.fullName === data.employeeName);
+              // Find the employee using the firebaseKey
+              const employee = employees.find(e => e.firebaseKey === data.employeeKey);
               const isExpanded = expandedClient === clientName;
               return (
                 <React.Fragment key={clientName}>
                   <tr onClick={() => setExpandedClient(isExpanded ? null : clientName)} style={{ cursor: 'pointer' }}>
                     <td className="employee-cell">
                       <div className="employee-avatar">{employee ? employee.avatar : '??'}</div>
-                      {data.employeeName}
+                      {employee ? employee.fullName : 'Unknown Employee'}
                     </td>
                     <td>{clientName}</td>
                     <td>{data.apps[0]?.jobTitle}</td>
@@ -2029,12 +2030,12 @@ Please provide a summary no longer than 150 words.`;
               );
             })}
              {Object.keys(groupedByClient).length === 0 && (
-                <tr>
-                  <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-color)' }}>
-                    No applications found matching your criteria.
-                  </td>
-                </tr>
-              )}
+                    <tr>
+                      <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-color)' }}>
+                        No applications found matching your criteria.
+                      </td>
+                    </tr>
+                  )}
           </tbody>
         </table>
       </div>
