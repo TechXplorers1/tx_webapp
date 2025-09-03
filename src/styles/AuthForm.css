@@ -95,7 +95,9 @@
   transition: color 0.3s ease;
 }
 
-.form-control-modern {
+/* --- THIS IS THE FIX --- */
+/* The selector is now more specific, so it only removes the border from inputs inside the auth form's special group. */
+.input-group-modern .form-control-modern {
   border: none !important;
   box-shadow: none !important;
   background: transparent !important;
@@ -105,7 +107,7 @@
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-.form-control-modern:focus {
+.input-group-modern .form-control-modern:focus {
   box-shadow: none !important;
   background: transparent !important;
 }
@@ -204,8 +206,8 @@
   color: #a0aec0 !important;
 }
 
-.dark-mode .form-control-modern {
-  background: transparent !important;
+/* This rule only needs to set the color now, as the background is handled by the parent */
+.dark-mode .input-group-modern .form-control-modern {
   color: #e2e8f0 !important;
 }
 
