@@ -1,7 +1,7 @@
 import React from 'react';
 import '../styles/Navbar.css';
 import { Navbar, Nav, Container } from 'react-bootstrap';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link, NavLink } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext'; // Import theme hook
 
 const JsNavbar = () => {
@@ -12,7 +12,7 @@ const JsNavbar = () => {
     <Navbar bg="light" expand="lg" className="fixed-top shadow-sm">
       <Container fluid>
         {/* Brand Logo */}
-        <Navbar.Brand href="#home" className="fw-bold navbar-brand">
+        <Navbar.Brand onClick={() => navigate('/')} className="fw-bold navbar-brand">
           <span className="brand-small">TECH</span>
           <span className="brand-x">X</span>
           <span className="brand-small">PLORERS</span>

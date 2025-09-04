@@ -306,7 +306,7 @@ const AdminPage = () => {
       </style>
       <header className="ad-header">
         <div className="ad-header-left">
-          <div className="ad-logo">
+          <div className="ad-logo" onClick={() => navigate('/')}>
             <span>Tech</span><span className="ad-logo-x">X</span><span>plorers</span>
           </div>
         </div>
@@ -324,9 +324,9 @@ const AdminPage = () => {
 <li className="profile-dropdown-item" onClick={() => setIsUserProfileModalOpen(true)}>
                   Profile
                 </li>
-                <li className="profile-dropdown-item logout" onClick={() => navigate('/')}>
+                {/* <li className="profile-dropdown-item logout" onClick={() => navigate('/')}>
                   Log out
-                </li>
+                </li> */}
               </ul>
             )}
           </div>

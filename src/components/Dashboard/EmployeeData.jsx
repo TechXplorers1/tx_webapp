@@ -381,8 +381,6 @@ const AdminHeader = ({
 
 
 
-
-
 const EmployeeData = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
@@ -412,16 +410,28 @@ const EmployeeData = () => {
 
   // NEW: useEffect to get logged-in user data from sessionStorage
   // Update useEffect to get the full employee object from sessionStorage
+// In EmployeeData.jsx, replace the useEffect hook that starts with "// NEW: useEffect to get logged-in user data..."
+
   useEffect(() => {
     const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInEmployee'));
     if (!loggedInUserData || !loggedInUserData.firebaseKey) {
       console.error("No logged in user found, redirecting...");
-      navigate('/login'); // Redirect if not logged in
+      navigate('/login');
       return;
     }
-    setEmployeeDetails(loggedInUserData);
+    
+    // --- FIX STARTS HERE ---
+    // Create a complete employee object, ensuring firstName and lastName are present
+    const nameParts = (loggedInUserData.name || "").split(" ");
+    const completeEmployeeData = {
+      ...loggedInUserData,
+      firstName: loggedInUserData.firstName || nameParts[0] || "",
+      lastName: loggedInUserData.lastName || nameParts.slice(1).join(" ") || "",
+    };
+    setEmployeeDetails(completeEmployeeData);
+    // --- FIX ENDS HERE ---
 
-        const employeeFirebaseKey = loggedInUserData.firebaseKey;
+    const employeeFirebaseKey = loggedInUserData.firebaseKey;
 
     if (!employeeFirebaseKey) {
       console.warn("No employee firebaseKey found in session storage.");
@@ -432,25 +442,20 @@ const EmployeeData = () => {
 
     const unsubscribe = onValue(clientsRef, (snapshot) => {
       const clientsData = snapshot.val();
-
-
       const allRegistrations = [];
+
       if (clientsData) {
-        // --- MODIFICATION START ---
-        // Step 1: Flatten the nested data structure from Firebase
         Object.keys(clientsData).forEach(clientKey => {
           const client = clientsData[clientKey];
           if (client.serviceRegistrations) {
             Object.keys(client.serviceRegistrations).forEach(regKey => {
               const registration = client.serviceRegistrations[regKey];
-              // Create a new, combined object with all necessary info
               allRegistrations.push({
                 ...registration,
                 clientFirebaseKey: clientKey,
                 registrationKey: regKey,
                 email: client.email,
                 mobile: client.mobile,
-                // Create a consistent name and initials for display
                 name: `${registration.firstName || client.firstName || ''} ${registration.lastName || client.lastName || ''}`.trim(),
                 initials: `${(registration.firstName || 'C').charAt(0)}${(registration.lastName || 'L').charAt(0)}`
               });
@@ -459,11 +464,8 @@ const EmployeeData = () => {
         });
       }
 
-      // Filter for clients assigned to THIS employee
       const myRegistrations = allRegistrations.filter(reg => reg.assignedTo === employeeFirebaseKey);
-
-      // --- Separate clients into tabs based on their status ---
-      const newAssigned = myRegistrations.filter(c => c.assignmentStatus === 'pending_acceptance'); // 'assigned' is the "New" status for employees
+      const newAssigned = myRegistrations.filter(c => c.assignmentStatus === 'pending_acceptance');
       const active = myRegistrations.filter(c => c.assignmentStatus === 'active');
       const inactive = myRegistrations.filter(c => c.assignmentStatus === 'inactive');
 
@@ -472,7 +474,6 @@ const EmployeeData = () => {
       setInactiveClients(inactive);
     });
 
-    // Cleanup listener on unmount
     return () => unsubscribe();
   }, [navigate]);
 
@@ -543,6 +544,7 @@ const EmployeeData = () => {
   };
 
   // NEW: Handle opening profile modal and initializing edit state
+  // FIX: This function now correctly copies the employeeDetails into the editedEmployeeDetails state
   const handleOpenProfileModal = () => {
     setEditedEmployeeDetails({ ...employeeDetails }); // Copy current details for editing
     setIsEditingProfile(false); // Start in view mode
@@ -2021,7 +2023,7 @@ const handleSaveNewFile = async () => {
                           <path d="M17 21v-2a4 0 0 0-4-4H5a4 0 0 0-4 4v2"></path>
                           <circle cx="9" cy="7" r="4"></circle>
                           <path d="M23 21v-2a4 0 0 0-3-3.87"></path>
-                          <path d="M16 3.13a4 0 0 1 0 7.75"></path>
+                          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
                         </svg>
                       </div>
                       <p style={cardLabelStyle}>Assigned Clients</p>
@@ -2033,7 +2035,7 @@ const handleSaveNewFile = async () => {
                       <div style={cardIconContainerStyle}>
                         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#10b981' }}>
                           <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                          <path d="M7 11V7a5 0 0 1 10 0v4"></path>
+                          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                         </svg>
                       </div>
                       <p style={cardLabelStyle}>Job Applications</p>
@@ -2060,7 +2062,7 @@ const handleSaveNewFile = async () => {
                     <div style={cardStyle}>
                       <div style={cardIconContainerStyle}>
                         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#8b5cf6' }}>
-                          <path d="M13 2H6a2 0 0 0-2 2v16a2 0 0 0 2 2h12a2 0 0 0 2-2V9z"></path>
+                          <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
                           <polyline points="13 2 13 9 20 9"></polyline>
                         </svg>
                       </div>
@@ -2103,7 +2105,7 @@ const handleSaveNewFile = async () => {
                         </p>
                         <p style={clientDetailStyle}>
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={clientDetailIconStyle}>
-                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 0 0 1 18 0z"></path>
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                             <circle cx="12" cy="10" r="3"></circle>
                           </svg>
                           {selectedClient.location}
@@ -2666,7 +2668,7 @@ const handleSaveNewFile = async () => {
                           style={clearFiltersButtonStyle}
                         >
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21 4H8l-7 16 7 16h13a2 2 0 0 0 2-2V6a2 0 0 0-2-2z"></path>
+                            <path d="M21 4H8l-7 16 7 16h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
                             <line x1="18" y1="9" x2="12" y2="15"></line>
                             <line x1="12" y1="9" x2="18" y2="15"></line>
                           </svg>
@@ -2932,10 +2934,10 @@ const handleSaveNewFile = async () => {
                     <div style={cardStyle}>
                       <div style={cardIconContainerStyle}>
                         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#ef4444' }}>
-                          <path d="M17 21v-2a4 0 0 0-4-4H5a4 0 0 0-4 4v2"></path>
+                          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
                           <circle cx="9" cy="7" r="4"></circle>
-                          <path d="M23 21v-2a4 0 0 0-3-3.87"></path>
-                          <path d="M16 3.13a4 0 0 1 0 7.75"></path>
+                          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
                         </svg>
                       </div>
                       <p style={cardLabelStyle}>Inactive Clients</p>
@@ -2947,7 +2949,7 @@ const handleSaveNewFile = async () => {
                       <div style={cardIconContainerStyle}>
                         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ color: '#10b981' }}>
                           <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                          <path d="M7 11V7a5 0 0 1 10 0v4"></path>
+                          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                         </svg>
                       </div>
                       <p style={cardLabelStyle}>Job Applications</p>
@@ -3016,7 +3018,7 @@ const handleSaveNewFile = async () => {
                         </p>
                         <p style={clientDetailStyle}>
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={clientDetailIconStyle}>
-                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 0 0 1 18 0z"></path>
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                             <circle cx="12" cy="10" r="3"></circle>
                           </svg>
                           {selectedClient.location}
@@ -3386,7 +3388,7 @@ const handleSaveNewFile = async () => {
                           style={clearFiltersButtonStyle}
                         >
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21 4H8l-7 16 7 16h13a2 2 0 0 0 2-2V6a2 0 0 0-2-2z"></path>
+                            <path d="M21 4H8l-7 16 7 16h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
                             <line x1="18" y1="9" x2="12" y2="15"></line>
                             <line x1="12" y1="9" x2="18" y2="15"></line>
                           </svg>
@@ -3417,7 +3419,7 @@ const handleSaveNewFile = async () => {
                         onClick={() => handleOpenUploadFileModal(selectedClient)}
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 0 0 1-2-2v-4"></path>
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                           <polyline points="17 8 12 3 7 8"></polyline>
                           <line x1="12" y1="3" x2="12" y2="15"></line>
                         </svg>
@@ -3458,7 +3460,7 @@ const handleSaveNewFile = async () => {
                           <div key={file.id} style={fileCardStyle}>
                             <div style={fileCardHeaderStyle}>
                               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={fileIconStyle}>
-                                <path d="M13 2H6a2 0 0 0-2 2v16a2 0 0 0 2 2h12a2 0 0 0 2-2V9z"></path>
+                                <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
                                 <polyline points="13 2 13 9 20 9"></polyline>
                               </svg>
                               <div style={{ flexGrow: 1 }}>
@@ -3493,7 +3495,7 @@ const handleSaveNewFile = async () => {
                               <button onClick={() => handleDeleteFile(selectedClient.id, file.id)} style={deleteButtonAppStyle}>
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                   <polyline points="3 6 5 6 21 6"></polyline>
-                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                                   <line x1="10" y1="11" x2="10" y2="17"></line>
                                   <line x1="14" y1="11" x2="14" y2="17"></line>
                                 </svg>
@@ -3579,7 +3581,7 @@ const handleSaveNewFile = async () => {
                           style={clearFiltersButtonStyle}
                         >
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21 4H8l-7 16 7 16h13a2 2 0 0 0 2-2V6a2 0 0 0-2-2z"></path>
+                            <path d="M21 4H8l-7 16 7 16h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
                             <line x1="18" y1="9" x2="12" y2="15"></line>
                             <line x1="12" y1="9" x2="18" y2="15"></line>
                           </svg>
