@@ -420,8 +420,6 @@ const EmployeeData = () => {
       return;
     }
     
-    // --- FIX STARTS HERE ---
-    // Create a complete employee object, ensuring firstName and lastName are present
     const nameParts = (loggedInUserData.name || "").split(" ");
     const completeEmployeeData = {
       ...loggedInUserData,
@@ -429,7 +427,6 @@ const EmployeeData = () => {
       lastName: loggedInUserData.lastName || nameParts.slice(1).join(" ") || "",
     };
     setEmployeeDetails(completeEmployeeData);
-    // --- FIX ENDS HERE ---
 
     const employeeFirebaseKey = loggedInUserData.firebaseKey;
 
@@ -476,6 +473,9 @@ const EmployeeData = () => {
 
     return () => unsubscribe();
   }, [navigate]);
+
+
+
 
   // NEW: Temporary state for editing profile
   const [editedEmployeeDetails, setEditedEmployeeDetails] = useState({});
@@ -545,11 +545,36 @@ const EmployeeData = () => {
 
   // NEW: Handle opening profile modal and initializing edit state
   // FIX: This function now correctly copies the employeeDetails into the editedEmployeeDetails state
-  const handleOpenProfileModal = () => {
-    setEditedEmployeeDetails({ ...employeeDetails }); // Copy current details for editing
-    setIsEditingProfile(false); // Start in view mode
+ 
+
+
+  const handleOpenProfileModal = async () => {
+  try {
+    const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInEmployee'));
+    if (!loggedInUserData || !loggedInUserData.firebaseKey) {
+      console.error("No logged in user found in session.");
+      return;
+    }
+
+    const employeeRef = ref(database, `users/${loggedInUserData.firebaseKey}`);
+    onValue(employeeRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const employeeDetails = snapshot.val();
+
+        // Save to state
+        setEmployeeDetails(employeeDetails);
+        setEditedEmployeeDetails({ ...employeeDetails }); // Pre-fill for editing
+      } else {
+        console.warn("No employee data found in Firebase for this key.");
+      }
+    }, { onlyOnce: true }); // fetch once
+
+    setIsEditingProfile(false);
     setShowEmployeeProfileModal(true);
-  };
+  } catch (error) {
+    console.error("Error fetching employee details:", error);
+  }
+};
 
   // NEW: Handle changes in edit profile form
   const handleProfileFormChange = (e) => {
@@ -692,16 +717,24 @@ const EmployeeData = () => {
 
 
 
-  useEffect(() => {
-    if (activeTab === 'New Clients') {
-      setSelectedClient(newClients[0] || null);
-    } else if (activeTab === 'Active Clients') {
-      setSelectedClient(activeClients[0] || null);
-    } else if (activeTab === 'Inactive Clients') {
-      setSelectedClient(inactiveClients[0] || null);
-    }
-    setNewResumeFile(null);
-  }, [activeTab, newClients, activeClients, inactiveClients]);
+ useEffect(() => {
+  let clientsForTab = [];
+  if (activeTab === 'New Clients') clientsForTab = newClients;
+  else if (activeTab === 'Active Clients') clientsForTab = activeClients;
+  else if (activeTab === 'Inactive Clients') clientsForTab = inactiveClients;
+
+  // If the selected client is still in the list, keep it
+  if (
+    selectedClient &&
+    clientsForTab.some(c => c.registrationKey === selectedClient.registrationKey)
+  ) {
+    return; // Do nothing, keep current selectedClient
+  }
+
+  // Otherwise, default to first client or null
+  setSelectedClient(clientsForTab[0] || null);
+  setNewResumeFile(null);
+}, [activeTab, newClients, activeClients, inactiveClients, selectedClient]);
 
 
   // Combined activities for the timeline
@@ -962,7 +995,41 @@ const EmployeeData = () => {
     
     try {
       await set(registrationRef, updatedApplications);
+
+        const updatedClient = {
+      ...selectedClient,
+      jobApplications: updatedApplications
+    };
+    setSelectedClient(updatedClient);
+
+    // Also update in the correct client list (active, inactive, new)
+    setActiveClients(prev =>
+      prev.map(c =>
+        c.registrationKey === updatedClient.registrationKey ? updatedClient : c
+      )
+    );
+    setInactiveClients(prev =>
+      prev.map(c =>
+        c.registrationKey === updatedClient.registrationKey ? updatedClient : c
+      )
+    );
+    setNewClients(prev =>
+      prev.map(c =>
+        c.registrationKey === updatedClient.registrationKey ? updatedClient : c
+      )
+    );
       setShowAddApplicationModal(false);
+      setNewApplicationFormData({
+          jobTitle: '',
+      company: '',
+      jobType: '',
+      platform: '',
+      jobUrl: '',
+      location: '',
+      notes: '',
+      jobId: '',
+      role: ''
+      });
       triggerNotification("Application added successfully!");
     } catch (error) {
       console.error("Failed to save new application:", error);
@@ -1517,6 +1584,34 @@ const handleSaveNewFile = async () => {
     });
   }, [selectedClient, filterWebsites, filterPositions, filterCompanies, searchTerm, startDateFilter, endDateFilter]);
 
+    useEffect(() => {
+      const clientsForTab = activeTab === 'Active Clients' ? activeClients : inactiveClients;
+    // Check if a client is already selected and if that client is still in the list
+    const currentClientInList = clientsForTab.find(
+    c => c.registrationKey === (selectedClient ? selectedClient.registrationKey : null)
+  );
+
+    // If the currently selected client is no longer in the list for the current tab,
+    // or if no client is selected, select the first one.
+    if (!currentClientInList) {
+      if (activeTab === 'New Clients' && newClients.length > 0) {
+        setSelectedClient(newClients[0]);
+      } else if (activeTab === 'Active Clients' && activeClients.length > 0) {
+        setSelectedClient(activeClients[0]);
+      } else if (activeTab === 'Inactive Clients' && inactiveClients.length > 0) {
+        setSelectedClient(inactiveClients[0]);
+      } else {
+        setSelectedClient(null);
+      }
+    }
+  }, [activeTab, newClients, activeClients, inactiveClients, selectedClient]);
+
+    const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setActiveSubTab('Applications');
+    setSelectedClient(null); // Explicitly clear the selected client
+  };
+
 
 
   return (
@@ -1881,7 +1976,7 @@ const handleSaveNewFile = async () => {
 
       {/* Header */}
       <header style={headerContentStyle}> {/* Adjusted style here */}
-        <div style={headerTitleStyle}>
+        <div style={headerTitleStyle}>  
           <h1 style={{ fontSize: '1.875rem', fontWeight: '700', color: '#1e293b', margin: 0 }}>
             Employee WorkSheet
           </h1>
@@ -1899,21 +1994,9 @@ const handleSaveNewFile = async () => {
                 ...(activeTab === tab ? tabButtonActiveStyle : {})
               }}
               className="tab-button"
-              onClick={() => {
-                setActiveTab(tab);
-                // Reset sub-tab when switching main tabs
-                setActiveSubTab('Applications');
-                // Set selected client based on the new active tab
-                if (tab === 'New Clients' && newClients.length > 0) {
-                  setSelectedClient(newClients[0]);
-                } else if (tab === 'Active Clients' && activeClients.length > 0) {
-                  setSelectedClient(activeClients[0]);
-                } else if (tab === 'Inactive Clients' && inactiveClients.length > 0) {
-                  setSelectedClient(inactiveClients[0]);
-                } else {
-                  setSelectedClient(null);
-                }
-              }}
+              onClick={() => 
+                handleTabChange(tab)}
+              
             >
               {tab}
             </button>
