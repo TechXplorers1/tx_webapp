@@ -1290,7 +1290,7 @@ useEffect(() => {
       return {
         ...emp,
         fullName: fullName,
-        assignedClients: clientCounts[fullName] || 0, // Get count from the map
+        assignedClients: clientCounts[emp.firebaseKey] || 0, // Get count from the map
         successRate: successRate,
         avatar: emp.avatar || getInitials(fullName), // Use existing avatar or fallback to initials
       };
@@ -1391,55 +1391,57 @@ useEffect(() => {
 
   // Handler for "Assign Client" or "Reassign Client" button submission
   const handleAssignmentSubmit = async () => {
-  const clientToProcess = clientToReassign || selectedClientToAssign;
-    
-   if (!clientToProcess || !selectedEmployee || !clientToProcess.clientFirebaseKey || !clientToProcess.registrationKey) {
+    const clientToProcess = clientToReassign || selectedClientToAssign;
+
+    if (!clientToProcess || !selectedEmployee || !clientToProcess.clientFirebaseKey || !clientToProcess.registrationKey) {
       alert('Error: Missing client, employee, or necessary keys to complete the assignment.');
       return;
     }
 
-     const employeeInfo = allEmployees.find(emp => emp.firebaseKey === selectedEmployee);
-  
-    // --- ADD THIS SAFETY CHECK ---
+    const employeeInfo = allEmployees.find(emp => emp.firebaseKey === selectedEmployee);
     if (!employeeInfo) {
       alert('Error: Could not find the selected employee. Please try again.');
       return;
     }
 
-   
-   
-    const employeeFullName = `${employeeInfo.firstName} ${employeeInfo.lastName}`;
     const registrationRef = ref(database, `clients/${clientToProcess.clientFirebaseKey}/serviceRegistrations/${clientToProcess.registrationKey}`);
 
-
-    // Create a comprehensive client object with all necessary fields for the manager's view
     const updates = {
-      assignedTo: selectedEmployee,
-      assignmentStatus: 'pending_acceptance', // Status for the manager's "Total assigned Clients" view
+      assignedTo: employeeInfo.firebaseKey,
+      assignmentStatus: 'pending_acceptance',
       assignedDate: new Date().toISOString().split('T')[0],
-      priority: assignmentPriority, // Add priority from the modal's state
-      // Add additional fields for consistent display in the "Total assigned Clients" table
-      // clientName: clientToProcess.name || `${clientToProcess.firstName} ${clientToProcess.lastName}`,
-      // position: clientToProcess.jobsApplyFor || 'Not specified',
-      // salary: clientToProcess.expectedSalary ? `$${clientToProcess.currentSalary} - $${clientToProcess.expectedSalary}` : 'Not specified',
-      // company: clientToProcess.currentCompany || 'Not specified',
-      // location: clientToProcess.address ? clientToProcess.address.split(',').slice(-2).join(', ').trim() : 'Not specified',
+      priority: assignmentPriority,
     };
+
+    // --- MODIFICATION START ---
     try {
+      // Await the update operation to ensure it completes or fails
       await update(registrationRef, updates);
 
-      // --- THE BLOCK OF CODE THAT SENT CLIENTS TO THE EMPLOYEE'S LOCALSTORAGE HAS BEEN REMOVED FROM HERE ---
+      // If the update is successful, proceed with local state updates and success message
+      const updatedClient = { ...clientToProcess, ...updates };
+
+      setAssignedClients(prev => {
+        if (clientToReassign) {
+          return prev.filter(c => c.registrationKey !== clientToReassign.registrationKey).concat(updatedClient);
+        } else {
+          setUnassignedClients(prevUnassigned => prevUnassigned.filter(c => c.registrationKey !== updatedClient.registrationKey));
+          return [...prev, updatedClient];
+        }
+      });
       
-      setSuccessMessage(`Successfully assigned ${clientToProcess.firstName} to ${employeeFullName}.`);
+      setSuccessMessage(`Successfully assigned ${clientToProcess.firstName} to ${employeeInfo.fullName}.`);
       setShowSuccessModal(true);
-      
-    if (clientToReassign) closeReassignClientModal();
+
+      if (clientToReassign) closeReassignClientModal();
       else closeAssignClientModal();
 
     } catch (error) {
-        console.error("Firebase update failed:", error);
-        alert("Failed to assign client. Please try again.");
+      // If any part of the asynchronous operation fails, catch the error and alert the user.
+      console.error("Firebase update failed:", error);
+      alert("Failed to assign client. Please try again.");
     }
+    // --- MODIFICATION END ---
   };
 
   // Handler for "Quick Assign" button

@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Container, Form, Button, Row, Col, Alert, Modal, ProgressBar,Spinner } from 'react-bootstrap';
+import { Container, Form, Button, Row, Col, Alert, Modal, ProgressBar, Spinner } from 'react-bootstrap';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useNavigate } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { database } from '../../firebase'; // Import your Firebase config
 import { ref, push, set, update } from "firebase/database";
 import { useAuth } from '../../components/AuthContext';
+
 
 const JobSupportContactForm = () => {
   const navigate = useNavigate();
@@ -74,7 +75,7 @@ const JobSupportContactForm = () => {
   const [submitStatus, setSubmitStatus] = useState({ success: false, message: '' });
   const [showPreviewModal, setShowPreviewModal] = useState(false);
 
-   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // State for the custom country code dropdown
   const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
@@ -550,37 +551,37 @@ const JobSupportContactForm = () => {
   `;
 
   return (
-   <>
+    <>
       <style>{modernStyles}</style>
       <div className="job-support-form-wrapper">
         <Container className="form-container-modern">
           <Button className="back-button-modern" onClick={() => navigate(-1)}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
             Back
           </Button>
-        <h2 className="form-header-modern">Job Support Contact Form</h2>
-         <div className="mb-4 progress-bar-modern">
-          <ProgressBar now={(currentStep / totalSteps) * 100} label={`Step ${currentStep} of ${totalSteps}`} />
-        </div>
-        <Form id="contact-form" onSubmit={handlePreview}>
-          <input type="hidden" name="service" value={formData.service} />
-      {/* Step 1: Personal & Contact Information */}
+          <h2 className="form-header-modern">Job Support Contact Form</h2>
+          <div className="mb-4 progress-bar-modern">
+            <ProgressBar now={(currentStep / totalSteps) * 100} label={`Step ${currentStep} of ${totalSteps}`} />
+          </div>
+          <Form id="contact-form" onSubmit={handlePreview}>
+            <input type="hidden" name="service" value={formData.service} />
+            {/* Step 1: Personal & Contact Information */}
             {currentStep === 1 && (
               <section className="step-section">
                 <h4 className="step-header-modern">Step 1: Personal & Contact Information</h4>
                 <Row className="mb-3">
-                  <Form.Group as={Col} controlId="formFirstName"><Form.Label>First Name <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="firstName" onChange={handleChange} required /></Form.Group>
-                  <Form.Group as={Col} controlId="formMiddleName"><Form.Label>Middle Name</Form.Label><Form.Control type="text" name="middleName" onChange={handleChange} /></Form.Group>
-                  <Form.Group as={Col} controlId="formLastName"><Form.Label>Last Name <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="lastName" onChange={handleChange} required /></Form.Group>
+                  <Form.Group as={Col} controlId="formFirstName"><Form.Label>First Name <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="firstName" value={formData.firstName} onChange={handleChange} required /></Form.Group>
+                  <Form.Group as={Col} controlId="formMiddleName"><Form.Label>Middle Name</Form.Label><Form.Control type="text" name="middleName" value={formData.middleName} onChange={handleChange} /></Form.Group>
+                  <Form.Group as={Col} controlId="formLastName"><Form.Label>Last Name <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="lastName" value={formData.lastName} onChange={handleChange} required /></Form.Group>
                 </Row>
                 <Row className="mb-3">
-                  <Form.Group as={Col} controlId="formDob"><Form.Label>Date of Birth <span className="text-danger">*</span></Form.Label><Form.Control type="date" name="dob" onChange={handleChange} required /></Form.Group>
-                  <Form.Group as={Col} controlId="formGender"><Form.Label>Gender <span className="text-danger">*</span></Form.Label><Form.Select name="gender" onChange={handleChange} required><option value="">Select Gender</option><option value="Male">Male</option><option value="Female">Female</option><option value="Non-binary">Non-binary</option><option value="Prefer not to say">Prefer not to say</option></Form.Select></Form.Group>
-                  <Form.Group as={Col} controlId="formEthnicity"><Form.Label>Ethnicity</Form.Label><Form.Control type="text" name="ethnicity" onChange={handleChange} /></Form.Group>
+                  <Form.Group as={Col} controlId="formDob"><Form.Label>Date of Birth <span className="text-danger">*</span></Form.Label><Form.Control type="date" name="dob" value={formData.dob} onChange={handleChange} required /></Form.Group>
+                  <Form.Group as={Col} controlId="formGender"><Form.Label>Gender <span className="text-danger">*</span></Form.Label><Form.Select name="gender" value={formData.gender} onChange={handleChange} required><option value="">Select Gender</option><option value="Male">Male</option><option value="Female">Female</option><option value="Non-binary">Non-binary</option><option value="Prefer not to say">Prefer not to say</option></Form.Select></Form.Group>
+                  <Form.Group as={Col} controlId="formEthnicity"><Form.Label>Ethnicity</Form.Label><Form.Control type="text" name="ethnicity" value={formData.ethnicity} onChange={handleChange} /></Form.Group>
                 </Row>
                 <Row className="mb-3">
-                  <Form.Group as={Col} controlId="formAddress"><Form.Label>Address <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="address" onChange={handleChange} required /></Form.Group>
-                  <Form.Group as={Col} md={4} controlId="formZipCode"><Form.Label>Zip Code <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="zipCode" onChange={handleChange} required /></Form.Group>
+                  <Form.Group as={Col} controlId="formAddress"><Form.Label>Address <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="address" value={formData.address} onChange={handleChange} required /></Form.Group>
+                  <Form.Group as={Col} md={4} controlId="formZipCode"><Form.Label>Zip Code <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="zipCode" value={formData.zipCode} onChange={handleChange} required /></Form.Group>
                 </Row>
                 <Row className="mb-3">
                   <Form.Group as={Col} controlId="formCountryCode" ref={countryDropdownRef}>
@@ -590,13 +591,13 @@ const JobSupportContactForm = () => {
                       {isCountryDropdownOpen && (<div className="country-dropdown-list"> {filteredCountries.map((country, index) => (<div key={index} className="country-dropdown-item" onClick={() => { setFormData(prev => ({ ...prev, countryCode: country.dialCode })); setCountrySearchTerm(''); setIsCountryDropdownOpen(false); }}> {country.name} ({country.dialCode}) </div>))} </div>)}
                     </div>
                   </Form.Group>
-                  <Form.Group as={Col} controlId="formMobile"><Form.Label>Mobile <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="mobile" onChange={handleChange} required /></Form.Group>
-                  <Form.Group as={Col} controlId="formEmail"><Form.Label>Email <span className="text-danger">*</span></Form.Label><Form.Control type="email" name="email" onChange={handleChange} required /></Form.Group>
+                  <Form.Group as={Col} controlId="formMobile"><Form.Label>Mobile <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="mobile" value={formData.mobile} onChange={handleChange} required /></Form.Group>
+                  <Form.Group as={Col} controlId="formEmail"><Form.Label>Email <span className="text-danger">*</span></Form.Label><Form.Control type="email" name="email" value={formData.email} onChange={handleChange} required /></Form.Group>
                 </Row>
               </section>
             )}
 
-             {/* Step 2: Employment & Job Preferences */}
+            {/* Step 2: Employment & Job Preferences */}
             {currentStep === 2 && (
               <section className="step-section">
                 <h4 className="step-header-modern">Step 2: Employment & Job Preferences</h4>
@@ -606,175 +607,191 @@ const JobSupportContactForm = () => {
                   <Form.Group as={Col} controlId="formWillingToRelocate"><Form.Label>Willing to Relocate <span className="text-danger">*</span></Form.Label><Form.Select name="willingToRelocate" value={formData.willingToRelocate} onChange={handleChange} required><option value="">Select Option</option><option value="yes">Yes</option><option value="no">No</option></Form.Select></Form.Group>
                 </Row>
                 <Row className="mb-3">
-                  <Form.Group as={Col} md={6} controlId="formWorkPreference"><Form.Label>Work Preference <span className="text-danger">*</span></Form.Label><Form.Select name="workPreference" value={formData.workPreference} onChange={handleChange} required><option value="">Select Preference</option><option value="remote">Remote</option><option value="onsite">On-site</option><option value="hybrid">Hybrid</option></Form.Select></Form.Group>
-                  <Form.Group as={Col} md={6} controlId="formYearsOfExperience"><Form.Label>Years of Experience <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="yearsOfExperience" placeholder="e.g., 5" value={formData.yearsOfExperience} onChange={handleChange} required /></Form.Group>
+ <Form.Group as={Col} md={6} controlId="formWorkPreference">
+                    <Form.Label>Work Preference <span className="text-danger">*</span></Form.Label>
+                    <Form.Control
+                      type="text"
+                      name="workPreference"
+                      value={formData.workPreference}
+                      onChange={handleChange}
+                      list="work-preference-options" // Reference to the datalist
+                      placeholder="Select or type..."
+                      required
+                    />
+                    <datalist id="work-preference-options">
+                      <option value="Remote" />
+                      <option value="On-site" />
+                      <option value="Hybrid" />
+                    </datalist>
+                  </Form.Group>                  <Form.Group as={Col} md={6} controlId="formYearsOfExperience"><Form.Label>Years of Experience <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="yearsOfExperience" placeholder="e.g., 5" value={formData.yearsOfExperience} onChange={handleChange} required /></Form.Group>
                 </Row>
                 <Row className="mb-3">
                   <Form.Group as={Col} controlId="formRestrictedCompanies"><Form.Label>Restricted Companies</Form.Label><Form.Control type="text" name="restrictedCompanies" value={formData.restrictedCompanies} onChange={handleChange} /></Form.Group>
                 </Row>
                 <Row className="mb-3">
-                  <Form.Group as={Col} controlId="formJobsToApply"><Form.Label>Jobs to Apply For <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="jobsToApply" placeholder="e.g., Software Engineer, Project Manager" onChange={handleChange} required /></Form.Group>
-                  <Form.Group as={Col} controlId="formTechnologySkills"><Form.Label>Technology Skills <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="technologySkills" placeholder="e.g., React, Node.js, Python" onChange={handleChange} required /></Form.Group>
+                  <Form.Group as={Col} controlId="formJobsToApply"><Form.Label>Jobs to Apply For <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="jobsToApply" placeholder="e.g., Software Engineer, Project Manager" value={formData.jobsToApply} onChange={handleChange} required /></Form.Group>
+                  <Form.Group as={Col} controlId="formTechnologySkills"><Form.Label>Technology Skills <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="technologySkills" placeholder="e.g., React, Node.js, Python" value={formData.technologySkills} onChange={handleChange} required /></Form.Group>
                 </Row>
                 <Row className="mb-3">
-                  <Form.Group as={Col} controlId="formCurrentSalary"><Form.Label>Current Salary <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="currentSalary" onChange={handleChange} required /></Form.Group>
-                  <Form.Group as={Col} controlId="formExpectedSalary"><Form.Label>Expected Salary <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="expectedSalary" onChange={handleChange} required /></Form.Group>
-                  <Form.Group as={Col} controlId="formVisaStatus"><Form.Label>Visa Status <span className="text-danger">*</span></Form.Label><Form.Select name="visaStatus" onChange={handleChange} required><option value="">Select Status</option><option value="us_citizen">US Citizen</option><option value="green_card">Green Card</option><option value="h1b">H1B</option><option value="opt">OPT</option><option value="cpt">CPT</option><option value="other">Other</option></Form.Select></Form.Group>
-                  {formData.visaStatus === 'other' && (<Form.Group as={Col} controlId="formOtherVisaStatus"><Form.Label>Please specify <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="otherVisaStatus" onChange={handleChange} required /></Form.Group>)}
+                  <Form.Group as={Col} controlId="formCurrentSalary"><Form.Label>Current Salary <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="currentSalary" value={formData.currentSalary} onChange={handleChange} required /></Form.Group>
+                  <Form.Group as={Col} controlId="formExpectedSalary"><Form.Label>Expected Salary <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="expectedSalary" value={formData.expectedSalary} onChange={handleChange} required /></Form.Group>
+                  <Form.Group as={Col} controlId="formVisaStatus"><Form.Label>Visa Status <span className="text-danger">*</span></Form.Label><Form.Select name="visaStatus" value={formData.visaStatus} onChange={handleChange} required><option value="">Select Status</option><option value="us_citizen">US Citizen</option><option value="green_card">Green Card</option><option value="h1b">H1B</option><option value="opt">OPT</option><option value="cpt">CPT</option><option value="other">Other</option></Form.Select></Form.Group>
+                  {formData.visaStatus === 'other' && (<Form.Group as={Col} controlId="formOtherVisaStatus"><Form.Label>Please specify <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="otherVisaStatus" value={formData.otherVisaStatus} onChange={handleChange} required /></Form.Group>)}
                 </Row>
               </section>
             )}
 
-             {/* Step 3: Education & Current Employment (Optional) */}
+            {/* Step 3: Education & Current Employment (Optional) */}
             {currentStep === 3 && (
               <section className="step-section">
                 <h4 className="step-header-modern">Step 3: Education & Current Employment (Optional)</h4>
                 <Row className="mb-3">
-                  <Form.Group as={Col} controlId="formUniversityName"><Form.Label>University Name</Form.Label><Form.Control type="text" name="universityName" onChange={handleChange} /></Form.Group>
-                  <Form.Group as={Col} controlId="formUniversityAddress"><Form.Label>University Address</Form.Label><Form.Control type="text" name="universityAddress" onChange={handleChange} /></Form.Group>
-                  <Form.Group as={Col} controlId="formCourseOfStudy"><Form.Label>Course of Study</Form.Label><Form.Control type="text" name="courseOfStudy" onChange={handleChange} /></Form.Group>
+                  <Form.Group as={Col} controlId="formUniversityName"><Form.Label>University Name</Form.Label><Form.Control type="text" name="universityName" value={formData.universityName} onChange={handleChange} /></Form.Group>
+                  <Form.Group as={Col} controlId="formUniversityAddress"><Form.Label>University Address</Form.Label><Form.Control type="text" name="universityAddress" value={formData.universityAddress} onChange={handleChange} /></Form.Group>
+                  <Form.Group as={Col} controlId="formCourseOfStudy"><Form.Label>Course of Study</Form.Label><Form.Control type="text" name="courseOfStudy" value={formData.courseOfStudy} onChange={handleChange} /></Form.Group>
                 </Row>
                 <Row className="mb-3">
-                  <Form.Group as={Col} controlId="formGraduationFromDate"><Form.Label>Graduation From Date</Form.Label><Form.Control type="date" name="graduationFromDate" onChange={handleChange} /></Form.Group>
-                  <Form.Group as={Col} controlId="formGraduationToDate"><Form.Label>Graduation To Date</Form.Label><Form.Control type="date" name="graduationToDate" onChange={handleChange} /></Form.Group>
+                  <Form.Group as={Col} controlId="formGraduationFromDate"><Form.Label>Graduation From Date</Form.Label><Form.Control type="date" name="graduationFromDate" value={formData.graduationFromDate} onChange={handleChange} /></Form.Group>
+                  <Form.Group as={Col} controlId="formGraduationToDate"><Form.Label>Graduation To Date</Form.Label><Form.Control type="date" name="graduationToDate" value={formData.graduationToDate} onChange={handleChange} /></Form.Group>
                 </Row>
                 <Row className="mb-3">
-                  <Form.Group as={Col} controlId="formCurrentCompany"><Form.Label>Current Company</Form.Label><Form.Control type="text" name="currentCompany" onChange={handleChange} /></Form.Group>
-                  <Form.Group as={Col} controlId="formCurrentDesignation"><Form.Label>Current Designation</Form.Label><Form.Control type="text" name="currentDesignation" onChange={handleChange} /></Form.Group>
+                  <Form.Group as={Col} controlId="formCurrentCompany"><Form.Label>Current Company</Form.Label><Form.Control type="text" name="currentCompany" value={formData.currentCompany} onChange={handleChange} /></Form.Group>
+                  <Form.Group as={Col} controlId="formCurrentDesignation"><Form.Label>Current Designation</Form.Label><Form.Control type="text" name="currentDesignation" value={formData.currentDesignation} onChange={handleChange} /></Form.Group>
                 </Row>
                 <Row className="mb-3">
-                  <Form.Group as={Col} controlId="formPreferredInterviewTime"><Form.Label>Preferred Interview Time</Form.Label><Form.Control type="text" name="preferredInterviewTime" onChange={handleChange} /></Form.Group>
-                  <Form.Group as={Col} controlId="formEarliestJoiningDate"><Form.Label>Earliest Joining Date</Form.Label><Form.Control type="date" name="earliestJoiningDate" onChange={handleChange} /></Form.Group>
-                  <Form.Group as={Col} controlId="formRelievingDate"><Form.Label>Relieving Date</Form.Label><Form.Control type="date" name="relievingDate" onChange={handleChange} /></Form.Group>
+                  <Form.Group as={Col} controlId="formPreferredInterviewTime"><Form.Label>Preferred Interview Time</Form.Label><Form.Control type="text" name="preferredInterviewTime" value={formData.preferredInterviewTime} onChange={handleChange} /></Form.Group>
+                  <Form.Group as={Col} controlId="formEarliestJoiningDate"><Form.Label>Earliest Joining Date</Form.Label><Form.Control type="date" name="earliestJoiningDate" value={formData.earliestJoiningDate} onChange={handleChange} /></Form.Group>
+                  <Form.Group as={Col} controlId="formRelievingDate"><Form.Label>Relieving Date</Form.Label><Form.Control type="date" name="relievingDate" value={formData.relievingDate} onChange={handleChange} /></Form.Group>
                 </Row>
               </section>
             )}
 
-           {/* Step 4: References (Optional) */}
+            {/* Step 4: References (Optional) */}
             {currentStep === 4 && (
               <section className="step-section">
                 <h4 className="step-header-modern">Step 4: References (Optional)</h4>
                 <Row className="mb-3">
-                  <Form.Group as={Col} controlId="formReferenceName"><Form.Label>Reference Name</Form.Label><Form.Control type="text" name="referenceName" onChange={handleChange} /></Form.Group>
-                  <Form.Group as={Col} controlId="formReferencePhone"><Form.Label>Reference Phone</Form.Label><Form.Control type="text" name="referencePhone" onChange={handleChange} /></Form.Group>
-                  <Form.Group as={Col} controlId="formReferenceAddress"><Form.Label>Reference Address</Form.Label><Form.Control type="text" name="referenceAddress" onChange={handleChange} /></Form.Group>
+                  <Form.Group as={Col} controlId="formReferenceName"><Form.Label>Reference Name</Form.Label><Form.Control type="text" name="referenceName" value={formData.referenceName} onChange={handleChange} /></Form.Group>
+                  <Form.Group as={Col} controlId="formReferencePhone"><Form.Label>Reference Phone</Form.Label><Form.Control type="text" name="referencePhone" value={formData.referencePhone} onChange={handleChange} /></Form.Group>
+                  <Form.Group as={Col} controlId="formReferenceAddress"><Form.Label>Reference Address</Form.Label><Form.Control type="text" name="referenceAddress" value={formData.referenceAddress} onChange={handleChange} /></Form.Group>
                 </Row>
                 <Row className="mb-3">
-                  <Form.Group as={Col} controlId="formReferenceEmail"><Form.Label>Reference Email</Form.Label><Form.Control type="email" name="referenceEmail" onChange={handleChange} /></Form.Group>
-                  <Form.Group as={Col} controlId="formReferenceRole"><Form.Label>Reference Role</Form.Label><Form.Control type="text" name="referenceRole" onChange={handleChange} /></Form.Group>
+                  <Form.Group as={Col} controlId="formReferenceEmail"><Form.Label>Reference Email</Form.Label><Form.Control type="email" name="referenceEmail" value={formData.referenceEmail} onChange={handleChange} /></Form.Group>
+                  <Form.Group as={Col} controlId="formReferenceRole"><Form.Label>Reference Role</Form.Label><Form.Control type="text" name="referenceRole" value={formData.referenceRole} onChange={handleChange} /></Form.Group>
                 </Row>
               </section>
             )}
 
-         {/* Step 5: Job Portal (Optional) & Resume */}
+            {/* Step 5: Job Portal (Optional) & Resume */}
             {currentStep === 5 && (
               <section className="step-section">
                 <h4 className="step-header-modern">Step 5: Job Portal (Optional) & Resume</h4>
-                <Form.Group controlId="formJobPortalCredentials" className="mb-3"><Form.Label>Job Portal Account Name & Credentials</Form.Label><Form.Control name="jobPortalAccountNameandCredentials" onChange={handleChange} as="textarea" rows={3} /></Form.Group>
+                <Form.Group controlId="formJobPortalCredentials" className="mb-3"><Form.Label>Job Portal Account Name & Credentials</Form.Label><Form.Control name="jobPortalAccountNameandCredentials" value={formData.jobPortalAccountNameandCredentials} onChange={handleChange} as="textarea" rows={3} /></Form.Group>
                 <Form.Group controlId="formResume" className="mb-3 mt-4"><Form.Label>Upload Your Resume <span className="text-danger">*</span></Form.Label><Form.Control type="file" name="resume" onChange={handleChange} required accept=".pdf,.doc,.docx" /><Form.Text className="text-muted">Please upload your resume in PDF, DOC, or DOCX format.</Form.Text></Form.Group>
               </section>
             )}
 
-           {/* MODIFICATION: Navigation Buttons */}
-          <div className="navigation-buttons">
-            {currentStep > 1 && (
-              <Button className="nav-button prev" onClick={prevStep}>Previous</Button>
-            )}
-            {currentStep < totalSteps && (
-              <Button className="nav-button next" onClick={nextStep}>Next</Button>
-            )}
-            {currentStep === totalSteps && (
-              <Button type="submit" className="nav-button preview" disabled={isSubmitting}>Preview & Submit</Button>
-            )}
-          </div>
-        </Form>
-      </Container>
-
-      {/* Preview Modal */}
-      <Modal show={showPreviewModal} onHide={handleClosePreviewModal} centered size="lg">
-        <Modal.Header closeButton><Modal.Title>Preview Your Details</Modal.Title></Modal.Header>
-        <Modal.Body style={previewModalContentStyle}>
-          {/* Personal Information Preview */}
-          <h4 className="border-bottom pb-2 mb-3" style={subHeaderStyle}>Personal Information</h4>
-          <Row className="mb-3"><Col><Form.Label>First Name:</Form.Label><div style={previewValueDisplay}>{formData.firstName || 'N/A'}</div></Col><Col><Form.Label>Middle Name:</Form.Label><div style={previewValueDisplay}>{formData.middleName || 'N/A'}</div></Col><Col><Form.Label>Last Name:</Form.Label><div style={previewValueDisplay}>{formData.lastName || 'N/A'}</div></Col></Row>
-          <Row className="mb-3"><Col><Form.Label>Date of Birth:</Form.Label><div style={previewValueDisplay}>{formData.dob || 'N/A'}</div></Col><Col><Form.Label>Gender:</Form.Label><div style={previewValueDisplay}>{formData.gender || 'N/A'}</div></Col><Col><Form.Label>Ethnicity:</Form.Label><div style={previewValueDisplay}>{formData.ethnicity || 'N/A'}</div></Col></Row>
-          
-          {/* Contact Information Preview */}
-          <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Contact Information</h4>
-          <Row className="mb-3"><Col><Form.Label>Address:</Form.Label><div style={previewValueDisplay}>{formData.address || 'N/A'}</div></Col><Col md={4}><Form.Label>Zip Code:</Form.Label><div style={previewValueDisplay}>{formData.zipCode || 'N/A'}</div></Col></Row>
-          <Row className="mb-3"><Col><Form.Label>Country:</Form.Label><div style={previewValueDisplay}>{countryCodes.find(c => c.dialCode === formData.countryCode)?.name || 'N/A'} ({formData.countryCode || 'N/A'})</div></Col><Col><Form.Label>Mobile:</Form.Label><div style={previewValueDisplay}>{formData.mobile || 'N/A'}</div></Col><Col><Form.Label>Email:</Form.Label><div style={previewValueDisplay}>{formData.email || 'N/A'}</div></Col></Row>
-          
-          {/* Employment Information Preview */}
-          <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Employment Information</h4>
-          <Row className="mb-3"><Col><Form.Label>Security Clearance:</Form.Label><div style={previewValueDisplay}>{formData.securityClearance || 'N/A'}</div></Col>{formData.securityClearance === 'yes' && (<Col><Form.Label>Clearance Level:</Form.Label><div style={previewValueDisplay}>{formData.clearanceLevel || 'N/A'}</div></Col>)}<Col><Form.Label>Willing to Relocate:</Form.Label><div style={previewValueDisplay}>{formData.willingToRelocate || 'N/A'}</div></Col></Row>
-          <Row className="mb-3">
-              <Col><Form.Label>Work Preference:</Form.Label><div style={previewValueDisplay}>{formData.workPreference || 'N/A'}</div></Col>
-              <Col><Form.Label>Years of Experience:</Form.Label><div style={previewValueDisplay}>{formData.yearsOfExperience || 'N/A'}</div></Col>
-          </Row>
-          <Row className="mb-3">
-            <Col><Form.Label>Restricted Companies:</Form.Label><div style={previewValueDisplay}>{formData.restrictedCompanies || 'N/A'}</div></Col>
-          </Row>
-
-          {/* Job Preferences Preview */}
-          <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Job Preferences</h4>
-          <Row className="mb-3"><Col><Form.Label>Jobs to Apply For:</Form.Label><div style={previewValueDisplay}>{formData.jobsToApply || 'N/A'}</div></Col><Col><Form.Label>Technology Skills:</Form.Label><div style={previewValueDisplay}>{formData.technologySkills || 'N/A'}</div></Col></Row>
-          <Row className="mb-3"><Col><Form.Label>Current Salary:</Form.Label><div style={previewValueDisplay}>{formData.currentSalary || 'N/A'}</div></Col><Col><Form.Label>Expected Salary:</Form.Label><div style={previewValueDisplay}>{formData.expectedSalary || 'N/A'}</div></Col><Col><Form.Label>Visa Status:</Form.Label><div style={previewValueDisplay}>{formData.visaStatus || 'N/A'}</div></Col>{formData.visaStatus === 'other' && (<Col><Form.Label>Please specify:</Form.Label><div style={previewValueDisplay}>{formData.otherVisaStatus || 'N/A'}</div></Col>)}</Row>
-          
-          {/* Education Preview */}
-          <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Education</h4>
-          <Row className="mb-3"><Col><Form.Label>University Name:</Form.Label><div style={previewValueDisplay}>{formData.universityName || 'N/A'}</div></Col><Col><Form.Label>University Address:</Form.Label><div style={previewValueDisplay}>{formData.universityAddress || 'N/A'}</div></Col><Col><Form.Label>Course of Study:</Form.Label><div style={previewValueDisplay}>{formData.courseOfStudy || 'N/A'}</div></Col></Row>
-          <Row className="mb-3"><Col><Form.Label>Graduation From Date:</Form.Label><div style={previewValueDisplay}>{formData.graduationFromDate || 'N/A'}</div></Col><Col><Form.Label>Graduation To Date:</Form.Label><div style={previewValueDisplay}>{formData.graduationToDate || 'N/A'}</div></Col></Row>
-          
-          {/* Current Employment Preview */}
-          <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Current Employment</h4>
-          <Row className="mb-3"><Col><Form.Label>Current Company:</Form.Label><div style={previewValueDisplay}>{formData.currentCompany || 'N/A'}</div></Col><Col><Form.Label>Current Designation:</Form.Label><div style={previewValueDisplay}>{formData.currentDesignation || 'N/A'}</div></Col></Row>
-          <Row className="mb-3"><Col><Form.Label>Preferred Interview Time:</Form.Label><div style={previewValueDisplay}>{formData.preferredInterviewTime || 'N/A'}</div></Col><Col><Form.Label>Earliest Joining Date:</Form.Label><div style={previewValueDisplay}>{formData.earliestJoiningDate || 'N/A'}</div></Col><Col><Form.Label>Relieving Date:</Form.Label><div style={previewValueDisplay}>{formData.relievingDate || 'N/A'}</div></Col></Row>
-          
-          {/* References Preview */}
-          <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>References</h4>
-          <Row className="mb-3"><Col><Form.Label>Reference Name:</Form.Label><div style={previewValueDisplay}>{formData.referenceName || 'N/A'}</div></Col><Col><Form.Label>Reference Phone:</Form.Label><div style={previewValueDisplay}>{formData.referencePhone || 'N/A'}</div></Col><Col><Form.Label>Reference Address:</Form.Label><div style={previewValueDisplay}>{formData.referenceAddress || 'N/A'}</div></Col></Row>
-          <Row className="mb-3"><Col><Form.Label>Reference Email:</Form.Label><div style={previewValueDisplay}>{formData.referenceEmail || 'N/A'}</div></Col><Col><Form.Label>Reference Role:</Form.Label><div style={previewValueDisplay}>{formData.referenceRole || 'N/A'}</div></Col></Row>
-          
-          {/* Job Portal Information Preview */}
-          <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Job Portal Information</h4>
-          <Form.Group controlId="previewJobPortalCredentials" className="mb-3"><Form.Label>Job Portal Account Name & Credentials:</Form.Label><div style={previewTextAreaDisplay}>{formData.jobPortalAccountNameandCredentials || 'N/A'}</div></Form.Group>
-          
-          {/* Resume Preview */}
-          <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Uploaded Resume</h4>
-          <Form.Group controlId="previewResume" className="mb-3"><Form.Label>Resume File Name:</Form.Label><div style={previewValueDisplay}>{formData.resume ? formData.resume.name : 'N/A'}</div></Form.Group>
-
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={handleClosePreviewModal}>Edit</Button>
-         <Button variant="primary" onClick={handleConfirmAndSubmit} disabled={isSubmitting}>
-            {isSubmitting ? (
-              <>
-                <Spinner
-                  as="span"
-                  animation="border"
-                  size="sm"
-                  role="status"
-                  aria-hidden="true"
-                />
-                <span style={{ marginLeft: '8px' }}>Submitting...</span>
-              </>
-            ) : (
-              'Confirm & Submit'
-            )}
-          </Button>        </Modal.Footer>
-      </Modal>
-
-      <Modal show={showSuccessModal} onHide={() => setShowSuccessModal(false)} centered>
-        <Modal.Header closeButton />
-        <Modal.Body style={successModalStyle}>
-            <div style={successAnimationContainerStyle}>
-                <span style={tickStyle}>✅</span>
+            {/* MODIFICATION: Navigation Buttons */}
+            <div className="navigation-buttons">
+              {currentStep > 1 && (
+                <Button className="nav-button prev" onClick={prevStep}>Previous</Button>
+              )}
+              {currentStep < totalSteps && (
+                <Button className="nav-button next" onClick={nextStep}>Next</Button>
+              )}
+              {currentStep === totalSteps && (
+                <Button type="submit" className="nav-button preview" disabled={isSubmitting}>Preview & Submit</Button>
+              )}
             </div>
-            <h4 style={successTitleStyle}>Form Successfully Submitted!</h4>
-            <p style={successMessageStyle}>Your form has been submitted successfully.</p>
-        </Modal.Body>
-      </Modal>
-    </div>
+          </Form>
+        </Container>
+
+        {/* Preview Modal */}
+        <Modal show={showPreviewModal} onHide={handleClosePreviewModal} centered size="lg">
+          <Modal.Header closeButton><Modal.Title>Preview Your Details</Modal.Title></Modal.Header>
+          <Modal.Body style={previewModalContentStyle}>
+            {/* Personal Information Preview */}
+            <h4 className="border-bottom pb-2 mb-3" style={subHeaderStyle}>Personal Information</h4>
+            <Row className="mb-3"><Col><Form.Label>First Name:</Form.Label><div style={previewValueDisplay}>{formData.firstName || 'N/A'}</div></Col><Col><Form.Label>Middle Name:</Form.Label><div style={previewValueDisplay}>{formData.middleName || 'N/A'}</div></Col><Col><Form.Label>Last Name:</Form.Label><div style={previewValueDisplay}>{formData.lastName || 'N/A'}</div></Col></Row>
+            <Row className="mb-3"><Col><Form.Label>Date of Birth:</Form.Label><div style={previewValueDisplay}>{formData.dob || 'N/A'}</div></Col><Col><Form.Label>Gender:</Form.Label><div style={previewValueDisplay}>{formData.gender || 'N/A'}</div></Col><Col><Form.Label>Ethnicity:</Form.Label><div style={previewValueDisplay}>{formData.ethnicity || 'N/A'}</div></Col></Row>
+            
+            {/* Contact Information Preview */}
+            <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Contact Information</h4>
+            <Row className="mb-3"><Col><Form.Label>Address:</Form.Label><div style={previewValueDisplay}>{formData.address || 'N/A'}</div></Col><Col md={4}><Form.Label>Zip Code:</Form.Label><div style={previewValueDisplay}>{formData.zipCode || 'N/A'}</div></Col></Row>
+            <Row className="mb-3"><Col><Form.Label>Country:</Form.Label><div style={previewValueDisplay}>{countryCodes.find(c => c.dialCode === formData.countryCode)?.name || 'N/A'} ({formData.countryCode || 'N/A'})</div></Col><Col><Form.Label>Mobile:</Form.Label><div style={previewValueDisplay}>{formData.mobile || 'N/A'}</div></Col><Col><Form.Label>Email:</Form.Label><div style={previewValueDisplay}>{formData.email || 'N/A'}</div></Col></Row>
+            
+            {/* Employment Information Preview */}
+            <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Employment Information</h4>
+            <Row className="mb-3"><Col><Form.Label>Security Clearance:</Form.Label><div style={previewValueDisplay}>{formData.securityClearance || 'N/A'}</div></Col>{formData.securityClearance === 'yes' && (<Col><Form.Label>Clearance Level:</Form.Label><div style={previewValueDisplay}>{formData.clearanceLevel || 'N/A'}</div></Col>)}<Col><Form.Label>Willing to Relocate:</Form.Label><div style={previewValueDisplay}>{formData.willingToRelocate || 'N/A'}</div></Col></Row>
+            <Row className="mb-3">
+                <Col><Form.Label>Work Preference:</Form.Label><div style={previewValueDisplay}>{formData.workPreference || 'N/A'}</div></Col>
+                <Col><Form.Label>Years of Experience:</Form.Label><div style={previewValueDisplay}>{formData.yearsOfExperience || 'N/A'}</div></Col>
+            </Row>
+            <Row className="mb-3">
+              <Col><Form.Label>Restricted Companies:</Form.Label><div style={previewValueDisplay}>{formData.restrictedCompanies || 'N/A'}</div></Col>
+            </Row>
+
+            {/* Job Preferences Preview */}
+            <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Job Preferences</h4>
+            <Row className="mb-3"><Col><Form.Label>Jobs to Apply For:</Form.Label><div style={previewValueDisplay}>{formData.jobsToApply || 'N/A'}</div></Col><Col><Form.Label>Technology Skills:</Form.Label><div style={previewValueDisplay}>{formData.technologySkills || 'N/A'}</div></Col></Row>
+            <Row className="mb-3"><Col><Form.Label>Current Salary:</Form.Label><div style={previewValueDisplay}>{formData.currentSalary || 'N/A'}</div></Col><Col><Form.Label>Expected Salary:</Form.Label><div style={previewValueDisplay}>{formData.expectedSalary || 'N/A'}</div></Col><Col><Form.Label>Visa Status:</Form.Label><div style={previewValueDisplay}>{formData.visaStatus || 'N/A'}</div></Col>{formData.visaStatus === 'other' && (<Col><Form.Label>Please specify:</Form.Label><div style={previewValueDisplay}>{formData.otherVisaStatus || 'N/A'}</div></Col>)}</Row>
+            
+            {/* Education Preview */}
+            <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Education</h4>
+            <Row className="mb-3"><Col><Form.Label>University Name:</Form.Label><div style={previewValueDisplay}>{formData.universityName || 'N/A'}</div></Col><Col><Form.Label>University Address:</Form.Label><div style={previewValueDisplay}>{formData.universityAddress || 'N/A'}</div></Col><Col><Form.Label>Course of Study:</Form.Label><div style={previewValueDisplay}>{formData.courseOfStudy || 'N/A'}</div></Col></Row>
+            <Row className="mb-3"><Col><Form.Label>Graduation From Date:</Form.Label><div style={previewValueDisplay}>{formData.graduationFromDate || 'N/A'}</div></Col><Col><Form.Label>Graduation To Date:</Form.Label><div style={previewValueDisplay}>{formData.graduationToDate || 'N/A'}</div></Col></Row>
+            
+            {/* Current Employment Preview */}
+            <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Current Employment</h4>
+            <Row className="mb-3"><Col><Form.Label>Current Company:</Form.Label><div style={previewValueDisplay}>{formData.currentCompany || 'N/A'}</div></Col><Col><Form.Label>Current Designation:</Form.Label><div style={previewValueDisplay}>{formData.currentDesignation || 'N/A'}</div></Col></Row>
+            <Row className="mb-3"><Col><Form.Label>Preferred Interview Time:</Form.Label><div style={previewValueDisplay}>{formData.preferredInterviewTime || 'N/A'}</div></Col><Col><Form.Label>Earliest Joining Date:</Form.Label><div style={previewValueDisplay}>{formData.earliestJoiningDate || 'N/A'}</div></Col><Col><Form.Label>Relieving Date:</Form.Label><div style={previewValueDisplay}>{formData.relievingDate || 'N/A'}</div></Col></Row>
+            
+            {/* References Preview */}
+            <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>References</h4>
+            <Row className="mb-3"><Col><Form.Label>Reference Name:</Form.Label><div style={previewValueDisplay}>{formData.referenceName || 'N/A'}</div></Col><Col><Form.Label>Reference Phone:</Form.Label><div style={previewValueDisplay}>{formData.referencePhone || 'N/A'}</div></Col><Col><Form.Label>Reference Address:</Form.Label><div style={previewValueDisplay}>{formData.referenceAddress || 'N/A'}</div></Col></Row>
+            <Row className="mb-3"><Col><Form.Label>Reference Email:</Form.Label><div style={previewValueDisplay}>{formData.referenceEmail || 'N/A'}</div></Col><Col><Form.Label>Reference Role:</Form.Label><div style={previewValueDisplay}>{formData.referenceRole || 'N/A'}</div></Col></Row>
+            
+            {/* Job Portal Information Preview */}
+            <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Job Portal Information</h4>
+            <Form.Group controlId="previewJobPortalCredentials" className="mb-3"><Form.Label>Job Portal Account Name & Credentials:</Form.Label><div style={previewTextAreaDisplay}>{formData.jobPortalAccountNameandCredentials || 'N/A'}</div></Form.Group>
+            
+            {/* Resume Preview */}
+            <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Uploaded Resume</h4>
+            <Form.Group controlId="previewResume" className="mb-3"><Form.Label>Resume File Name:</Form.Label><div style={previewValueDisplay}>{formData.resume ? formData.resume.name : 'N/A'}</div></Form.Group>
+
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={handleClosePreviewModal}>Edit</Button>
+            <Button variant="primary" onClick={handleConfirmAndSubmit} disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Spinner
+                    as="span"
+                    animation="border"
+                    size="sm"
+                    role="status"
+                    aria-hidden="true"
+                  />
+                  <span style={{ marginLeft: '8px' }}>Submitting...</span>
+                </>
+              ) : (
+                'Confirm & Submit'
+              )}
+            </Button>
+          </Modal.Footer>
+        </Modal>
+
+        <Modal show={showSuccessModal} onHide={() => setShowSuccessModal(false)} centered>
+          <Modal.Header closeButton />
+          <Modal.Body style={successModalStyle}>
+              <div style={successAnimationContainerStyle}>
+                  <span style={tickStyle}>✅</span>
+              </div>
+              <h4 style={successTitleStyle}>Form Successfully Submitted!</h4>
+              <p style={successMessageStyle}>Your form has been submitted successfully.</p>
+          </Modal.Body>
+        </Modal>
+      </div>
     </>
   );
 };
@@ -785,7 +802,6 @@ const tickStyle = { fontSize: "40px", color: "#fff", animation: "fadeIn 0.5s eas
 const successTitleStyle = { fontSize: "24px", fontWeight: "600", color: "#333", marginBottom: "10px" };
 const successMessageStyle = { fontSize: "16px", color: "#555", marginBottom: "20px" };
 
-// You may need to add these keyframes to your existing modernStyles string or a new <style> tag if they aren't already global.
 const keyframes = `
   @keyframes scaleIn { from { transform: scale(0); } to { transform: scale(1); } }
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
