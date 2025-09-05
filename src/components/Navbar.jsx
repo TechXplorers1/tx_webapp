@@ -20,7 +20,10 @@ const CustomNavbar = () => {
 
   const handleServicesEnter = () => {
     clearTimeout(servicesTimeoutRef.current);
-    setShowServicesPopup(true);
+    // Only show on hover for larger screens
+    if (window.innerWidth >= 992) {
+      setShowServicesPopup(true);
+    }
   };
 
   const handleServicesLeave = () => {
@@ -30,7 +33,12 @@ const CustomNavbar = () => {
   };
   
   const handleServicesClick = () => {
+    // Toggle the popup on click for all screen sizes
     setShowServicesPopup(prev => !prev);
+    // If on a small screen, close the main navbar collapse menu
+    if (window.innerWidth < 992) {
+        document.getElementById('basic-navbar-nav').classList.remove('show');
+    }
   };
 
   const toggleProfileDropdown = () => {
