@@ -4051,7 +4051,7 @@ const EmployeeData = () => {
                 />
               </div>
               <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
-                <label style={modalLabelStyle}>Notes</label>
+                <label style={modalLabelStyle}>Job Description</label>
                 <textarea
                   name="notes"
                   value={newApplicationFormData.notes}

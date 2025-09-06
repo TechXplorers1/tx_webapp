@@ -38,7 +38,7 @@ const LandingPage = () => {
   ];
 
   const carouselItems = [
-    { id: 1, image: Image1, alt: "TechXplorers Service 1", text: "Mobilee App Development", path: "/services/mobile-app-development", service: "Mobile Development" },
+    { id: 1, image: Image1, alt: "TechXplorers Service 1", text: "Mobile App Development", path: "/services/mobile-app-development", service: "Mobile Development" },
     { id: 2, image: Image2, alt: "TechXplorers Service 2", text: "Web Application Development", path: "/services/web-app-development", service: "Web Development" },
     { id: 3, image: Image3, alt: "TechXplorers Service 3", text: "Digital Marketing", path: "/services/digital-marketing", service: "Digital Marketing" },
     { id: 4, image: Image4, alt: "Job Support Profile", text: "Job Support", path: "/services/job-support", isJobSupport: true },
