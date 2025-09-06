@@ -3,7 +3,7 @@ import { Container, Form, Button, Row, Col, Alert, Modal, ProgressBar, Spinner }
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useNavigate } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { database } from '../../firebase'; // Import your Firebase config
+import { database } from '../../firebase';
 import { ref, push, set, update } from "firebase/database";
 import { useAuth } from '../../components/AuthContext';
 
@@ -11,6 +11,7 @@ import { useAuth } from '../../components/AuthContext';
 const JobSupportContactForm = () => {
   const navigate = useNavigate();
   const countryDropdownRef = useRef(null);
+  const resumeInputRef = useRef(null);
   const { user } = useAuth();
 
   const [currentStep, setCurrentStep] = useState(1);
@@ -28,8 +29,9 @@ const JobSupportContactForm = () => {
     ethnicity: '',
     // Contact Information
     address: '',
+    county: '', // NEW: New 'County' field
     zipCode: '',
-    countryCode: '+1', // Default to USA
+    countryCode: '+1',
     mobile: '',
     email: '',
     // Employment Information
@@ -38,10 +40,9 @@ const JobSupportContactForm = () => {
     willingToRelocate: '',
     workPreference: '',
     restrictedCompanies: '',
-    yearsOfExperience: '', // Updated field
+    yearsOfExperience: '',
     // Job Preferences
-    jobsToApply: '',
-    technologySkills: '',
+    jobsToApply: '', // Changed to be a textarea
     currentSalary: '',
     expectedSalary: '',
     visaStatus: '',
@@ -52,6 +53,7 @@ const JobSupportContactForm = () => {
     courseOfStudy: '',
     graduationFromDate: '',
     graduationToDate: '',
+    noticePeriod: '',
     // Current Employment
     currentCompany: '',
     currentDesignation: '',
@@ -68,74 +70,122 @@ const JobSupportContactForm = () => {
     jobPortalAccountNameandCredentials: '',
     // Resume Upload
     resume: null,
+    coverLetter: null,
   };
 
   const [formData, setFormData] = useState(initialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState({ success: false, message: '' });
   const [showPreviewModal, setShowPreviewModal] = useState(false);
-
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-
-  // State for the custom country code dropdown
   const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
   const [countrySearchTerm, setCountrySearchTerm] = useState('');
+  
+  // NEW: State for validation errors
+  const [validationErrors, setValidationErrors] = useState({});
+    
+  // FIX: Separate state for file objects to preserve them across steps
+  const [resumeFile, setResumeFile] = useState(null);
+  const [coverLetterFile, setCoverLetterFile] = useState(null);
 
   const handleChange = (e) => {
     const { name, value, files } = e.target;
     if (name === "resume") {
-      setFormData(prev => ({ ...prev, [name]: files[0] }));
-    } else {
+      setResumeFile(files[0] || null); // FIX: Update new state for resume
+    } else if (name === "coverLetter") {
+      setCoverLetterFile(files[0] || null); // FIX: Update new state for cover letter
+    }
+    else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
   };
 
-  // Function to validate all mandatory fields
-  const validateForm = () => {
-    const mandatoryFields = [
-        // Step 1 Fields
-      'firstName', 'lastName', 'dob', 'gender', 'address', 'zipCode',
-      'countryCode', 'mobile', 'email', 
-      // Step 2 Fields
-      'securityClearance', 'willingToRelocate',
-      'workPreference', 'jobsToApply', 'technologySkills', 'currentSalary',
-      'expectedSalary', 'visaStatus', 'yearsOfExperience',
-      // Step 5 Field
-      'resume'
-    ];
+  // NEW: Refactored validateForm to handle all steps and show field-specific errors
+  const validateForm = (step) => {
+    const errors = {};
+    let isValid = true;
 
-    for (const field of mandatoryFields) {
-      if (!formData[field] || formData[field] === '') {
-        const fieldName = field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-        setSubmitStatus({ success: false, message: `Please fill in the '${fieldName}' field.` });
-        return false;
+    // Validation for Step 1
+    if (step === 1) {
+      const mandatoryFields = ['firstName', 'lastName', 'dob', 'gender', 'address', 'ethnicity', 'county', 'zipCode', 'countryCode', 'mobile', 'email'];
+      mandatoryFields.forEach(field => {
+        if (!formData[field]) {
+          errors[field] = 'This field is required.';
+          isValid = false;
+        }
+      });
+
+      // Simple mobile number validation
+      const mobileNumber = formData.mobile.replace(/[^0-9]/g, '');
+      const countryCode = formData.countryCode.replace('+', '');
+      const countryData = countryCodes.find(c => c.dialCode === formData.countryCode);
+      const expectedLength = countryData ? countryData.dialCode.length + mobileNumber.length : 10;
+      
+      if (formData.mobile && (mobileNumber.length < 7 || mobileNumber.length > 15)) {
+        errors.mobile = 'Please enter a valid mobile number.';
+        isValid = false;
       }
     }
 
-    if (formData.visaStatus === 'other' && !formData.otherVisaStatus) {
-      setSubmitStatus({ success: false, message: "Please specify your 'Other Visa Status'." });
-      return false;
+    // Validation for Step 2
+    if (step === 2) {
+      const mandatoryFields = ['securityClearance', 'willingToRelocate', 'workPreference','restrictedCompanies', 'jobsToApply','currentSalary', 'expectedSalary', 'visaStatus', 'yearsOfExperience'];
+      mandatoryFields.forEach(field => {
+        if (!formData[field]) {
+          errors[field] = 'This field is required.';
+          isValid = false;
+        }
+      });
+      if (formData.securityClearance === 'yes' && !formData.clearanceLevel) {
+        errors.clearanceLevel = "Please specify your clearance level.";
+        isValid = false;
+      }
+      if (formData.visaStatus === 'other' && !formData.otherVisaStatus) {
+        errors.otherVisaStatus = "Please specify your visa status.";
+        isValid = false;
+      }
     }
 
-    if (formData.securityClearance === 'yes' && !formData.clearanceLevel) {
-      setSubmitStatus({ success: false, message: "Please specify your 'Clearance Level'." });
-      return false;
+    // NEW: Validation for Step 3
+    if (step === 3) {
+       const mandatoryFields = ['universityName', 'universityAddress', 'courseOfStudy','graduationFromDate', 'graduationToDate','noticePeriod'];
+      mandatoryFields.forEach(field => {
+        if (!formData[field]) {
+          errors[field] = 'This field is required.';
+          isValid = false;
+        }
+      });
+      if (formData.graduationFromDate && formData.graduationToDate) {
+        const fromDate = new Date(formData.graduationFromDate);
+        const toDate = new Date(formData.graduationToDate);
+        if (toDate <= fromDate) {
+          errors.graduationToDate = "To date must be greater than From date.";
+          isValid = false;
+        }
+      }
     }
 
-    if (!formData.resume) {
-      setSubmitStatus({ success: false, message: 'Please upload your resume.' });
-      return false;
+    // Validation for Step 5
+    if (step === 5) {
+      // FIX: Check the dedicated file state, not formData
+      if (!resumeFile) {
+        errors.resume = "Please upload your resume.";
+        isValid = false;
+      }
     }
 
-    setSubmitStatus({ success: false, message: '' }); // Clear previous error messages
-    return true;
+    setValidationErrors(errors);
+    return isValid;
   };
+
 
   const handlePreview = (e) => {
     e.preventDefault();
-    
+    if (validateForm(totalSteps)) { // Validate final step before preview
       setShowPreviewModal(true);
-    
+    } else {
+      setSubmitStatus({ success: false, message: 'Please fix the errors in the form before submitting.' });
+    }
   };
 
   const handleClosePreviewModal = () => {
@@ -144,7 +194,7 @@ const JobSupportContactForm = () => {
 
   const handleConfirmAndSubmit = async (e) => {
     if (e) e.preventDefault();
-    if (!validateForm()) {
+    if (!validateForm(totalSteps)) {
       setShowPreviewModal(false);
       return;
     }
@@ -157,23 +207,18 @@ const JobSupportContactForm = () => {
         throw new Error("You must be logged in to submit this form.");
       }
 
-      // --- Start of New File Upload Logic ---
       let resumeUrl = '';
       let resumeFileName = '';
       
-      // First, get a unique key for the new registration. This key will be used for both the database entry and the file path.
       const newRegistrationRef = push(ref(database, `clients/${user.firebaseKey}/serviceRegistrations`));
       const registrationKey = newRegistrationRef.key;
 
-      if (formData.resume) {
-        resumeFileName = formData.resume.name;
-        // Create a unique storage path: resumes/{userId}/{registrationId}/{fileName}
+      // FIX: Use the resumeFile state for upload
+      if (resumeFile) {
+        resumeFileName = resumeFile.name;
         const fileRef = storageRef(getStorage(), `resumes/${user.firebaseKey}/${registrationKey}/${resumeFileName}`);
         
-        // Upload the file
-        const uploadResult = await uploadBytes(fileRef, formData.resume);
-        
-        // Get the public download URL
+        const uploadResult = await uploadBytes(fileRef, resumeFile);
         resumeUrl = await getDownloadURL(uploadResult.ref);
       }
 
@@ -181,7 +226,7 @@ const JobSupportContactForm = () => {
       name: `${formData.firstName} ${formData.lastName}`,
       mobile: `${formData.countryCode} ${formData.mobile}`,
       email: formData.email,
-      jobsApplyFor: formData.jobsToApply,
+      jobsToApply: formData.jobsToApply,
       registeredDate: new Date().toISOString().split('T')[0],
       country: countryName,
       visaStatus: formData.visaStatus === 'other' ? formData.otherVisaStatus : formData.visaStatus,
@@ -198,20 +243,21 @@ const JobSupportContactForm = () => {
       gender: formData.gender,
       ethnicity: formData.ethnicity,
       address: formData.address,
+      county: formData.county,
       zipCode: formData.zipCode,
       securityClearance: formData.securityClearance,
       clearanceLevel: formData.clearanceLevel,
       willingToRelocate: formData.willingToRelocate,
       workPreference: formData.workPreference,
       restrictedCompanies: formData.restrictedCompanies,
-      yearsOfExperience: formData.yearsOfExperience, // Use the direct string value
-      technologySkills: formData.technologySkills.split(',').map(s => s.trim()),
+      yearsOfExperience: formData.yearsOfExperience,
       currentSalary: formData.currentSalary,
       expectedSalary: formData.expectedSalary,
       schoolName: formData.universityName,
-      schoolAddress: formData.universityAddress,
+      universityAddress: formData.universityAddress,
       courseOfStudy: formData.courseOfStudy,
       graduationDate: formData.graduationToDate,
+      noticePeriod: formData.noticePeriod,
       currentCompany: formData.currentCompany,
       currentDesignation: formData.currentDesignation,
       preferredInterviewTime: formData.preferredInterviewTime,
@@ -224,7 +270,7 @@ const JobSupportContactForm = () => {
       referenceRole: formData.referenceRole,
       jobPortalAccountName: formData.jobPortalAccountNameandCredentials,
       resumeUrl: resumeUrl,
-        resumeFileName: resumeFileName,
+      resumeFileName: resumeFileName,
     };
     const clientProfileUpdate = {
             firstName: formData.firstName,
@@ -243,7 +289,7 @@ const JobSupportContactForm = () => {
             console.log("Job Support registration saved successfully.");
  setSubmitStatus({ success: true, message: 'Form submitted successfully!' });
       setShowSuccessModal(true);
-      setFormData(initialFormData);      // Set a timeout to close the modal and navigate to the homepage
+      setFormData(initialFormData);
       setTimeout(() => {
           setShowSuccessModal(false);
           navigate("/");
@@ -262,11 +308,14 @@ const JobSupportContactForm = () => {
   useEffect(() => { const handleClickOutside = (event) => { if (countryDropdownRef.current && !countryDropdownRef.current.contains(event.target)) { setIsCountryDropdownOpen(false); } }; document.addEventListener("mousedown", handleClickOutside); return () => document.removeEventListener("mousedown", handleClickOutside); }, []);
 
   const nextStep = () => {
-    setCurrentStep(prev => (prev < totalSteps ? prev + 1 : prev));
+    if (validateForm(currentStep)) {
+      setCurrentStep(prev => (prev < totalSteps ? prev + 1 : prev));
+    }
   };
 
   const prevStep = () => {
     setCurrentStep(prev => (prev > 1 ? prev - 1 : prev));
+    setValidationErrors({}); // Clear errors when going back
   };
 
   const containerStyle = { backgroundColor: 'rgba(255, 255, 255, 0.95)', padding: '30px', borderRadius: '10px', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)', marginTop: '50px', marginBottom: '50px', position: 'relative' };
@@ -570,29 +619,81 @@ const JobSupportContactForm = () => {
               <section className="step-section">
                 <h4 className="step-header-modern">Step 1: Personal & Contact Information</h4>
                 <Row className="mb-3">
-                  <Form.Group as={Col} controlId="formFirstName"><Form.Label>First Name <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="firstName" value={formData.firstName} onChange={handleChange} required /></Form.Group>
-                  <Form.Group as={Col} controlId="formMiddleName"><Form.Label>Middle Name</Form.Label><Form.Control type="text" name="middleName" value={formData.middleName} onChange={handleChange} /></Form.Group>
-                  <Form.Group as={Col} controlId="formLastName"><Form.Label>Last Name <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="lastName" value={formData.lastName} onChange={handleChange} required /></Form.Group>
+                  <Form.Group as={Col} controlId="formFirstName">
+                    <Form.Label>First Name <span className="text-danger">*</span></Form.Label>
+                    <Form.Control type="text" name="firstName" value={formData.firstName} onChange={handleChange} isInvalid={!!validationErrors.firstName} required />
+                    <Form.Control.Feedback type="invalid">{validationErrors.firstName}</Form.Control.Feedback>
+                  </Form.Group>
+                  <Form.Group as={Col} controlId="formMiddleName">
+                    <Form.Label>Middle Name</Form.Label>
+                    <Form.Control type="text" name="middleName" value={formData.middleName} onChange={handleChange} isInvalid={!!validationErrors.middleName} />
+                  </Form.Group>
+                  <Form.Group as={Col} controlId="formLastName">
+                    <Form.Label>Last Name <span className="text-danger">*</span></Form.Label>
+                    <Form.Control type="text" name="lastName" value={formData.lastName} onChange={handleChange} isInvalid={!!validationErrors.lastName} required />
+                    <Form.Control.Feedback type="invalid">{validationErrors.lastName}</Form.Control.Feedback>
+                  </Form.Group>
                 </Row>
                 <Row className="mb-3">
-                  <Form.Group as={Col} controlId="formDob"><Form.Label>Date of Birth <span className="text-danger">*</span></Form.Label><Form.Control type="date" name="dob" value={formData.dob} onChange={handleChange} required /></Form.Group>
-                  <Form.Group as={Col} controlId="formGender"><Form.Label>Gender <span className="text-danger">*</span></Form.Label><Form.Select name="gender" value={formData.gender} onChange={handleChange} required><option value="">Select Gender</option><option value="Male">Male</option><option value="Female">Female</option><option value="Non-binary">Non-binary</option><option value="Prefer not to say">Prefer not to say</option></Form.Select></Form.Group>
-                  <Form.Group as={Col} controlId="formEthnicity"><Form.Label>Ethnicity</Form.Label><Form.Control type="text" name="ethnicity" value={formData.ethnicity} onChange={handleChange} /></Form.Group>
+                  <Form.Group as={Col} controlId="formDob">
+                    <Form.Label>Date of Birth <span className="text-danger">*</span></Form.Label>
+                    <Form.Control type="date" name="dob" value={formData.dob} onChange={handleChange} isInvalid={!!validationErrors.dob} required />
+                    <Form.Control.Feedback type="invalid">{validationErrors.dob}</Form.Control.Feedback>
+                  </Form.Group>
+                  <Form.Group as={Col} controlId="formGender">
+                    <Form.Label>Gender <span className="text-danger">*</span></Form.Label>
+                    <Form.Select name="gender" value={formData.gender} onChange={handleChange} isInvalid={!!validationErrors.gender} required>
+                      <option value="">Select Gender</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Non-binary">Non-binary</option>
+                      <option value="Prefer not to say">Prefer not to say</option>
+                    </Form.Select>
+                    <Form.Control.Feedback type="invalid">{validationErrors.gender}</Form.Control.Feedback>
+                  </Form.Group>
+                  <Form.Group as={Col} controlId="formEthnicity">
+                    <Form.Label>Ethnicity<span className="text-danger">*</span></Form.Label>
+                    <Form.Control type="text" name="ethnicity" value={formData.ethnicity} onChange={handleChange} isInvalid={!!validationErrors.ethnicity} required />
+                    <Form.Control.Feedback type="invalid">{validationErrors.ethnicity}</Form.Control.Feedback>
+                  </Form.Group>
                 </Row>
                 <Row className="mb-3">
-                  <Form.Group as={Col} controlId="formAddress"><Form.Label>Address <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="address" value={formData.address} onChange={handleChange} required /></Form.Group>
-                  <Form.Group as={Col} md={4} controlId="formZipCode"><Form.Label>Zip Code <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="zipCode" value={formData.zipCode} onChange={handleChange} required /></Form.Group>
+                  <Form.Group as={Col} controlId="formAddress">
+                    <Form.Label>Address <span className="text-danger">*</span></Form.Label>
+                    <Form.Control type="text" name="address" value={formData.address} onChange={handleChange} isInvalid={!!validationErrors.address} required />
+                    <Form.Control.Feedback type="invalid">{validationErrors.address}</Form.Control.Feedback>
+                  </Form.Group>
+                  {/* NEW: New County field */}
+                  <Form.Group as={Col} md={4} controlId="formCounty">
+                    <Form.Label>County <span className="text-danger">*</span></Form.Label>
+                    <Form.Control type="text" name="county" value={formData.county} onChange={handleChange} isInvalid={!!validationErrors.county} required />
+                    <Form.Control.Feedback type="invalid">{validationErrors.county}</Form.Control.Feedback>
+                  </Form.Group>
+                  <Form.Group as={Col} md={4} controlId="formZipCode">
+                    <Form.Label>Zip Code <span className="text-danger">*</span></Form.Label>
+                    <Form.Control type="text" name="zipCode" value={formData.zipCode} onChange={handleChange} isInvalid={!!validationErrors.zipCode} required />
+                    <Form.Control.Feedback type="invalid">{validationErrors.zipCode}</Form.Control.Feedback>
+                  </Form.Group>
                 </Row>
                 <Row className="mb-3">
                   <Form.Group as={Col} controlId="formCountryCode" ref={countryDropdownRef}>
                     <Form.Label>Country Code <span className="text-danger">*</span></Form.Label>
                     <div className="country-dropdown-container">
-                      <Form.Control type="text" value={isCountryDropdownOpen ? countrySearchTerm : `${countryCodes.find(c => c.dialCode === formData.countryCode)?.name || ''} (${formData.countryCode})`} onFocus={() => setIsCountryDropdownOpen(true)} onChange={(e) => setCountrySearchTerm(e.target.value)} placeholder="Search country..." />
+                      <Form.Control type="text" value={isCountryDropdownOpen ? countrySearchTerm : `${countryCodes.find(c => c.dialCode === formData.countryCode)?.name || ''} (${formData.countryCode})`} onFocus={() => setIsCountryDropdownOpen(true)} onChange={(e) => setCountrySearchTerm(e.target.value)} placeholder="Search country..." isInvalid={!!validationErrors.countryCode} />
                       {isCountryDropdownOpen && (<div className="country-dropdown-list"> {filteredCountries.map((country, index) => (<div key={index} className="country-dropdown-item" onClick={() => { setFormData(prev => ({ ...prev, countryCode: country.dialCode })); setCountrySearchTerm(''); setIsCountryDropdownOpen(false); }}> {country.name} ({country.dialCode}) </div>))} </div>)}
+                      <Form.Control.Feedback type="invalid">{validationErrors.countryCode}</Form.Control.Feedback>
                     </div>
                   </Form.Group>
-                  <Form.Group as={Col} controlId="formMobile"><Form.Label>Mobile <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="mobile" value={formData.mobile} onChange={handleChange} required /></Form.Group>
-                  <Form.Group as={Col} controlId="formEmail"><Form.Label>Email <span className="text-danger">*</span></Form.Label><Form.Control type="email" name="email" value={formData.email} onChange={handleChange} required /></Form.Group>
+                  <Form.Group as={Col} controlId="formMobile">
+                    <Form.Label>Mobile <span className="text-danger">*</span></Form.Label>
+                    <Form.Control type="text" name="mobile" value={formData.mobile} onChange={handleChange} isInvalid={!!validationErrors.mobile} required />
+                    <Form.Control.Feedback type="invalid">{validationErrors.mobile}</Form.Control.Feedback>
+                  </Form.Group>
+                  <Form.Group as={Col} controlId="formEmail">
+                    <Form.Label>Email <span className="text-danger">*</span></Form.Label>
+                    <Form.Control type="email" name="email" value={formData.email} onChange={handleChange} isInvalid={!!validationErrors.email} required />
+                    <Form.Control.Feedback type="invalid">{validationErrors.email}</Form.Control.Feedback>
+                  </Form.Group>
                 </Row>
               </section>
             )}
@@ -602,9 +703,21 @@ const JobSupportContactForm = () => {
               <section className="step-section">
                 <h4 className="step-header-modern">Step 2: Employment & Job Preferences</h4>
                 <Row className="mb-3">
-                  <Form.Group as={Col} controlId="formSecurityClearance"><Form.Label>Security Clearance <span className="text-danger">*</span></Form.Label><Form.Select name="securityClearance" value={formData.securityClearance} onChange={handleChange} required><option value="">Select Option</option><option value="yes">Yes</option><option value="no">No</option></Form.Select></Form.Group>
-                  {formData.securityClearance === 'yes' && (<Form.Group as={Col} controlId="formClearanceLevel"><Form.Label>Clearance Level <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="clearanceLevel" value={formData.clearanceLevel} onChange={handleChange} /></Form.Group>)}
-                  <Form.Group as={Col} controlId="formWillingToRelocate"><Form.Label>Willing to Relocate <span className="text-danger">*</span></Form.Label><Form.Select name="willingToRelocate" value={formData.willingToRelocate} onChange={handleChange} required><option value="">Select Option</option><option value="yes">Yes</option><option value="no">No</option></Form.Select></Form.Group>
+                  <Form.Group as={Col} controlId="formSecurityClearance">
+                    <Form.Label>Security Clearance <span className="text-danger">*</span></Form.Label>
+                    <Form.Select name="securityClearance" value={formData.securityClearance} onChange={handleChange} isInvalid={!!validationErrors.securityClearance} required>
+                      <option value="">Select Option</option><option value="yes">Yes</option><option value="no">No</option>
+                    </Form.Select>
+                    <Form.Control.Feedback type="invalid">{validationErrors.securityClearance}</Form.Control.Feedback>
+                  </Form.Group>
+                  {formData.securityClearance === 'yes' && (<Form.Group as={Col} controlId="formClearanceLevel"><Form.Label>Clearance Level <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="clearanceLevel" value={formData.clearanceLevel} onChange={handleChange} isInvalid={!!validationErrors.clearanceLevel} /><Form.Control.Feedback type="invalid">{validationErrors.clearanceLevel}</Form.Control.Feedback></Form.Group>)}
+                  <Form.Group as={Col} controlId="formWillingToRelocate">
+                    <Form.Label>Willing to Relocate <span className="text-danger">*</span></Form.Label>
+                    <Form.Select name="willingToRelocate" value={formData.willingToRelocate} onChange={handleChange} isInvalid={!!validationErrors.willingToRelocate} required>
+                      <option value="">Select Option</option><option value="yes">Yes</option><option value="no">No</option>
+                    </Form.Select>
+                    <Form.Control.Feedback type="invalid">{validationErrors.willingToRelocate}</Form.Control.Feedback>
+                  </Form.Group>
                 </Row>
                 <Row className="mb-3">
  <Form.Group as={Col} md={6} controlId="formWorkPreference">
@@ -614,29 +727,59 @@ const JobSupportContactForm = () => {
                       name="workPreference"
                       value={formData.workPreference}
                       onChange={handleChange}
-                      list="work-preference-options" // Reference to the datalist
+                      list="work-preference-options"
                       placeholder="Select or type..."
+                      isInvalid={!!validationErrors.workPreference}
                       required
                     />
                     <datalist id="work-preference-options">
                       <option value="Remote" />
                       <option value="On-site" />
                       <option value="Hybrid" />
+                      <option value="Remote-Hybrid" />
+                      <option value="Hybrid-Onsite" />
+                       <option value="Remote-Hybrid-Onsite" />
                     </datalist>
-                  </Form.Group>                  <Form.Group as={Col} md={6} controlId="formYearsOfExperience"><Form.Label>Years of Experience <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="yearsOfExperience" placeholder="e.g., 5" value={formData.yearsOfExperience} onChange={handleChange} required /></Form.Group>
+                    <Form.Control.Feedback type="invalid">{validationErrors.workPreference}</Form.Control.Feedback>
+                  </Form.Group>
+                  <Form.Group as={Col} md={6} controlId="formYearsOfExperience">
+                    <Form.Label>Years of Experience <span className="text-danger">*</span></Form.Label>
+                    <Form.Control type="text" name="yearsOfExperience" placeholder="e.g., 5" value={formData.yearsOfExperience} onChange={handleChange} isInvalid={!!validationErrors.yearsOfExperience} required />
+                    <Form.Control.Feedback type="invalid">{validationErrors.yearsOfExperience}</Form.Control.Feedback>
+                  </Form.Group>
                 </Row>
                 <Row className="mb-3">
-                  <Form.Group as={Col} controlId="formRestrictedCompanies"><Form.Label>Restricted Companies</Form.Label><Form.Control type="text" name="restrictedCompanies" value={formData.restrictedCompanies} onChange={handleChange} /></Form.Group>
+                    <Form.Group as={Col} controlId="formJobsToApply">
+                    <Form.Label>Jobs to Apply For <span className="text-danger">*</span></Form.Label>
+                    {/* NEW: Changed to textarea */}
+                    <Form.Control as="textarea" rows={3} name="jobsToApply" placeholder="e.g., Software Engineer, Project Manager" value={formData.jobsToApply} onChange={handleChange} isInvalid={!!validationErrors.jobsToApply} required />
+                    <Form.Control.Feedback type="invalid">{validationErrors.jobsToApply}</Form.Control.Feedback>
+                  </Form.Group>
+                  <Form.Group as={Col} controlId="formRestrictedCompanies">
+                    <Form.Label>Restricted Companies <span className="text-danger">*</span></Form.Label>
+                    <Form.Control type="text" name="restrictedCompanies" value={formData.restrictedCompanies} onChange={handleChange} isInvalid={!!validationErrors.restrictedCompanies} />
+                    <Form.Control.Feedback type="invalid">{validationErrors.restrictedCompanies}</Form.Control.Feedback>
+                  </Form.Group>
                 </Row>
                 <Row className="mb-3">
-                  <Form.Group as={Col} controlId="formJobsToApply"><Form.Label>Jobs to Apply For <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="jobsToApply" placeholder="e.g., Software Engineer, Project Manager" value={formData.jobsToApply} onChange={handleChange} required /></Form.Group>
-                  <Form.Group as={Col} controlId="formTechnologySkills"><Form.Label>Technology Skills <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="technologySkills" placeholder="e.g., React, Node.js, Python" value={formData.technologySkills} onChange={handleChange} required /></Form.Group>
-                </Row>
-                <Row className="mb-3">
-                  <Form.Group as={Col} controlId="formCurrentSalary"><Form.Label>Current Salary <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="currentSalary" value={formData.currentSalary} onChange={handleChange} required /></Form.Group>
-                  <Form.Group as={Col} controlId="formExpectedSalary"><Form.Label>Expected Salary <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="expectedSalary" value={formData.expectedSalary} onChange={handleChange} required /></Form.Group>
-                  <Form.Group as={Col} controlId="formVisaStatus"><Form.Label>Visa Status <span className="text-danger">*</span></Form.Label><Form.Select name="visaStatus" value={formData.visaStatus} onChange={handleChange} required><option value="">Select Status</option><option value="us_citizen">US Citizen</option><option value="green_card">Green Card</option><option value="h1b">H1B</option><option value="opt">OPT</option><option value="cpt">CPT</option><option value="other">Other</option></Form.Select></Form.Group>
-                  {formData.visaStatus === 'other' && (<Form.Group as={Col} controlId="formOtherVisaStatus"><Form.Label>Please specify <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="otherVisaStatus" value={formData.otherVisaStatus} onChange={handleChange} required /></Form.Group>)}
+                  <Form.Group as={Col} controlId="formCurrentSalary">
+                    <Form.Label>Current Salary <span className="text-danger">*</span></Form.Label>
+                    <Form.Control type="text" name="currentSalary" value={formData.currentSalary} onChange={handleChange} isInvalid={!!validationErrors.currentSalary} required />
+                    <Form.Control.Feedback type="invalid">{validationErrors.currentSalary}</Form.Control.Feedback>
+                  </Form.Group>
+                  <Form.Group as={Col} controlId="formExpectedSalary">
+                    <Form.Label>Expected Salary <span className="text-danger">*</span></Form.Label>
+                    <Form.Control type="text" name="expectedSalary" value={formData.expectedSalary} onChange={handleChange} isInvalid={!!validationErrors.expectedSalary} required />
+                    <Form.Control.Feedback type="invalid">{validationErrors.expectedSalary}</Form.Control.Feedback>
+                  </Form.Group>
+                  <Form.Group as={Col} controlId="formVisaStatus">
+                    <Form.Label>Visa Status <span className="text-danger">*</span></Form.Label>
+                    <Form.Select name="visaStatus" value={formData.visaStatus} onChange={handleChange} isInvalid={!!validationErrors.visaStatus} required>
+                      <option value="">Select Status</option><option value="us_citizen">US Citizen</option><option value="green_card">Green Card</option><option value="h1b">H1B</option><option value="opt">OPT</option><option value="cpt">CPT</option><option value="other">Other</option>
+                    </Form.Select>
+                    <Form.Control.Feedback type="invalid">{validationErrors.visaStatus}</Form.Control.Feedback>
+                  </Form.Group>
+                  {formData.visaStatus === 'other' && (<Form.Group as={Col} controlId="formOtherVisaStatus"><Form.Label>Please specify <span className="text-danger">*</span></Form.Label><Form.Control type="text" name="otherVisaStatus" value={formData.otherVisaStatus} onChange={handleChange} isInvalid={!!validationErrors.otherVisaStatus} required /><Form.Control.Feedback type="invalid">{validationErrors.otherVisaStatus}</Form.Control.Feedback></Form.Group>)}
                 </Row>
               </section>
             )}
@@ -646,22 +789,43 @@ const JobSupportContactForm = () => {
               <section className="step-section">
                 <h4 className="step-header-modern">Step 3: Education & Current Employment (Optional)</h4>
                 <Row className="mb-3">
-                  <Form.Group as={Col} controlId="formUniversityName"><Form.Label>University Name</Form.Label><Form.Control type="text" name="universityName" value={formData.universityName} onChange={handleChange} /></Form.Group>
-                  <Form.Group as={Col} controlId="formUniversityAddress"><Form.Label>University Address</Form.Label><Form.Control type="text" name="universityAddress" value={formData.universityAddress} onChange={handleChange} /></Form.Group>
-                  <Form.Group as={Col} controlId="formCourseOfStudy"><Form.Label>Course of Study</Form.Label><Form.Control type="text" name="courseOfStudy" value={formData.courseOfStudy} onChange={handleChange} /></Form.Group>
+                  <Form.Group as={Col} controlId="formUniversityName"><Form.Label>University Name<span className="text-danger">*</span></Form.Label><Form.Control type="text" name="universityName" value={formData.universityName} onChange={handleChange} isInvalid={!!validationErrors.universityName} />
+                                      <Form.Control.Feedback type="invalid">{validationErrors.universityName}</Form.Control.Feedback>
+</Form.Group>
+                  <Form.Group as={Col} controlId="formUniversityAddress"><Form.Label>University Address<span className="text-danger">*</span></Form.Label><Form.Control type="text" name="universityAddress" value={formData.universityAddress} onChange={handleChange} isInvalid={!!validationErrors.universityAddress} />
+                                      <Form.Control.Feedback type="invalid">{validationErrors.universityAddress}</Form.Control.Feedback>
+</Form.Group>
+                  <Form.Group as={Col} controlId="formCourseOfStudy"><Form.Label>Course of Study<span className="text-danger">*</span></Form.Label><Form.Control type="text" name="courseOfStudy" value={formData.courseOfStudy} onChange={handleChange} isInvalid={!!validationErrors.courseOfStudy} />
+                                      <Form.Control.Feedback type="invalid">{validationErrors.courseOfStudy}</Form.Control.Feedback>
+</Form.Group>
                 </Row>
                 <Row className="mb-3">
-                  <Form.Group as={Col} controlId="formGraduationFromDate"><Form.Label>Graduation From Date</Form.Label><Form.Control type="date" name="graduationFromDate" value={formData.graduationFromDate} onChange={handleChange} /></Form.Group>
-                  <Form.Group as={Col} controlId="formGraduationToDate"><Form.Label>Graduation To Date</Form.Label><Form.Control type="date" name="graduationToDate" value={formData.graduationToDate} onChange={handleChange} /></Form.Group>
+                  <Form.Group as={Col} controlId="formGraduationFromDate">
+                    <Form.Label>Graduation From Date<span className="text-danger">*</span></Form.Label>
+                    <Form.Control type="date" name="graduationFromDate" value={formData.graduationFromDate} onChange={handleChange} isInvalid={!!validationErrors.graduationFromDate} />
+                    <Form.Control.Feedback type="invalid">{validationErrors.graduationFromDate}</Form.Control.Feedback>
+                  </Form.Group>
+                  <Form.Group as={Col} controlId="formGraduationToDate">
+                    <Form.Label>Graduation To Date<span className="text-danger">*</span></Form.Label>
+                    <Form.Control type="date" name="graduationToDate" value={formData.graduationToDate} onChange={handleChange} isInvalid={!!validationErrors.graduationToDate} />
+                    <Form.Control.Feedback type="invalid">{validationErrors.graduationToDate}</Form.Control.Feedback>
+                  </Form.Group>
+                  <Form.Group as={Col} controlId="formNoticePeriod">
+                    <Form.Label>Notice Period<span className="text-danger">*</span></Form.Label>
+                    <Form.Select name="noticePeriod" value={formData.noticePeriod} onChange={handleChange} isInvalid={!!validationErrors.noticePeriod} required>
+                      <option value="">Select Notice Period</option><option value="immediately">Immediately</option><option value="1_week">1 Week</option><option value="2_week">2 Weeks</option><option value="3_week">3 Weeks</option><option value="1_month">1 Month</option>
+                    </Form.Select>
+                    <Form.Control.Feedback type="invalid">{validationErrors.noticePeriod}</Form.Control.Feedback>
+                  </Form.Group>
                 </Row>
                 <Row className="mb-3">
-                  <Form.Group as={Col} controlId="formCurrentCompany"><Form.Label>Current Company</Form.Label><Form.Control type="text" name="currentCompany" value={formData.currentCompany} onChange={handleChange} /></Form.Group>
-                  <Form.Group as={Col} controlId="formCurrentDesignation"><Form.Label>Current Designation</Form.Label><Form.Control type="text" name="currentDesignation" value={formData.currentDesignation} onChange={handleChange} /></Form.Group>
+                  <Form.Group as={Col} controlId="formCurrentCompany"><Form.Label>Current Company</Form.Label><Form.Control type="text" name="currentCompany" value={formData.currentCompany} onChange={handleChange} isInvalid={!!validationErrors.currentCompany} /></Form.Group>
+                  <Form.Group as={Col} controlId="formCurrentDesignation"><Form.Label>Current Designation</Form.Label><Form.Control type="text" name="currentDesignation" value={formData.currentDesignation} onChange={handleChange} isInvalid={!!validationErrors.currentDesignation} /></Form.Group>
                 </Row>
                 <Row className="mb-3">
-                  <Form.Group as={Col} controlId="formPreferredInterviewTime"><Form.Label>Preferred Interview Time</Form.Label><Form.Control type="text" name="preferredInterviewTime" value={formData.preferredInterviewTime} onChange={handleChange} /></Form.Group>
-                  <Form.Group as={Col} controlId="formEarliestJoiningDate"><Form.Label>Earliest Joining Date</Form.Label><Form.Control type="date" name="earliestJoiningDate" value={formData.earliestJoiningDate} onChange={handleChange} /></Form.Group>
-                  <Form.Group as={Col} controlId="formRelievingDate"><Form.Label>Relieving Date</Form.Label><Form.Control type="date" name="relievingDate" value={formData.relievingDate} onChange={handleChange} /></Form.Group>
+                  <Form.Group as={Col} controlId="formPreferredInterviewTime"><Form.Label>Preferred Interview Time</Form.Label><Form.Control type="text" name="preferredInterviewTime" value={formData.preferredInterviewTime} onChange={handleChange} isInvalid={!!validationErrors.preferredInterviewTime} /></Form.Group>
+                  <Form.Group as={Col} controlId="formEarliestJoiningDate"><Form.Label>Earliest Joining Date</Form.Label><Form.Control type="date" name="earliestJoiningDate" value={formData.earliestJoiningDate} onChange={handleChange} isInvalid={!!validationErrors.earliestJoiningDate} /></Form.Group>
+                  <Form.Group as={Col} controlId="formRelievingDate"><Form.Label>Relieving Date</Form.Label><Form.Control type="date" name="relievingDate" value={formData.relievingDate} onChange={handleChange} isInvalid={!!validationErrors.relievingDate} /></Form.Group>
                 </Row>
               </section>
             )}
@@ -671,13 +835,13 @@ const JobSupportContactForm = () => {
               <section className="step-section">
                 <h4 className="step-header-modern">Step 4: References (Optional)</h4>
                 <Row className="mb-3">
-                  <Form.Group as={Col} controlId="formReferenceName"><Form.Label>Reference Name</Form.Label><Form.Control type="text" name="referenceName" value={formData.referenceName} onChange={handleChange} /></Form.Group>
-                  <Form.Group as={Col} controlId="formReferencePhone"><Form.Label>Reference Phone</Form.Label><Form.Control type="text" name="referencePhone" value={formData.referencePhone} onChange={handleChange} /></Form.Group>
-                  <Form.Group as={Col} controlId="formReferenceAddress"><Form.Label>Reference Address</Form.Label><Form.Control type="text" name="referenceAddress" value={formData.referenceAddress} onChange={handleChange} /></Form.Group>
+                  <Form.Group as={Col} controlId="formReferenceName"><Form.Label>Reference Name</Form.Label><Form.Control type="text" name="referenceName" value={formData.referenceName} onChange={handleChange} isInvalid={!!validationErrors.referenceName} /></Form.Group>
+                  <Form.Group as={Col} controlId="formReferencePhone"><Form.Label>Reference Phone</Form.Label><Form.Control type="text" name="referencePhone" value={formData.referencePhone} onChange={handleChange} isInvalid={!!validationErrors.referencePhone} /></Form.Group>
+                  <Form.Group as={Col} controlId="formReferenceAddress"><Form.Label>Reference Address</Form.Label><Form.Control type="text" name="referenceAddress" value={formData.referenceAddress} onChange={handleChange} isInvalid={!!validationErrors.referenceAddress} /></Form.Group>
                 </Row>
                 <Row className="mb-3">
-                  <Form.Group as={Col} controlId="formReferenceEmail"><Form.Label>Reference Email</Form.Label><Form.Control type="email" name="referenceEmail" value={formData.referenceEmail} onChange={handleChange} /></Form.Group>
-                  <Form.Group as={Col} controlId="formReferenceRole"><Form.Label>Reference Role</Form.Label><Form.Control type="text" name="referenceRole" value={formData.referenceRole} onChange={handleChange} /></Form.Group>
+                  <Form.Group as={Col} controlId="formReferenceEmail"><Form.Label>Reference Email</Form.Label><Form.Control type="email" name="referenceEmail" value={formData.referenceEmail} onChange={handleChange} isInvalid={!!validationErrors.referenceEmail} /></Form.Group>
+                  <Form.Group as={Col} controlId="formReferenceRole"><Form.Label>Reference Role</Form.Label><Form.Control type="text" name="referenceRole" value={formData.referenceRole} onChange={handleChange} isInvalid={!!validationErrors.referenceRole} /></Form.Group>
                 </Row>
               </section>
             )}
@@ -686,8 +850,41 @@ const JobSupportContactForm = () => {
             {currentStep === 5 && (
               <section className="step-section">
                 <h4 className="step-header-modern">Step 5: Job Portal (Optional) & Resume</h4>
-                <Form.Group controlId="formJobPortalCredentials" className="mb-3"><Form.Label>Job Portal Account Name & Credentials</Form.Label><Form.Control name="jobPortalAccountNameandCredentials" value={formData.jobPortalAccountNameandCredentials} onChange={handleChange} as="textarea" rows={3} /></Form.Group>
-                <Form.Group controlId="formResume" className="mb-3 mt-4"><Form.Label>Upload Your Resume <span className="text-danger">*</span></Form.Label><Form.Control type="file" name="resume" onChange={handleChange} required accept=".pdf,.doc,.docx" /><Form.Text className="text-muted">Please upload your resume in PDF, DOC, or DOCX format.</Form.Text></Form.Group>
+                <Form.Group controlId="formJobPortalCredentials" className="mb-3">
+                  <Form.Label>Job Portal Account Name & Credentials</Form.Label>
+                  <Form.Control name="jobPortalAccountNameandCredentials" value={formData.jobPortalAccountNameandCredentials} onChange={handleChange} as="textarea" rows={3} isInvalid={!!validationErrors.jobPortalAccountNameandCredentials} />
+                </Form.Group>
+                <Row className="mb-3">
+                <Form.Group as={Col} controlId="formResume" className="mb-3 mt-4">
+                  <Form.Label>Upload Your Resume <span className="text-danger">*</span></Form.Label>
+                  <Form.Control
+                    type="file"
+                    name="resume"
+                    onChange={handleChange}
+                    required
+                    accept=".pdf,.doc,.docx"
+                    isInvalid={!!validationErrors.resume}
+                  />
+                  <Form.Control.Feedback type="invalid">{validationErrors.resume}</Form.Control.Feedback>
+                  {/* FIX: Display file name from state, not form value */}
+                  {resumeFile && (
+                    <Form.Text className="text-success d-block mt-1">
+                      Selected file: **{resumeFile.name}**
+                    </Form.Text>
+                  )}
+                  <Form.Text className="text-muted d-block mt-1">Please upload your resume in PDF, DOC, or DOCX format.</Form.Text>
+                </Form.Group>
+                <Form.Group as={Col} controlId="formcoverLetter" className="mb-3 mt-4">
+                  <Form.Label>Cover Letter</Form.Label>
+                  <Form.Control type="file" name="coverLetter" onChange={handleChange} required accept=".pdf,.doc,.docx" isInvalid={!!validationErrors.coverLetter} />
+                  {coverLetterFile && (
+                    <Form.Text className="text-success d-block mt-1">
+                      Selected file: **{coverLetterFile.name}**
+                    </Form.Text>
+                  )}
+                  <Form.Text className="text-muted d-block mt-1">Please upload your Cover Letter in PDF, DOC, or DOCX format.</Form.Text>
+                </Form.Group>
+                </Row>
               </section>
             )}
 
@@ -717,7 +914,7 @@ const JobSupportContactForm = () => {
             
             {/* Contact Information Preview */}
             <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Contact Information</h4>
-            <Row className="mb-3"><Col><Form.Label>Address:</Form.Label><div style={previewValueDisplay}>{formData.address || 'N/A'}</div></Col><Col md={4}><Form.Label>Zip Code:</Form.Label><div style={previewValueDisplay}>{formData.zipCode || 'N/A'}</div></Col></Row>
+            <Row className="mb-3"><Col><Form.Label>Address:</Form.Label><div style={previewValueDisplay}>{formData.address || 'N/A'}</div></Col><Col md={4}><Form.Label>County:</Form.Label><div style={previewValueDisplay}>{formData.county || 'N/A'}</div></Col><Col md={4}><Form.Label>Zip Code:</Form.Label><div style={previewValueDisplay}>{formData.zipCode || 'N/A'}</div></Col></Row>
             <Row className="mb-3"><Col><Form.Label>Country:</Form.Label><div style={previewValueDisplay}>{countryCodes.find(c => c.dialCode === formData.countryCode)?.name || 'N/A'} ({formData.countryCode || 'N/A'})</div></Col><Col><Form.Label>Mobile:</Form.Label><div style={previewValueDisplay}>{formData.mobile || 'N/A'}</div></Col><Col><Form.Label>Email:</Form.Label><div style={previewValueDisplay}>{formData.email || 'N/A'}</div></Col></Row>
             
             {/* Employment Information Preview */}
@@ -733,13 +930,13 @@ const JobSupportContactForm = () => {
 
             {/* Job Preferences Preview */}
             <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Job Preferences</h4>
-            <Row className="mb-3"><Col><Form.Label>Jobs to Apply For:</Form.Label><div style={previewValueDisplay}>{formData.jobsToApply || 'N/A'}</div></Col><Col><Form.Label>Technology Skills:</Form.Label><div style={previewValueDisplay}>{formData.technologySkills || 'N/A'}</div></Col></Row>
+            <Row className="mb-3"><Col><Form.Label>Jobs to Apply For:</Form.Label><div style={previewValueDisplay}>{formData.jobsToApply || 'N/A'}</div></Col></Row>
             <Row className="mb-3"><Col><Form.Label>Current Salary:</Form.Label><div style={previewValueDisplay}>{formData.currentSalary || 'N/A'}</div></Col><Col><Form.Label>Expected Salary:</Form.Label><div style={previewValueDisplay}>{formData.expectedSalary || 'N/A'}</div></Col><Col><Form.Label>Visa Status:</Form.Label><div style={previewValueDisplay}>{formData.visaStatus || 'N/A'}</div></Col>{formData.visaStatus === 'other' && (<Col><Form.Label>Please specify:</Form.Label><div style={previewValueDisplay}>{formData.otherVisaStatus || 'N/A'}</div></Col>)}</Row>
             
             {/* Education Preview */}
             <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Education</h4>
             <Row className="mb-3"><Col><Form.Label>University Name:</Form.Label><div style={previewValueDisplay}>{formData.universityName || 'N/A'}</div></Col><Col><Form.Label>University Address:</Form.Label><div style={previewValueDisplay}>{formData.universityAddress || 'N/A'}</div></Col><Col><Form.Label>Course of Study:</Form.Label><div style={previewValueDisplay}>{formData.courseOfStudy || 'N/A'}</div></Col></Row>
-            <Row className="mb-3"><Col><Form.Label>Graduation From Date:</Form.Label><div style={previewValueDisplay}>{formData.graduationFromDate || 'N/A'}</div></Col><Col><Form.Label>Graduation To Date:</Form.Label><div style={previewValueDisplay}>{formData.graduationToDate || 'N/A'}</div></Col></Row>
+            <Row className="mb-3"><Col><Form.Label>Graduation From Date:</Form.Label><div style={previewValueDisplay}>{formData.graduationFromDate || 'N/A'}</div></Col><Col><Form.Label>Graduation To Date:</Form.Label><div style={previewValueDisplay}>{formData.graduationToDate || 'N/A'}</div></Col><Col><Form.Label>Notice Period:</Form.Label><div style={previewValueDisplay}>{formData.noticePeriod || 'N/A'}</div></Col></Row>
             
             {/* Current Employment Preview */}
             <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Current Employment</h4>

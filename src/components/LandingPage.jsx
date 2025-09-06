@@ -112,7 +112,7 @@ const LandingPage = () => {
       {/* Services Section */}
       <section
         ref={servicesRef}
-        className={`services-section ${servicesInView ? 'fade-up-section' : ''}`}
+        className={`services-section ${servicesInView ? '' : ''}`}
         id="services"
       >
         <Container fluid className="px-0">
