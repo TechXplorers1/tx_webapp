@@ -399,6 +399,9 @@ const EmployeeData = () => {
   const [showEmployeeProfileModal, setShowEmployeeProfileModal] = useState(false);
   // NEW: State for controlling edit mode of employee profile
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+
+  const [isSavingChanges, setIsSavingChanges] = useState(false);
+
   // NEW: State for employee details (now mutable)
   const [employeeDetails, setEmployeeDetails] = useState({
     name: "Employee User",
@@ -629,7 +632,7 @@ const EmployeeData = () => {
   // States for Modals (Applications Tab)
   const [showAddApplicationModal, setShowAddApplicationModal] = useState(false);
   const [newApplicationFormData, setNewApplicationFormData] = useState({
-    jobTitle: '', company: '', jobType: '', platform: '', jobUrl: '', location: '', notes: '', jobId: '', role: '' // Added jobId
+    jobTitle: '', company: '', jobType: '', jobBoards: '', jobUrl: '', location: '', notes: '', jobId: '', role: '' // Added jobId
   });
   const [selectedClientForApplication, setSelectedClientForApplication] = useState(null);
 
@@ -1100,7 +1103,7 @@ const EmployeeData = () => {
         jobTitle: '',
         company: '',
         jobType: '',
-        platform: '',
+        jobBoards: '',
         jobUrl: '',
         location: '',
         notes: '',
@@ -1129,41 +1132,50 @@ const EmployeeData = () => {
     setEditedApplicationFormData(prev => ({ ...prev, [name]: value }));
   };
 
-    const handleSaveEditedApplication = async () => {
+        const handleSaveEditedApplication = async () => {
         if (!editedApplicationFormData || !selectedClient) return;
+        
+        // Start the saving process and show the spinner
+        setIsSavingChanges(true);
 
         try {
-            // Create a mutable copy of the form data to work with
             const applicationDataToSave = { ...editedApplicationFormData };
             const attachmentsToSave = [];
             let hasNewUploads = false;
+            let filesToAddToClient = []; // NEW: Array to hold new file metadata for the client's `files` array
 
-            // Iterate through attachments to find and upload new files
             for (const attachment of applicationDataToSave.attachments || []) {
-                // A new file will have a 'file' property and no 'downloadUrl'
                 if (attachment.file && !attachment.downloadUrl) {
                     hasNewUploads = true;
                     const { clientFirebaseKey, registrationKey } = selectedClient;
                     const appId = applicationDataToSave.id;
                     const fileName = `${Date.now()}_${attachment.file.name}`;
 
-                    // Create a storage path
                     const attachmentRef = storageRef(getStorage(), `application_attachments/${clientFirebaseKey}/${registrationKey}/${appId}/${fileName}`);
-
-                    // Upload the file
                     const uploadResult = await uploadBytes(attachmentRef, attachment.file);
                     const downloadURL = await getDownloadURL(uploadResult.ref);
 
-                    // Create a clean metadata object for the database (without the local 'file' object)
+                    // Create metadata for the `jobApplications` array
                     attachmentsToSave.push({
                         name: attachment.name,
                         size: attachment.size,
                         type: attachment.type,
                         uploadDate: attachment.uploadDate,
-                        downloadUrl: downloadURL, // Save the URL instead of the file
+                        downloadUrl: downloadURL,
                     });
+
+                    // NEW LOGIC START: Prepare file metadata for the client's main `files` array
+                    filesToAddToClient.push({
+                        id: Date.now() + Math.random(), // Unique ID for the file
+                        downloadUrl: downloadURL,
+                        name: attachment.name,
+                        size: attachment.size,
+                        type: 'interview screenshot', // Ensure type is correctly set for the Documents tab
+                        uploadDate: attachment.uploadDate,
+                        notes: `Screenshot for application: ${applicationDataToSave.jobTitle} at ${applicationDataToSave.company}`,
+                    });
+                    // NEW LOGIC END
                 } else {
-                    // This is an existing attachment, so keep it as is
                     attachmentsToSave.push(attachment);
                 }
             }
@@ -1172,41 +1184,66 @@ const EmployeeData = () => {
                 triggerNotification("Uploading attachments...");
             }
 
-            // Replace the old attachments array with the new one containing URLs
             applicationDataToSave.attachments = attachmentsToSave;
 
-            // Now, update the Realtime Database with the final application data
             const updatedApplications = (selectedClient.jobApplications || []).map(app =>
                 app.id === applicationDataToSave.id ? applicationDataToSave : app
             );
 
-            const registrationRef = ref(database, `clients/${selectedClient.clientFirebaseKey}/serviceRegistrations/${selectedClient.registrationKey}/jobApplications`);
+            const registrationRef = ref(database, `clients/${selectedClient.clientFirebaseKey}/serviceRegistrations/${selectedClient.registrationKey}`);
 
-            await set(registrationRef, updatedApplications);
+            // NEW LOGIC START: Update the main `files` array if there are new attachments
+            if (filesToAddToClient.length > 0) {
+                 const currentFiles = selectedClient.files || [];
+                 const updatedFiles = [...filesToAddToClient, ...currentFiles];
 
-            // FIX: Immediately update the local state to reflect the changes
-            const updatedClient = {
-                ...selectedClient,
-                jobApplications: updatedApplications
-            };
-            setSelectedClient(updatedClient);
+                 // This performs the update operation for both `jobApplications` and `files` simultaneously
+                 await update(registrationRef, {
+                    jobApplications: updatedApplications,
+                    files: updatedFiles,
+                 });
 
-            // Also update the correct client list (active, inactive, new)
-            setActiveClients(prev =>
-                prev.map(c =>
-                    c.registrationKey === updatedClient.registrationKey ? updatedClient : c
-                )
-            );
-            setInactiveClients(prev =>
-                prev.map(c =>
-                    c.registrationKey === updatedClient.registrationKey ? updatedClient : c
-                )
-            );
-            setNewClients(prev =>
-                prev.map(c =>
-                    c.registrationKey === updatedClient.registrationKey ? updatedClient : c
-                )
-            );
+                 // Update local state for files as well
+                 const updatedClientWithFiles = {
+                    ...selectedClient,
+                    jobApplications: updatedApplications,
+                    files: updatedFiles,
+                 };
+                 setSelectedClient(updatedClientWithFiles);
+
+                 // Update the main lists for the employee
+                 const updateClientLists = (prevClients) => {
+                     return prevClients.map(c => 
+                         c.registrationKey === updatedClientWithFiles.registrationKey ? updatedClientWithFiles : c
+                     );
+                 };
+                 setActiveClients(updateClientLists);
+                 setInactiveClients(updateClientLists);
+                 setNewClients(updateClientLists);
+
+            } else {
+                // If no new files, just update the `jobApplications` node
+                await update(registrationRef, {
+                    jobApplications: updatedApplications,
+                });
+                
+                // Update local state for applications only
+                const updatedClient = {
+                    ...selectedClient,
+                    jobApplications: updatedApplications,
+                };
+                setSelectedClient(updatedClient);
+
+                 const updateClientLists = (prevClients) => {
+                     return prevClients.map(c => 
+                         c.registrationKey === updatedClient.registrationKey ? updatedClient : c
+                     );
+                 };
+                 setActiveClients(updateClientLists);
+                 setInactiveClients(updateClientLists);
+                 setNewClients(updateClientLists);
+            }
+            // NEW LOGIC END
 
             setShowEditApplicationModal(false);
             triggerNotification("Application updated successfully!");
@@ -1214,6 +1251,9 @@ const EmployeeData = () => {
         } catch (error) {
             console.error("Failed to save edited application or upload file:", error);
             alert("Error saving application. Please try again.");
+        } finally {
+            // Hide the spinner regardless of success or failure
+            setIsSavingChanges(false);
         }
     };
 
@@ -2513,7 +2553,7 @@ const EmployeeData = () => {
                             <th style={applicationTableHeaderCellStyle}>Job Title</th>
                             <th style={applicationTableHeaderCellStyle}>Company</th>
                             <th style={applicationTableHeaderCellStyle}>Job Type</th>
-                            <th style={applicationTableHeaderCellStyle}>Platform</th>
+                            <th style={applicationTableHeaderCellStyle}>Job Boards</th>
                             <th style={applicationTableHeaderCellStyle}>Job ID</th>
                             <th style={applicationTableHeaderCellStyle}>Link</th>
                             <th style={applicationTableHeaderCellStyle}>Applied Date</th>
@@ -2537,7 +2577,7 @@ const EmployeeData = () => {
                                 <td style={applicationTableDataCellStyle}>{app.jobTitle}</td>
                                 <td style={applicationTableDataCellStyle}>{app.company}</td>
                                 <td style={applicationTableDataCellStyle}>{app.jobType}</td>
-                                <td style={applicationTableDataCellStyle}>{app.platform}</td>
+                                <td style={applicationTableDataCellStyle}>{app.jobBoards}</td>
                                 <td style={applicationTableDataCellStyle}>{app.jobId || '-'}</td> {/* Display Job ID */}
                                 <td style={applicationTableDataCellStyle}>
                                   {app.jobUrl && (
@@ -3425,7 +3465,7 @@ const EmployeeData = () => {
                             <th style={applicationTableHeaderCellStyle}>S.No</th>
                             <th style={applicationTableHeaderCellStyle}>Job Title</th>
                             <th style={applicationTableHeaderCellStyle}>Company</th>
-                            <th style={applicationTableHeaderCellStyle}>Platform</th>
+                            <th style={applicationTableHeaderCellStyle}>Job Boards</th>
                             <th style={applicationTableHeaderCellStyle}>Job ID</th>
                             <th style={applicationTableHeaderCellStyle}>Link</th>
                             <th style={applicationTableHeaderCellStyle}>Applied Date</th>
@@ -3448,7 +3488,7 @@ const EmployeeData = () => {
                                 </td>
                                 <td style={applicationTableDataCellStyle}>{app.jobTitle}</td>
                                 <td style={applicationTableDataCellStyle}>{app.company}</td>
-                                <td style={applicationTableDataCellStyle}>{app.platform}</td>
+                                <td style={applicationTableDataCellStyle}>{app.jobBoards}</td>
                                 <td style={applicationTableDataCellStyle}>{app.jobId || '-'}</td>
                                 <td style={applicationTableDataCellStyle}>
                                   {app.jobUrl && (
@@ -3992,14 +4032,14 @@ const EmployeeData = () => {
                 />
               </div>
               <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Platform</label>
+                <label style={modalLabelStyle}>Job Boards</label>
                 <input
                   type="text"
-                  name="platform"
-                  value={newApplicationFormData.platform}
+                  name="jobBoards"
+                  value={newApplicationFormData.jobBoards}
                   onChange={handleNewApplicationFormChange}
                   style={modalInputStyle}
-                  placeholder="Select platform"
+                  placeholder="Select jobBoards"
                 />
               </div>
               <div style={modalFormFieldGroupStyle}>
@@ -4089,7 +4129,7 @@ const EmployeeData = () => {
             <div style={modalViewDetailsGridStyle}>
               <p style={modalViewDetailItemStyle}><strong>Job Title:</strong> {viewedApplication.jobTitle}</p>
               <p style={modalViewDetailItemStyle}><strong>Company:</strong> {viewedApplication.company}</p>
-              <p style={modalViewDetailItemStyle}><strong>Platform:</strong> {viewedApplication.platform}</p>
+              <p style={modalViewDetailItemStyle}><strong>Job Boards:</strong> {viewedApplication.jobBoards}</p>
               <p style={modalViewDetailItemStyle}><strong>Job ID:</strong> {viewedApplication.jobId || '-'}</p> {/* Display Job ID */}
               <p style={modalViewDetailItemStyle}><strong>Job URL:</strong> <a href={viewedApplication.jobUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6' }}>{viewedApplication.jobUrl}</a></p>
               <p style={modalViewDetailItemStyle}><strong>Job Type:</strong> {viewedApplication.jobType || '-'}</p>
@@ -4181,11 +4221,11 @@ const EmployeeData = () => {
                 />
               </div>
               <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Platform</label>
+                <label style={modalLabelStyle}>Job Boards</label>
                 <input
                   type="text"
-                  name="platform"
-                  value={editedApplicationFormData.platform}
+                  name="jobBoards"
+                  value={editedApplicationFormData.jobBoards}
                   onChange={handleEditedApplicationFormChange}
                   style={modalInputStyle}
                 />
@@ -4401,14 +4441,29 @@ const EmployeeData = () => {
             <button
               onClick={() => setShowEditApplicationModal(false)}
               style={modalCancelButtonStyle}
+              disabled={isSavingChanges} // Disable if saving
             >
               Cancel
             </button>
-            <button
+             <button
               onClick={handleSaveEditedApplication}
               style={modalAddButtonPrimaryStyle}
+              disabled={isSavingChanges} // Disable if saving
             >
-              Save Changes
+              {isSavingChanges ? (
+                <>
+                  <Spinner
+                    as="span"
+                    animation="border"
+                    size="sm"
+                    role="status"
+                    aria-hidden="true"
+                  />
+                  <span style={{ marginLeft: '5px' }}>Saving...</span>
+                </>
+              ) : (
+                'Save Changes'
+              )}
             </button>
           </Modal.Footer>
         </Modal>

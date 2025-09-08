@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { getDatabase, ref, onValue, query, orderByChild, equalTo, update, remove } from "firebase/database"; // Import Firebase functions
-import { database } from '../../firebase'; // Import your Firebase config
+import { getDatabase, ref, onValue, update, remove } from "firebase/database";
+import { database } from '../../firebase';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
-import { Spinner } from 'react-bootstrap'; 
+import { Spinner } from 'react-bootstrap';
 
 
 const ClientManagement = () => {
@@ -14,23 +14,16 @@ const ClientManagement = () => {
   const [clientSearchTerm, setClientSearchTerm] = useState('');
   const [isDeleteClientConfirmModalOpen, setIsDeleteClientConfirmModalOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState(null);
-  const [clientToDeleteId, setClientToDeleteId] = useState(null);
   const [isClientDetailsModalOpen, setIsClientDetailsModalOpen] = useState(false);
   const [selectedClientForDetails, setSelectedClientForDetails] = useState(null);
   const [isEditClientModalOpen, setIsEditClientModalOpen] = useState(false);
   const [currentClientToEdit, setCurrentClientToEdit] = useState(null);
-  const [selectedRegistrationForDetails, setSelectedRegistrationForDetails] = useState(null);
-  const [currentRegistrationToEdit, setCurrentRegistrationToEdit] = useState(null);
   const [selectedServiceFilter, setSelectedServiceFilter] = useState('All');
   const simplifiedServices = ['Mobile Development', 'Web Development', 'Digital Marketing', 'IT Talent Supply', 'Cyber Security'];
   const [newResumeFile, setNewResumeFile] = useState(null);
-
   const [serviceRegistrations, setServiceRegistrations] = useState([]);
-
   const [isSaving, setIsSaving] = useState(false);
-const [showSuccessModal, setShowSuccessModal] = useState(false);
-
-  // State for Payment Management Modal
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedClientForPayment, setSelectedClientForPayment] = useState(null);
   const [paymentDetails, setPaymentDetails] = useState({
@@ -39,22 +32,12 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
     transactionDate: '',
   });
   const [generatedPaymentLink, setGeneratedPaymentLink] = useState('');
-
   const [isManagerModalOpen, setIsManagerModalOpen] = useState(false);
   const [registrationForManager, setRegistrationForManager] = useState(null);
   const [managerSearchTerm, setManagerSearchTerm] = useState('');
-
-  const [employees, setEmployees] = useState([]);
-
-  // MODIFIED: Initialize clients state as empty.
-  const [clients, setClients] = useState([]);
-
-  // NEW: Add loading and error states for fetching initial data.
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-
-  // NEW: useEffect to load clients from localStorage or fetch from clients.json
+  const [coverLetterFile, setCoverLetterFile] = useState(null);
 
 
   useEffect(() => {
@@ -116,9 +99,7 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
     'Cyber Security'
   ];
 
-  // --- Client Management Handlers ---
   const handleAcceptClient = async (registration) => {
-    // The path now points to a specific registration within a client's record
     const registrationRef = ref(database, `clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}`);
     try {
       await update(registrationRef, {
@@ -130,12 +111,12 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
   };
 
   const handleDeclineClient = (clientId) => {
-    setClients(prevClients => prevClients.map(client =>
-      client.id === clientId ? { ...client, displayStatuses: ['rejected'] } : client
+    setServiceRegistrations(prevRegistrations => prevRegistrations.map(reg =>
+      reg.clientFirebaseKey === clientId ? { ...reg, assignmentStatus: 'rejected' } : reg
     ));
   };
 
-  // Payment Modal Handlers
+
   const handleOpenPaymentModal = (client) => {
     setSelectedClientForPayment(client);
     setPaymentDetails({
@@ -216,7 +197,7 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const handleConfirmClientDelete = async () => {
     if (!clientToDelete) return;
-    const clientRef = ref(database, `clients/${clientToDelete.firebaseKey}`);
+    const clientRef = ref(database, `clients/${clientToDelete.clientFirebaseKey}`);
     try {
       await remove(clientRef);
       setIsDeleteClientConfirmModalOpen(false);
@@ -229,7 +210,7 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const handleCancelClientDelete = () => {
     setIsDeleteClientConfirmModalOpen(false);
-    setClientToDeleteId(null);
+    setClientToDelete(null);
   };
 
   const handleAssignClient = async (registration) => {
@@ -240,38 +221,31 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
     const registrationRef = ref(database, `clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}`);
     try {
       await update(registrationRef, {
-        manager: registration.manager,
+        manager: `${registration.managerFirstName} ${registration.managerLastName}`,
         assignedManager: registration.managerFirebaseKey,
         assignmentStatus: 'pending_employee'
       });
+      // OPTIMISTIC UPDATE: Update local state immediately for a responsive UI
+      setServiceRegistrations(prev => prev.map(reg => 
+        reg.registrationKey === registration.registrationKey 
+          ? { ...reg, manager: `${registration.managerFirstName} ${registration.managerLastName}`, assignedManager: registration.managerFirebaseKey, assignmentStatus: 'pending_employee' }
+          : reg
+      ));
     } catch (error) {
       console.error("Failed to assign manager:", error);
     }
   };
 
-  const handleRestoreClient = (clientId) => {
-    setClients(prevClients => prevClients.map(client =>
-      client.id === clientId ? { ...client, displayStatuses: ['unassigned'], manager: null } : client
-    ));
+
+  const handleRestoreClient = (registration) => {
+    const registrationRef = ref(database, `clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}`);
+    try {
+      update(registrationRef, { assignmentStatus: 'unassigned' });
+    } catch (error) {
+      console.error("Failed to restore client:", error);
+    }
   };
 
-  const handleEditManager = (client) => {
-    setEditingClientId(client.id);
-    setTempSelectedManager(client.manager || '');
-  };
-
-  const handleSaveManagerChange = (clientId) => {
-    setClients(prevClients => prevClients.map(client =>
-      client.id === clientId ? { ...client, manager: tempSelectedManager } : client
-    ));
-    setEditingClientId(null);
-    setTempSelectedManager('');
-  };
-
-  const handleCancelEdit = () => {
-    setEditingClientId(null);
-    setTempSelectedManager('');
-  };
 
   const handleOpenManagerModal = (registration) => {
     setRegistrationForManager(registration);
@@ -309,7 +283,6 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
     } else if (clientFilter === 'unassigned') {
       filtered = filtered.filter(c => c.assignmentStatus === 'pending_manager');
     } else if (clientFilter === 'active') {
-      // "Active" for the admin means the client has been assigned to a manager
       filtered = filtered.filter(c => ['pending_employee', 'pending_acceptance', 'active'].includes(c.assignmentStatus));
     } else if (clientFilter === 'rejected') {
       filtered = filtered.filter(c => c.assignmentStatus === 'rejected');
@@ -352,14 +325,20 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
   const handleCloseEditClientModal = () => {
     setIsEditClientModalOpen(false);
     setCurrentClientToEdit(null);
+    setNewResumeFile(null); // Reset file input state
   };
 
   const handleEditClientChange = (e) => {
-    const { name, value } = e.target;
-    setCurrentClientToEdit(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    const { name, value, files } = e.target;
+    // Handle new file selection separately
+    if (name === "newResumeFile") {
+      setNewResumeFile(files[0]);
+    } else {
+      setCurrentClientToEdit(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   const handleSaveClientDetails = async (e) => {
@@ -374,7 +353,6 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
     try {
       const updates = { ...currentClientToEdit };
 
-      // ✅ Handle resume upload if new file provided
       if (newResumeFile) {
         const storage = getStorage();
         const filePath = `resumes/${currentClientToEdit.clientFirebaseKey}/${currentClientToEdit.registrationKey}/${newResumeFile.name}`;
@@ -383,23 +361,27 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
         await uploadBytes(fileRef, newResumeFile);
         const resumeUrl = await getDownloadURL(fileRef);
 
-        updates.resumeUrl = resumeUrl; // save new URL
+        updates.resumeUrl = resumeUrl;
         updates.resumeFileName = newResumeFile.name;
-        delete updates.newResumeFile; // cleanup temp field
+        delete updates.newResumeFile;
       }
 
-      // Create a reference to the specific client in the Firebase database
+      const {
+        firstName, lastName, email, mobile,
+        ...registrationUpdates
+      } = updates;
 
       const regRef = ref(database, `clients/${currentClientToEdit.clientFirebaseKey}/serviceRegistrations/${currentClientToEdit.registrationKey}`);
-      await update(regRef, updates);
+      const clientProfileRef = ref(database, `clients/${currentClientToEdit.clientFirebaseKey}`);
+
+      await update(regRef, registrationUpdates);
+      await update(clientProfileRef, { firstName, lastName, email, mobile });
 
       console.log("Client details updated successfully in Firebase.");
-      handleCloseEditClientModal(); // Close modal
-      setNewResumeFile(null); // Reset the file input state
+      handleCloseEditClientModal();
+      setNewResumeFile(null);
 
-      // Show the success modal
       setShowSuccessModal(true);
-      // Automatically hide the success modal after 3 seconds
       setTimeout(() => {
         setShowSuccessModal(false);
       }, 3000);
@@ -408,7 +390,7 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
       console.error("Failed to update client details in Firebase:", error);
       alert("An error occurred while saving the changes. Please try again.");
     } finally {
-      setIsSaving(false); // Stop the spinner
+      setIsSaving(false);
     }
   };
 
@@ -432,7 +414,7 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
                   <td>{registration.lastName}</td>
                   <td>{registration.mobile}</td>
                   <td>{registration.email}</td>
-                  <td>{registration.service === 'Job Supporting' ? registration.jobsApplyFor : registration.service}</td>
+                  <td>{registration.service === 'Job Supporting' ? registration.jobsToApply : registration.service}</td>
                   <td>{registration.registeredDate}</td>
                   <td>{registration.country}</td>
                   {registration.service === 'Job Supporting' && <td>{registration.visaStatus}</td>}
@@ -1524,14 +1506,9 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
       {/* Client Details Modal */}
       {isClientDetailsModalOpen && selectedClientForDetails && (
         <div className="modal-overlay open">
-          <div className="assign-modal-content"> {/* Reusing assign-modal-content for its wider layout */}
+          <div className="assign-modal-content">
             <div className="assign-modal-header">
-
-              <h3 className="assign-modal-title">Client Details: {selectedClientForDetails.name || selectedClientForDetails.firstName + ' ' + selectedClientForDetails.lastName}</h3>
-
-
-
-
+              <h3 className="assign-modal-title">Client Details: {selectedClientForDetails.firstName + ' ' + selectedClientForDetails.lastName}</h3>
               <button className="assign-modal-close-button" onClick={handleCloseClientDetailsModal}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1.2rem', height: '1.2rem' }}>
                   <path d="M6.29289 6.29289C6.68342 5.90237 7.31658 5.90237 7.70711 6.29289L12 10.5858L16.2929 6.29289C16.6834 5.90237 17.3166 5.90237 17.7071 6.29289C18.0976 6.68342 18.0976 7.31658 17.7071 7.70711L13.4142 12L17.7071 16.2929C18.0976 16.6834 18.0976 17.3166 17.7071 17.7071C17.3166 18.0976 16.6834 18.0976 16.2929 17.7071L12 13.4142L7.70711 17.7071C5.90237 7.31658 5.90237 6.68342 6.29289 6.29289Z" />
@@ -1539,9 +1516,7 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
               </button>
             </div>
 
-            {/* ====== CONDITIONAL RENDERING LOGIC STARTS HERE ====== */}
             {simplifiedServices.includes(selectedClientForDetails.service) ? (
-              // --- NEW SIMPLIFIED VIEW ---
               <div className="client-preview-grid-container" style={{ gridTemplateColumns: '1fr' }}>
                 <div className="client-preview-section">
                   <h4 className="client-preview-section-title">Service Request Details</h4>
@@ -1577,11 +1552,8 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
                 </div>
               </div>
             ) : (
-              // --- ORIGINAL DETAILED VIEW ---
               <>
-                {/* Comprehensive Client Details Grid - now read-only form fields */}
                 <div className="client-preview-grid-container">
-                  {/* Personal Information */}
                   <div className="client-preview-section">
                     <h4 className="client-preview-section-title">Personal Information</h4>
                     <div className="assign-form-group">
@@ -1609,13 +1581,15 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
                       <div className="read-only-value">{selectedClientForDetails.ethnicity || '-'}</div>
                     </div>
                   </div>
-
-                  {/* Contact Information */}
                   <div className="client-preview-section">
                     <h4 className="client-preview-section-title">Contact Information</h4>
                     <div className="assign-form-group">
                       <label>Address</label>
                       <div className="read-only-value" style={{ minHeight: '60px' }}>{selectedClientForDetails.address || '-'}</div>
+                    </div>
+                    <div className="assign-form-group">
+                      <label>County</label>
+                      <div className="read-only-value">{selectedClientForDetails.county || '-'}</div>
                     </div>
                     <div className="assign-form-group">
                       <label>Zip Code</label>
@@ -1634,15 +1608,13 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
                       <div className="read-only-value">{selectedClientForDetails.country || '-'}</div>
                     </div>
                   </div>
-
-                  {/* Job Preferences & Status */}
                   <div className="client-preview-section">
-                    <h4 className="client-preview-section-title">Job Preferences & Status</h4>
+                    <h4 className="client-preview-section-title">Employment Information</h4>
                     <div className="assign-form-group">
                       <label>Security Clearance</label>
                       <div className="read-only-value">{selectedClientForDetails.securityClearance || '-'}</div>
                     </div>
-                    {selectedClientForDetails.securityClearance === 'Yes' && (
+                    {selectedClientForDetails.securityClearance === 'yes' && (
                       <div className="assign-form-group">
                         <label>Clearance Level</label>
                         <div className="read-only-value">{selectedClientForDetails.clearanceLevel || '-'}</div>
@@ -1661,63 +1633,62 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
                       <div className="read-only-value">{selectedClientForDetails.restrictedCompanies || '-'}</div>
                     </div>
                     <div className="assign-form-group">
+                      <label>Years of Experience</label>
+                      <div className="read-only-value">{selectedClientForDetails.yearsOfExperience || '-'}</div>
+                    </div>
+                  </div>
+                  <div className="client-preview-section">
+                    <h4 className="client-preview-section-title">Job Preferences & Status</h4>
+                    <div className="assign-form-group">
                       <label>Jobs to Apply</label>
                       <div className="read-only-value">{selectedClientForDetails.jobsToApply || '-'}</div>
                     </div>
                     <div className="assign-form-group">
                       <label>Current Salary</label>
-                      <div className="read-only-value">${selectedClientForDetails.currentSalary || '-'}</div>
+                      <div className="read-only-value">{selectedClientForDetails.currentSalary || '-'}</div>
                     </div>
                     <div className="assign-form-group">
                       <label>Expected Salary</label>
-                      <div className="read-only-value">${selectedClientForDetails.expectedSalary || '-'}</div>
+                      <div className="read-only-value">{selectedClientForDetails.expectedSalary || '-'}</div>
                     </div>
                     <div className="assign-form-group">
                       <label>Visa Status</label>
                       <div className="read-only-value">{selectedClientForDetails.visaStatus || '-'}</div>
                     </div>
-                    {selectedClientForDetails.visaStatus === 'Other' && (
+                    {selectedClientForDetails.visaStatus === 'other' && (
                       <div className="assign-form-group">
                         <label>Other Visa Status</label>
                         <div className="read-only-value">{selectedClientForDetails.otherVisaStatus || '-'}</div>
                       </div>
                     )}
-                    <div className="assign-form-group">
-                      <label>Priority</label>
-                      <div className="read-only-value">{selectedClientForDetails.priority || '-'}</div>
-                    </div>
-                    <div className="assign-form-group">
-                      <label>Status</label>
-                      <div className="read-only-value">{selectedClientForDetails.status || '-'}</div>
-                    </div>
                   </div>
-
-                  {/* Education Details */}
                   <div className="client-preview-section">
                     <h4 className="client-preview-section-title">Education Details</h4>
                     <div className="assign-form-group">
-                      <label>School Name</label>
-                      <div className="read-only-value">{selectedClientForDetails.schoolName || '-'}</div>
+                      <label>University Name</label>
+                      <div className="read-only-value">{selectedClientForDetails.universityName || '-'}</div>
                     </div>
                     <div className="assign-form-group">
-                      <label>School Address</label>
-                      <div className="read-only-value" style={{ minHeight: '60px' }}>{selectedClientForDetails.schoolAddress || '-'}</div>
-                    </div>
-                    <div className="assign-form-group">
-                      <label>School Phone</label>
-                      <div className="read-only-value">{selectedClientForDetails.schoolPhone || '-'}</div>
+                      <label>University Address</label>
+                      <div className="read-only-value">{selectedClientForDetails.universityAddress || '-'}</div>
                     </div>
                     <div className="assign-form-group">
                       <label>Course of Study</label>
                       <div className="read-only-value">{selectedClientForDetails.courseOfStudy || '-'}</div>
                     </div>
                     <div className="assign-form-group">
-                      <label>Graduation Date</label>
-                      <div className="read-only-value">{selectedClientForDetails.graduationDate || '-'}</div>
+                      <label>Graduation From Date</label>
+                      <div className="read-only-value">{selectedClientForDetails.graduationFromDate || '-'}</div>
+                    </div>
+                    <div className="assign-form-group">
+                      <label>Graduation To Date</label>
+                      <div className="read-only-value">{selectedClientForDetails.graduationToDate || '-'}</div>
+                    </div>
+                    <div className="assign-form-group">
+                      <label>Notice Period</label>
+                      <div className="read-only-value">{selectedClientForDetails.noticePeriod || '-'}</div>
                     </div>
                   </div>
-
-                  {/* Employment Details */}
                   <div className="client-preview-section">
                     <h4 className="client-preview-section-title">Employment Details</h4>
                     <div className="assign-form-group">
@@ -1741,8 +1712,6 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
                       <div className="read-only-value">{selectedClientForDetails.relievingDate || '-'}</div>
                     </div>
                   </div>
-
-                  {/* References */}
                   <div className="client-preview-section">
                     <h4 className="client-preview-section-title">References</h4>
                     <div className="assign-form-group">
@@ -1755,7 +1724,7 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
                     </div>
                     <div className="assign-form-group">
                       <label>Reference Address</label>
-                      <div className="read-only-value" style={{ minHeight: '60px' }}>{selectedClientForDetails.referenceAddress || '-'}</div>
+                      <div className="read-only-value">{selectedClientForDetails.referenceAddress || '-'}</div>
                     </div>
                     <div className="assign-form-group">
                       <label>Reference Email</label>
@@ -1766,35 +1735,40 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
                       <div className="read-only-value">{selectedClientForDetails.referenceRole || '-'}</div>
                     </div>
                   </div>
-
-                  {/* Job Portal Accounts */}
                   <div className="client-preview-section">
                     <h4 className="client-preview-section-title">Job Portal Accounts</h4>
-
                     <div className="assign-form-group">
                       <label>Account Name</label>
-                      <div className="read-only-value">{selectedClientForDetails.jobPortalAccountName || '-'}</div>
-                    </div>
-                    <div className="assign-form-group">
-                      <label>Credentials</label>
-                      <div className="read-only-value">{selectedClientForDetails.jobPortalCredentials || '-'}</div>
+                      <div className="read-only-value">{selectedClientForDetails.jobPortalAccountNameandCredentials || '-'}</div>
                     </div>
                   </div>
-
-                  {/* Resume Download Section */}
                   <div className="client-preview-section">
                     <h4 className="client-preview-section-title">Resume</h4>
                     {selectedClientForDetails.resumeUrl ? (
                       <div className="assign-form-group">
                         <label>File Name</label>
+                       <div className="read-only-value" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>{selectedClientForDetails.resumeFileName || 'No resume uploaded.'}</span>
+                        {selectedClientForDetails.resumeUrl && (<a href={selectedClientForDetails.resumeUrl} download={selectedClientForDetails.resumeFileName} target="_blank" rel="noopener noreferrer" className="assign-form-button assign" style={{ textDecoration: 'none' }}>Download</a>)}
+                      </div>
+                      </div>
+                    ) : (
+                      <div className="read-only-value">No resume uploaded.</div>
+                    )}
+                  </div>
+                  <div className="client-preview-section">
+                    <h4 className="client-preview-section-title">Cover Letter</h4>
+                    {selectedClientForDetails.coverLetterUrl ? (
+                      <div className="assign-form-group">
+                        <label>File Name</label>
                         <div className="read-only-value" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span>{selectedClientForDetails.resumeFileName || 'resume.pdf'}</span>
+                          <span>{selectedClientForDetails.coverLetterFileName || 'cover_letter.pdf'}</span>
                           <a
-                            href={selectedClientForDetails.resumeUrl}
-                            download={selectedClientForDetails.resumeFileName || 'resume.pdf'}
+                            href={selectedClientForDetails.coverLetterUrl}
+                            download={selectedClientForDetails.coverLetterFileName || 'cover_letter.pdf'}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="action-button assign" // Re-using a button style
+                            className="action-button assign"
                             style={{ textDecoration: 'none' }}
                           >
                             Download
@@ -1802,22 +1776,12 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
                         </div>
                       </div>
                     ) : (
-                      <div className="read-only-value">No resume uploaded.</div>
+                      <div className="read-only-value">No cover letter uploaded.</div>
                     )}
                   </div>
                 </div>
 
-                {/* Skills section for viewing */}
-                {selectedClientForDetails.technologySkills && (
-                  <div className="client-preview-skills-section">
-                    <h4 className="assign-modal-title" style={{ marginBottom: '10px', fontSize: '18px' }}>Skills (Comma Separated)</h4>
-                    <div className="assign-form-group">
-                      <div className="read-only-value" style={{ minHeight: '80px', alignItems: 'flex-start' }}>
-                        {Array.isArray(selectedClientForDetails.technologySkills) ? selectedClientForDetails.technologySkills.join(', ') : selectedClientForDetails.technologySkills || '-'}
-                      </div>
-                    </div>
-                  </div>
-                )}
+               
               </>
             )}
 
@@ -1830,24 +1794,19 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
         </div>
       )}
 
-      {/* Edit Client Modal (now with matching style) */}
+      {/* Edit Client Modal */}
       {isEditClientModalOpen && currentClientToEdit && (
         <div className="modal-overlay open">
-          <div className="assign-modal-content"> {/* Reusing assign-modal-content for its wider layout */}
+          <div className="assign-modal-content">
             <div className="assign-modal-header">
-
               <h3 className="assign-modal-title">Edit Client Details: {currentClientToEdit.firstName} {currentClientToEdit.lastName}</h3>
-
-
               <button className="assign-modal-close-button" onClick={handleCloseEditClientModal}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1.2rem', height: '1.2rem' }}>
                   <path d="M6.29289 6.29289C6.68342 5.90237 7.31658 5.90237 7.70711 6.29289L12 10.5858L16.2929 6.29289C16.6834 5.90237 17.3166 5.90237 17.7071 6.29289C18.0976 6.68342 18.0976 7.31658 17.7071 7.70711L13.4142 12L17.7071 16.2929C18.0976 16.6834 18.0976 17.3166 17.7071 17.7071C17.3166 18.0976 16.6834 18.0976 16.2929 17.7071L12 13.4142L7.70711 17.7071C5.90237 7.31658 5.90237 6.68342 6.29289 6.29289Z" />
                 </svg>
               </button>
             </div>
-            {/* ====== CONDITIONAL RENDERING LOGIC FOR EDIT FORM ====== */}
             {simplifiedServices.includes(currentClientToEdit.service) ? (
-              // --- NEW SIMPLIFIED EDIT FORM ---
               <div className="client-preview-grid-container" style={{ gridTemplateColumns: '1fr' }}>
                 <div className="client-preview-section">
                   <h4 className="client-preview-section-title">Service Request Details</h4>
@@ -1902,15 +1861,10 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
                 </div>
               </div>
             ) : (
-              // --- ORIGINAL DETAILED EDIT FORM ---
               <>
-
-                {/* Comprehensive Client Details Grid - now with input fields */}
                 <div className="client-preview-grid-container">
-                  {/* Personal Information */}
                   <div className="client-preview-section">
                     <h4 className="client-preview-section-title">Personal Information</h4>
-
                     <div className="assign-form-group">
                       <label htmlFor="firstName">First Name</label>
                       <input type="text" id="firstName" name="firstName" value={currentClientToEdit.firstName || ''} onChange={handleEditClientChange} />
@@ -1941,14 +1895,15 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
                       <input type="text" id="ethnicity" name="ethnicity" value={currentClientToEdit.ethnicity || ''} onChange={handleEditClientChange} />
                     </div>
                   </div>
-
-                  {/* Contact Information */}
                   <div className="client-preview-section">
                     <h4 className="client-preview-section-title">Contact Information</h4>
-
                     <div className="assign-form-group">
                       <label htmlFor="address">Address</label>
                       <textarea id="address" name="address" value={currentClientToEdit.address || ''} onChange={handleEditClientChange}></textarea>
+                    </div>
+                    <div className="assign-form-group">
+                      <label htmlFor="county">County</label>
+                      <input type="text" id="county" name="county" value={currentClientToEdit.county || ''} onChange={handleEditClientChange} />
                     </div>
                     <div className="assign-form-group">
                       <label htmlFor="zipCode">Zip Code</label>
@@ -1967,60 +1922,16 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
                       <input type="text" id="country" name="country" value={currentClientToEdit.country || ''} onChange={handleEditClientChange} />
                     </div>
                   </div>
-
-                  {/* Service Details */}
                   <div className="client-preview-section">
-                    <h4 className="client-preview-section-title">Service Details</h4>
-                    <div className="assign-form-group">
-                      <label htmlFor="service">Service</label>
-                      <select id="service" name="service" value={currentClientToEdit.service || ''} onChange={handleEditClientChange}>
-                        <option value="">Select Service</option>
-                        {serviceOptions.filter(opt => opt !== 'All').map(option => (
-                          <option key={option} value={option}>{option}</option>
-                        ))}
-                      </select>
-                    </div>
-                    {(currentClientToEdit.service === 'Mobile Development' ||
-                      currentClientToEdit.service === 'Web Development' ||
-                      currentClientToEdit.service === 'Digital Marketing' ||
-                      currentClientToEdit.service === 'IT Talent Supply') && (
-                        <div className="assign-form-group">
-                          <label htmlFor="subServices">What Service do you want? (Comma Separated)</label>
-                          <textarea
-                            id="subServices"
-                            name="subServices"
-                            value={Array.isArray(currentClientToEdit.subServices) ? currentClientToEdit.subServices.join(', ') : currentClientToEdit.subServices || ''}
-                            onChange={(e) => setCurrentClientToEdit(prev => ({ ...prev, subServices: e.target.value.split(',').map(s => s.trim()) }))}
-                          ></textarea>
-                        </div>
-                      )}
-
-                  </div>
-
-
-
-
-
-                  {/* Job Preferences & Status */}
-
-                  <div className="client-preview-section">
-                    <h4 className="client-preview-section-title">Job Preferences & Status</h4>
-
-
-
+                    <h4 className="client-preview-section-title">Employment Information</h4>
                     <div className="assign-form-group">
                       <label htmlFor="securityClearance">Security Clearance</label>
-                      <select id="securityClearance" name="securityClearance" value={currentClientToEdit.securityClearance || 'No'} onChange={handleEditClientChange}>
-                        <option value="Yes">Yes</option>
-                        <option value="No">No</option>
+                      <select id="securityClearance" name="securityClearance" value={currentClientToEdit.securityClearance || 'no'} onChange={handleEditClientChange}>
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
                       </select>
-
-
-
-
-
                     </div>
-                    {currentClientToEdit.securityClearance === 'Yes' && (
+                    {currentClientToEdit.securityClearance === 'yes' && (
                       <div className="assign-form-group">
                         <label htmlFor="clearanceLevel">Clearance Level</label>
                         <input type="text" id="clearanceLevel" name="clearanceLevel" value={currentClientToEdit.clearanceLevel || ''} onChange={handleEditClientChange} />
@@ -2028,9 +1939,9 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
                     )}
                     <div className="assign-form-group">
                       <label htmlFor="willingToRelocate">Willing to Relocate</label>
-                      <select id="willingToRelocate" name="willingToRelocate" value={currentClientToEdit.willingToRelocate || 'No'} onChange={handleEditClientChange}>
-                        <option value="Yes">Yes</option>
-                        <option value="No">No</option>
+                      <select id="willingToRelocate" name="willingToRelocate" value={currentClientToEdit.willingToRelocate || 'no'} onChange={handleEditClientChange}>
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
                       </select>
                     </div>
                     <div className="assign-form-group">
@@ -2042,15 +1953,17 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
                       <input type="text" id="restrictedCompanies" name="restrictedCompanies" value={currentClientToEdit.restrictedCompanies || ''} onChange={handleEditClientChange} />
                     </div>
                     <div className="assign-form-group">
-                      <label htmlFor="jobsToApply">Jobs to Apply</label>
-                      <input type="text" id="jobsToApply" name="jobsToApply" value={currentClientToEdit.jobsToApply || ''} onChange={handleEditClientChange} />
+                      <label htmlFor="yearsOfExperience">Years of Experience</label>
+                      <input type="text" id="yearsOfExperience" name="yearsOfExperience" value={currentClientToEdit.yearsOfExperience || ''} onChange={handleEditClientChange} />
                     </div>
-
-
-
-
+                  </div>
+                  <div className="client-preview-section">
+                    <h4 className="client-preview-section-title">Job Preferences & Status</h4>
                     <div className="assign-form-group">
-
+                      <label htmlFor="jobsToApply">Jobs to Apply</label>
+                      <textarea id="jobsToApply" name="jobsToApply" value={currentClientToEdit.jobsToApply || ''} onChange={handleEditClientChange}></textarea>
+                    </div>
+                    <div className="assign-form-group">
                       <label htmlFor="currentSalary">Current Salary</label>
                       <input type="text" id="currentSalary" name="currentSalary" value={currentClientToEdit.currentSalary || ''} onChange={handleEditClientChange} />
                     </div>
@@ -2062,64 +1975,49 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
                       <label htmlFor="visaStatus">Visa Status</label>
                       <input type="text" id="visaStatus" name="visaStatus" value={currentClientToEdit.visaStatus || ''} onChange={handleEditClientChange} />
                     </div>
-                    {currentClientToEdit.visaStatus === 'Other' && (
+                    {currentClientToEdit.visaStatus === 'other' && (
                       <div className="assign-form-group">
                         <label htmlFor="otherVisaStatus">Other Visa Status</label>
                         <input type="text" id="otherVisaStatus" name="otherVisaStatus" value={currentClientToEdit.otherVisaStatus || ''} onChange={handleEditClientChange} />
                       </div>
                     )}
-                    <div className="assign-form-group">
-                      <label htmlFor="priority">Priority</label>
-                      <select id="priority" name="priority" value={currentClientToEdit.priority || 'medium'} onChange={handleEditClientChange}>
-                        <option value="high">High</option>
-
-                        <option value="medium">Medium</option>
-                        <option value="low">Low</option>
-                      </select>
-                    </div>
-                    <div className="assign-form-group">
-                      <label htmlFor="status">Status</label>
-                      <input type="text" id="status" name="status" value={currentClientToEdit.status || ''} onChange={handleEditClientChange} />
-
-
-
-
-                    </div>
                   </div>
-
-                  {/* Education Details */}
                   <div className="client-preview-section">
                     <h4 className="client-preview-section-title">Education Details</h4>
                     <div className="assign-form-group">
-                      <label htmlFor="schoolName">School Name</label>
-                      <input type="text" id="schoolName" name="schoolName" value={currentClientToEdit.schoolName || ''} onChange={handleEditClientChange} />
+                      <label htmlFor="universityName">University Name</label>
+                      <input type="text" id="universityName" name="universityName" value={currentClientToEdit.universityName || ''} onChange={handleEditClientChange} />
                     </div>
                     <div className="assign-form-group">
-                      <label htmlFor="schoolAddress">School Address</label>
-                      <textarea id="schoolAddress" name="schoolAddress" value={currentClientToEdit.schoolAddress || ''} onChange={handleEditClientChange}></textarea>
-
-
-
-
-                    </div>
-                    <div className="assign-form-group">
-                      <label htmlFor="schoolPhone">School Phone</label>
-                      <input type="tel" id="schoolPhone" name="schoolPhone" value={currentClientToEdit.schoolPhone || ''} onChange={handleEditClientChange} />
+                      <label htmlFor="universityAddress">University Address</label>
+                      <input type="text" id="universityAddress" name="universityAddress" value={currentClientToEdit.universityAddress || ''} onChange={handleEditClientChange} />
                     </div>
                     <div className="assign-form-group">
                       <label htmlFor="courseOfStudy">Course of Study</label>
                       <input type="text" id="courseOfStudy" name="courseOfStudy" value={currentClientToEdit.courseOfStudy || ''} onChange={handleEditClientChange} />
                     </div>
                     <div className="assign-form-group">
-                      <label htmlFor="graduationDate">Graduation Date</label>
-                      <input type="date" id="graduationDate" name="graduationDate" value={currentClientToEdit.graduationDate || ''} onChange={handleEditClientChange} />
+                      <label htmlFor="graduationFromDate">Graduation From Date</label>
+                      <input type="date" id="graduationFromDate" name="graduationFromDate" value={currentClientToEdit.graduationFromDate || ''} onChange={handleEditClientChange} />
+                    </div>
+                    <div className="assign-form-group">
+                      <label htmlFor="graduationToDate">Graduation To Date</label>
+                      <input type="date" id="graduationToDate" name="graduationToDate" value={currentClientToEdit.graduationToDate || ''} onChange={handleEditClientChange} />
+                    </div>
+                    <div className="assign-form-group">
+                      <label htmlFor="noticePeriod">Notice Period</label>
+                      <select id="noticePeriod" name="noticePeriod" value={currentClientToEdit.noticePeriod || ''} onChange={handleEditClientChange}>
+                        <option value="">Select Notice Period</option>
+                        <option value="immediately">Immediately</option>
+                        <option value="1_week">1 Week</option>
+                        <option value="2_week">2 Weeks</option>
+                        <option value="3_week">3 Weeks</option>
+                        <option value="1_month">1 Month</option>
+                      </select>
                     </div>
                   </div>
-
-                  {/* Employment Details */}
                   <div className="client-preview-section">
                     <h4 className="client-preview-section-title">Employment Details</h4>
-
                     <div className="assign-form-group">
                       <label htmlFor="currentCompany">Current Company</label>
                       <input type="text" id="currentCompany" name="currentCompany" value={currentClientToEdit.currentCompany || ''} onChange={handleEditClientChange} />
@@ -2141,8 +2039,6 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
                       <input type="date" id="relievingDate" name="relievingDate" value={currentClientToEdit.relievingDate || ''} onChange={handleEditClientChange} />
                     </div>
                   </div>
-
-                  {/* References */}
                   <div className="client-preview-section">
                     <h4 className="client-preview-section-title">References</h4>
                     <div className="assign-form-group">
@@ -2166,120 +2062,85 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
                       <input type="text" id="referenceRole" name="referenceRole" value={currentClientToEdit.referenceRole || ''} onChange={handleEditClientChange} />
                     </div>
                   </div>
-
+                  <div className="client-preview-section">
+                    <h4 className="client-preview-section-title">Job Portal Accounts</h4>
+                    <div className="assign-form-group">
+                      <label htmlFor="jobPortalAccountNameandCredentials">Account Name & Credentials</label>
+                      <textarea id="jobPortalAccountNameandCredentials" name="jobPortalAccountNameandCredentials" value={currentClientToEdit.jobPortalAccountNameandCredentials || ''} onChange={handleEditClientChange}></textarea>
+                    </div>
+                  </div>
                   <div className="client-preview-section">
                     <h4 className="client-preview-section-title">Resume</h4>
-                    
-                    {/* MODIFICATION START: Add file input and download link */}
                     <div className="assign-form-group">
-                      <label>Current Resume</label>
-                      {currentClientToEdit.resumeUrl ? (
-                        <a 
-                          href={currentClientToEdit.resumeUrl} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="action-button download" // Re-using a style for consistency
-                          style={{ textDecoration: 'none', textAlign: 'center' }}
-                        >
-                          {currentClientToEdit.resumeFileName || 'Download File'}
-                        </a>
-                      ) : (
-                        <div className="read-only-value">No resume on file.</div>
-                      )}
-                    </div>
-
-                    <div className="assign-form-group">
-                      <label htmlFor="resumeUpload">Upload New Resume</label>
+                      <label htmlFor="newResumeFile">Upload New Resume (optional)</label>
                       <input
                         type="file"
-                        id="resumeUpload"
+                        id="newResumeFile"
                         name="newResumeFile"
-                        onChange={(e) => setNewResumeFile(e.target.files[0])}
+                        onChange={handleEditClientChange}
                         accept=".pdf,.doc,.docx"
                       />
                     </div>
-                    {/* MODIFICATION END */}
                   </div>
-
-                  {/* Job Portal Accounts */}
                   <div className="client-preview-section">
-                    <h4 className="client-preview-section-title">Job Portal Accounts</h4>
-
+                    <h4 className="client-preview-section-title">Cover Letter</h4>
                     <div className="assign-form-group">
-                      <label htmlFor="jobPortalAccountName">Account Name</label>
-                      <input type="text" id="jobPortalAccountName" name="jobPortalAccountName" value={currentClientToEdit.jobPortalAccountName || ''} onChange={handleEditClientChange} />
-                    </div>
-                    <div className="assign-form-group">
-                      <label htmlFor="jobPortalCredentials">Credentials</label>
-                      <input type="text" id="jobPortalCredentials" name="jobPortalCredentials" value={currentClientToEdit.jobPortalCredentials || ''} onChange={handleEditClientChange} />
+                      <label htmlFor="coverLetterFile">Upload New Cover Letter (optional)</label>
+                      <input
+                        type="file"
+                        id="coverLetterFile"
+                        name="coverLetterFile"
+                        onChange={handleEditClientChange}
+                        accept=".pdf,.doc,.docx"
+                      />
                     </div>
                   </div>
-
                 </div>
-
-                {/* Skills section for editing */}
-                {currentClientToEdit.technologySkills && (
-                  <div className="client-preview-skills-section">
-                    <h4 className="assign-modal-title" style={{ marginBottom: '10px', fontSize: '18px' }}>Skills (Comma Separated)</h4>
-                    <div className="assign-form-group">
-                      <textarea
-                        id="skills"
-                        name="technologySkills" // Changed to technologySkills to match the client object
-                        value={Array.isArray(currentClientToEdit.technologySkills) ? currentClientToEdit.technologySkills.join(', ') : currentClientToEdit.technologySkills || ''}
-                        onChange={handleEditClientChange} // Use the general handler
-                      ></textarea>
-                    </div>
-                  </div>
-                )}
               </>
             )}
 
-
-<div className="assign-form-actions">
-    <button className="assign-form-button cancel" onClick={handleCloseEditClientModal}>
-        Cancel
-    </button>
-    <button className="assign-form-button assign" onClick={handleSaveClientDetails} disabled={isSaving}>
-        {isSaving ? (
-            <>
-                <Spinner
-                    as="span"
-                    animation="border"
-                    size="sm"
-                    role="status"
-                    aria-hidden="true"
-                />
-                <span style={{ marginLeft: '8px' }}>Saving...</span>
-            </>
-        ) : (
-            'Save Changes'
-        )}
-    </button>
-</div>
+            <div className="assign-form-actions">
+              <button className="assign-form-button cancel" onClick={handleCloseEditClientModal}>
+                Cancel
+              </button>
+              <button className="assign-form-button assign" onClick={handleSaveClientDetails} disabled={isSaving}>
+                {isSaving ? (
+                  <>
+                    <Spinner
+                      as="span"
+                      animation="border"
+                      size="sm"
+                      role="status"
+                      aria-hidden="true"
+                    />
+                    <span style={{ marginLeft: '8px' }}>Saving...</span>
+                  </>
+                ) : (
+                  'Save Changes'
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-
-{/* Success Modal */}
-{showSuccessModal && (
-    <div className="modal-overlay open">
-        <div className="modal-content" style={{ maxWidth: '400px', textAlign: 'center' }}>
+      {showSuccessModal && (
+        <div className="modal-overlay open">
+          <div className="modal-content" style={{ maxWidth: '400px', textAlign: 'center' }}>
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>✅</div>
             <h3 className="modal-title" style={{ marginBottom: '0.5rem' }}>Successfully Submitted!</h3>
             <p className="modal-subtitle">Client details have been updated.</p>
+          </div>
         </div>
-    </div>
-)}
+      )}
 
-      {/* Payment Management Modal */}
       {isPaymentModalOpen && selectedClientForPayment && (
         <div className="modal-overlay open">
           <div className="modal-content payment-modal-content">
             <div className="modal-header">
               <div>
                 <h3 className="modal-title">Payment Management</h3>
-                <p className="modal-subtitle">Create payment links or process immediate payments for {selectedClientForPayment.name}</p>
+                <p className="modal-subtitle">Create payment links or process immediate payments for {selectedClientForPayment.firstName} {selectedClientForPayment.lastName}</p>
               </div>
               <button className="modal-close-btn" onClick={handleClosePaymentModal}>&times;</button>
             </div>
@@ -2326,18 +2187,15 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
                   readOnly
                 />
               </div>
-
               <div className="payment-modal-client-details modal-form-full-width">
                 <p><strong>Client Details:</strong></p>
-                <p>Name: {selectedClientForPayment.name}</p>
+                <p>Name: {selectedClientForPayment.firstName} {selectedClientForPayment.lastName}</p>
                 <p>Email: {selectedClientForPayment.email}</p>
                 <p>Phone: {selectedClientForPayment.mobile}</p>
               </div>
-
               {generatedPaymentLink ? (
                 <div className="generated-link-section modal-form-full-width">
                   <div className="generated-link-header">
-
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                       <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2ZM16.7071 9.29289C17.0976 8.90237 17.0976 8.26921 16.7071 7.87869C16.3166 7.48816 15.6834 7.48816 15.2929 7.87869L10.5 12.6716L8.70711 10.8787C8.31658 10.4882 7.68342 10.4882 7.29289 10.8787C6.90237 11.2692 6.90237 11.9024 7.29289 12.2929L9.87869 14.8787C10.2692 15.2692 10.9024 15.2692 11.2929 14.8787L16.7071 9.46447V9.29289Z" />
                     </svg>
@@ -2352,21 +2210,18 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
                     />
                     <div className="generated-link-actions">
                       <button type="button" className="generated-link-action-btn" onClick={handleCopyLink}>
-
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                           <path d="M16 1H4C2.89543 1 2 1.89543 2 3V17H4V3H16V1ZM18 5H8C6.89543 5 6 5.89543 6 7V21C6 22.1046 6.89543 23 8 23H18C19.1046 23 20 22.1046 20 21V7C20 5.89543 19.1046 5 18 5ZM8 7H18V21H8V7Z" />
                         </svg>
                         Copy Link
                       </button>
                       <button type="button" className="generated-link-action-btn" onClick={handleSendEmail}>
-
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                           <path d="M22 2L11 13M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                         Send Email
                       </button>
                       <button type="button" className="generated-link-action-btn" onClick={handlePreviewLink}>
-
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                           <path d="M10 6H6C4.89543 6 4 6.89543 4 8V18C4 19.1046 4.89543 20 6 20H16C17.1046 20 18 19.1046 18 18V14M14 4L20 4M20 4V10M20 4L10 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>

@@ -207,8 +207,10 @@ const JobSupportContactForm = () => {
         throw new Error("You must be logged in to submit this form.");
       }
 
-      let resumeUrl = '';
-      let resumeFileName = '';
+       let resumeUrl = '';
+        let resumeFileName = '';
+        let coverLetterUrl = '';
+        let coverLetterFileName = '';
       
       const newRegistrationRef = push(ref(database, `clients/${user.firebaseKey}/serviceRegistrations`));
       const registrationKey = newRegistrationRef.key;
@@ -222,55 +224,81 @@ const JobSupportContactForm = () => {
         resumeUrl = await getDownloadURL(uploadResult.ref);
       }
 
+       if (coverLetterFile) {
+            coverLetterFileName = coverLetterFile.name;
+            const fileRef = storageRef(getStorage(), `coverletters/${user.firebaseKey}/${registrationKey}/${coverLetterFileName}`);
+            const uploadResult = await uploadBytes(fileRef, coverLetterFile);
+            coverLetterUrl = await getDownloadURL(uploadResult.ref);
+        }
+
     const newServiceRegistration = {
-      name: `${formData.firstName} ${formData.lastName}`,
-      mobile: `${formData.countryCode} ${formData.mobile}`,
-      email: formData.email,
-      jobsToApply: formData.jobsToApply,
-      registeredDate: new Date().toISOString().split('T')[0],
-      country: countryName,
-      visaStatus: formData.visaStatus === 'other' ? formData.otherVisaStatus : formData.visaStatus,
-      paymentStatus: 'Pending',
-      assignmentStatus: 'registered',
-      service: formData.service,
-      assignedManager: '',
-      subServices: [],
-      userType: 'Individual',
-      firstName: formData.firstName,
-      middleName: formData.middleName,
-      lastName: formData.lastName,
-      dob: formData.dob,
-      gender: formData.gender,
-      ethnicity: formData.ethnicity,
-      address: formData.address,
-      county: formData.county,
-      zipCode: formData.zipCode,
-      securityClearance: formData.securityClearance,
-      clearanceLevel: formData.clearanceLevel,
-      willingToRelocate: formData.willingToRelocate,
-      workPreference: formData.workPreference,
-      restrictedCompanies: formData.restrictedCompanies,
-      yearsOfExperience: formData.yearsOfExperience,
-      currentSalary: formData.currentSalary,
-      expectedSalary: formData.expectedSalary,
-      schoolName: formData.universityName,
-      universityAddress: formData.universityAddress,
-      courseOfStudy: formData.courseOfStudy,
-      graduationDate: formData.graduationToDate,
-      noticePeriod: formData.noticePeriod,
-      currentCompany: formData.currentCompany,
-      currentDesignation: formData.currentDesignation,
-      preferredInterviewTime: formData.preferredInterviewTime,
-      earliestJoiningDate: formData.earliestJoiningDate,
-      relievingDate: formData.relievingDate,
-      referenceName: formData.referenceName,
-      referencePhone: formData.referencePhone,
-      referenceAddress: formData.referenceAddress,
-      referenceEmail: formData.referenceEmail,
-      referenceRole: formData.referenceRole,
-      jobPortalAccountName: formData.jobPortalAccountNameandCredentials,
-      resumeUrl: resumeUrl,
-      resumeFileName: resumeFileName,
+         service: 'Job Supporting',
+            registeredDate: new Date().toISOString().split('T')[0],
+            paymentStatus: 'Pending',
+            assignmentStatus: 'registered',
+            assignedManager: '',
+
+            // Personal Information
+            firstName: formData.firstName,
+            middleName: formData.middleName,
+            lastName: formData.lastName,
+            dob: formData.dob,
+            gender: formData.gender,
+            ethnicity: formData.ethnicity,
+            
+            // Contact Information
+            address: formData.address,
+            county: formData.county,
+            zipCode: formData.zipCode,
+            country: countryName,
+            mobile: `${formData.countryCode} ${formData.mobile}`,
+            email: formData.email,
+
+            // Employment Information
+            securityClearance: formData.securityClearance,
+            clearanceLevel: formData.clearanceLevel,
+            willingToRelocate: formData.willingToRelocate,
+            workPreference: formData.workPreference,
+            restrictedCompanies: formData.restrictedCompanies,
+            yearsOfExperience: formData.yearsOfExperience,
+
+            // Job Preferences
+            jobsToApply: formData.jobsToApply,
+            currentSalary: formData.currentSalary,
+            expectedSalary: formData.expectedSalary,
+            visaStatus: formData.visaStatus === 'other' ? formData.otherVisaStatus : formData.visaStatus,
+            otherVisaStatus: formData.visaStatus === 'other' ? formData.otherVisaStatus : '',
+
+            // Education
+            universityName: formData.universityName,
+            universityAddress: formData.universityAddress,
+            courseOfStudy: formData.courseOfStudy,
+            graduationFromDate: formData.graduationFromDate,
+            graduationToDate: formData.graduationToDate,
+            noticePeriod: formData.noticePeriod,
+
+            // Current Employment
+            currentCompany: formData.currentCompany,
+            currentDesignation: formData.currentDesignation,
+            preferredInterviewTime: formData.preferredInterviewTime,
+            earliestJoiningDate: formData.earliestJoiningDate,
+            relievingDate: formData.relievingDate,
+            
+            // References
+            referenceName: formData.referenceName,
+            referencePhone: formData.referencePhone,
+            referenceAddress: formData.referenceAddress,
+            referenceEmail: formData.referenceEmail,
+            referenceRole: formData.referenceRole,
+
+            // Job Portal Information
+            jobPortalAccountNameandCredentials: formData.jobPortalAccountNameandCredentials,
+            
+            // Documents
+            resumeUrl: resumeUrl,
+            resumeFileName: resumeFileName,
+            coverLetterUrl: coverLetterUrl,
+            coverLetterFileName: coverLetterFileName,
     };
     const clientProfileUpdate = {
             firstName: formData.firstName,
@@ -290,6 +318,8 @@ const JobSupportContactForm = () => {
  setSubmitStatus({ success: true, message: 'Form submitted successfully!' });
       setShowSuccessModal(true);
       setFormData(initialFormData);
+       setResumeFile(null); // Reset file states
+        setCoverLetterFile(null);
       setTimeout(() => {
           setShowSuccessModal(false);
           navigate("/");
@@ -750,7 +780,7 @@ const JobSupportContactForm = () => {
                 </Row>
                 <Row className="mb-3">
                     <Form.Group as={Col} controlId="formJobsToApply">
-                    <Form.Label>Jobs to Apply For <span className="text-danger">*</span></Form.Label>
+                    <Form.Label>Jobs to Apply <span className="text-danger">*</span></Form.Label>
                     {/* NEW: Changed to textarea */}
                     <Form.Control as="textarea" rows={3} name="jobsToApply" placeholder="e.g., Software Engineer, Project Manager" value={formData.jobsToApply} onChange={handleChange} isInvalid={!!validationErrors.jobsToApply} required />
                     <Form.Control.Feedback type="invalid">{validationErrors.jobsToApply}</Form.Control.Feedback>
@@ -952,9 +982,18 @@ const JobSupportContactForm = () => {
             <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Job Portal Information</h4>
             <Form.Group controlId="previewJobPortalCredentials" className="mb-3"><Form.Label>Job Portal Account Name & Credentials:</Form.Label><div style={previewTextAreaDisplay}>{formData.jobPortalAccountNameandCredentials || 'N/A'}</div></Form.Group>
             
-            {/* Resume Preview */}
-            <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Uploaded Resume</h4>
-            <Form.Group controlId="previewResume" className="mb-3"><Form.Label>Resume File Name:</Form.Label><div style={previewValueDisplay}>{formData.resume ? formData.resume.name : 'N/A'}</div></Form.Group>
+            {/* FIX: Display resume and cover letter file names */}
+            <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Uploaded Documents</h4>
+            <Row className="mb-3">
+              <Col>
+                <Form.Label>Resume File Name:</Form.Label>
+                <div style={previewValueDisplay}>{resumeFile ? resumeFile.name : 'N/A'}</div>
+              </Col>
+              <Col>
+                <Form.Label>Cover Letter File Name:</Form.Label>
+                <div style={previewValueDisplay}>{coverLetterFile ? coverLetterFile.name : 'N/A'}</div>
+              </Col>
+            </Row>
 
           </Modal.Body>
           <Modal.Footer>

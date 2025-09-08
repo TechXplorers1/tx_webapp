@@ -1642,7 +1642,7 @@ const Applications = ({
                 <tr style={{ backgroundColor: '#007bff', color: 'white' }}>
                   <th style={{ padding: '12px', textAlign: 'center' }}>S.No</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Applied Date</th>
-                  <th style={{ padding: '12px', textAlign: 'center' }}>Platform</th>
+                  <th style={{ padding: '12px', textAlign: 'center' }}>Job Boards</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Job Title</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Job ID</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Company</th>
@@ -2449,7 +2449,7 @@ const ClientDashboard = () => {
           acc[dateKey].push({
             id: app.id,
             jobId: app.jobId,
-            website: app.platform,
+            website: app.jobBoards,
             position: app.jobTitle,
             company: app.company,
             link: app.jobUrl,
@@ -2864,7 +2864,7 @@ const ClientDashboard = () => {
     const dataToExport = filteredApplicationsForDisplay.map((app, index) => ({
       'S.No': index + 1,
       'Applied Date': app.dateAdded,
-      'Platform': app.website,
+      'Job Boards': app.jobBoards,
       'Job Title': app.position,
       'Job ID': jobId,
       'Company': app.company,

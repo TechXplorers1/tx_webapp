@@ -91,6 +91,9 @@ const ManagerWorkSheet = () => {
   const [userName, setUserName] = useState('Manager'); // Changed from Balaji to Chaveen
   const [userAvatarLetter, setUserAvatarLetter] = useState('C'); // Derived from userName
 
+  const [managerFirebaseKey, setManagerFirebaseKey] = useState(null);
+
+
   // NEW STATE: State to control the visibility of the profile dropdown
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   // Ref for the profile dropdown to detect clicks outside
@@ -259,6 +262,7 @@ const ManagerWorkSheet = () => {
 useEffect(() => {
     const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInEmployee'));
     const managerFirebaseKey = loggedInUserData ? loggedInUserData.firebaseKey : null;
+    setManagerFirebaseKey(managerFirebaseKey);
 
     if (!managerFirebaseKey) {
         setLoading(false);
@@ -268,86 +272,77 @@ useEffect(() => {
     const clientsRef = ref(database, 'clients');
     const usersRef = ref(database, 'users'); // Reference the 'users' node
 
+
     const unsubscribeClients = onValue(clientsRef, (snapshot) => {
-  const clientsData = snapshot.val();
-      const allRegistrations = []; // We will create a flat list of registrations here.
-
-      if (clientsData) {
-        // Iterate over each client object from Firebase
-        Object.keys(clientsData).forEach(clientKey => {
-          const client = clientsData[clientKey];
-          // Check if the client has the nested serviceRegistrations
-          if (client.serviceRegistrations) {
-            // Iterate over each individual service registration
-            Object.keys(client.serviceRegistrations).forEach(regKey => {
-              const registration = client.serviceRegistrations[regKey];
-              // Create a new, combined object with both client and registration info
-              allRegistrations.push({
-                ...registration, // service, assignmentStatus, etc.
-                clientFirebaseKey: clientKey,
-                registrationKey: regKey,
-                email: client.email,
-                mobile: client.mobile,
-                // Use the name from the registration, fallback to the parent client's name
-                firstName: registration.firstName || client.firstName,
-                lastName: registration.lastName || client.lastName,
-              });
+        const clientsData = snapshot.val();
+        const allRegistrations = [];
+        if (clientsData) {
+            Object.keys(clientsData).forEach(clientKey => {
+                const client = clientsData[clientKey];
+                if (client.serviceRegistrations) {
+                    Object.keys(client.serviceRegistrations).forEach(regKey => {
+                        const registration = client.serviceRegistrations[regKey];
+                        // Add full client and registration data to the list
+                        allRegistrations.push({
+                            ...registration,
+                            clientFirebaseKey: clientKey,
+                            registrationKey: regKey,
+                            email: client.email,
+                            mobile: client.mobile,
+                            firstName: registration.firstName || client.firstName,
+                            lastName: registration.lastName || client.lastName,
+                            name: registration.name || `${registration.firstName || ''} ${registration.lastName || ''}`,
+                        });
+                    });
+                }
             });
-          }
-        });
-      }
-      
-      // Now, filter this complete list of registrations for the logged-in manager
-      const unassignedForManager = allRegistrations.filter(reg => 
-        reg.assignedManager === managerFirebaseKey && reg.assignmentStatus === 'pending_employee'
-      );
-      
-      const assignedByManager = allRegistrations.filter(reg => 
-        reg.assignedManager === managerFirebaseKey && ['pending_acceptance', 'active'].includes(reg.assignmentStatus)
-      );
+        }
+        
+        // Filter clients based on the logged-in manager's key
+        const clientsForManager = allRegistrations.filter(reg => 
+            reg.assignedManager === managerFirebaseKey
+        );
 
-      setUnassignedClients(unassignedForManager);
-      setAssignedClients(assignedByManager);
+        const unassignedForManager = clientsForManager.filter(reg => reg.assignmentStatus === 'pending_employee');
+        const assignedByManager = clientsForManager.filter(reg => ['pending_acceptance', 'active'].includes(reg.assignmentStatus));
 
-      // The logic for applications and interviews can now also use the 'assignedByManager' list
-      // which is derived from the correctly filtered registrations.
-      const allApplications = assignedByManager.flatMap(clientReg => 
-          (clientReg.jobApplications || []).map(app => ({
-              ...app,
-              clientName: `${clientReg.firstName} ${clientReg.lastName}`,
-              assignedTo: clientReg.assignedTo
-          }))
-      );
-      setApplicationData(allApplications);
-
-      const allInterviews = assignedByManager.flatMap(clientReg => 
-          (clientReg.jobApplications || [])
-              .filter(app => app.status === 'Interview')
-              .map(app => ({ ...app, clientName: `${clientReg.firstName} ${clientReg.lastName}`, assignedTo: clientReg.assignedTo }))
-      );
-      setInterviewData(allInterviews);
-      
-      setLoading(false);
+        setUnassignedClients(unassignedForManager);
+        setAssignedClients(assignedByManager);
+        
+        // Populate application and interview data from the assigned list
+        setApplicationData(assignedByManager.flatMap(clientReg => 
+            (clientReg.jobApplications || []).map(app => ({
+                ...app,
+                clientName: `${clientReg.firstName} ${clientReg.lastName}`,
+                assignedTo: clientReg.assignedTo
+            }))
+        ));
+        setInterviewData(assignedByManager.flatMap(clientReg => 
+            (clientReg.jobApplications || [])
+                .filter(app => app.status === 'Interview')
+                .map(app => ({ ...app, clientName: `${clientReg.firstName} ${clientReg.lastName}`, assignedTo: clientReg.assignedTo }))
+        ));
+        
+        setLoading(false);
     });
 
-    // --- MODIFIED: Fetch all users and filter for employees ---
-      const unsubscribeUsers = onValue(usersRef, (snapshot) => {
+    const unsubscribeUsers = onValue(usersRef, (snapshot) => {
         const data = snapshot.val();
         if (data) {
-          const usersArray = Object.keys(data).map(key => ({ firebaseKey: key, ...data[key] }));
-          setAllEmployees(usersArray); 
-          const employeesOnly = usersArray.filter(user => 
-            user.roles && Array.isArray(user.roles) && user.roles.includes('employee')
-          );
-          setEmployeesForAssignment(employeesOnly);
+            const usersArray = Object.keys(data).map(key => ({ firebaseKey: key, ...data[key] }));
+            setAllEmployees(usersArray); 
+            const employeesOnly = usersArray.filter(user => 
+                user.roles && Array.isArray(user.roles) && user.roles.includes('employee')
+            );
+            setEmployeesForAssignment(employeesOnly);
         }
     });
 
     return () => {
-      unsubscribeClients();
-      unsubscribeUsers();
+        unsubscribeClients();
+        unsubscribeUsers();
     };
-  }, []);
+}, []);
 
  
 
@@ -1430,7 +1425,7 @@ useEffect(() => {
         }
       });
       
-      setSuccessMessage(`Successfully assigned ${clientToProcess.firstName} to ${employeeInfo.fullName}.`);
+      setSuccessMessage(`Successfully assigned ${clientToProcess.firstName} to ${employeeInfo.firstName} ${employeeInfo.lastName}.`);
       setShowSuccessModal(true);
 
       if (clientToReassign) closeReassignClientModal();
@@ -1586,18 +1581,11 @@ const filteredInterviewData = interviewData.filter(interview => {
   };
 
   // Filtered employees for the "Assigned" tab
-  const filteredEmployees = displayEmployees.filter(employee => {
-
-    if (!employee || !employee.fullName) {
-      return false; 
-    }
-
-    const hasEmployeeRole = employee.roles && employee.roles.includes('employee');
-    const fullName = employee.fullName.toLowerCase();
-    const lowerCaseSearchQuery = assignedEmployeeSearchQuery.toLowerCase();
-    const matchesSearch = fullName.includes(lowerCaseSearchQuery);
-    return hasEmployeeRole && matchesSearch;
-  });
+const filteredEmployees = displayEmployees.filter(employee => {
+    // Only show employees that have at least one client assigned by this manager
+    const clientsForEmployee = assignedClients.filter(c => c.assignedTo === employee.firebaseKey);
+    return clientsForEmployee.length > 0;
+});
 
    const [employeesForAssignment, setEmployeesForAssignment] = useState([]);
 
@@ -1883,7 +1871,7 @@ Please provide a summary no longer than 150 words.`;
   };
 
   // --- NEW Component for the Applications Tab UI ---
- const ApplicationsTab = ({ 
+const ApplicationsTab = ({ 
     applicationData, 
     employees,
     uniqueClientNames,
@@ -1915,7 +1903,7 @@ Please provide a summary no longer than 150 words.`;
     if (!acc[app.clientName]) {
       acc[app.clientName] = {
         apps: [],
-        employeeName: app.assignedTo,
+        employeeKey: app.assignedTo, // Use employeeKey to store the firebaseKey
       };
     }
     acc[app.clientName].apps.push(app);
@@ -1988,14 +1976,14 @@ Please provide a summary no longer than 150 words.`;
                 <React.Fragment key={clientName}>
                   <tr onClick={() => setExpandedClient(isExpanded ? null : clientName)} style={{ cursor: 'pointer' }}>
                     <td className="employee-cell">
-                      <div className="employee-avatar">{employee ? employee.avatar : '??'}</div>
-                      {employee ? employee.fullName : 'Unknown Employee'}
+                      <div className="employee-avatar">{employee ? getInitials(`${employee.firstName} ${employee.lastName}`) : '??'}</div>
+                      {employee ? `${employee.firstName} ${employee.lastName}` : 'Unknown Employee'}
                     </td>
                     <td>{clientName}</td>
                     <td>{data.apps[0]?.jobTitle}</td>
                     <td style={{ textAlign: 'center' }}>{data.apps.length}</td>
                     <td style={{ textAlign: 'center' }}>
-                      <span style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', display: 'inline-block', transition: 'transform 0.2s' }}>⋁</span>
+                      <span style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', display: 'inline-block', transition: 'transform 0.2s' }}>▼</span>
                     </td>
                   </tr>
                   {isExpanded && (
@@ -4918,66 +4906,59 @@ Please provide a summary no longer than 150 words.`;
           </section>
         )}
 
-        {activeTab === 'Assigned' && (
-          <section className="assigned-employee-overview client-assignment-overview">
-            <div className="client-assignment-header">
-              {/* Changed title to "Assigned Clients" */}
-              <h2 className="client-assignment-title">All Employees</h2>
-              {/* Display total assigned clients here, matching the screenshot */}
-              <div className="clients-count-badge">
+{activeTab === 'Assigned' && (
+    <section className="assigned-employee-overview client-assignment-overview">
+        <div className="client-assignment-header">
+            <h2 className="client-assignment-title">My Employees</h2>
+            <div className="clients-count-badge">
                 Total {totalAssignedClientsByEmployee} clients
-              </div>
-
-              <button className="assign-client-button" onClick={() => setIsAddEmployeeModalOpen(true)}>
-                <i className="fas fa-user-plus"></i> Add Employee
-              </button>
-              {/* Removed "Manage Employees" button */}
             </div>
-
-
-
-            {/* NEW: Search bar for employees in Assigned tab */}
-            <div className="applications-filters assigned-employee-search-bar" style={{ marginBottom: '20px' }}> {/* Reusing styles and added new class */}
-              <div className="search-input-wrapper">
+            <button className="assign-client-button" onClick={() => setIsAddEmployeeModalOpen(true)}>
+                <i className="fas fa-user-plus"></i> Add Employee
+            </button>
+        </div>
+        
+        <div className="applications-filters assigned-employee-search-bar" style={{ marginBottom: '20px' }}>
+            <div className="search-input-wrapper">
                 <i className="fas fa-search"></i>
                 <input
-                  type="text"
-                  placeholder="Search employees..."
-                  value={assignedEmployeeSearchQuery}
-                  onChange={handleAssignedEmployeeSearchChange}
+                    type="text"
+                    placeholder="Search employees..."
+                    value={assignedEmployeeSearchQuery}
+                    onChange={handleAssignedEmployeeSearchChange}
                 />
-              </div>
             </div>
-
-            <div className="employee-cards-grid">
-              {filteredEmployees.map((employee) => (
+        </div>
+        
+        <div className="employee-cards-grid">
+            {filteredEmployees.map((employee) => (
                 <div key={employee.firebaseKey} className="employee-card">
-                  <div className="employee-card-header">
-                    <div className="employee-avatar-large">{employee.avatar}</div>
-                    <div className="employee-info">
-                      <div className="employee-name">{employee.fullName}</div>
-                      <div className="employee-role">{employee.role}</div>
+                    <div className="employee-card-header">
+                        <div className="employee-avatar-large">{getInitials(employee.fullName)}</div>
+                        <div className="employee-info">
+                            <div className="employee-name">{employee.fullName}</div>
+                            <div className="employee-role">{employee.role}</div>
+                        </div>
+                        <div className="clients-count-badge">
+                            {assignedClients.filter(c => c.assignedTo === employee.firebaseKey).length} clients
+                        </div>
                     </div>
-                    <div className="clients-count-badge">
-                      {employee.assignedClients} clients
+                    <div className="employee-card-details">
+                        <div className="success-rate">Success Rate: <span className="success-rate-value">{employee.successRate}%</span></div>
+                        <button className="view-employee-details-button" onClick={() => openEmployeeClientsModal(employee)}>
+                            <i className="fas fa-eye"></i>
+                        </button>
                     </div>
-                  </div>
-                  <div className="employee-card-details">
-                    <div className="success-rate">Success Rate: <span className="success-rate-value">{employee.successRate}%</span></div>
-                    <button className="view-employee-details-button" onClick={() => openEmployeeClientsModal(employee)}>
-                      <i className="fas fa-eye"></i>
-                    </button>
-                  </div>
                 </div>
-              ))}
-              {filteredEmployees.length === 0 && (
+            ))}
+            {filteredEmployees.length === 0 && (
                 <p style={{ textAlign: 'center', color: 'var(--text-color)', gridColumn: '1 / -1' }}>
-                  No employees found matching your search.
+                    No employees assigned to your clients.
                 </p>
-              )}
-            </div>
-          </section>
-        )}
+            )}
+        </div>
+    </section>
+)}
 
        {/* --- NEW Applications Tab UI --- */}
         {activeTab === 'Applications' && (
@@ -5064,7 +5045,7 @@ Please provide a summary no longer than 150 words.`;
                     <tr key={interview.id}>
                       <td className="employee-cell">
                         <div className="employee-avatar">{interview.employeeAvatar}</div>
-                        {interview.employeeName}
+                        {`${interview.firstName} ${interview.lastName}`}
                       </td>
                       <td>{interview.clientName}</td>
                       <td>{interview.jobTitle}</td>
@@ -5150,12 +5131,12 @@ Please provide a summary no longer than 150 words.`;
                 </select>
                 <i className="fas fa-chevron-down"></i>
               </div>
-              <button className="modal-quick-assign-button" onClick={handleQuickAssign}>
+              {/* <button className="modal-quick-assign-button" onClick={handleQuickAssign}>
                 <i className="fas fa-bolt"></i> Quick Assign
               </button>
               <button className="modal-export-button">
                 <i className="fas fa-download"></i> Export List
-              </button>
+              </button> */}
             </div>
 
             <h4 className="modal-title" style={{ marginBottom: '10px' }}>Available Clients</h4>
@@ -5354,12 +5335,18 @@ Please provide a summary no longer than 150 words.`;
                   </tr>
                 </thead>
                 <tbody>
-                  {assignedClients.map((client) => (
+   {assignedClients.map((client) => {
+                  // FIX: Find the assigned employee's full name using their firebaseKey
+                  const assignedEmployee = allEmployees.find(emp => emp.firebaseKey === client.assignedTo);
+                  const assignedEmployeeName = assignedEmployee ? `${assignedEmployee.firstName} ${assignedEmployee.lastName}` : 'N/A';
+                  
+                  return (
                     <tr key={client.registrationKey}>
                       <td>
-                        <div className="employee-cell"> {/* Reusing employee-cell for client avatar/name layout */}
+                        <div className="employee-cell">
                           <div className="employee-avatar">
-                            {getInitials(client.clientName)}</div>
+                            {getInitials(client.name)}
+                          </div>
                           <div className="client-info">
                             <div className="main-text">{client.name}</div>
                             <div className="sub-text">{client.location}</div>
@@ -5368,19 +5355,17 @@ Please provide a summary no longer than 150 words.`;
                       </td>
                       <td>
                         <div className="position-info">
-                          <div className="main-text">{client.
-jobsApplyFor}</div>
+                          <div className="main-text">{client.jobsToApply}</div>
                           <div className="sub-text">{client.salary}</div>
                         </div>
                       </td>
-                      <td>{client.
-currentSalary}</td>
+                      <td>{client.currentSalary}</td>
                       <td>
                         <div className="employee-cell">
                           <div className="employee-avatar">
-                            {getInitials(client.assignedTo)}
+                            {getInitials(assignedEmployeeName)}
                           </div>
-                          {client.assignedTo}
+                          {assignedEmployeeName}
                         </div>
                       </td>
                       <td>
@@ -5388,34 +5373,29 @@ currentSalary}</td>
                           {(client.priority || '').charAt(0).toUpperCase() + (client.priority || '').slice(1)}
                         </span>
                       </td>
-                      {/* REMOVED:
-                      <td>
-                        <span className={`status-badge status-${client.status}`}>
-                          {client.status.charAt(0).toUpperCase() + client.status.slice(1)}
-                        </span>
-                      </td>
-                      */}
                       <td>
                         <div className="employee-cell">
-                          <i className="fas fa-calendar-alt" style={{ marginRight: '5px' }}></i>{formatDateToDDMMYYYY(client.assignedDate)}
+                          <i className="fas fa-calendar-alt" style={{ marginRight: '5px' }}></i>
+                          {formatDateToDDMMYYYY(client.assignedDate)}
                         </div>
                       </td>
-                <td>
-                    <button className="modal-view-profile-button" onClick={() => openEditClientModal(client)}>
-                        <i className="fas fa-eye"></i> View Profile
-                      </button>
-                </td>
-                    </tr>
-                  ))}
-                  {assignedClients.length === 0 && (
-                    <tr>
-                      <td colSpan="6" style={{ textAlign: 'center', color: 'var(--text-color)' }}> {/* Adjusted colspan */}
-                        No assigned clients to display.
+                      <td>
+                        <button className="modal-view-profile-button" onClick={() => openEditClientModal(client)}>
+                          <i className="fas fa-eye"></i> View Profile
+                        </button>
                       </td>
                     </tr>
-                  )}
-                </tbody>
-              </table>
+                  );
+                })}
+                {assignedClients.length === 0 && (
+                  <tr>
+                    <td colSpan="7" style={{ textAlign: 'center', color: 'var(--text-color)' }}>
+                      No assigned clients to display.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
             </div>
           </div>
         </div>
@@ -5423,67 +5403,64 @@ currentSalary}</td>
 
       {/* NEW: Employee Clients Detail Modal */}
       {isEmployeeClientsModalOpen && selectedEmployeeForClients && (
-        <div className="modal-overlay open">
-          <div className="employee-clients-modal-content">
-            <div className="employee-clients-modal-header">
-              <h3 className="employee-clients-modal-title">
-                {/* FIX: Changed .name to .fullName */}
-                Clients Assigned to {selectedEmployeeForClients.fullName}
-              </h3>
-              <button className="modal-close-button" onClick={closeEmployeeClientsModal}>
-                <i className="fas fa-times"></i>
-              </button>
+  <div className="modal-overlay open">
+    <div className="employee-clients-modal-content">
+      <div className="employee-clients-modal-header">
+        <h3 className="employee-clients-modal-title">
+          Clients Assigned to {selectedEmployeeForClients.fullName}
+        </h3>
+        <button className="modal-close-button" onClick={closeEmployeeClientsModal}>
+          <i className="fas fa-times"></i>
+        </button>
+      </div>
+      <div className="employee-clients-list">
+        {assignedClients
+          // FIX: Change the filter condition to use firebaseKey for accurate filtering
+          .filter(client => client.assignedTo === selectedEmployeeForClients.firebaseKey)
+          .map(client => (
+            <div key={client.firebaseKey} className="employee-client-card">
+              <div className="employee-client-card-header">
+                <span className="employee-client-name">{client.clientName}</span>
+                <span className={`modal-client-priority-badge ${client.priority}`}>
+                  {(client.priority || '').charAt(0).toUpperCase() + (client.priority || '').slice(1)}
+                </span>
+              </div>
+              <div className="employee-client-position">
+                {client.position} at {client.company}
+              </div>
+              <div className="employee-client-details-row">
+                <span className="employee-client-details-item">
+                  <i className="fas fa-money-bill-wave"></i> {client.salary}
+                </span>
+                <span className="employee-client-details-item">
+                  <i className="fas fa-map-marker-alt"></i> {client.location}
+                </span>
+                <span className="employee-client-details-item">
+                  <i className="fas fa-calendar-alt"></i> Assigned: {formatDateToDDMMYYYY(client.assignedDate)}
+                </span>
+                <span className="employee-client-details-item">
+                  <i className="fas fa-info-circle"></i> Status: {client.status.charAt(0).toUpperCase() + client.status.slice(1)}
+                </span>
+              </div>
+              <div className="modal-client-actions" style={{ justifyContent: 'flex-start' }}>
+                <button className="modal-assign-button" onClick={() => openReassignClientModal(client)}>
+                  <i className="fas fa-exchange-alt"></i> Change Employee
+                </button>
+                <button className="modal-view-profile-button" onClick={() => openEditClientModal(client)}>
+                  <i className="fas fa-eye"></i> View Profile
+                </button>
+              </div>
             </div>
-            <div className="employee-clients-list">
-              {assignedClients
-                // FIX: Changed .name to .fullName for correct filtering
-                .filter(client => client.assignedTo === selectedEmployeeForClients.fullName)
-                .map(client => (
-                  <div key={client.firebaseKey} className="employee-client-card">
-                    <div className="employee-client-card-header">
-                      <span className="employee-client-name">{client.clientName}</span>
-                      <span className={`modal-client-priority-badge ${client.priority}`}>
-                        {client.priority.charAt(0).toUpperCase() + client.priority.slice(1)}
-                      </span>
-                    </div>
-                    <div className="employee-client-position">
-                      {client.position} at {client.company}
-                    </div>
-                    <div className="employee-client-details-row">
-                      <span className="employee-client-details-item">
-                        <i className="fas fa-money-bill-wave"></i> {client.salary}
-                      </span>
-                      <span className="employee-client-details-item">
-                        <i className="fas fa-map-marker-alt"></i> {client.location}
-                      </span>
-                      <span className="employee-client-details-item">
-                        <i className="fas fa-calendar-alt"></i> Assigned: {formatDateToDDMMYYYY(client.assignedDate)}
-                      </span>
-                      <span className="employee-client-details-item">
-                        <i className="fas fa-info-circle"></i> Status: {client.status.charAt(0).toUpperCase() + client.status.slice(1)}
-                      </span>
-                    </div>
-                    <div className="modal-client-actions" style={{ justifyContent: 'flex-start' }}>
-                      <button className="modal-assign-button" onClick={() => openReassignClientModal(client)}>
-                        <i className="fas fa-exchange-alt"></i> Change Employee
-                      </button>
-                      <button className="modal-view-profile-button" onClick={() => openEditClientModal(client)}>
-                        <i className="fas fa-eye"></i> View Profile
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              {/* FIX: Changed .name to .fullName for correct filtering */}
-              {assignedClients.filter(client => client.assignedTo === selectedEmployeeForClients.fullName).length === 0 && (
-                <p style={{ textAlign: 'center', color: 'var(--text-color)' }}>
-                  {/* FIX: Changed .name to .fullName */}
-                  No clients currently assigned to {selectedEmployeeForClients.fullName}.
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+          ))}
+        {assignedClients.filter(client => client.assignedTo === selectedEmployeeForClients.firebaseKey).length === 0 && (
+          <p style={{ textAlign: 'center', color: 'var(--text-color)' }}>
+            No clients currently assigned to {selectedEmployeeForClients.fullName}.
+          </p>
+        )}
+      </div>
+    </div>
+  </div>
+)}
 
       {/* NEW: Reassign Client Modal (reusing assign-modal-content) */}
       {isReassignClientModalOpen && clientToReassign && (
@@ -5655,6 +5632,10 @@ currentSalary}</td>
                   <label htmlFor="address">Address</label>
                   <textarea id="address" name="address" value={clientToEdit.address || ''} onChange={handleEditClientChange} readOnly={!isEditingClient}></textarea>
                 </div>
+                 <div className="assign-form-group">
+                  <label htmlFor="county">County</label>
+                  <input type="text" id="county" name="county" value={clientToEdit.county || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
+                </div>
                 <div className="assign-form-group">
                   <label htmlFor="zipCode">Zip Code</label>
                   <input type="text" id="zipCode" name="zipCode" value={clientToEdit.zipCode || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
@@ -5704,10 +5685,7 @@ currentSalary}</td>
                   <label htmlFor="jobsToApply">Jobs to Apply</label>
                   <input type="text" id="jobsToApply" name="jobsToApply" value={clientToEdit.jobsToApply || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
-                <div className="assign-form-group">
-                  <label htmlFor="technologySkills">Technology Skills</label>
-                  <textarea id="technologySkills" name="technologySkills" value={clientToEdit.technologySkills || ''} onChange={handleEditClientChange} readOnly={!isEditingClient}></textarea>
-                </div>
+               
                 <div className="assign-form-group">
                   <label htmlFor="currentSalary">Current Salary</label>
                   <input type="text" id="currentSalary" name="currentSalary" value={clientToEdit.currentSalary || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
@@ -5773,8 +5751,16 @@ currentSalary}</td>
                   <input type="text" id="courseOfStudy" name="courseOfStudy" value={clientToEdit.courseOfStudy || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
                 <div className="assign-form-group">
-                  <label htmlFor="graduationDate">Graduation Date</label>
-                  <input type="date" id="graduationDate" name="graduationDate" value={clientToEdit.graduationDate || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
+                  <label htmlFor="graduationFromDate">Graduation From Date</label>
+                  <input type="date" id="graduationFromDate" name="graduationFromDate" value={clientToEdit.graduationFromDate || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
+                </div>
+                <div className="assign-form-group">
+                  <label htmlFor="graduationToDate">Graduation To Date</label>
+                  <input type="date" id="graduationToDate" name="graduationToDate" value={clientToEdit.graduationToDate || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
+                </div>
+                <div className="assign-form-group">
+                  <label htmlFor="noticePeriod">Notice Period</label>
+                  <input type="text" id="noticePeriod" name="noticePeriod" value={clientToEdit.noticePeriod || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
               </div>
 
@@ -5832,12 +5818,8 @@ currentSalary}</td>
               <div className="client-preview-section">
                 <h4 className="client-preview-section-title">Job Portal Accounts</h4>
                 <div className="assign-form-group">
-                  <label htmlFor="jobPortalAccountName">Account Name</label>
-                  <input type="text" id="jobPortalAccountName" name="jobPortalAccountName" value={clientToEdit.jobPortalAccountName || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
-                </div>
-                <div className="assign-form-group">
-                  <label htmlFor="jobPortalCredentials">Credentials</label>
-                  <input type="text" id="jobPortalCredentials" name="jobPortalCredentials" value={clientToEdit.jobPortalCredentials || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
+                  <label htmlFor="jobPortalAccountNameandCredentials">Account Name & Credentials</label>
+                  <textarea id="jobPortalAccountNameandCredentials" name="jobPortalAccountNameandCredentials" value={clientToEdit.jobPortalAccountNameandCredentials || ''} onChange={handleEditClientChange} readOnly={!isEditingClient}></textarea>
                 </div>
               </div>
 
