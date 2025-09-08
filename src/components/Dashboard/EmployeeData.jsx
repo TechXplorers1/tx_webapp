@@ -664,9 +664,9 @@ const EmployeeData = () => {
   const [isDeleting, setIsDeleting] = useState(false);
 
 
-      const [showDeleteApplicationModal, setShowDeleteApplicationModal] = useState(false);
-    const [applicationToDelete, setApplicationToDelete] = useState(null);
-    const [isDeletingApplication, setIsDeletingApplication] = useState(false);
+  const [showDeleteApplicationModal, setShowDeleteApplicationModal] = useState(false);
+  const [applicationToDelete, setApplicationToDelete] = useState(null);
+  const [isDeletingApplication, setIsDeletingApplication] = useState(false);
 
   // NEW: State for new clients awaiting acceptance
   const [newClients, setNewClients] = useState([]);
@@ -706,57 +706,57 @@ const EmployeeData = () => {
     }
   }, [activeClients]);
 
-  
-      const handleRequestDeleteApplication = (client, app) => {
-        setApplicationToDelete({ client, app });
-        setShowDeleteApplicationModal(true);
-    };
+
+  const handleRequestDeleteApplication = (client, app) => {
+    setApplicationToDelete({ client, app });
+    setShowDeleteApplicationModal(true);
+  };
 
 
-        const handleConfirmDeleteApplication = async () => {
-        if (!applicationToDelete) return;
+  const handleConfirmDeleteApplication = async () => {
+    if (!applicationToDelete) return;
 
-        setIsDeletingApplication(true);
-        const { client, app } = applicationToDelete;
+    setIsDeletingApplication(true);
+    const { client, app } = applicationToDelete;
 
-        try {
-            const updatedApplications = (client.jobApplications || []).filter(
-                (existingApp) => existingApp.id !== app.id
-            );
+    try {
+      const updatedApplications = (client.jobApplications || []).filter(
+        (existingApp) => existingApp.id !== app.id
+      );
 
-            const registrationRef = ref(
-                database,
-                `clients/${client.clientFirebaseKey}/serviceRegistrations/${client.registrationKey}/jobApplications`
-            );
+      const registrationRef = ref(
+        database,
+        `clients/${client.clientFirebaseKey}/serviceRegistrations/${client.registrationKey}/jobApplications`
+      );
 
-            await set(registrationRef, updatedApplications);
+      await set(registrationRef, updatedApplications);
 
-            // Update the local state to trigger a re-render
-            const updatedClient = {
-                ...client,
-                jobApplications: updatedApplications,
-            };
+      // Update the local state to trigger a re-render
+      const updatedClient = {
+        ...client,
+        jobApplications: updatedApplications,
+      };
 
-            setSelectedClient(updatedClient);
-            const updateClientList = (prevClients) => {
-                return prevClients.map((c) =>
-                    c.registrationKey === updatedClient.registrationKey ? updatedClient : c
-                );
-            };
-            setActiveClients(updateClientList);
-            setInactiveClients(updateClientList);
-            setNewClients(updateClientList);
+      setSelectedClient(updatedClient);
+      const updateClientList = (prevClients) => {
+        return prevClients.map((c) =>
+          c.registrationKey === updatedClient.registrationKey ? updatedClient : c
+        );
+      };
+      setActiveClients(updateClientList);
+      setInactiveClients(updateClientList);
+      setNewClients(updateClientList);
 
-            triggerNotification("Application deleted successfully!");
-        } catch (error) {
-            console.error("Failed to delete application:", error);
-            alert("Error deleting application. Please try again.");
-        } finally {
-            setShowDeleteApplicationModal(false);
-            setApplicationToDelete(null);
-            setIsDeletingApplication(false);
-        }
-    };
+      triggerNotification("Application deleted successfully!");
+    } catch (error) {
+      console.error("Failed to delete application:", error);
+      alert("Error deleting application. Please try again.");
+    } finally {
+      setShowDeleteApplicationModal(false);
+      setApplicationToDelete(null);
+      setIsDeletingApplication(false);
+    }
+  };
 
 
   // NEW: State for inactive clients
@@ -927,67 +927,67 @@ const EmployeeData = () => {
     setShowDeleteFileModal(true);
   };
 
-    const handleConfirmDeleteFile = async () => {
-        if (!fileToDelete) return;
+  const handleConfirmDeleteFile = async () => {
+    if (!fileToDelete) return;
 
-        setIsDeleting(true);
-        const { clientFirebaseKey, registrationKey, file } = fileToDelete;
+    setIsDeleting(true);
+    const { clientFirebaseKey, registrationKey, file } = fileToDelete;
 
-        try {
-            // 1. Create a reference from the download URL and delete from Firebase Storage
-            const fileStorageRef = storageRef(getStorage(), file.downloadUrl);
-            await deleteObject(fileStorageRef);
+    try {
+      // 1. Create a reference from the download URL and delete from Firebase Storage
+      const fileStorageRef = storageRef(getStorage(), file.downloadUrl);
+      await deleteObject(fileStorageRef);
 
-            // 2. Get the current list of files from the Realtime Database
-            const filesRef = ref(database, `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}/files`);
-            
-            // This part is the issue. `onValue` fetches once and then stops listening.
-            // We need to fetch the current data, update it, and then save it back.
-            const snapshot = await new Promise(resolve => onValue(ref(database, `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}`), resolve, { onlyOnce: true }));
-            const registrationData = snapshot.val();
-            const currentFiles = registrationData.files || [];
-            
-            // 3. Filter out the deleted file and update the list in the Realtime Database
-            const updatedFiles = currentFiles.filter(f => f.id !== file.id);
-            await set(filesRef, updatedFiles);
+      // 2. Get the current list of files from the Realtime Database
+      const filesRef = ref(database, `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}/files`);
 
-            // FIX: Immediately update the local state to reflect the changes
-            const updatedClient = {
-                ...fileToDelete.client,
-                files: updatedFiles,
-            };
+      // This part is the issue. `onValue` fetches once and then stops listening.
+      // We need to fetch the current data, update it, and then save it back.
+      const snapshot = await new Promise(resolve => onValue(ref(database, `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}`), resolve, { onlyOnce: true }));
+      const registrationData = snapshot.val();
+      const currentFiles = registrationData.files || [];
 
-            setSelectedClient(updatedClient);
+      // 3. Filter out the deleted file and update the list in the Realtime Database
+      const updatedFiles = currentFiles.filter(f => f.id !== file.id);
+      await set(filesRef, updatedFiles);
 
-            // Update the correct client list (active, inactive, new)
-            const updateClientList = (prevClients) => {
-                return prevClients.map(c =>
-                    c.registrationKey === updatedClient.registrationKey ? updatedClient : c
-                );
-            };
+      // FIX: Immediately update the local state to reflect the changes
+      const updatedClient = {
+        ...fileToDelete.client,
+        files: updatedFiles,
+      };
 
-            setActiveClients(updateClientList);
-            setInactiveClients(updateClientList);
-            setNewClients(updateClientList);
+      setSelectedClient(updatedClient);
+
+      // Update the correct client list (active, inactive, new)
+      const updateClientList = (prevClients) => {
+        return prevClients.map(c =>
+          c.registrationKey === updatedClient.registrationKey ? updatedClient : c
+        );
+      };
+
+      setActiveClients(updateClientList);
+      setInactiveClients(updateClientList);
+      setNewClients(updateClientList);
 
 
-            triggerNotification("File deleted successfully from storage and database!");
+      triggerNotification("File deleted successfully from storage and database!");
 
-        } catch (error) {
-            console.error("Error deleting file:", error);
-            if (error.code === 'storage/object-not-found') {
-                alert("File not found in storage, but removing from database.");
-                // To-do: Add logic to remove from database even if storage file is missing
-            } else {
-                alert("Failed to delete file. Please check permissions or try again.");
-            }
-        } finally {
-            // 4. Close the modal and reset the state
-            setShowDeleteFileModal(false);
-            setFileToDelete(null);
-            setIsDeleting(false);
-        }
-    };
+    } catch (error) {
+      console.error("Error deleting file:", error);
+      if (error.code === 'storage/object-not-found') {
+        alert("File not found in storage, but removing from database.");
+        // To-do: Add logic to remove from database even if storage file is missing
+      } else {
+        alert("Failed to delete file. Please check permissions or try again.");
+      }
+    } finally {
+      // 4. Close the modal and reset the state
+      setShowDeleteFileModal(false);
+      setFileToDelete(null);
+      setIsDeleting(false);
+    }
+  };
 
 
   const handleDownloadResume = (clientName) => {
@@ -1132,130 +1132,130 @@ const EmployeeData = () => {
     setEditedApplicationFormData(prev => ({ ...prev, [name]: value }));
   };
 
-        const handleSaveEditedApplication = async () => {
-        if (!editedApplicationFormData || !selectedClient) return;
-        
-        // Start the saving process and show the spinner
-        setIsSavingChanges(true);
+  const handleSaveEditedApplication = async () => {
+    if (!editedApplicationFormData || !selectedClient) return;
 
-        try {
-            const applicationDataToSave = { ...editedApplicationFormData };
-            const attachmentsToSave = [];
-            let hasNewUploads = false;
-            let filesToAddToClient = []; // NEW: Array to hold new file metadata for the client's `files` array
+    // Start the saving process and show the spinner
+    setIsSavingChanges(true);
 
-            for (const attachment of applicationDataToSave.attachments || []) {
-                if (attachment.file && !attachment.downloadUrl) {
-                    hasNewUploads = true;
-                    const { clientFirebaseKey, registrationKey } = selectedClient;
-                    const appId = applicationDataToSave.id;
-                    const fileName = `${Date.now()}_${attachment.file.name}`;
+    try {
+      const applicationDataToSave = { ...editedApplicationFormData };
+      const attachmentsToSave = [];
+      let hasNewUploads = false;
+      let filesToAddToClient = []; // NEW: Array to hold new file metadata for the client's `files` array
 
-                    const attachmentRef = storageRef(getStorage(), `application_attachments/${clientFirebaseKey}/${registrationKey}/${appId}/${fileName}`);
-                    const uploadResult = await uploadBytes(attachmentRef, attachment.file);
-                    const downloadURL = await getDownloadURL(uploadResult.ref);
+      for (const attachment of applicationDataToSave.attachments || []) {
+        if (attachment.file && !attachment.downloadUrl) {
+          hasNewUploads = true;
+          const { clientFirebaseKey, registrationKey } = selectedClient;
+          const appId = applicationDataToSave.id;
+          const fileName = `${Date.now()}_${attachment.file.name}`;
 
-                    // Create metadata for the `jobApplications` array
-                    attachmentsToSave.push({
-                        name: attachment.name,
-                        size: attachment.size,
-                        type: attachment.type,
-                        uploadDate: attachment.uploadDate,
-                        downloadUrl: downloadURL,
-                    });
+          const attachmentRef = storageRef(getStorage(), `application_attachments/${clientFirebaseKey}/${registrationKey}/${appId}/${fileName}`);
+          const uploadResult = await uploadBytes(attachmentRef, attachment.file);
+          const downloadURL = await getDownloadURL(uploadResult.ref);
 
-                    // NEW LOGIC START: Prepare file metadata for the client's main `files` array
-                    filesToAddToClient.push({
-                        id: Date.now() + Math.random(), // Unique ID for the file
-                        downloadUrl: downloadURL,
-                        name: attachment.name,
-                        size: attachment.size,
-                        type: 'interview screenshot', // Ensure type is correctly set for the Documents tab
-                        uploadDate: attachment.uploadDate,
-                        notes: `Screenshot for application: ${applicationDataToSave.jobTitle} at ${applicationDataToSave.company}`,
-                    });
-                    // NEW LOGIC END
-                } else {
-                    attachmentsToSave.push(attachment);
-                }
-            }
+          // Create metadata for the `jobApplications` array
+          attachmentsToSave.push({
+            name: attachment.name,
+            size: attachment.size,
+            type: attachment.type,
+            uploadDate: attachment.uploadDate,
+            downloadUrl: downloadURL,
+          });
 
-            if (hasNewUploads) {
-                triggerNotification("Uploading attachments...");
-            }
-
-            applicationDataToSave.attachments = attachmentsToSave;
-
-            const updatedApplications = (selectedClient.jobApplications || []).map(app =>
-                app.id === applicationDataToSave.id ? applicationDataToSave : app
-            );
-
-            const registrationRef = ref(database, `clients/${selectedClient.clientFirebaseKey}/serviceRegistrations/${selectedClient.registrationKey}`);
-
-            // NEW LOGIC START: Update the main `files` array if there are new attachments
-            if (filesToAddToClient.length > 0) {
-                 const currentFiles = selectedClient.files || [];
-                 const updatedFiles = [...filesToAddToClient, ...currentFiles];
-
-                 // This performs the update operation for both `jobApplications` and `files` simultaneously
-                 await update(registrationRef, {
-                    jobApplications: updatedApplications,
-                    files: updatedFiles,
-                 });
-
-                 // Update local state for files as well
-                 const updatedClientWithFiles = {
-                    ...selectedClient,
-                    jobApplications: updatedApplications,
-                    files: updatedFiles,
-                 };
-                 setSelectedClient(updatedClientWithFiles);
-
-                 // Update the main lists for the employee
-                 const updateClientLists = (prevClients) => {
-                     return prevClients.map(c => 
-                         c.registrationKey === updatedClientWithFiles.registrationKey ? updatedClientWithFiles : c
-                     );
-                 };
-                 setActiveClients(updateClientLists);
-                 setInactiveClients(updateClientLists);
-                 setNewClients(updateClientLists);
-
-            } else {
-                // If no new files, just update the `jobApplications` node
-                await update(registrationRef, {
-                    jobApplications: updatedApplications,
-                });
-                
-                // Update local state for applications only
-                const updatedClient = {
-                    ...selectedClient,
-                    jobApplications: updatedApplications,
-                };
-                setSelectedClient(updatedClient);
-
-                 const updateClientLists = (prevClients) => {
-                     return prevClients.map(c => 
-                         c.registrationKey === updatedClient.registrationKey ? updatedClient : c
-                     );
-                 };
-                 setActiveClients(updateClientLists);
-                 setInactiveClients(updateClientLists);
-                 setNewClients(updateClientLists);
-            }
-            // NEW LOGIC END
-
-            setShowEditApplicationModal(false);
-            triggerNotification("Application updated successfully!");
-
-        } catch (error) {
-            console.error("Failed to save edited application or upload file:", error);
-            alert("Error saving application. Please try again.");
-        } finally {
-            // Hide the spinner regardless of success or failure
-            setIsSavingChanges(false);
+          // NEW LOGIC START: Prepare file metadata for the client's main `files` array
+          filesToAddToClient.push({
+            id: Date.now() + Math.random(), // Unique ID for the file
+            downloadUrl: downloadURL,
+            name: attachment.name,
+            size: attachment.size,
+            type: 'interview screenshot', // Ensure type is correctly set for the Documents tab
+            uploadDate: attachment.uploadDate,
+            notes: `Screenshot for application: ${applicationDataToSave.jobTitle} at ${applicationDataToSave.company}`,
+          });
+          // NEW LOGIC END
+        } else {
+          attachmentsToSave.push(attachment);
         }
-    };
+      }
+
+      if (hasNewUploads) {
+        triggerNotification("Uploading attachments...");
+      }
+
+      applicationDataToSave.attachments = attachmentsToSave;
+
+      const updatedApplications = (selectedClient.jobApplications || []).map(app =>
+        app.id === applicationDataToSave.id ? applicationDataToSave : app
+      );
+
+      const registrationRef = ref(database, `clients/${selectedClient.clientFirebaseKey}/serviceRegistrations/${selectedClient.registrationKey}`);
+
+      // NEW LOGIC START: Update the main `files` array if there are new attachments
+      if (filesToAddToClient.length > 0) {
+        const currentFiles = selectedClient.files || [];
+        const updatedFiles = [...filesToAddToClient, ...currentFiles];
+
+        // This performs the update operation for both `jobApplications` and `files` simultaneously
+        await update(registrationRef, {
+          jobApplications: updatedApplications,
+          files: updatedFiles,
+        });
+
+        // Update local state for files as well
+        const updatedClientWithFiles = {
+          ...selectedClient,
+          jobApplications: updatedApplications,
+          files: updatedFiles,
+        };
+        setSelectedClient(updatedClientWithFiles);
+
+        // Update the main lists for the employee
+        const updateClientLists = (prevClients) => {
+          return prevClients.map(c =>
+            c.registrationKey === updatedClientWithFiles.registrationKey ? updatedClientWithFiles : c
+          );
+        };
+        setActiveClients(updateClientLists);
+        setInactiveClients(updateClientLists);
+        setNewClients(updateClientLists);
+
+      } else {
+        // If no new files, just update the `jobApplications` node
+        await update(registrationRef, {
+          jobApplications: updatedApplications,
+        });
+
+        // Update local state for applications only
+        const updatedClient = {
+          ...selectedClient,
+          jobApplications: updatedApplications,
+        };
+        setSelectedClient(updatedClient);
+
+        const updateClientLists = (prevClients) => {
+          return prevClients.map(c =>
+            c.registrationKey === updatedClient.registrationKey ? updatedClient : c
+          );
+        };
+        setActiveClients(updateClientLists);
+        setInactiveClients(updateClientLists);
+        setNewClients(updateClientLists);
+      }
+      // NEW LOGIC END
+
+      setShowEditApplicationModal(false);
+      triggerNotification("Application updated successfully!");
+
+    } catch (error) {
+      console.error("Failed to save edited application or upload file:", error);
+      alert("Error saving application. Please try again.");
+    } finally {
+      // Hide the spinner regardless of success or failure
+      setIsSavingChanges(false);
+    }
+  };
 
 
 
@@ -1415,86 +1415,86 @@ const EmployeeData = () => {
 
   // In EmployeeData.jsx, replace the existing handleSaveNewFile function
 
-     const handleSaveNewFile = async () => {
-        // 1. Validation
-        if (!selectedClientForFile || !newFileFormData.fileType || !fileToUpload) {
-            alert('Please select a client, file type, and a file to upload.');
-            return;
-        }
+  const handleSaveNewFile = async () => {
+    // 1. Validation
+    if (!selectedClientForFile || !newFileFormData.fileType || !fileToUpload) {
+      alert('Please select a client, file type, and a file to upload.');
+      return;
+    }
 
-        setIsUploading(true);
-        const { clientFirebaseKey, registrationKey } = selectedClientForFile;
+    setIsUploading(true);
+    const { clientFirebaseKey, registrationKey } = selectedClientForFile;
 
-        try {
-            triggerNotification("Uploading file, please wait..."); // Inform user
+    try {
+      triggerNotification("Uploading file, please wait..."); // Inform user
 
-            // 2. Upload the file to Firebase Storage
-            const storagePath = `client_files/${clientFirebaseKey}/${registrationKey}/${Date.now()}_${fileToUpload.name}`;
-            const fileRef = storageRef(getStorage(), storagePath);
-            await uploadBytes(fileRef, fileToUpload);
-            const downloadURL = await getDownloadURL(fileRef);
+      // 2. Upload the file to Firebase Storage
+      const storagePath = `client_files/${clientFirebaseKey}/${registrationKey}/${Date.now()}_${fileToUpload.name}`;
+      const fileRef = storageRef(getStorage(), storagePath);
+      await uploadBytes(fileRef, fileToUpload);
+      const downloadURL = await getDownloadURL(fileRef);
 
-            // 3. Prepare metadata for the Realtime Database
-            const newFileMetadata = {
-                id: Date.now(),
-                downloadUrl: downloadURL,
-                name: fileToUpload.name,
-                size: `${(fileToUpload.size / 1024).toFixed(1)} KB`,
-                type: newFileFormData.fileType,
-                uploadDate: new Date().toISOString().split('T')[0],
-                notes: newFileFormData.notes || '',
-            };
+      // 3. Prepare metadata for the Realtime Database
+      const newFileMetadata = {
+        id: Date.now(),
+        downloadUrl: downloadURL,
+        name: fileToUpload.name,
+        size: `${(fileToUpload.size / 1024).toFixed(1)} KB`,
+        type: newFileFormData.fileType,
+        uploadDate: new Date().toISOString().split('T')[0],
+        notes: newFileFormData.notes || '',
+      };
 
-            // 4. Get existing files and add the new one
-            const filesRef = ref(database, `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}/files`);
-            const existingFiles = selectedClientForFile.files || [];
-            const updatedFiles = [newFileMetadata, ...existingFiles]; // Prepend new file to the list
+      // 4. Get existing files and add the new one
+      const filesRef = ref(database, `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}/files`);
+      const existingFiles = selectedClientForFile.files || [];
+      const updatedFiles = [newFileMetadata, ...existingFiles]; // Prepend new file to the list
 
-            // 5. Save the updated file list back to the database
-            await set(filesRef, updatedFiles);
+      // 5. Save the updated file list back to the database
+      await set(filesRef, updatedFiles);
 
-            // FIX: Immediately update the local state to reflect the changes
-            const updatedClient = {
-                ...selectedClientForFile,
-                files: updatedFiles
-            };
+      // FIX: Immediately update the local state to reflect the changes
+      const updatedClient = {
+        ...selectedClientForFile,
+        files: updatedFiles
+      };
 
-            setSelectedClient(updatedClient);
+      setSelectedClient(updatedClient);
 
-            const updateClientList = (prevClients) => {
-                return prevClients.map(c =>
-                    c.registrationKey === updatedClient.registrationKey ? updatedClient : c
-                );
-            };
+      const updateClientList = (prevClients) => {
+        return prevClients.map(c =>
+          c.registrationKey === updatedClient.registrationKey ? updatedClient : c
+        );
+      };
 
-            // Update the correct client list (active, inactive, new)
-            setActiveClients(updateClientList);
-            setInactiveClients(updateClientList);
-            setNewClients(updateClientList);
+      // Update the correct client list (active, inactive, new)
+      setActiveClients(updateClientList);
+      setInactiveClients(updateClientList);
+      setNewClients(updateClientList);
 
-            // 6. Reset UI and provide feedback
-            setShowUploadFileModal(false);
-            setFileToUpload(null);
-            setNewFileFormData({ fileType: '', fileName: '', notes: '' });
-            triggerNotification("File uploaded successfully!");
+      // 6. Reset UI and provide feedback
+      setShowUploadFileModal(false);
+      setFileToUpload(null);
+      setNewFileFormData({ fileType: '', fileName: '', notes: '' });
+      triggerNotification("File uploaded successfully!");
 
-        } catch (error) {
-            console.error("Error uploading file:", error);
-            alert("File upload failed. Please try again.");
-        } finally {
-            setIsUploading(false); // Stop loading spinner regardless of outcome
-        }
-    };
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      alert("File upload failed. Please try again.");
+    } finally {
+      setIsUploading(false); // Stop loading spinner regardless of outcome
+    }
+  };
 
   const handleViewFile = (file) => {
-        if (file.downloadUrl) {
-            // Open the file's download URL in a new tab
-            window.open(file.downloadUrl, "_blank", "noopener,noreferrer");
-        } else {
-            // Handle files that don't have a download URL yet (e.g., local files)
-            alert("File URL is not available. Please upload it first.");
-        }
-    };
+    if (file.downloadUrl) {
+      // Open the file's download URL in a new tab
+      window.open(file.downloadUrl, "_blank", "noopener,noreferrer");
+    } else {
+      // Handle files that don't have a download URL yet (e.g., local files)
+      alert("File URL is not available. Please upload it first.");
+    }
+  };
 
   const handleEditFile = (file) => {
     // Find the client associated with this file
@@ -4445,7 +4445,7 @@ const EmployeeData = () => {
             >
               Cancel
             </button>
-             <button
+            <button
               onClick={handleSaveEditedApplication}
               style={modalAddButtonPrimaryStyle}
               disabled={isSavingChanges} // Disable if saving
@@ -4967,74 +4967,74 @@ const EmployeeData = () => {
       </Modal>
 
       {/* NEW MODAL: Delete Confirmation Modal for Applications */}
-            <Modal
-                show={showDeleteApplicationModal}
-                onHide={() => setShowDeleteApplicationModal(false)}
-                centered
-                size="md"
+      <Modal
+        show={showDeleteApplicationModal}
+        onHide={() => setShowDeleteApplicationModal(false)}
+        centered
+        size="md"
+      >
+        <Modal.Header closeButton style={modalHeaderStyle}>
+          <Modal.Title style={modalTitleStyle}>Confirm Deletion</Modal.Title>
+        </Modal.Header>
+        <Modal.Body style={modalBodyStyle}>
+          <p style={{ textAlign: 'center', fontSize: '1.1rem', color: '#475569' }}>
+            Are you sure you want to permanently delete this application?
+          </p>
+          {applicationToDelete && (
+            <div
+              style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                padding: '10px 15px',
+                textAlign: 'center',
+                color: '#1e293b',
+                wordBreak: 'break-all',
+              }}
             >
-                <Modal.Header closeButton style={modalHeaderStyle}>
-                    <Modal.Title style={modalTitleStyle}>Confirm Deletion</Modal.Title>
-                </Modal.Header>
-                <Modal.Body style={modalBodyStyle}>
-                    <p style={{ textAlign: 'center', fontSize: '1.1rem', color: '#475569' }}>
-                        Are you sure you want to permanently delete this application?
-                    </p>
-                    {applicationToDelete && (
-                        <div
-                            style={{
-                                background: '#f8fafc',
-                                border: '1px solid #e2e8f0',
-                                borderRadius: '8px',
-                                padding: '10px 15px',
-                                textAlign: 'center',
-                                color: '#1e293b',
-                                wordBreak: 'break-all',
-                            }}
-                        >
-                            <strong>{applicationToDelete.app.jobTitle} at {applicationToDelete.app.company}</strong>
-                        </div>
-                    )}
-                    <p
-                        style={{
-                            textAlign: 'center',
-                            fontSize: '0.9rem',
-                            color: '#ef4444',
-                            marginTop: '15px',
-                        }}
-                    >
-                        This action cannot be undone.
-                    </p>
-                </Modal.Body>
-                <Modal.Footer style={modalFooterStyle}>
-                    <button
-                        onClick={() => setShowDeleteApplicationModal(false)}
-                        style={modalCancelButtonStyle}
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        onClick={handleConfirmDeleteApplication}
-                        style={{ ...modalAddButtonPrimaryStyle, backgroundColor: '#ef4444' }}
-                        disabled={isDeletingApplication}
-                    >
-                        {isDeletingApplication ? (
-                            <>
-                                <Spinner
-                                    as="span"
-                                    animation="border"
-                                    size="sm"
-                                    role="status"
-                                    aria-hidden="true"
-                                />
-                                <span style={{ marginLeft: '5px' }}>Deleting...</span>
-                            </>
-                        ) : (
-                            'Confirm Delete'
-                        )}
-                    </button>
-                </Modal.Footer>
-            </Modal>
+              <strong>{applicationToDelete.app.jobTitle} at {applicationToDelete.app.company}</strong>
+            </div>
+          )}
+          <p
+            style={{
+              textAlign: 'center',
+              fontSize: '0.9rem',
+              color: '#ef4444',
+              marginTop: '15px',
+            }}
+          >
+            This action cannot be undone.
+          </p>
+        </Modal.Body>
+        <Modal.Footer style={modalFooterStyle}>
+          <button
+            onClick={() => setShowDeleteApplicationModal(false)}
+            style={modalCancelButtonStyle}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleConfirmDeleteApplication}
+            style={{ ...modalAddButtonPrimaryStyle, backgroundColor: '#ef4444' }}
+            disabled={isDeletingApplication}
+          >
+            {isDeletingApplication ? (
+              <>
+                <Spinner
+                  as="span"
+                  animation="border"
+                  size="sm"
+                  role="status"
+                  aria-hidden="true"
+                />
+                <span style={{ marginLeft: '5px' }}>Deleting...</span>
+              </>
+            ) : (
+              'Confirm Delete'
+            )}
+          </button>
+        </Modal.Footer>
+      </Modal>
 
     </div>
   );

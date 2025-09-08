@@ -93,6 +93,9 @@ const ManagerWorkSheet = () => {
 
   const [managerFirebaseKey, setManagerFirebaseKey] = useState(null);
 
+      const [newCoverLetterFile, setNewCoverLetterFile] = useState(null);
+
+
 
   // NEW STATE: State to control the visibility of the profile dropdown
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
@@ -199,6 +202,12 @@ const ManagerWorkSheet = () => {
     }
     setNewEmployee(prev => ({ ...prev, temporaryPassword: password }));
   };
+
+      const handleCoverLetterFileChange = (e) => {
+        if (e.target.files && e.target.files[0]) {
+            setNewCoverLetterFile(e.target.files[0]);
+        }
+    };
 
   const handleCreateEmployeeAccount = async (e) => {
     e.preventDefault();
@@ -1410,29 +1419,41 @@ useEffect(() => {
 
     // --- MODIFICATION START ---
     try {
-      // Await the update operation to ensure it completes or fails
       await update(registrationRef, updates);
 
-      // If the update is successful, proceed with local state updates and success message
       const updatedClient = { ...clientToProcess, ...updates };
 
-      setAssignedClients(prev => {
-        if (clientToReassign) {
-          return prev.filter(c => c.registrationKey !== clientToReassign.registrationKey).concat(updatedClient);
+      // Check if the client is being reassigned or newly assigned.
+      const isReassigning = !!clientToReassign;
+
+      // If it's a re-assignment, update the existing entry in the assignedClients array.
+      // If it's a new assignment, add it to the assignedClients array.
+      setAssignedClients(prevAssigned => {
+        if (isReassigning) {
+          // Find and update the existing entry.
+          return prevAssigned.map(c => 
+            c.registrationKey === updatedClient.registrationKey ? updatedClient : c
+          );
         } else {
-          setUnassignedClients(prevUnassigned => prevUnassigned.filter(c => c.registrationKey !== updatedClient.registrationKey));
-          return [...prev, updatedClient];
+          // Add the new entry.
+          return [...prevAssigned, updatedClient];
         }
       });
+
+      // If it's a new assignment, remove the client from the unassignedClients array.
+      if (!isReassigning) {
+        setUnassignedClients(prevUnassigned => 
+          prevUnassigned.filter(c => c.registrationKey !== updatedClient.registrationKey)
+        );
+      }
       
       setSuccessMessage(`Successfully assigned ${clientToProcess.firstName} to ${employeeInfo.firstName} ${employeeInfo.lastName}.`);
       setShowSuccessModal(true);
 
-      if (clientToReassign) closeReassignClientModal();
+      if (isReassigning) closeReassignClientModal();
       else closeAssignClientModal();
 
     } catch (error) {
-      // If any part of the asynchronous operation fails, catch the error and alert the user.
       console.error("Firebase update failed:", error);
       alert("Failed to assign client. Please try again.");
     }
@@ -1667,6 +1688,21 @@ const filteredEmployees = displayEmployees.filter(employee => {
         return; // Stop the save process if upload fails
       }
     }
+
+            // NEW: Handle new cover letter upload if a file was selected
+        if (newCoverLetterFile) {
+            try {
+                const fileRef = storageRef(getStorage(), `coverletters/${clientToEdit.clientFirebaseKey}/${clientToEdit.registrationKey}/${newCoverLetterFile.name}`);
+                const uploadResult = await uploadBytes(fileRef, newCoverLetterFile);
+                const downloadURL = await getDownloadURL(uploadResult.ref);
+                updatedClientData.coverLetterUrl = downloadURL;
+                updatedClientData.coverLetterFileName = newCoverLetterFile.name;
+            } catch (uploadError) {
+                console.error("Failed to upload new cover letter:", uploadError);
+                alert("Error uploading cover letter. Client details were not saved.");
+                return;
+            }
+        }
 
     // 2. Separate the data: some fields belong to the main client profile,
     //    and the rest belong to the specific service registration.
@@ -1983,7 +2019,7 @@ const ApplicationsTab = ({
                     <td>{data.apps[0]?.jobTitle}</td>
                     <td style={{ textAlign: 'center' }}>{data.apps.length}</td>
                     <td style={{ textAlign: 'center' }}>
-                      <span style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', display: 'inline-block', transition: 'transform 0.2s' }}>▼</span>
+                      <span style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', display: 'inline-block', transition: 'transform 0.2s' }}><i className="fas fa-chevron-down"></i></span>
                     </td>
                   </tr>
                   {isExpanded && (
@@ -5097,7 +5133,7 @@ const ApplicationsTab = ({
                 <div className="priority-card-value">{totalUnassignedCount}</div>
                 <div className="priority-card-title">Total Unassigned</div>
               </div>
-              <div className="priority-card high">
+              {/* <div className="priority-card high">
                 <div className="priority-card-value">{highPriorityCount}</div>
                 <div className="priority-card-title">High Priority</div>
               </div>
@@ -5108,7 +5144,7 @@ const ApplicationsTab = ({
               <div className="priority-card low">
                 <div className="priority-card-value">{lowPriorityCount}</div>
                 <div className="priority-card-title">Low Priority</div>
-              </div>
+              </div> */}
             </div>
 
             <div className="modal-actions-top">
@@ -5121,8 +5157,7 @@ const ApplicationsTab = ({
                   onChange={handleUnassignedSearchChange}
                 />
               </div>
-              <div className="filter-dropdown">
-                {/* Updated select with value and onChange handler */}
+              {/* <div className="filter-dropdown">
                 <select value={filterPriority} onChange={handleFilterPriorityChange}>
                   <option value="all">Filter by priority</option>
                   <option value="high">High Priority</option>
@@ -5130,7 +5165,7 @@ const ApplicationsTab = ({
                   <option value="low">Low Priority</option>
                 </select>
                 <i className="fas fa-chevron-down"></i>
-              </div>
+              </div> */}
               {/* <button className="modal-quick-assign-button" onClick={handleQuickAssign}>
                 <i className="fas fa-bolt"></i> Quick Assign
               </button>
@@ -5876,6 +5911,60 @@ const ApplicationsTab = ({
                   </div>
                 )}
               </div>
+
+              {/* NEW: Cover Letter Section */}
+                            <div className="client-preview-section">
+                                <h4 className="client-preview-section-title">Cover Letter</h4>
+                                {isEditingClient ? (
+                                    // EDIT MODE VIEW
+                                    <div className="assign-form-group">
+                                        <label htmlFor="coverLetterUpload">Upload New Cover Letter (optional)</label>
+                                        {newCoverLetterFile ? (
+                                            <p style={{ fontSize: '0.9em', color: '#28a745' }}>
+                                                New file selected: <strong>{newCoverLetterFile.name}</strong>
+                                            </p>
+                                        ) : (
+                                            <p style={{ fontSize: '0.9em', color: 'var(--subtitle-color)' }}>
+                                                Current file: {clientToEdit.coverLetterFileName ? (
+                                                    <a href={clientToEdit.coverLetterUrl} target="_blank" rel="noopener noreferrer">
+                                                        {clientToEdit.coverLetterFileName}
+                                                    </a>
+                                                ) : 'No cover letter on file.'}
+                                            </p>
+                                        )}
+                                        <input 
+                                            type="file" 
+                                            id="coverLetterUpload" 
+                                            name="coverLetter" 
+                                            onChange={handleCoverLetterFileChange} 
+                                            accept=".pdf,.doc,.docx" 
+                                        />
+                                        <small style={{ color: 'var(--subtitle-color)', marginTop: '5px' }}>
+                                            Uploading a new file will replace the current one upon saving.
+                                        </small>
+                                    </div>
+                                ) : (
+                                    // VIEW-ONLY MODE
+                                    <div className="assign-form-group">
+                                        <label>File Name</label>
+                                        <div className="read-only-value" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span>{clientToEdit.coverLetterFileName || 'No cover letter uploaded.'}</span>
+                                            {clientToEdit.coverLetterUrl && (
+                                                <a
+                                                    href={clientToEdit.coverLetterUrl}
+                                                    download={clientToEdit.coverLetterFileName}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="assign-form-button assign"
+                                                    style={{ textDecoration: 'none' }}
+                                                >
+                                                    Download
+                                                </a>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
 
             </div>
 

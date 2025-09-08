@@ -1793,16 +1793,7 @@ const ClientManagement = () => {
                         <label>File Name</label>
                         <div className="read-only-value" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span>{selectedClientForDetails.coverLetterFileName || 'cover_letter.pdf'}</span>
-                          <a
-                            href={selectedClientForDetails.coverLetterUrl}
-                            download={selectedClientForDetails.coverLetterFileName || 'cover_letter.pdf'}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="action-button assign"
-                            style={{ textDecoration: 'none' }}
-                          >
-                            Download
-                          </a>
+                          {selectedClientForDetails.coverLetterUrl && (<a href={selectedClientForDetails.coverLetterUrl} download={selectedClientForDetails.coverLetterFileName|| 'cover_letter.pdf'} target="_blank" rel="noopener noreferrer" className="assign-form-button assign" style={{ textDecoration: 'none' }}>Download</a>)}
                         </div>
                       </div>
                     ) : (
