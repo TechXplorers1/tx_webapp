@@ -110,11 +110,25 @@ const ClientManagement = () => {
     }
   };
 
-  const handleDeclineClient = (clientId) => {
-    setServiceRegistrations(prevRegistrations => prevRegistrations.map(reg =>
-      reg.clientFirebaseKey === clientId ? { ...reg, assignmentStatus: 'rejected' } : reg
-    ));
-  };
+    const handleDeclineClient = async (registration) => {
+        if (!registration || !registration.clientFirebaseKey || !registration.registrationKey) {
+            console.error("Missing registration details to decline client.");
+            return;
+        }
+        const registrationRef = ref(database, `clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}`);
+        try {
+            await update(registrationRef, {
+                assignmentStatus: 'rejected'
+            });
+            console.log(`Client ${registration.firstName} declined and moved to rejected.`);
+            // OPTIMISTIC UPDATE: update local state immediately
+            setServiceRegistrations(prevRegistrations => prevRegistrations.map(reg =>
+                reg.registrationKey === registration.registrationKey ? { ...reg, assignmentStatus: 'rejected' } : reg
+            ));
+        } catch (error) {
+            console.error("Failed to decline client registration:", error);
+        }
+    };
 
 
   const handleOpenPaymentModal = (client) => {
@@ -237,14 +251,25 @@ const ClientManagement = () => {
   };
 
 
-  const handleRestoreClient = (registration) => {
-    const registrationRef = ref(database, `clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}`);
-    try {
-      update(registrationRef, { assignmentStatus: 'unassigned' });
-    } catch (error) {
-      console.error("Failed to restore client:", error);
-    }
-  };
+    const handleRestoreClient = async (registration) => {
+        if (!registration || !registration.clientFirebaseKey || !registration.registrationKey) {
+            console.error("Missing registration details to restore client.");
+            return;
+        }
+        const registrationRef = ref(database, `clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}`);
+        try {
+            await update(registrationRef, {
+                assignmentStatus: 'pending_manager'
+            });
+            console.log(`Client ${registration.firstName} restored and moved to unassigned.`);
+            // OPTIMISTIC UPDATE: update local state immediately
+            setServiceRegistrations(prevRegistrations => prevRegistrations.map(reg =>
+                reg.registrationKey === registration.registrationKey ? { ...reg, assignmentStatus: 'pending_manager' } : reg
+            ));
+        } catch (error) {
+            console.error("Failed to restore client registration:", error);
+        }
+    };
 
 
   const handleOpenManagerModal = (registration) => {
@@ -395,73 +420,78 @@ const ClientManagement = () => {
   };
 
   // --- Rendering Functions ---
-  const renderClientTable = (registrationsToRender, serviceType, currentClientFilter, title = '') => {
-    const headers = ['First Name', 'Last Name', 'Mobile', 'Email', serviceType === 'Job Supporting' ? 'Jobs Apply For' : 'Service', 'Registered Date', 'Country'];
-    if (serviceType === 'Job Supporting') headers.push('Visa Status');
-    if (['unassigned', 'active', 'restored'].includes(currentClientFilter)) headers.push('Manager');
-    headers.push('Details', 'Actions');
+ const renderClientTable = (registrationsToRender, serviceType, currentClientFilter, title = '') => {
+        const headers = ['First Name', 'Last Name', 'Mobile', 'Email', serviceType === 'Job Supporting' ? 'Jobs Apply For' : 'Service', 'Registered Date', 'Country'];
+        if (serviceType === 'Job Supporting') headers.push('Visa Status');
+        if (['unassigned', 'active', 'restored'].includes(currentClientFilter)) headers.push('Manager');
+        headers.push('Details', 'Actions');
+
+        const getManagerName = (managerFirebaseKey) => {
+            const manager = managerList.find(m => m.firebaseKey === managerFirebaseKey);
+            return manager ? `${manager.firstName} ${manager.lastName}` : 'N/A';
+        };
 
     return (
       <div className="client-table-container">
         {title && <h4 className="client-table-title">{title} ({registrationsToRender.length})</h4>}
-        <table className="client-table">
-          <thead><tr>{headers.map(h => <th key={h}>{h}</th>)}</tr></thead>
-          <tbody>
-            {registrationsToRender.length > 0 ? (
-              registrationsToRender.map(registration => (
-                <tr key={registration.registrationKey}>
-                  <td>{registration.firstName}</td>
-                  <td>{registration.lastName}</td>
-                  <td>{registration.mobile}</td>
-                  <td>{registration.email}</td>
-                  <td>{registration.service === 'Job Supporting' ? registration.jobsToApply : registration.service}</td>
-                  <td>{registration.registeredDate}</td>
-                  <td>{registration.country}</td>
-                  {registration.service === 'Job Supporting' && <td>{registration.visaStatus}</td>}
-
-                  {(currentClientFilter === 'unassigned' || currentClientFilter === 'restored') && (
-                    <td>
-                      <button onClick={() => handleOpenManagerModal(registration)} className="action-button select-manager">
-                        {registration.manager || 'Select Manager'}
-                      </button>
-                    </td>
-                  )}
-                  {currentClientFilter === 'active' && (
-                    <td>
-                      {registration.manager || '-'}
-                    </td>
-                  )}
-                  <td><button onClick={() => handleViewClientDetails(registration)} className="action-button view">View</button></td>
-                  <td style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-start' }}>
-                    <div className="action-buttons">
-                      {currentClientFilter === 'registered' && (<><button onClick={() => handleAcceptClient(registration)} className="action-button accept">Accept</button><button onClick={() => handleDeclineClient(registration)} className="action-button decline">Decline</button></>)}
-                      {(currentClientFilter === 'unassigned' || currentClientFilter === 'restored') && <button onClick={() => handleAssignClient(registration)} className="action-button assign" disabled={!registration.manager}>Save</button>}
-                      {currentClientFilter === 'active' && (<button onClick={() => handleOpenManagerModal(registration)} className="action-button edit-manager">Edit Manager</button>)}                      {currentClientFilter === 'rejected' && (<><button onClick={() => handleRestoreClient(registration)} className="action-button restore">Restore</button><button onClick={() => handleDeleteRejectedClient(registration)} className="action-button delete-btn">Delete</button></>)}
-                    </div>
-                    {/* Send Payment Link Button */}
-                    <button
-                      onClick={() => handleOpenPaymentModal(registration)}
-                      className="action-button send-payment-link"
-                    >
-                      {/* Credit Card Icon (from Screenshot 2025-07-02 at 7.33.16 PM.png) */}
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '0.9rem', height: '0.9rem' }}>
-                        <path d="M20 4H4C3.44772 4 3 4.44772 3 5V19C3 19.5523 3.44772 20 4 20H20C20.5523 20 21 19.5523 21 19V5C21 4.44772 20.5523 4 20 4ZM5 7H19V9H5V7ZM5 11H17V13H5V11ZM5 15H13V17H5V15Z" />
-                      </svg>
-                      Send Payment Link
-                    </button>
-
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={headers.length} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
-                  No {serviceType !== 'All' ? serviceType : ''} clients found for this filter.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+               <table className="client-table">
+                    <thead><tr>{headers.map(h => <th key={h}>{h}</th>)}</tr></thead>
+                    <tbody>
+                        {registrationsToRender.length > 0 ? (
+                            registrationsToRender.map(registration => (
+                                <tr key={registration.registrationKey}>
+                                    <td>{registration.firstName}</td>
+                                    <td>{registration.lastName}</td>
+                                    <td>{registration.mobile}</td>
+                                    <td>{registration.email}</td>
+                                    <td>{registration.service === 'Job Supporting' ? registration.jobsToApply : registration.service}</td>
+                                    <td>{registration.registeredDate}</td>
+                                    <td>{registration.country}</td>
+                                    {registration.service === 'Job Supporting' && <td>{registration.visaStatus}</td>}
+                                    {(currentClientFilter === 'unassigned' || currentClientFilter === 'restored') && (
+                                        <td>
+                                            <button onClick={() => handleOpenManagerModal(registration)} className="action-button select-manager">
+                                                {registration.manager ? registration.manager : 'Select Manager'}
+                                            </button>
+                                        </td>
+                                    )}
+                                    {currentClientFilter === 'active' && (
+                                        <td>
+                                            {getManagerName(registration.assignedManager)}
+                                        </td>
+                                    )}
+                                    <td><button onClick={() => handleViewClientDetails(registration)} className="action-button view">View</button></td>
+                                    <td style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-start' }}>
+                                        <div className="action-buttons">
+                                            {currentClientFilter === 'registered' && (<><button onClick={() => handleAcceptClient(registration)} className="action-button accept">Accept</button><button onClick={() => handleDeclineClient(registration)} className="action-button decline">Decline</button></>)}
+                                            {(currentClientFilter === 'unassigned' || currentClientFilter === 'restored') && <button onClick={() => handleAssignClient(registration)} className="action-button assign" disabled={!registration.manager}>Save</button>}
+                                            {currentClientFilter === 'active' && (<button onClick={() => handleOpenManagerModal(registration)} className="action-button edit-manager">Edit Manager</button>)}
+                                            {/* FIX: Changed the onClick handler to the updated handleRestoreClient */}
+                                            {currentClientFilter === 'rejected' && (<><button onClick={() => handleRestoreClient(registration)} className="action-button restore">Restore</button><button onClick={() => handleDeleteRejectedClient(registration)} className="action-button delete-btn">Delete</button></>)}
+                                        </div>
+                                        {/* Send Payment Link Button */}
+                                        <button
+                                            onClick={() => handleOpenPaymentModal(registration)}
+                                            className="action-button send-payment-link"
+                                        >
+                                            {/* Credit Card Icon (from Screenshot 2025-07-02 at 7.33.16 PM.png) */}
+                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '0.9rem', height: '0.9rem' }}>
+                                                <path d="M20 4H4C3.44772 4 3 4.44772 3 5V19C3 19.5523 3.44772 20 4 20H20C20.5523 20 21 19.5523 21 19V5C21 4.44772 20.5523 4 20 4ZM5 7H19V9H5V7ZM5 11H17V13H5V11ZM5 15H13V17H5V15Z" />
+                                            </svg>
+                                            Send Payment Link
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))
+                        ) : (
+                            <tr>
+                                <td colSpan={headers.length} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                                    No {serviceType !== 'All' ? serviceType : ''} clients found for this filter.
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
       </div>
     );
   };

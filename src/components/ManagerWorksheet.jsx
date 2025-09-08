@@ -5548,7 +5548,7 @@ const ApplicationsTab = ({
           <div className="assign-modal-content"> {/* Reusing assign-modal-content for its wider layout */}
             <div className="assign-modal-header">
               <h3 className="assign-modal-title">
-                {isEditingClient ? 'Edit Client Details' : 'View Client Details'}: {clientToEdit.name || clientToEdit.clientName}
+                {isEditingClient ? 'Edit Client Details' : 'View Client Details'}: {clientToEdit.name || clientToEdit.firstName} {clientToEdit.lastName}
               </h3>
               <button className="assign-modal-close-button" onClick={closeEditClientModal}>
                 <i className="fas fa-times"></i>
@@ -5681,6 +5681,10 @@ const ApplicationsTab = ({
                   <label htmlFor="restrictedCompanies">Restricted Companies</label>
                   <input type="text" id="restrictedCompanies" name="restrictedCompanies" value={clientToEdit.restrictedCompanies || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
+                  <div className="assign-form-group">
+                  <label htmlFor="jobsToApply">Years of Experience</label>
+                  <input type="text" id="yearsOfExperience" name="yearsOfExperience" value={clientToEdit.yearsOfExperience || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
+                </div>
                 <div className="assign-form-group">
                   <label htmlFor="jobsToApply">Jobs to Apply</label>
                   <input type="text" id="jobsToApply" name="jobsToApply" value={clientToEdit.jobsToApply || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
@@ -5734,18 +5738,14 @@ const ApplicationsTab = ({
               {/* Education Details */}
               <div className="client-preview-section">
                 <h4 className="client-preview-section-title">Education Details</h4>
-                <div className="assign-form-group">
-                  <label htmlFor="schoolName">School Name</label>
-                  <input type="text" id="schoolName" name="schoolName" value={clientToEdit.schoolName || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
-                </div>
-                <div className="assign-form-group">
-                  <label htmlFor="schoolAddress">School Address</label>
-                  <textarea id="schoolAddress" name="schoolAddress" value={clientToEdit.schoolAddress || ''} onChange={handleEditClientChange} readOnly={!isEditingClient}></textarea>
-                </div>
-                <div className="assign-form-group">
-                  <label htmlFor="schoolPhone">School Phone</label>
-                  <input type="tel" id="schoolPhone" name="schoolPhone" value={clientToEdit.schoolPhone || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
-                </div>
+                  <div className="assign-form-group">
+                                    <label>University Name</label>
+                                    <input type="text" name="universityName" value={clientToEdit.universityName || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
+                                </div>
+                                <div className="assign-form-group">
+                                    <label>University Address</label>
+                                    <textarea name="universityAddress" value={clientToEdit.universityAddress || ''} onChange={handleEditClientChange} readOnly={!isEditingClient}></textarea>
+                                </div>
                 <div className="assign-form-group">
                   <label htmlFor="courseOfStudy">Course of Study</label>
                   <input type="text" id="courseOfStudy" name="courseOfStudy" value={clientToEdit.courseOfStudy || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />

@@ -100,6 +100,10 @@ const JobSupportContactForm = () => {
     }
   };
 
+      const handleViewDashboard = () => {
+        navigate('/clientdashboard');
+    };
+
   // NEW: Refactored validateForm to handle all steps and show field-specific errors
   const validateForm = (step) => {
     const errors = {};
@@ -320,10 +324,10 @@ const JobSupportContactForm = () => {
       setFormData(initialFormData);
        setResumeFile(null); // Reset file states
         setCoverLetterFile(null);
-      setTimeout(() => {
-          setShowSuccessModal(false);
-          navigate("/");
-      }, 3000);
+      // setTimeout(() => {
+      //     setShowSuccessModal(false);
+      //     navigate("/");
+      // }, 3000);
         } catch (error) {
             setSubmitStatus({ success: false, message: 'Submission failed. Please try again.' });
             console.error("Failed to save to Firebase", error);
@@ -906,7 +910,7 @@ const JobSupportContactForm = () => {
                 </Form.Group>
                 <Form.Group as={Col} controlId="formcoverLetter" className="mb-3 mt-4">
                   <Form.Label>Cover Letter</Form.Label>
-                  <Form.Control type="file" name="coverLetter" onChange={handleChange} required accept=".pdf,.doc,.docx" isInvalid={!!validationErrors.coverLetter} />
+                  <Form.Control type="file" name="coverLetter" onChange={handleChange} accept=".pdf,.doc,.docx" isInvalid={!!validationErrors.coverLetter} />
                   {coverLetterFile && (
                     <Form.Text className="text-success d-block mt-1">
                       Selected file: **{coverLetterFile.name}**
@@ -1017,16 +1021,22 @@ const JobSupportContactForm = () => {
           </Modal.Footer>
         </Modal>
 
-        <Modal show={showSuccessModal} onHide={() => setShowSuccessModal(false)} centered>
-          <Modal.Header closeButton />
-          <Modal.Body style={successModalStyle}>
-              <div style={successAnimationContainerStyle}>
-                  <span style={tickStyle}>✅</span>
-              </div>
-              <h4 style={successTitleStyle}>Form Successfully Submitted!</h4>
-              <p style={successMessageStyle}>Your form has been submitted successfully.</p>
-          </Modal.Body>
-        </Modal>
+       <Modal show={showSuccessModal} onHide={() => setShowSuccessModal(false)} centered>
+                    <Modal.Header closeButton />
+                    <Modal.Body style={successModalStyle}>
+                        <div style={successAnimationContainerStyle}>
+                            <span style={tickStyle}>✅</span>
+                        </div>
+                        <h4 style={successTitleStyle}>Form Successfully Submitted!</h4>
+                        <p style={successMessageStyle}>Your form has been submitted successfully.</p>
+                    </Modal.Body>
+                    <Modal.Footer style={{ justifyContent: 'center', borderTop: 'none' }}>
+                        {/* New 'View Your Dashboard' button */}
+                        <Button variant="primary" onClick={handleViewDashboard} style={{ padding: '10px 20px', borderRadius: '8px', fontWeight: '600' }}>
+                            View Your Dashboard
+                        </Button>
+                    </Modal.Footer>
+                </Modal>
       </div>
     </>
   );
