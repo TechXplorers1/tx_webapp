@@ -116,13 +116,7 @@ const ManagerWorkSheet = () => {
 
   // NEW STATE: For User Profile Edit Modal
   const [isUserProfileModalOpen, setIsUserProfileModalOpen] = useState(false);
-  const [userProfile, setUserProfile] = useState({
-    name: 'Manager',
-    employeeId: 'MNG001',
-    email: 'manager@techxplorers.com',
-    mobile: '+91 98765 43210',
-    lastLogin: '2025-07-15 10:30 AM',
-  });
+  const [userProfile, setUserProfile] = useState({});
 
   const [displayEmployees, setDisplayEmployees] = useState([]);
 
@@ -278,80 +272,93 @@ useEffect(() => {
         return; // Stop if no manager is logged in
     }
 
-    const clientsRef = ref(database, 'clients');
-    const usersRef = ref(database, 'users'); // Reference the 'users' node
+    setManagerFirebaseKey(managerFirebaseKey);
 
+        const managerRef = ref(database, `users/${managerFirebaseKey}`);
+        const unsubscribeManager = onValue(managerRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                const fullName = `${data.firstName || ''} ${data.lastName || ''}`.trim();
+                const avatarLetter = fullName.charAt(0).toUpperCase();
 
-    const unsubscribeClients = onValue(clientsRef, (snapshot) => {
-        const clientsData = snapshot.val();
-        const allRegistrations = [];
-        if (clientsData) {
-            Object.keys(clientsData).forEach(clientKey => {
-                const client = clientsData[clientKey];
-                if (client.serviceRegistrations) {
-                    Object.keys(client.serviceRegistrations).forEach(regKey => {
-                        const registration = client.serviceRegistrations[regKey];
-                        // Add full client and registration data to the list
-                        allRegistrations.push({
-                            ...registration,
-                            clientFirebaseKey: clientKey,
-                            registrationKey: regKey,
-                            email: client.email,
-                            mobile: client.mobile,
-                            firstName: registration.firstName || client.firstName,
-                            lastName: registration.lastName || client.lastName,
-                            name: registration.name || `${registration.firstName || ''} ${registration.lastName || ''}`,
+                // Set user profile state from Firebase data
+                setUserProfile({ ...data, fullName: fullName });
+                setUserName(fullName);
+                setUserAvatarLetter(avatarLetter);
+            }
+        });
+
+        const clientsRef = ref(database, 'clients');
+        const usersRef = ref(database, 'users');
+
+        const unsubscribeClients = onValue(clientsRef, (snapshot) => {
+            const clientsData = snapshot.val();
+            const allRegistrations = [];
+            if (clientsData) {
+                Object.keys(clientsData).forEach(clientKey => {
+                    const client = clientsData[clientKey];
+                    if (client.serviceRegistrations) {
+                        Object.keys(client.serviceRegistrations).forEach(regKey => {
+                            const registration = client.serviceRegistrations[regKey];
+                            allRegistrations.push({
+                                ...registration,
+                                clientFirebaseKey: clientKey,
+                                registrationKey: regKey,
+                                email: client.email,
+                                mobile: client.mobile,
+                                firstName: registration.firstName || client.firstName,
+                                lastName: registration.lastName || client.lastName,
+                                name: registration.name || `${registration.firstName || ''} ${registration.lastName || ''}`,
+                            });
                         });
-                    });
-                }
-            });
-        }
-        
-        // Filter clients based on the logged-in manager's key
-        const clientsForManager = allRegistrations.filter(reg => 
-            reg.assignedManager === managerFirebaseKey
-        );
-
-        const unassignedForManager = clientsForManager.filter(reg => reg.assignmentStatus === 'pending_employee');
-        const assignedByManager = clientsForManager.filter(reg => ['pending_acceptance', 'active'].includes(reg.assignmentStatus));
-
-        setUnassignedClients(unassignedForManager);
-        setAssignedClients(assignedByManager);
-        
-        // Populate application and interview data from the assigned list
-        setApplicationData(assignedByManager.flatMap(clientReg => 
-            (clientReg.jobApplications || []).map(app => ({
-                ...app,
-                clientName: `${clientReg.firstName} ${clientReg.lastName}`,
-                assignedTo: clientReg.assignedTo
-            }))
-        ));
-        setInterviewData(assignedByManager.flatMap(clientReg => 
-            (clientReg.jobApplications || [])
-                .filter(app => app.status === 'Interview')
-                .map(app => ({ ...app, clientName: `${clientReg.firstName} ${clientReg.lastName}`, assignedTo: clientReg.assignedTo }))
-        ));
-        
-        setLoading(false);
-    });
-
-    const unsubscribeUsers = onValue(usersRef, (snapshot) => {
-        const data = snapshot.val();
-        if (data) {
-            const usersArray = Object.keys(data).map(key => ({ firebaseKey: key, ...data[key] }));
-            setAllEmployees(usersArray); 
-            const employeesOnly = usersArray.filter(user => 
-                user.roles && Array.isArray(user.roles) && user.roles.includes('employee')
+                    }
+                });
+            }
+            
+            const clientsForManager = allRegistrations.filter(reg => 
+                reg.assignedManager === managerFirebaseKey
             );
-            setEmployeesForAssignment(employeesOnly);
-        }
-    });
 
-    return () => {
-        unsubscribeClients();
-        unsubscribeUsers();
-    };
-}, []);
+            const unassignedForManager = clientsForManager.filter(reg => reg.assignmentStatus === 'pending_employee');
+            const assignedByManager = clientsForManager.filter(reg => ['pending_acceptance', 'active'].includes(reg.assignmentStatus));
+
+            setUnassignedClients(unassignedForManager);
+            setAssignedClients(assignedByManager);
+            
+            setApplicationData(assignedByManager.flatMap(clientReg => 
+                (clientReg.jobApplications || []).map(app => ({
+                    ...app,
+                    clientName: `${clientReg.firstName} ${clientReg.lastName}`,
+                    assignedTo: clientReg.assignedTo
+                }))
+            ));
+            setInterviewData(assignedByManager.flatMap(clientReg => 
+                (clientReg.jobApplications || [])
+                    .filter(app => app.status === 'Interview')
+                    .map(app => ({ ...app, clientName: `${clientReg.firstName} ${clientReg.lastName}`, assignedTo: clientReg.assignedTo }))
+            ));
+            
+            setLoading(false);
+        });
+
+        const unsubscribeUsers = onValue(usersRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                const usersArray = Object.keys(data).map(key => ({ firebaseKey: key, ...data[key] }));
+                setAllEmployees(usersArray); 
+                const employeesOnly = usersArray.filter(user => 
+                    user.roles && Array.isArray(user.roles) && user.roles.includes('employee')
+                );
+                setEmployeesForAssignment(employeesOnly);
+            }
+        });
+
+        return () => {
+            unsubscribeManager();
+            unsubscribeClients();
+            unsubscribeUsers();
+        };
+    }, []);
 
  
 
@@ -1866,27 +1873,28 @@ Please provide a summary no longer than 150 words.`;
   };
 
   // NEW: Handle saving profile changes
-  const handleSaveProfile = async () => {
-    if (!userProfile.firebaseKey) {
-        alert("Error: Cannot update profile. User key is missing.");
-        return;
-    }
-    try {
-        const userRef = ref(database, `employees/${userProfile.firebaseKey}`);
-        await update(userRef, editableProfile);
+    const handleSaveProfile = async () => {
+        if (!userProfile.firebaseKey) {
+            alert("Error: Cannot update profile. User key is missing.");
+            return;
+        }
+        try {
+            const userRef = ref(database, `users/${userProfile.firebaseKey}`);
+            await update(userRef, editableProfile);
 
-        // Update local state and session storage
-        setUserProfile(editableProfile);
-        setUserName(editableProfile.name); // Also update the display name
-        sessionStorage.setItem('loggedInEmployee', JSON.stringify(editableProfile));
-        
-        setIsEditingUserProfile(false);
-        alert('Profile updated successfully!');
-    } catch (error) {
-        console.error("Error updating profile in Firebase:", error);
-        alert("Failed to update profile. Please try again.");
-    }
-  };
+            // Update local state and session storage
+            setUserProfile(editableProfile);
+            setUserName(`${editableProfile.firstName} ${editableProfile.lastName}`);
+            sessionStorage.setItem('loggedInEmployee', JSON.stringify(editableProfile));
+            
+            setIsEditingUserProfile(false);
+            setSuccessMessage("Profile updated successfully!");
+            setShowSuccessModal(true);
+        } catch (error) {
+            console.error("Error updating profile in Firebase:", error);
+            alert("Failed to update profile. Please try again.");
+        }
+    };
 
   const handleProfileClick = () => {
     console.log('View Profile clicked');

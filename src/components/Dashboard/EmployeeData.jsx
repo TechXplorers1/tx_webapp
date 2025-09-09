@@ -418,29 +418,23 @@ const EmployeeData = () => {
   useEffect(() => {
     const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInEmployee'));
     if (!loggedInUserData || !loggedInUserData.firebaseKey) {
-      console.error("No logged in user found, redirecting...");
       navigate('/login');
       return;
     }
 
-    const nameParts = (loggedInUserData.name || "").split(" ");
-    const completeEmployeeData = {
-      ...loggedInUserData,
-      firstName: loggedInUserData.firstName || nameParts[0] || "",
-      lastName: loggedInUserData.lastName || nameParts.slice(1).join(" ") || "",
-    };
-    setEmployeeDetails(completeEmployeeData);
-
     const employeeFirebaseKey = loggedInUserData.firebaseKey;
-
-    if (!employeeFirebaseKey) {
-      console.warn("No employee firebaseKey found in session storage.");
-      return;
-    }
-
+    const employeeRef = ref(database, `users/${employeeFirebaseKey}`);
     const clientsRef = ref(database, 'clients');
+    
+    // Fetch employee details once for profile modal
+    const unsubscribeEmployee = onValue(employeeRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        setEmployeeDetails(data);
+      }
+    });
 
-    const unsubscribe = onValue(clientsRef, (snapshot) => {
+    const unsubscribeClients = onValue(clientsRef, (snapshot) => {
       const clientsData = snapshot.val();
       const allRegistrations = [];
 
@@ -456,7 +450,9 @@ const EmployeeData = () => {
                 registrationKey: regKey,
                 email: client.email,
                 mobile: client.mobile,
-                name: `${registration.firstName || client.firstName || ''} ${registration.lastName || client.lastName || ''}`.trim(),
+                firstName: registration.firstName || client.firstName,
+                lastName: registration.lastName || client.lastName,
+                name: `${(registration.firstName || client.firstName || '')} ${(registration.lastName || client.lastName || '')}`.trim(),
                 initials: `${(registration.firstName || 'C').charAt(0)}${(registration.lastName || 'L').charAt(0)}`
               });
             });
@@ -474,7 +470,10 @@ const EmployeeData = () => {
       setInactiveClients(inactive);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeEmployee();
+      unsubscribeClients();
+    };
   }, [navigate]);
 
 
@@ -515,14 +514,12 @@ const EmployeeData = () => {
 
 
   // Function to derive initials from name
-  const getInitials = (name) => {
-    if (!name) return '';
-    const parts = name.split(' ');
-    if (parts.length === 1) {
-      return parts[0].substring(0, 2).toUpperCase();
-    }
-    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+  const getInitials = (firstName, lastName) => {
+    return `${firstName ? firstName.charAt(0).toUpperCase() : ''}${lastName ? lastName.charAt(0).toUpperCase() : ''}`;
   };
+
+    const employeeName = `${employeeDetails.firstName || ''} ${employeeDetails.lastName || ''}`.trim();
+  const employeeInitials = getInitials(employeeDetails.firstName, employeeDetails.lastName);
 
   // Dynamically calculate adminInitials
   const adminInitials = getInitials(employeeDetails.name);
@@ -612,6 +609,23 @@ const EmployeeData = () => {
   const handleCancelEditProfile = () => {
     setIsEditingProfile(false); // Exit edit mode
     setEditedEmployeeDetails({ ...employeeDetails }); // Revert changes
+  };
+
+    const handleLogout = () => {
+    sessionStorage.removeItem('loggedInEmployee');
+    navigate('/login');
+  };
+
+    const toggleProfileDropdown = () => {
+    setIsProfileDropdownOpen(prevState => !prevState);
+  };
+  
+  const openNotificationsModal = () => {
+    setShowNotificationModal(true);
+  };
+  
+  const closeNotificationsModal = () => {
+    setShowNotificationModal(false);
   };
 
 
@@ -1773,19 +1787,19 @@ const EmployeeData = () => {
 
   return (
     <div style={containerStyle}>
-      <AdminHeader
-        adminUserName={employeeDetails.name} // Pass dynamic name
-        adminInitials={adminInitials} // Pass dynamic initials
-        isDarkMode={theme === 'dark'}
-        toggleTheme={toggleTheme}
-        toggleSidebar={toggleSidebar} // Pass the dummy toggleSidebar
-        isProfileDropdownOpen={isProfileDropdownOpen}
-        setIsProfileDropdownOpen={setIsProfileDropdownOpen}
-        profileDropdownRef={profileDropdownRef}
-        showProfileModal={showEmployeeProfileModal} // Pass the state
-        setShowProfileModal={handleOpenProfileModal} // Pass the function to open profile modal
-        onNotificationClick={handleNotificationIconClick} // Pass notification click handler
-      />
+<AdminHeader
+  adminUserName={`${employeeDetails.firstName || ''} ${employeeDetails.lastName || ''}`.trim() || employeeDetails.name}
+  adminInitials={adminInitials}
+  isDarkMode={theme === 'dark'}
+  toggleTheme={toggleTheme}
+  toggleSidebar={toggleSidebar}
+  isProfileDropdownOpen={isProfileDropdownOpen}
+  setIsProfileDropdownOpen={setIsProfileDropdownOpen}
+  profileDropdownRef={profileDropdownRef}
+  showProfileModal={showEmployeeProfileModal}
+  setShowProfileModal={setShowEmployeeProfileModal}
+  onNotificationClick={handleNotificationIconClick}
+/>
       {/* Centralized CSS styles for hover effects and animations */}
       <style>
         {`
