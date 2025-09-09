@@ -1401,71 +1401,65 @@ useEffect(() => {
 
 
   // Handler for "Assign Client" or "Reassign Client" button submission
-  const handleAssignmentSubmit = async () => {
+const handleAssignmentSubmit = async () => {
     const clientToProcess = clientToReassign || selectedClientToAssign;
 
     if (!clientToProcess || !selectedEmployee || !clientToProcess.clientFirebaseKey || !clientToProcess.registrationKey) {
-      alert('Error: Missing client, employee, or necessary keys to complete the assignment.');
-      return;
+        alert('Error: Missing client, employee, or necessary keys to complete the assignment.');
+        return;
     }
 
     const employeeInfo = allEmployees.find(emp => emp.firebaseKey === selectedEmployee);
     if (!employeeInfo) {
-      alert('Error: Could not find the selected employee. Please try again.');
-      return;
+        alert('Error: Could not find the selected employee. Please try again.');
+        return;
     }
 
     const registrationRef = ref(database, `clients/${clientToProcess.clientFirebaseKey}/serviceRegistrations/${clientToProcess.registrationKey}`);
 
     const updates = {
-      assignedTo: employeeInfo.firebaseKey,
-      assignmentStatus: 'pending_acceptance',
-      assignedDate: new Date().toISOString().split('T')[0],
-      priority: assignmentPriority,
+        assignedTo: employeeInfo.firebaseKey,
+        assignmentStatus: 'pending_acceptance',
+        assignedDate: new Date().toISOString().split('T')[0],
+        priority: assignmentPriority,
     };
 
-    // --- MODIFICATION START ---
     try {
-      await update(registrationRef, updates);
+        await update(registrationRef, updates);
 
-      const updatedClient = { ...clientToProcess, ...updates };
+        const updatedClient = { ...clientToProcess, ...updates };
 
-      // Check if the client is being reassigned or newly assigned.
-      const isReassigning = !!clientToReassign;
+        // Check if the client is being reassigned or newly assigned.
+        const isReassigning = !!clientToReassign;
 
-      // If it's a re-assignment, update the existing entry in the assignedClients array.
-      // If it's a new assignment, add it to the assignedClients array.
-      setAssignedClients(prevAssigned => {
-        if (isReassigning) {
-          // Find and update the existing entry.
-          return prevAssigned.map(c => 
-            c.registrationKey === updatedClient.registrationKey ? updatedClient : c
-          );
-        } else {
-          // Add the new entry.
-          return [...prevAssigned, updatedClient];
-        }
-      });
+        // Atomically update both the assigned and unassigned client lists.
+     if (isReassigning) {
+  // For a reassignment, just update the client in the assigned list.
+  setAssignedClients(prevAssigned =>
+    prevAssigned.map(c => c.registrationKey === updatedClient.registrationKey ? updatedClient : c)
+  );
+} else {
+  // For a new assignment, remove from unassigned and add to assigned without duplication.
+  setUnassignedClients(prevUnassigned =>
+    prevUnassigned.filter(c => c.registrationKey !== updatedClient.registrationKey)
+  );
+  setAssignedClients(prevAssigned => {
+    const filtered = prevAssigned.filter(c => c.registrationKey !== updatedClient.registrationKey);
+    return [...filtered, updatedClient];
+  });
+}
+        
+        setSuccessMessage(`Successfully assigned ${clientToProcess.firstName} to ${employeeInfo.firstName} ${employeeInfo.lastName}.`);
+        setShowSuccessModal(true);
 
-      // If it's a new assignment, remove the client from the unassignedClients array.
-      if (!isReassigning) {
-        setUnassignedClients(prevUnassigned => 
-          prevUnassigned.filter(c => c.registrationKey !== updatedClient.registrationKey)
-        );
-      }
-      
-      setSuccessMessage(`Successfully assigned ${clientToProcess.firstName} to ${employeeInfo.firstName} ${employeeInfo.lastName}.`);
-      setShowSuccessModal(true);
-
-      if (isReassigning) closeReassignClientModal();
-      else closeAssignClientModal();
+        if (isReassigning) closeReassignClientModal();
+        else closeAssignClientModal();
 
     } catch (error) {
-      console.error("Firebase update failed:", error);
-      alert("Failed to assign client. Please try again.");
+        console.error("Firebase update failed:", error);
+        alert("Failed to assign client. Please try again.");
     }
-    // --- MODIFICATION END ---
-  };
+};
 
   // Handler for "Quick Assign" button
   const handleQuickAssign = () => {
@@ -5265,13 +5259,15 @@ const ApplicationsTab = ({
             </div>
 
             {/* MODIFIED: Replaced the <select> with a clickable <div> */}
-            <div className="assign-form-group">
-              <label>Select Employee</label>
+            <div className="form-row" style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
+              <label style={{ width: '200px', fontWeight: '500' }}>Select Employee :</label>
+              <div style={{ flex: 1 }}>
               <div className="pseudo-input" onClick={() => setIsEmployeeSelectModalOpen(true)}>
                 {selectedEmployee
                   ? employeesForAssignment.find(e => e.firebaseKey === parseInt(selectedEmployee))?.fullName
                   : "Click to choose an employee..."
                 }
+              </div>
               </div>
             </div>
 
@@ -5291,21 +5287,27 @@ const ApplicationsTab = ({
             })()}
 
             {/* --- The rest of the form remains the same --- */}
-            <div className="assign-form-group">
-              <label htmlFor="priorityLevel">Priority Level</label>
-              <select id="priorityLevel" value={assignmentPriority} onChange={(e) => setAssignmentPriority(e.target.value)}>
+            <div className="form-row" style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
+              <label style={{ width: '200px', fontWeight: '500' }}>Priority Level :</label>
+              <div style={{ flex: 1 }}>
+              <select  className="pseudo-input" id="priorityLevel" value={assignmentPriority} onChange={(e) => setAssignmentPriority(e.target.value)}> 
                 <option value="high">High Priority</option>
                 <option value="medium">Medium Priority</option>
                 <option value="low">Low Priority</option>
               </select>
+              </div>
             </div>
-            <div className="assign-form-group">
-              <label htmlFor="assignmentNotes">Assignment Notes</label>
-              <textarea id="assignmentNotes" placeholder="Any specific instructions or requirements..." value={assignmentNotes} onChange={(e) => setAssignmentNotes(e.target.value)}></textarea>
+             <div className="form-row" style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
+              <label style={{ width: '200px', fontWeight: '500' }}>Assignement Notes :</label>
+              <div style={{ flex: 1 }}>
+              <textarea className="pseudo-input" id="assignmentNotes" placeholder="Any specific instructions or requirements..." value={assignmentNotes} onChange={(e) => setAssignmentNotes(e.target.value)}></textarea>
             </div>
+            <div style={{ flex: 1 }}>
             <div className="assign-form-actions">
               <button className="assign-form-button cancel" onClick={closeAssignClientModal}>Cancel</button>
               <button className="assign-form-button assign" onClick={handleAssignmentSubmit}>Confirm Assignment</button>
+            </div>
+            </div>
             </div>
           </div>
         </div>
