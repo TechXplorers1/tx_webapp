@@ -22,6 +22,8 @@
     "bootstrap": "^5.3.7",
     "bootstrap-icons": "^1.13.1",
     "chart.js": "^4.5.0",
+    "country-codes-list": "^2.0.0",
+    "country-data": "^0.0.31",
     "country-list": "^2.3.0",
     "country-state-city": "^3.2.1",
     "firebase": "^12.1.0",
@@ -38,6 +40,7 @@
     "react-leaflet": "^5.0.0",
     "react-phone-input-2": "^2.15.1",
     "react-router-dom": "^7.6.2",
+    "react-select-country-list": "^2.2.3",
     "sonner": "^2.0.5",
     "styled-components": "^6.1.19",
     "xlsx": "^0.18.5"

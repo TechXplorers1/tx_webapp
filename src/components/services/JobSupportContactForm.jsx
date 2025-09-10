@@ -8,6 +8,7 @@ import { ref, push, set, update } from "firebase/database";
 import { useAuth } from '../../components/AuthContext';
 
 
+
 const JobSupportContactForm = () => {
   const navigate = useNavigate();
   const countryDropdownRef = useRef(null);
@@ -110,14 +111,27 @@ const JobSupportContactForm = () => {
     let isValid = true;
 
     // Validation for Step 1
-    if (step === 1) {
-      const mandatoryFields = ['firstName', 'lastName', 'dob', 'gender', 'address', 'ethnicity', 'county', 'zipCode', 'countryCode', 'mobile', 'email'];
-      mandatoryFields.forEach(field => {
-        if (!formData[field]) {
-          errors[field] = 'This field is required.';
-          isValid = false;
+     if (step === 1) {
+        const mandatoryFields = ['firstName', 'lastName'];
+        mandatoryFields.forEach(field => {
+            if (!formData[field]) {
+                errors[field] = 'This field is required.';
+                isValid = false;
+            }
+        });
+
+           if (formData.dob) {
+            const selectedDate = new Date(formData.dob);
+            const today = new Date();
+            // Normalize dates to remove time component for accurate comparison
+            selectedDate.setHours(0, 0, 0, 0);
+            today.setHours(0, 0, 0, 0);
+
+            if (selectedDate >= today) {
+                errors.dob = 'Please select a valid DOB.';
+                isValid = false;
+            }
         }
-      });
 
       // Simple mobile number validation
       const mobileNumber = formData.mobile.replace(/[^0-9]/g, '');
@@ -126,47 +140,52 @@ const JobSupportContactForm = () => {
       const expectedLength = countryData ? countryData.dialCode.length + mobileNumber.length : 10;
       
       if (formData.mobile && (mobileNumber.length < 7 || mobileNumber.length > 15)) {
-        errors.mobile = 'Please enter a valid mobile number.';
-        isValid = false;
-      }
+            errors.mobile = 'Please enter a valid mobile number.';
+            isValid = false;
+        }
+
+        if (formData.email && !/^\S+@\S+\.\S+$/.test(formData.email)) {
+            errors.email = 'Please enter a valid email address.';
+            isValid = false;
+        }
     }
 
     // Validation for Step 2
-    if (step === 2) {
-      const mandatoryFields = ['securityClearance', 'willingToRelocate', 'workPreference','restrictedCompanies', 'jobsToApply','currentSalary', 'expectedSalary', 'visaStatus', 'yearsOfExperience'];
-      mandatoryFields.forEach(field => {
-        if (!formData[field]) {
-          errors[field] = 'This field is required.';
-          isValid = false;
+  if (step === 2) {
+        const mandatoryFields = [];
+        mandatoryFields.forEach(field => {
+            if (!formData[field]) {
+                errors[field] = 'This field is required.';
+                isValid = false;
+            }
+        });
+        if (formData.securityClearance === 'yes' && !formData.clearanceLevel) {
+            errors.clearanceLevel = "Please specify your clearance level.";
+            isValid = false;
         }
-      });
-      if (formData.securityClearance === 'yes' && !formData.clearanceLevel) {
-        errors.clearanceLevel = "Please specify your clearance level.";
-        isValid = false;
-      }
-      if (formData.visaStatus === 'other' && !formData.otherVisaStatus) {
-        errors.otherVisaStatus = "Please specify your visa status.";
-        isValid = false;
-      }
+        if (formData.visaStatus === 'other' && !formData.otherVisaStatus) {
+            errors.otherVisaStatus = "Please specify your visa status.";
+            isValid = false;
+        }
     }
 
     // NEW: Validation for Step 3
     if (step === 3) {
-       const mandatoryFields = ['universityName', 'universityAddress', 'courseOfStudy','graduationFromDate', 'graduationToDate','noticePeriod'];
-      mandatoryFields.forEach(field => {
-        if (!formData[field]) {
-          errors[field] = 'This field is required.';
-          isValid = false;
+        const mandatoryFields = [];
+        mandatoryFields.forEach(field => {
+            if (!formData[field]) {
+                errors[field] = 'This field is required.';
+                isValid = false;
+            }
+        });
+        if (formData.graduationFromDate && formData.graduationToDate) {
+            const fromDate = new Date(formData.graduationFromDate);
+            const toDate = new Date(formData.graduationToDate);
+            if (toDate <= fromDate) {
+                errors.graduationToDate = "To date must be greater than From date.";
+                isValid = false;
+            }
         }
-      });
-      if (formData.graduationFromDate && formData.graduationToDate) {
-        const fromDate = new Date(formData.graduationFromDate);
-        const toDate = new Date(formData.graduationToDate);
-        if (toDate <= fromDate) {
-          errors.graduationToDate = "To date must be greater than From date.";
-          isValid = false;
-        }
-      }
     }
 
     // Validation for Step 5
@@ -633,9 +652,58 @@ const JobSupportContactForm = () => {
     }
   `;
 
+  const checkmarkStyles = `
+  .checkmark {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: block;
+    stroke-width: 3;
+    stroke: #fff;
+    stroke-miterlimit: 10;
+    margin: 0 auto 20px;
+    box-shadow: inset 0px 0px 0px #2ecc71;
+    animation: fill .4s ease-in-out .4s forwards, scale .3s ease-in-out .9s both;
+  }
+
+  .checkmark__circle {
+    stroke-dasharray: 166;
+    stroke-dashoffset: 166;
+    stroke-width: 3;
+    stroke-miterlimit: 10;
+    stroke: #2ecc71;
+    fill: none;
+    animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+  }
+
+  .checkmark__check {
+    transform-origin: 50% 50%;
+    stroke-dasharray: 48;
+    stroke-dashoffset: 48;
+    animation: stroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.8s forwards;
+  }
+
+  @keyframes stroke {
+    100% { stroke-dashoffset: 0; }
+  }
+  @keyframes scale {
+    0%, 100% { transform: none; }
+    50% { transform: scale3d(1.1, 1.1, 1); }
+  }
+  @keyframes fill {
+    100% { box-shadow: inset 0px 0px 0px 80px #2ecc71; }
+  }
+`;
+
+
+const keyframes = `
+  @keyframes scaleIn { from { transform: scale(0); } to { transform: scale(1); } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+`;
+
   return (
     <>
-      <style>{modernStyles}</style>
+      <style>{modernStyles + checkmarkStyles}</style>
       <div className="job-support-form-wrapper">
         <Container className="form-container-modern">
           <Button className="back-button-modern" onClick={() => navigate(-1)}>
@@ -685,32 +753,15 @@ const JobSupportContactForm = () => {
                     </Form.Select>
                     <Form.Control.Feedback type="invalid">{validationErrors.gender}</Form.Control.Feedback>
                   </Form.Group>
-                  <Form.Group as={Col} controlId="formEthnicity">
-                    <Form.Label>Ethnicity<span className="text-danger">*</span></Form.Label>
-                    <Form.Control type="text" name="ethnicity" value={formData.ethnicity} onChange={handleChange} isInvalid={!!validationErrors.ethnicity} required />
-                    <Form.Control.Feedback type="invalid">{validationErrors.ethnicity}</Form.Control.Feedback>
+                  <Form.Group as={Col} controlId="formEmail">
+                    <Form.Label>Email <span className="text-danger">*</span></Form.Label>
+                    <Form.Control type="email" name="email" value={formData.email} onChange={handleChange} isInvalid={!!validationErrors.email} required />
+                    <Form.Control.Feedback type="invalid">{validationErrors.email}</Form.Control.Feedback>
                   </Form.Group>
+                  
                 </Row>
                 <Row className="mb-3">
-                  <Form.Group as={Col} controlId="formAddress">
-                    <Form.Label>Address <span className="text-danger">*</span></Form.Label>
-                    <Form.Control type="text" name="address" value={formData.address} onChange={handleChange} isInvalid={!!validationErrors.address} required />
-                    <Form.Control.Feedback type="invalid">{validationErrors.address}</Form.Control.Feedback>
-                  </Form.Group>
-                  {/* NEW: New County field */}
-                  <Form.Group as={Col} md={4} controlId="formCounty">
-                    <Form.Label>County <span className="text-danger">*</span></Form.Label>
-                    <Form.Control type="text" name="county" value={formData.county} onChange={handleChange} isInvalid={!!validationErrors.county} required />
-                    <Form.Control.Feedback type="invalid">{validationErrors.county}</Form.Control.Feedback>
-                  </Form.Group>
-                  <Form.Group as={Col} md={4} controlId="formZipCode">
-                    <Form.Label>Zip Code <span className="text-danger">*</span></Form.Label>
-                    <Form.Control type="text" name="zipCode" value={formData.zipCode} onChange={handleChange} isInvalid={!!validationErrors.zipCode} required />
-                    <Form.Control.Feedback type="invalid">{validationErrors.zipCode}</Form.Control.Feedback>
-                  </Form.Group>
-                </Row>
-                <Row className="mb-3">
-                  <Form.Group as={Col} controlId="formCountryCode" ref={countryDropdownRef}>
+                    <Form.Group as={Col} controlId="formCountryCode" ref={countryDropdownRef}>
                     <Form.Label>Country Code <span className="text-danger">*</span></Form.Label>
                     <div className="country-dropdown-container">
                       <Form.Control type="text" value={isCountryDropdownOpen ? countrySearchTerm : `${countryCodes.find(c => c.dialCode === formData.countryCode)?.name || ''} (${formData.countryCode})`} onFocus={() => setIsCountryDropdownOpen(true)} onChange={(e) => setCountrySearchTerm(e.target.value)} placeholder="Search country..." isInvalid={!!validationErrors.countryCode} />
@@ -723,11 +774,32 @@ const JobSupportContactForm = () => {
                     <Form.Control type="text" name="mobile" value={formData.mobile} onChange={handleChange} isInvalid={!!validationErrors.mobile} required />
                     <Form.Control.Feedback type="invalid">{validationErrors.mobile}</Form.Control.Feedback>
                   </Form.Group>
-                  <Form.Group as={Col} controlId="formEmail">
-                    <Form.Label>Email <span className="text-danger">*</span></Form.Label>
-                    <Form.Control type="email" name="email" value={formData.email} onChange={handleChange} isInvalid={!!validationErrors.email} required />
-                    <Form.Control.Feedback type="invalid">{validationErrors.email}</Form.Control.Feedback>
+                  <Form.Group as={Col} controlId="formEthnicity">
+                    <Form.Label>Ethnicity<span className="text-danger">*</span></Form.Label>
+                    <Form.Control type="text" name="ethnicity" value={formData.ethnicity} onChange={handleChange} isInvalid={!!validationErrors.ethnicity} required />
+                    <Form.Control.Feedback type="invalid">{validationErrors.ethnicity}</Form.Control.Feedback>
                   </Form.Group>
+                  
+                </Row>
+                <Row className="mb-3">
+                
+                  {/* NEW: New County field */}
+                  <Form.Group as={Col} md={4} controlId="formCounty">
+                    <Form.Label>County <span className="text-danger">*</span></Form.Label>
+                    <Form.Control type="text" name="county" value={formData.county} onChange={handleChange} isInvalid={!!validationErrors.county} required />
+                    <Form.Control.Feedback type="invalid">{validationErrors.county}</Form.Control.Feedback>
+                  </Form.Group>
+                  <Form.Group as={Col} controlId="formAddress">
+                    <Form.Label>Address <span className="text-danger">*</span></Form.Label>
+                    <Form.Control type="text" name="address" value={formData.address} onChange={handleChange} isInvalid={!!validationErrors.address} required />
+                    <Form.Control.Feedback type="invalid">{validationErrors.address}</Form.Control.Feedback>
+                  </Form.Group>
+                  <Form.Group as={Col} md={4} controlId="formZipCode">
+                    <Form.Label>Zip Code <span className="text-danger">*</span></Form.Label>
+                    <Form.Control type="text" name="zipCode" value={formData.zipCode} onChange={handleChange} isInvalid={!!validationErrors.zipCode} required />
+                    <Form.Control.Feedback type="invalid">{validationErrors.zipCode}</Form.Control.Feedback>
+                  </Form.Group>
+                  
                 </Row>
               </section>
             )}
@@ -790,7 +862,7 @@ const JobSupportContactForm = () => {
                     <Form.Control.Feedback type="invalid">{validationErrors.jobsToApply}</Form.Control.Feedback>
                   </Form.Group>
                   <Form.Group as={Col} controlId="formRestrictedCompanies">
-                    <Form.Label>Restricted Companies <span className="text-danger">*</span></Form.Label>
+                    <Form.Label>Restricted Companies </Form.Label>
                     <Form.Control type="text" name="restrictedCompanies" value={formData.restrictedCompanies} onChange={handleChange} isInvalid={!!validationErrors.restrictedCompanies} />
                     <Form.Control.Feedback type="invalid">{validationErrors.restrictedCompanies}</Form.Control.Feedback>
                   </Form.Group>
@@ -885,7 +957,7 @@ const JobSupportContactForm = () => {
               <section className="step-section">
                 <h4 className="step-header-modern">Step 5: Job Portal (Optional) & Resume</h4>
                 <Form.Group controlId="formJobPortalCredentials" className="mb-3">
-                  <Form.Label>Job Portal Account Name & Credentials</Form.Label>
+                  <Form.Label>Job Portal Account Name & Credentials (Ex:- LinkedIn, Glassdoor etc... )</Form.Label>
                   <Form.Control name="jobPortalAccountNameandCredentials" value={formData.jobPortalAccountNameandCredentials} onChange={handleChange} as="textarea" rows={3} isInvalid={!!validationErrors.jobPortalAccountNameandCredentials} />
                 </Form.Group>
                 <Row className="mb-3">
@@ -1025,10 +1097,13 @@ const JobSupportContactForm = () => {
                     <Modal.Header closeButton />
                     <Modal.Body style={successModalStyle}>
                         <div style={successAnimationContainerStyle}>
-                            <span style={tickStyle}>✅</span>
-                        </div>
+  <svg className="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+    <circle className="checkmark__circle" cx="26" cy="26" r="25" fill="none"/>
+    <path className="checkmark__check" fill="none" d="M14 27l7 7 16-16"/>
+  </svg>
+</div>
                         <h4 style={successTitleStyle}>Form Successfully Submitted!</h4>
-                        <p style={successMessageStyle}>Your form has been submitted successfully.</p>
+                        <p style={successMessageStyle}>To View Your DashBoard, please click the below button</p>
                     </Modal.Body>
                     <Modal.Footer style={{ justifyContent: 'center', borderTop: 'none' }}>
                         {/* New 'View Your Dashboard' button */}
@@ -1048,9 +1123,5 @@ const tickStyle = { fontSize: "40px", color: "#fff", animation: "fadeIn 0.5s eas
 const successTitleStyle = { fontSize: "24px", fontWeight: "600", color: "#333", marginBottom: "10px" };
 const successMessageStyle = { fontSize: "16px", color: "#555", marginBottom: "20px" };
 
-const keyframes = `
-  @keyframes scaleIn { from { transform: scale(0); } to { transform: scale(1); } }
-  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-`;
 
 export default JobSupportContactForm;

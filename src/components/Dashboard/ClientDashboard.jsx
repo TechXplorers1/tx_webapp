@@ -2177,6 +2177,60 @@ const ClientDashboard = () => {
     setShowNotifyMessage(false);
   };
 
+  const allJobSupportFields = {
+  // Personal Information
+  firstName: 'N/A',
+  middleName: 'N/A',
+  lastName: 'N/A',
+  dob: 'N/A',
+  gender: 'N/A',
+  ethnicity: 'N/A',
+  // Contact Information
+  address: 'N/A',
+  county: 'N/A',
+  zipCode: 'N/A',
+  countryCode: 'N/A',
+  mobile: 'N/A',
+  email: 'N/A',
+  // Employment Information
+  securityClearance: 'N/A',
+  clearanceLevel: 'N/A',
+  willingToRelocate: 'N/A',
+  workPreference: 'N/A',
+  restrictedCompanies: 'N/A',
+  yearsOfExperience: 'N/A',
+  // Job Preferences
+  jobsToApply: 'N/A',
+  currentSalary: 'N/A',
+  expectedSalary: 'N/A',
+  visaStatus: 'N/A',
+  otherVisaStatus: 'N/A',
+  // Education
+  universityName: 'N/A',
+  universityAddress: 'N/A',
+  courseOfStudy: 'N/A',
+  graduationFromDate: 'N/A',
+  graduationToDate: 'N/A',
+  noticePeriod: 'N/A',
+  // Current Employment
+  currentCompany: 'N/A',
+  currentDesignation: 'N/A',
+  preferredInterviewTime: 'N/A',
+  earliestJoiningDate: 'N/A',
+  relievingDate: 'N/A',
+  // References
+  referenceName: 'N/A',
+  referencePhone: 'N/A',
+  referenceAddress: 'N/A',
+  referenceEmail: 'N/A',
+  referenceRole: 'N/A',
+  // Job Portal Information
+  jobPortalAccountNameandCredentials: 'N/A',
+  // Resume & Cover Letter
+  resumeFileName: 'N/A',
+  coverLetterFileName: 'N/A',
+};
+
 
   // Effect to save activeTab to localStorage whenever it changes
   useEffect(() => {
@@ -2317,37 +2371,45 @@ const ClientDashboard = () => {
   const toggleSubscriptionDetailsModal = () => setShowSubscriptionDetailsModal(!showSubscriptionDetailsModal);
 
   // Handlers for profile dropdown items
-  const handleClientProfileClick = useCallback(() => {
-    setIsProfileDropdownOpen(false); // Close dropdown first
-    if (clientData && clientData.serviceRegistrations) {
-      const registrationKeys = Object.keys(clientData.serviceRegistrations);
-      if (registrationKeys.length > 0) {
-        // Find the most recent registration to display by default
-        const mostRecentRegistration = registrationKeys.reduce((latest, key) => {
-          const current = { ...clientData.serviceRegistrations[key], key: key };
-          if (!latest || new Date(current.registeredDate) > new Date(latest.registeredDate)) {
-            return current;
-          }
-          return latest;
-        }, null);
-
-        if (mostRecentRegistration) {
-          const fullDetails = {
-            ...mostRecentRegistration,
-            // Combine parent client data for consistency
-            email: clientData.email || mostRecentRegistration.email,
-            mobile: clientData.mobile || mostRecentRegistration.mobile,
-          };
-          setSelectedServiceForDetails(fullDetails);
-          setIsServiceDetailsModalOpen(true);
+// UPDATE: The handleClientProfileClick function needs to reference the new allJobSupportFields object.
+const handleClientProfileClick = useCallback(() => {
+  setIsProfileDropdownOpen(false);
+  if (clientData && clientData.serviceRegistrations) {
+    const registrationKeys = Object.keys(clientData.serviceRegistrations);
+    if (registrationKeys.length > 0) {
+      const mostRecentRegistration = registrationKeys.reduce((latest, key) => {
+        const current = { ...clientData.serviceRegistrations[key], key: key };
+        if (!latest || new Date(current.registeredDate) > new Date(latest.registeredDate)) {
+          return current;
         }
-      } else {
-        alert("You have no registered services to display.");
+        return latest;
+      }, null);
+
+      if (mostRecentRegistration) {
+        const fullDetails = {
+          ...allJobSupportFields, // Use all form fields as a base
+          ...mostRecentRegistration, // Overwrite with data from Firebase
+          // Combine parent client data for consistency
+          email: clientData.email || mostRecentRegistration.email,
+          mobile: clientData.mobile || mostRecentRegistration.mobile,
+          firstName: clientData.firstName || mostRecentRegistration.firstName,
+          lastName: clientData.lastName || mostRecentRegistration.lastName,
+          // Ensure file names and URLs are present for the modal
+          resumeFileName: mostRecentRegistration.resumeFileName,
+          resumeUrl: mostRecentRegistration.resumeUrl,
+          coverLetterFileName: mostRecentRegistration.coverLetterFileName,
+          coverLetterUrl: mostRecentRegistration.coverLetterUrl,
+        };
+        setSelectedServiceForDetails(fullDetails);
+        setIsServiceDetailsModalOpen(true);
       }
     } else {
-      alert("Profile data is not available yet. Please try again in a moment.");
+      alert("You have no registered services to display.");
     }
-  }, [clientData]);
+  } else {
+    alert("Profile data is not available yet. Please try again in a moment.");
+  }
+}, [clientData]);
 
   const handleSubscriptionClick = useCallback(() => {
     setIsProfileDropdownOpen(false); // Close dropdown
@@ -3114,6 +3176,11 @@ const ClientDashboard = () => {
   const ClientServiceDetailsModal = ({ show, onHide, serviceDetails }) => {
     if (!serviceDetails) return null;
 
+      const combinedDetails = {
+    ...allJobSupportFields,
+    ...serviceDetails,
+  };
+
     const isSimpleService = simplifiedServices.includes(serviceDetails.service);
 
     const renderSimpleDetails = () => (
@@ -3139,64 +3206,79 @@ const ClientDashboard = () => {
       </>
     );
 
-    const renderJobSupportDetails = () => (
-      <>
-        <h4 className="border-bottom pb-2 mb-3">Personal Information</h4>
-        <Row className="mb-3"><Col><Form.Label>First Name:</Form.Label><div className="previewValueDisplay">{serviceDetails.firstName || 'N/A'}</div></Col><Col><Form.Label>Middle Name:</Form.Label><div className="previewValueDisplay">{serviceDetails.middleName || 'N/A'}</div></Col><Col><Form.Label>Last Name:</Form.Label><div className="previewValueDisplay">{serviceDetails.lastName || 'N/A'}</div></Col></Row>
-        <Row className="mb-3"><Col><Form.Label>Date of Birth:</Form.Label><div className="previewValueDisplay">{serviceDetails.dob || 'N/A'}</div></Col><Col><Form.Label>Gender:</Form.Label><div className="previewValueDisplay">{serviceDetails.gender || 'N/A'}</div></Col><Col><Form.Label>Ethnicity:</Form.Label><div className="previewValueDisplay">{serviceDetails.ethnicity || 'N/A'}</div></Col></Row>
+ const renderJobSupportDetails = () => (
+    <>
+      <h4 className="border-bottom pb-2 mb-3">Personal Information</h4>
+      <Row className="mb-3"><Col><Form.Label>First Name:</Form.Label><div className="previewValueDisplay">{combinedDetails.firstName}</div></Col><Col><Form.Label>Middle Name:</Form.Label><div className="previewValueDisplay">{combinedDetails.middleName}</div></Col><Col><Form.Label>Last Name:</Form.Label><div className="previewValueDisplay">{combinedDetails.lastName}</div></Col></Row>
+      <Row className="mb-3"><Col><Form.Label>Date of Birth:</Form.Label><div className="previewValueDisplay">{combinedDetails.dob}</div></Col><Col><Form.Label>Gender:</Form.Label><div className="previewValueDisplay">{combinedDetails.gender}</div></Col><Col><Form.Label>Ethnicity:</Form.Label><div className="previewValueDisplay">{combinedDetails.ethnicity}</div></Col></Row>
 
-        <h4 className="border-bottom pb-2 mb-3 mt-4">Contact Information</h4>
-        <Row className="mb-3"><Col><Form.Label>Address:</Form.Label><div className="previewValueDisplay">{serviceDetails.address || 'N/A'}</div></Col><Col md={4}><Form.Label>Zip Code:</Form.Label><div className="previewValueDisplay">{serviceDetails.zipCode || 'N/A'}</div></Col></Row>
-        <Row className="mb-3"><Col><Form.Label>Country:</Form.Label><div className="previewValueDisplay">{serviceDetails.country || 'N/A'}</div></Col><Col><Form.Label>Mobile:</Form.Label><div className="previewValueDisplay">{serviceDetails.mobile || 'N/A'}</div></Col><Col><Form.Label>Email:</Form.Label><div className="previewValueDisplay">{serviceDetails.email || 'N/A'}</div></Col></Row>
+      <h4 className="border-bottom pb-2 mb-3 mt-4">Contact Information</h4>
+      <Row className="mb-3"><Col><Form.Label>Address:</Form.Label><div className="previewValueDisplay">{combinedDetails.address}</div></Col><Col><Form.Label>County:</Form.Label><div className="previewValueDisplay">{combinedDetails.county}</div></Col><Col md={4}><Form.Label>Zip Code:</Form.Label><div className="previewValueDisplay">{combinedDetails.zipCode}</div></Col></Row>
+      <Row className="mb-3"><Col><Form.Label>Country:</Form.Label><div className="previewValueDisplay">{combinedDetails.country || 'N/A'}</div></Col><Col><Form.Label>Mobile:</Form.Label><div className="previewValueDisplay">{combinedDetails.mobile}</div></Col><Col><Form.Label>Email:</Form.Label><div className="previewValueDisplay">{combinedDetails.email}</div></Col></Row>
 
-        <h4 className="border-bottom pb-2 mb-3 mt-4">Employment Information</h4>
-        <Row className="mb-3"><Col><Form.Label>Security Clearance:</Form.Label><div className="previewValueDisplay">{serviceDetails.securityClearance || 'N/A'}</div></Col>{serviceDetails.securityClearance === 'yes' && (<Col><Form.Label>Clearance Level:</Form.Label><div className="previewValueDisplay">{serviceDetails.clearanceLevel || 'N/A'}</div></Col>)}<Col><Form.Label>Willing to Relocate:</Form.Label><div className="previewValueDisplay">{serviceDetails.willingToRelocate || 'N/A'}</div></Col></Row>
-        <Row className="mb-3">
-          <Col><Form.Label>Work Preference:</Form.Label><div className="previewValueDisplay">{serviceDetails.workPreference || 'N/A'}</div></Col>
-          <Col><Form.Label>Years of Experience:</Form.Label><div className="previewValueDisplay">{serviceDetails.yearsOfExperience || 'N/A'}</div></Col>
-        </Row>
-        <Row className="mb-3">
-          <Col><Form.Label>Restricted Companies:</Form.Label><div className="previewValueDisplay">{serviceDetails.restrictedCompanies || 'N/A'}</div></Col>
-        </Row>
+      <h4 className="border-bottom pb-2 mb-3 mt-4">Employment Information</h4>
+      <Row className="mb-3"><Col><Form.Label>Security Clearance:</Form.Label><div className="previewValueDisplay">{combinedDetails.securityClearance}</div></Col>{combinedDetails.securityClearance === 'yes' && (<Col><Form.Label>Clearance Level:</Form.Label><div className="previewValueDisplay">{combinedDetails.clearanceLevel}</div></Col>)}<Col><Form.Label>Willing to Relocate:</Form.Label><div className="previewValueDisplay">{combinedDetails.willingToRelocate}</div></Col></Row>
+      <Row className="mb-3">
+        <Col><Form.Label>Work Preference:</Form.Label><div className="previewValueDisplay">{combinedDetails.workPreference}</div></Col>
+        <Col><Form.Label>Years of Experience:</Form.Label><div className="previewValueDisplay">{combinedDetails.yearsOfExperience}</div></Col>
+      </Row>
+      <Row className="mb-3">
+        <Col><Form.Label>Restricted Companies:</Form.Label><div className="previewValueDisplay">{combinedDetails.restrictedCompanies}</div></Col>
+      </Row>
 
-        <h4 className="border-bottom pb-2 mb-3 mt-4">Job Preferences</h4>
-        <Row className="mb-3"><Col><Form.Label>Jobs to Apply For:</Form.Label><div className="previewValueDisplay">{serviceDetails.jobsApplyFor || 'N/A'}</div></Col><Col><Form.Label>Technology Skills:</Form.Label><div className="previewValueDisplay">{Array.isArray(serviceDetails.technologySkills) ? serviceDetails.technologySkills.join(', ') : (serviceDetails.technologySkills || 'N/A')}</div></Col></Row>
-        <Row className="mb-3"><Col><Form.Label>Current Salary:</Form.Label><div className="previewValueDisplay">{serviceDetails.currentSalary || 'N/A'}</div></Col><Col><Form.Label>Expected Salary:</Form.Label><div className="previewValueDisplay">{serviceDetails.expectedSalary || 'N/A'}</div></Col><Col><Form.Label>Visa Status:</Form.Label><div className="previewValueDisplay">{serviceDetails.visaStatus || 'N/A'}</div></Col></Row>
+      <h4 className="border-bottom pb-2 mb-3 mt-4">Job Preferences</h4>
+      <Row className="mb-3"><Col><Form.Label>Jobs to Apply For:</Form.Label><div className="previewValueDisplay">{combinedDetails.jobsToApply}</div></Col></Row>
+      <Row className="mb-3"><Col><Form.Label>Current Salary:</Form.Label><div className="previewValueDisplay">{combinedDetails.currentSalary}</div></Col><Col><Form.Label>Expected Salary:</Form.Label><div className="previewValueDisplay">{combinedDetails.expectedSalary}</div></Col><Col><Form.Label>Visa Status:</Form.Label><div className="previewValueDisplay">{combinedDetails.visaStatus}</div></Col></Row>
 
-        <h4 className="border-bottom pb-2 mb-3 mt-4">Education</h4>
-        <Row className="mb-3"><Col><Form.Label>University Name:</Form.Label><div className="previewValueDisplay">{serviceDetails.schoolName || 'N/A'}</div></Col><Col><Form.Label>University Address:</Form.Label><div className="previewValueDisplay">{serviceDetails.schoolAddress || 'N/A'}</div></Col><Col><Form.Label>Course of Study:</Form.Label><div className="previewValueDisplay">{serviceDetails.courseOfStudy || 'N/A'}</div></Col></Row>
-        <Row className="mb-3"><Col><Form.Label>Graduation Date:</Form.Label><div className="previewValueDisplay">{serviceDetails.graduationDate || 'N/A'}</div></Col></Row>
+      <h4 className="border-bottom pb-2 mb-3 mt-4">Education</h4>
+      <Row className="mb-3"><Col><Form.Label>University Name:</Form.Label><div className="previewValueDisplay">{combinedDetails.universityName}</div></Col><Col><Form.Label>University Address:</Form.Label><div className="previewValueDisplay">{combinedDetails.universityAddress || 'N/A'}</div></Col><Col><Form.Label>Course of Study:</Form.Label><div className="previewValueDisplay">{combinedDetails.courseOfStudy}</div></Col></Row>
+      <Row className="mb-3">
+        <Col><Form.Label>Graduation From Date:</Form.Label><div className="previewValueDisplay">{combinedDetails.graduationFromDate}</div></Col>
+        <Col><Form.Label>Graduation To Date:</Form.Label><div className="previewValueDisplay">{combinedDetails.graduationToDate}</div></Col>
+        <Col><Form.Label>Notice Period:</Form.Label><div className="previewValueDisplay">{combinedDetails.noticePeriod}</div></Col>
+      </Row>
 
-        <h4 className="border-bottom pb-2 mb-3 mt-4">Current Employment</h4>
-        <Row className="mb-3"><Col><Form.Label>Current Company:</Form.Label><div className="previewValueDisplay">{serviceDetails.currentCompany || 'N/A'}</div></Col><Col><Form.Label>Current Designation:</Form.Label><div className="previewValueDisplay">{serviceDetails.currentDesignation || 'N/A'}</div></Col></Row>
-        <Row className="mb-3"><Col><Form.Label>Preferred Interview Time:</Form.Label><div className="previewValueDisplay">{serviceDetails.preferredInterviewTime || 'N/A'}</div></Col><Col><Form.Label>Earliest Joining Date:</Form.Label><div className="previewValueDisplay">{serviceDetails.earliestJoiningDate || 'N/A'}</div></Col><Col><Form.Label>Relieving Date:</Form.Label><div className="previewValueDisplay">{serviceDetails.relievingDate || 'N/A'}</div></Col></Row>
+      <h4 className="border-bottom pb-2 mb-3 mt-4">Current Employment</h4>
+      <Row className="mb-3"><Col><Form.Label>Current Company:</Form.Label><div className="previewValueDisplay">{combinedDetails.currentCompany}</div></Col><Col><Form.Label>Current Designation:</Form.Label><div className="previewValueDisplay">{combinedDetails.currentDesignation}</div></Col></Row>
+      <Row className="mb-3"><Col><Form.Label>Preferred Interview Time:</Form.Label><div className="previewValueDisplay">{combinedDetails.preferredInterviewTime}</div></Col><Col><Form.Label>Earliest Joining Date:</Form.Label><div className="previewValueDisplay">{combinedDetails.earliestJoiningDate}</div></Col><Col><Form.Label>Relieving Date:</Form.Label><div className="previewValueDisplay">{combinedDetails.relievingDate}</div></Col></Row>
 
-        <h4 className="border-bottom pb-2 mb-3 mt-4">References</h4>
-        <Row className="mb-3"><Col><Form.Label>Reference Name:</Form.Label><div className="previewValueDisplay">{serviceDetails.referenceName || 'N/A'}</div></Col><Col><Form.Label>Reference Phone:</Form.Label><div className="previewValueDisplay">{serviceDetails.referencePhone || 'N/A'}</div></Col><Col><Form.Label>Reference Address:</Form.Label><div className="previewValueDisplay">{serviceDetails.referenceAddress || 'N/A'}</div></Col></Row>
-        <Row className="mb-3"><Col><Form.Label>Reference Email:</Form.Label><div className="previewValueDisplay">{serviceDetails.referenceEmail || 'N/A'}</div></Col><Col><Form.Label>Reference Role:</Form.Label><div className="previewValueDisplay">{serviceDetails.referenceRole || 'N/A'}</div></Col></Row>
+      <h4 className="border-bottom pb-2 mb-3 mt-4">References</h4>
+      <Row className="mb-3"><Col><Form.Label>Reference Name:</Form.Label><div className="previewValueDisplay">{combinedDetails.referenceName}</div></Col><Col><Form.Label>Reference Phone:</Form.Label><div className="previewValueDisplay">{combinedDetails.referencePhone}</div></Col><Col><Form.Label>Reference Address:</Form.Label><div className="previewValueDisplay">{combinedDetails.referenceAddress}</div></Col></Row>
+      <Row className="mb-3"><Col><Form.Label>Reference Email:</Form.Label><div className="previewValueDisplay">{combinedDetails.referenceEmail}</div></Col><Col><Form.Label>Reference Role:</Form.Label><div className="previewValueDisplay">{combinedDetails.referenceRole}</div></Col></Row>
 
-        <h4 className="border-bottom pb-2 mb-3 mt-4">Job Portal Information</h4>
-        <Form.Group className="mb-3"><Form.Label>Job Portal Account Name & Credentials:</Form.Label><div className="previewTextAreaDisplay">{serviceDetails.jobPortalAccountName || 'N/A'}</div></Form.Group>
+      <h4 className="border-bottom pb-2 mb-3 mt-4">Job Portal Information</h4>
+      <Form.Group className="mb-3"><Form.Label>Account Name & Credentials:</Form.Label><div className="previewTextAreaDisplay">{combinedDetails.jobPortalAccountNameandCredentials}</div></Form.Group>
 
-        <h4 className="border-bottom pb-2 mb-3 mt-4">Uploaded Resume</h4>
-        <Form.Group className="mb-3"><Form.Label>Resume File Name:</Form.Label><div className="previewValueDisplay">{serviceDetails.resumeFileName ? <a href={serviceDetails.resumeUrl} target="_blank" rel="noopener noreferrer">{serviceDetails.resumeFileName}</a> : 'N/A'}</div></Form.Group>
-      </>
-    );
+      <h4 className="border-bottom pb-2 mb-3 mt-4">Uploaded Resume & Cover Letter</h4>
+      <Form.Group className="mb-3">
+        <Form.Label>Resume:</Form.Label>
+        <div className="previewValueDisplay">
+          {combinedDetails.resumeFileName ? <a href={combinedDetails.resumeUrl} target="_blank" rel="noopener noreferrer">{combinedDetails.resumeFileName}</a> : 'N/A'}
+        </div>
+      </Form.Group>
+      <Form.Group className="mb-3">
+        <Form.Label>Cover Letter:</Form.Label>
+        <div className="previewValueDisplay">
+          {combinedDetails.coverLetterFileName ? <a href={combinedDetails.coverLetterUrl} target="_blank" rel="noopener noreferrer">{combinedDetails.coverLetterFileName}</a> : 'N/A'}
+        </div>
+      </Form.Group>
+    </>
+  );
 
-    return (
-      <Modal show={show} onHide={onHide} centered size="lg">
-        <Modal.Header closeButton>
-          <Modal.Title>Your Profile Details for "{serviceDetails.service}"</Modal.Title>
-        </Modal.Header>
-        <Modal.Body style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-          {isSimpleService ? renderSimpleDetails() : renderJobSupportDetails()}
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={onHide}>Close</Button>
-        </Modal.Footer>
-      </Modal>
-    );
-  };
+  return (
+    <Modal show={show} onHide={onHide} centered size="lg">
+      <Modal.Header closeButton>
+        <Modal.Title>Your Profile Details for "{serviceDetails.service}"</Modal.Title>
+      </Modal.Header>
+      <Modal.Body style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+        {isSimpleService ? renderSimpleDetails() : renderJobSupportDetails()}
+      </Modal.Body>
+      <Modal.Footer>
+        <Button variant="secondary" onClick={onHide}>Close</Button>
+      </Modal.Footer>
+    </Modal>
+  );
+};
 
   const handleImageView = (url) => {
     setImageUrlToView(url);

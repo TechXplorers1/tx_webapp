@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'; // Import useRef
+import React, { useState, useEffect, useRef, useMemo } from 'react'; // Import useRef
 import { useNavigate } from 'react-router-dom';
 import { Modal, Button } from 'react-bootstrap'; // Using react-bootstrap Modal
 import { getDatabase, ref, onValue, update, push, set } from "firebase/database"; // Import Firebase functions
@@ -102,6 +102,8 @@ const ManagerWorkSheet = () => {
   // Ref for the profile dropdown to detect clicks outside
   const profileDropdownRef = useRef(null);
 
+  // Get unique employee names for the filter dropdown
+
   // NEW STATE: For Notifications Modal
   const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
 
@@ -119,6 +121,133 @@ const ManagerWorkSheet = () => {
   const [userProfile, setUserProfile] = useState({});
 
   const [displayEmployees, setDisplayEmployees] = useState([]);
+
+  const [selectedApplication, setSelectedApplication] = useState(null);
+const [isApplicationDetailModalOpen, setIsApplicationDetailModalOpen] = useState(false);
+const [isEditApplicationModalOpen, setIsEditApplicationModalOpen] = useState(false);
+const [editableApplication, setEditableApplication] = useState({});
+
+// Add these functions to handle application operations
+const openApplicationDetailModal = (application) => {
+  setSelectedApplication(application);
+  setIsApplicationDetailModalOpen(true);
+};
+
+const closeApplicationDetailModal = () => {
+  setIsApplicationDetailModalOpen(false);
+  setSelectedApplication(null);
+};
+
+const openEditApplicationModal = (application) => {
+  console.log("Original application data:", application);
+  
+  // Ensure we're passing all the necessary identifiers
+  setEditableApplication({
+    ...application,
+    clientFirebaseKey: application.clientFirebaseKey || application.clientFirebaseKey,
+    registrationKey: application.registrationKey || application.registrationKey,
+    applicationId: application.applicationId || application.id || application.key
+  });
+  
+  setIsEditApplicationModalOpen(true);
+  setIsApplicationDetailModalOpen(false);
+};
+
+const closeEditApplicationModal = () => {
+  setIsEditApplicationModalOpen(false);
+  setEditableApplication({});
+};
+
+const handleApplicationChange = (e) => {
+  const { name, value } = e.target;
+  setEditableApplication(prev => ({
+    ...prev,
+    [name]: value
+  }));
+};
+
+const handleUpdateApplication = async () => {
+  console.log("Editable application data:", editableApplication);
+  
+  // Check for all required identifiers with better error messages
+  const clientFirebaseKey = editableApplication.clientFirebaseKey;
+  const registrationKey = editableApplication.registrationKey;
+  const applicationId = editableApplication.applicationId;
+
+  if (!clientFirebaseKey) {
+    alert("Error: Missing client Firebase key.");
+    return;
+  }
+  
+  if (!registrationKey) {
+    alert("Error: Missing registration key.");
+    return;
+  }
+  
+  if (!applicationId) {
+    alert("Error: Missing application ID.");
+    return;
+  }
+
+  try {
+    const applicationRef = ref(database, 
+      `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}/jobApplications/${applicationId}`
+    );
+    
+    // Create update object without the identifiers to avoid overwriting them
+    const updateData = {...editableApplication};
+    delete updateData.clientFirebaseKey;
+    delete updateData.registrationKey;
+    delete updateData.applicationId;
+    delete updateData.id;
+    delete updateData.key;
+    
+    await update(applicationRef, updateData);
+    
+    // Update local state
+    setApplicationData(prev => prev.map(app => 
+      app.applicationId === applicationId ? {...editableApplication} : app
+    ));
+    
+    setSuccessMessage("Application updated successfully!");
+    setShowSuccessModal(true);
+    closeEditApplicationModal();
+  } catch (error) {
+    console.error("Error updating application:", error);
+    alert("Failed to update application. Please try again.");
+  }
+};
+
+const handleDeleteApplication = async () => {
+  if (!selectedApplication.clientFirebaseKey || !selectedApplication.registrationKey || !selectedApplication.applicationId) {
+    alert("Error: Missing required application identifiers.");
+    return;
+  }
+
+  if (!window.confirm("Are you sure you want to delete this application?")) {
+    return;
+  }
+
+  try {
+    const applicationRef = ref(database, 
+      `clients/${selectedApplication.clientFirebaseKey}/serviceRegistrations/${selectedApplication.registrationKey}/jobApplications/${selectedApplication.applicationId}`
+    );
+    
+    await set(applicationRef, null);
+    
+    // Update local state
+    setApplicationData(prev => prev.filter(app => 
+      app.applicationId !== selectedApplication.applicationId
+    ));
+    
+    setSuccessMessage("Application deleted successfully!");
+    setShowSuccessModal(true);
+    closeApplicationDetailModal();
+  } catch (error) {
+    console.error("Error deleting application:", error);
+    alert("Failed to delete application. Please try again.");
+  }
+};
 
     const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false);
     const [isEditEmployeeModalOpen, setIsEditEmployeeModalOpen] = useState(false);
@@ -262,6 +391,7 @@ const ManagerWorkSheet = () => {
 
 
   // NEW: useEffect to get logged-in user data from sessionStorage
+// NEW: useEffect to get logged-in user data from sessionStorage and filter data
 useEffect(() => {
     const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInEmployee'));
     const managerFirebaseKey = loggedInUserData ? loggedInUserData.firebaseKey : null;
@@ -274,91 +404,93 @@ useEffect(() => {
 
     setManagerFirebaseKey(managerFirebaseKey);
 
-        const managerRef = ref(database, `users/${managerFirebaseKey}`);
-        const unsubscribeManager = onValue(managerRef, (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                const fullName = `${data.firstName || ''} ${data.lastName || ''}`.trim();
-                const avatarLetter = fullName.charAt(0).toUpperCase();
+    const managerRef = ref(database, `users/${managerFirebaseKey}`);
+    const unsubscribeManager = onValue(managerRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            const fullName = `${data.firstName || ''} ${data.lastName || ''}`.trim();
+            const avatarLetter = fullName.charAt(0).toUpperCase();
 
-                // Set user profile state from Firebase data
-                setUserProfile({ ...data, fullName: fullName });
-                setUserName(fullName);
-                setUserAvatarLetter(avatarLetter);
-            }
-        });
+            setUserProfile({ ...data, fullName: fullName });
+            setUserName(fullName);
+            setUserAvatarLetter(avatarLetter);
+        }
+    });
 
-        const clientsRef = ref(database, 'clients');
-        const usersRef = ref(database, 'users');
+    const clientsRef = ref(database, 'clients');
+    const usersRef = ref(database, 'users');
 
-        const unsubscribeClients = onValue(clientsRef, (snapshot) => {
-            const clientsData = snapshot.val();
-            const allRegistrations = [];
-            if (clientsData) {
-                Object.keys(clientsData).forEach(clientKey => {
-                    const client = clientsData[clientKey];
-                    if (client.serviceRegistrations) {
-                        Object.keys(client.serviceRegistrations).forEach(regKey => {
-                            const registration = client.serviceRegistrations[regKey];
-                            allRegistrations.push({
-                                ...registration,
-                                clientFirebaseKey: clientKey,
-                                registrationKey: regKey,
-                                email: client.email,
-                                mobile: client.mobile,
-                                firstName: registration.firstName || client.firstName,
-                                lastName: registration.lastName || client.lastName,
-                                name: registration.name || `${registration.firstName || ''} ${registration.lastName || ''}`,
-                            });
+    const unsubscribeClients = onValue(clientsRef, (snapshot) => {
+        const clientsData = snapshot.val();
+        const allRegistrations = [];
+        if (clientsData) {
+            Object.keys(clientsData).forEach(clientKey => {
+                const client = clientsData[clientKey];
+                if (client.serviceRegistrations) {
+                    Object.keys(client.serviceRegistrations).forEach(regKey => {
+                        const registration = client.serviceRegistrations[regKey];
+                        allRegistrations.push({
+                            ...registration,
+                            clientFirebaseKey: clientKey,
+                            registrationKey: regKey,
+                            email: client.email,
+                            mobile: client.mobile,
+                            firstName: registration.firstName || client.firstName,
+                            lastName: registration.lastName || client.lastName,
+                            name: registration.name || `${registration.firstName || ''} ${registration.lastName || ''}`,
                         });
-                    }
-                });
-            }
-            
-            const clientsForManager = allRegistrations.filter(reg => 
-                reg.assignedManager === managerFirebaseKey
+                    });
+                }
+            });
+        }
+        
+        // Filter for clients assigned to the current manager
+        const clientsForManager = allRegistrations.filter(reg => 
+            reg.assignedManager === managerFirebaseKey
+        );
+
+        // Separate clients by assignment status
+        const unassignedForManager = clientsForManager.filter(reg => reg.assignmentStatus === 'pending_employee');
+        const assignedByManager = clientsForManager.filter(reg => ['pending_acceptance', 'active'].includes(reg.assignmentStatus));
+
+        setUnassignedClients(unassignedForManager);
+        setAssignedClients(assignedByManager);
+        
+        setApplicationData(assignedByManager.flatMap(clientReg => 
+            (clientReg.jobApplications || []).map(app => ({
+                ...app,
+                clientName: `${clientReg.firstName} ${clientReg.lastName}`,
+                assignedTo: clientReg.assignedTo
+            }))
+        ));
+        setInterviewData(assignedByManager.flatMap(clientReg => 
+            (clientReg.jobApplications || [])
+                .filter(app => app.status === 'Interview')
+                .map(app => ({ ...app, clientName: `${clientReg.firstName} ${clientReg.lastName}`, assignedTo: clientReg.assignedTo }))
+        ));
+        
+        setLoading(false);
+    });
+
+    const unsubscribeUsers = onValue(usersRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            const usersArray = Object.keys(data).map(key => ({ firebaseKey: key, ...data[key] }));
+            setAllEmployees(usersArray); 
+            // Filter for employees only for the assignment dropdown
+            const employeesOnly = usersArray.filter(user => 
+                user.roles && Array.isArray(user.roles) && user.roles.includes('employee')
             );
+            setEmployeesForAssignment(employeesOnly);
+        }
+    });
 
-            const unassignedForManager = clientsForManager.filter(reg => reg.assignmentStatus === 'pending_employee');
-            const assignedByManager = clientsForManager.filter(reg => ['pending_acceptance', 'active'].includes(reg.assignmentStatus));
-
-            setUnassignedClients(unassignedForManager);
-            setAssignedClients(assignedByManager);
-            
-            setApplicationData(assignedByManager.flatMap(clientReg => 
-                (clientReg.jobApplications || []).map(app => ({
-                    ...app,
-                    clientName: `${clientReg.firstName} ${clientReg.lastName}`,
-                    assignedTo: clientReg.assignedTo
-                }))
-            ));
-            setInterviewData(assignedByManager.flatMap(clientReg => 
-                (clientReg.jobApplications || [])
-                    .filter(app => app.status === 'Interview')
-                    .map(app => ({ ...app, clientName: `${clientReg.firstName} ${clientReg.lastName}`, assignedTo: clientReg.assignedTo }))
-            ));
-            
-            setLoading(false);
-        });
-
-        const unsubscribeUsers = onValue(usersRef, (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                const usersArray = Object.keys(data).map(key => ({ firebaseKey: key, ...data[key] }));
-                setAllEmployees(usersArray); 
-                const employeesOnly = usersArray.filter(user => 
-                    user.roles && Array.isArray(user.roles) && user.roles.includes('employee')
-                );
-                setEmployeesForAssignment(employeesOnly);
-            }
-        });
-
-        return () => {
-            unsubscribeManager();
-            unsubscribeClients();
-            unsubscribeUsers();
-        };
-    }, []);
+    return () => {
+        unsubscribeManager();
+        unsubscribeClients();
+        unsubscribeUsers();
+    };
+}, []);
 
  
 
@@ -393,8 +525,13 @@ useEffect(() => {
 
   // NEW STATE: For the Employee's Assigned Clients Detail Modal
   const [isEmployeeClientsModalOpen, setIsEmployeeClientsModalOpen] = useState(false);
-  const [selectedEmployeeForClients, setSelectedEmployeeForClients] = useState(null); // Changed to useState(null)
-
+const [selectedEmployeeForClients, setSelectedEmployeeForClients] = useState({
+   fullName: '',
+  role: '',
+  workEmail: '',
+  email: '',
+  assignedClients: [] // Initialize with empty array
+});
   // NEW STATE: Search query for Interviews tab
   const [interviewSearchQuery, setInterviewSearchQuery] = useState('');
   // NEW STATE: Filter for Interviews tab
@@ -491,7 +628,10 @@ useEffect(() => {
     }
   };
 
-
+  const selectedEmployeeDetails = useMemo(() => {
+    if (!selectedEmployee || !displayEmployees.length) return null;
+    return displayEmployees.find(e => e.firebaseKey === selectedEmployee);
+}, [selectedEmployee, displayEmployees]);
 
 
 
@@ -1481,10 +1621,21 @@ const handleAssignmentSubmit = async () => {
   };
 
   // NEW: Function to open Employee Clients Detail Modal
-  const openEmployeeClientsModal = (employee) => {
-    setSelectedEmployeeForClients(employee);
-    setIsEmployeeClientsModalOpen(true);
-  };
+const openEmployeeClientsModal = (employee) => {
+  // Get clients assigned to this specific employee
+  const employeeClients = assignedClients.filter(client => 
+    client.assignedTo === (employee.firebaseKey || employee.id)
+  );
+  
+  setSelectedEmployeeForClients({
+    fullName: employee.fullName || `${employee.firstName || ''} ${employee.lastName || ''}`.trim(),
+    role: employee.role || (employee.roles && employee.roles.join(', ')) || '',
+    workEmail: employee.workEmail || '',
+    email: employee.email || '',
+    assignedClients: employeeClients
+  });
+  setIsEmployeeClientsModalOpen(true);
+};
 
   // NEW: Function to close Employee Clients Detail Modal
   const closeEmployeeClientsModal = () => {
@@ -1584,6 +1735,8 @@ const filteredInterviewData = interviewData.filter(interview => {
 
   // Get unique client names for the filter dropdown - NOW ONLY FROM ASSIGNED CLIENTS
   const uniqueAssignedClientNames = [...new Set(assignedClients.map(client => client.clientName))];
+    const uniqueAssignedEmployeeNames = [...new Set(assignedClients.map(client => client.assignedTo))];
+
 
   // Determine if any filter is active for the "Applications" tab
   const isApplicationFilterActive = applicationSearchQuery !== '' || applicationFilterEmployee !== '' || applicationFilterClient !== '' || startDateFilter !== '' || endDateFilter !== '';
@@ -1910,23 +2063,23 @@ Please provide a summary no longer than 150 words.`;
 
   // --- NEW Component for the Applications Tab UI ---
 const ApplicationsTab = ({ 
-    applicationData, 
-    employees,
-    uniqueClientNames,
-    applicationSearchQuery,
-    handleApplicationSearchChange,
-    applicationFilterEmployee,
-    handleApplicationFilterEmployeeChange,
-    applicationFilterClient,
-    handleApplicationFilterClientChange,
-    filterDateRange,
-    handleDateRangeChange,
-    sortOrder,
-    setSortOrder,
-    quickFilter,
-    handleQuickFilterChange,
-    areFiltersActive,
-    handleClearFilters
+  applicationData, 
+  employees,
+  uniqueClientNames,
+  applicationSearchQuery,
+  handleApplicationSearchChange,
+  applicationFilterEmployee,
+  handleApplicationFilterEmployeeChange,
+  applicationFilterClient,
+  handleApplicationFilterClientChange,
+  filterDateRange,
+  handleDateRangeChange,
+  sortOrder,
+  setSortOrder,
+  quickFilter,
+  handleQuickFilterChange,
+  areFiltersActive,
+  handleClearFilters
   }) => {
   const [expandedClient, setExpandedClient] = useState(null);
 
@@ -1975,12 +2128,13 @@ const ApplicationsTab = ({
           />
         </div>
         <div className="filter-dropdown">
-          <select value={applicationFilterEmployee} onChange={handleApplicationFilterEmployeeChange}>
-            <option value="">Filter by Employee</option>
-            {employees.map(emp => (
-              <option key={emp.firebaseKey} value={emp.firebaseKey}>{emp.fullName}</option>
-            ))}
-          </select>
+         <select value={applicationFilterEmployee} onChange={handleApplicationFilterEmployeeChange}>
+  <option value="">Filter by Employee</option>
+  {uniqueAssignedEmployeeNames.map(employeeKey => {
+    const employee = displayEmployees.find(emp => emp.firebaseKey === employeeKey);
+    return employee ? <option key={employee.firebaseKey} value={employee.firebaseKey}>{employee.fullName}</option> : null;
+  })}
+</select>
           <i className="fas fa-chevron-down"></i>
         </div>
         <div className="filter-dropdown">
@@ -2032,7 +2186,7 @@ const ApplicationsTab = ({
                             <thead>
                               <tr>
                                 <th>Company</th>
-                                <th>Platform</th>
+                                <th>Job Boards</th>
                                 <th>Job ID</th>
                                 <th>Link</th>
                                 <th>Applied Date</th>
@@ -2042,10 +2196,38 @@ const ApplicationsTab = ({
                               {data.apps.map(app => (
                                 <tr key={app.id}>
                                   <td>{app.company}</td>
-                                  <td>{app.platform}</td>
+                                  <td>{app.jobBoards}</td>
                                   <td>{app.jobId}</td>
                                   <td><a href={app.jobUrl} target="_blank" rel="noopener noreferrer">Link</a></td>
                                   <td>{formatDateToDDMMYYYY(app.appliedDate)}</td>
+                                  <td>
+        <div className="action-buttons">
+          <button 
+            className="action-button" 
+            onClick={() => openApplicationDetailModal(app)}
+            title="View Details"
+          >
+            <i className="fas fa-eye"></i>
+          </button>
+          <button 
+            className="action-button" 
+            onClick={() => openEditApplicationModal(app)}
+            title="Edit Application"
+          >
+            <i className="fas fa-edit"></i>
+          </button>
+          <button 
+            className="action-button" 
+            onClick={() => {
+              setSelectedApplication(app);
+              handleDeleteApplication();
+            }}
+            title="Delete Application"
+          >
+            <i className="fas fa-trash"></i>
+          </button>
+        </div>
+      </td>
                                 </tr>
                               ))}
                             </tbody>
@@ -4984,8 +5166,8 @@ const ApplicationsTab = ({
                     <div className="employee-card-details">
                         <div className="success-rate">Success Rate: <span className="success-rate-value">{employee.successRate}%</span></div>
                         <button className="view-employee-details-button" onClick={() => openEmployeeClientsModal(employee)}>
-                            <i className="fas fa-eye"></i>
-                        </button>
+  <i className="fas fa-eye"></i>
+</button>
                     </div>
                 </div>
             ))}
@@ -5259,93 +5441,93 @@ const ApplicationsTab = ({
             </div>
 
             {/* MODIFIED: Replaced the <select> with a clickable <div> */}
-            <div className="form-row" style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
-              <label style={{ width: '200px', fontWeight: '500' }}>Select Employee :</label>
-              <div style={{ flex: 1 }}>
-              <div className="pseudo-input" onClick={() => setIsEmployeeSelectModalOpen(true)}>
-                {selectedEmployee
-                  ? employeesForAssignment.find(e => e.firebaseKey === parseInt(selectedEmployee))?.fullName
-                  : "Click to choose an employee..."
-                }
-              </div>
-              </div>
-            </div>
+           <div className="form-row" style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
+                    <label style={{ width: '200px', fontWeight: '500' }}>Select Employee :</label>
+                    <div style={{ flex: 1 }}>
+                        {/* The pseudo-input correctly opens the employee selection modal */}
+                        <div className="pseudo-input" onClick={() => setIsEmployeeSelectModalOpen(true)}>
+                            {selectedEmployeeDetails
+                                ? selectedEmployeeDetails.fullName
+                                : "Click to choose an employee..."
+                            }
+                        </div>
+                    </div>
+                </div>
 
             {/* The confirmation box still works perfectly! */}
-            {selectedEmployee && (() => {
-              const employeeDetails = employeesForAssignment.find(e => e.firebaseKey === selectedEmployee);
-              if (!employeeDetails) return null;
-
-              return (
-                <div className="selected-employee-details">
-                  <h4>Selected Employee Details</h4>
-                  <p><strong>Name:</strong> {`${employeeDetails.firstName} ${employeeDetails.lastName}`}</p>
-                  <p><strong>Role:</strong> {employeeDetails.roles}</p>
-                  <p><strong>Current Workload:</strong> {employeeDetails.assignedClients} assigned clients</p>
-                </div>
-              );
-            })()}
+              {selectedEmployeeDetails && (
+                    <div className="selected-employee-details">
+                        <h4>Selected Employee Details</h4>
+                        <p><strong>Name:</strong> {selectedEmployeeDetails.fullName}</p>
+                        <p><strong>Role:</strong> {selectedEmployeeDetails.role || (selectedEmployeeDetails.roles && selectedEmployeeDetails.roles.join(', '))}</p>
+                        {/* This line is the key change to show the correct, updated count */}
+                        <p><strong>Current Workload:</strong> {selectedEmployeeDetails.assignedClients} assigned clients</p>
+                    </div>
+                )}
 
             {/* --- The rest of the form remains the same --- */}
             <div className="form-row" style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
-              <label style={{ width: '200px', fontWeight: '500' }}>Priority Level :</label>
-              <div style={{ flex: 1 }}>
-              <select  className="pseudo-input" id="priorityLevel" value={assignmentPriority} onChange={(e) => setAssignmentPriority(e.target.value)}> 
-                <option value="high">High Priority</option>
-                <option value="medium">Medium Priority</option>
-                <option value="low">Low Priority</option>
-              </select>
-              </div>
+                    <label style={{ width: '200px', fontWeight: '500' }}>Priority Level :</label>
+                    <div style={{ flex: 1 }}>
+                        <select className="pseudo-input" id="priorityLevel" value={assignmentPriority} onChange={(e) => setAssignmentPriority(e.target.value)}>
+                            <option value="high">High Priority</option>
+                            <option value="medium">Medium Priority</option>
+                            <option value="low">Low Priority</option>
+                        </select>
+                    </div>
+                </div>
+            <div className="form-row" style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
+                    <label style={{ width: '200px', fontWeight: '500' }}>Assignment Notes :</label>
+                    <div style={{ flex: 1 }}>
+                        <textarea className="pseudo-input" id="assignmentNotes" placeholder="Any specific instructions or requirements..." value={assignmentNotes} onChange={(e) => setAssignmentNotes(e.target.value)}></textarea>
+                    </div>
+                </div>
+                <div style={{ flex: 1 }}>
+                    <div className="assign-form-actions">
+                        <button className="assign-form-button cancel" onClick={closeAssignClientModal}>Cancel</button>
+                        <button className="assign-form-button assign" onClick={handleAssignmentSubmit}>Confirm Assignment</button>
+                    </div>
+                </div>
             </div>
-             <div className="form-row" style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
-              <label style={{ width: '200px', fontWeight: '500' }}>Assignement Notes :</label>
-              <div style={{ flex: 1 }}>
-              <textarea className="pseudo-input" id="assignmentNotes" placeholder="Any specific instructions or requirements..." value={assignmentNotes} onChange={(e) => setAssignmentNotes(e.target.value)}></textarea>
-            </div>
-            <div style={{ flex: 1 }}>
-            <div className="assign-form-actions">
-              <button className="assign-form-button cancel" onClick={closeAssignClientModal}>Cancel</button>
-              <button className="assign-form-button assign" onClick={handleAssignmentSubmit}>Confirm Assignment</button>
-            </div>
-            </div>
-            </div>
-          </div>
         </div>
-      )}
+    )}
 
       {/* NEW: Modal Popup for Selecting an Employee */}
-      {isEmployeeSelectModalOpen && (
+  {isEmployeeSelectModalOpen && (
         <div className="modal-overlay open">
-          <div className="modal-content" style={{ maxWidth: '500px' }}>
-            <div className="modal-header">
-              <h3 className="modal-title">Select an Employee</h3>
-              <button className="modal-close-button" onClick={() => setIsEmployeeSelectModalOpen(false)}>
-                <i className="fas fa-times"></i>
-              </button>
-            </div>
-            <div className="employee-select-list">
-              {employeesForAssignment.map(employee => (
-                <div
-                  key={employee.firebaseKey}
-                  className="employee-select-item"
-                  onClick={() => {
-                    setSelectedEmployee(employee.firebaseKey); // Set the selected employee's ID
-                    setIsEmployeeSelectModalOpen(false); // Close this modal
-                  }}
-                >
-                  <div className="employee-select-info">
-                    <strong>{`${employee.firstName} ${employee.lastName}`}</strong>
-                    <span>{employee.role || (employee.roles && employee.roles.join(', '))}</span>
-                  </div>
-                  <div className="clients-count-badge">
-                    {displayEmployees.find(e => e.firebaseKey === employee.firebaseKey)?.assignedClients || 0} clients
-                  </div>
+            <div className="modal-content" style={{ maxWidth: '500px' }}>
+                <div className="modal-header">
+                    <h3 className="modal-title">Select an Employee</h3>
+                    <button className="modal-close-button" onClick={() => setIsEmployeeSelectModalOpen(false)}>
+                        <i className="fas fa-times"></i>
+                    </button>
                 </div>
-              ))}
+                <div className="employee-select-list">
+                    {employeesForAssignment.map(employee => {
+                        const employeeWithCount = displayEmployees.find(e => e.firebaseKey === employee.firebaseKey);
+                        return (
+                            <div
+                                key={employee.firebaseKey}
+                                className="employee-select-item"
+                                onClick={() => {
+                                    setSelectedEmployee(employee.firebaseKey);
+                                    setIsEmployeeSelectModalOpen(false);
+                                }}
+                            >
+                                <div className="employee-select-info">
+                                    <strong>{`${employee.firstName} ${employee.lastName}`}</strong>
+                                    <span>{employee.role || (employee.roles && employee.roles.join(', '))}</span>
+                                </div>
+                                <div className="clients-count-badge">
+                                    {employeeWithCount?.assignedClients || 0} clients
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
-          </div>
         </div>
-      )}
+    )}
 
       {/* Total Clients Modal */}
       {isTotalClientsModalOpen && (
@@ -5447,60 +5629,98 @@ const ApplicationsTab = ({
       )}
 
       {/* NEW: Employee Clients Detail Modal */}
-      {isEmployeeClientsModalOpen && selectedEmployeeForClients && (
+{isEmployeeClientsModalOpen && selectedEmployeeForClients && (
   <div className="modal-overlay open">
     <div className="employee-clients-modal-content">
       <div className="employee-clients-modal-header">
         <h3 className="employee-clients-modal-title">
-          Clients Assigned to {selectedEmployeeForClients.fullName}
+          Clients Assigned to {selectedEmployeeForClients.fullName || 'Employee'}
         </h3>
         <button className="modal-close-button" onClick={closeEmployeeClientsModal}>
           <i className="fas fa-times"></i>
         </button>
       </div>
+      
+      <div className="employee-info-section" style={{ marginBottom: '20px', padding: '15px', backgroundColor: 'var(--card-bg)', borderRadius: '8px' }}>
+        <h4>Employee Information</h4>
+        <p><strong>Name:</strong> {selectedEmployeeForClients.fullName || 'N/A'}</p>
+        <p><strong>Role:</strong> {selectedEmployeeForClients.role || (selectedEmployeeForClients.roles && selectedEmployeeForClients.roles.join(', ')) || 'N/A'}</p>
+        <p><strong>Email:</strong> {selectedEmployeeForClients.workEmail || selectedEmployeeForClients.email || 'N/A'}</p>
+        <p><strong>Total Assigned Clients:</strong> {selectedEmployeeForClients.assignedClients ? selectedEmployeeForClients.assignedClients.length : 0}</p>
+      </div>
+
       <div className="employee-clients-list">
-        {assignedClients
-          // FIX: Change the filter condition to use firebaseKey for accurate filtering
-          .filter(client => client.assignedTo === selectedEmployeeForClients.firebaseKey)
-          .map(client => (
-            <div key={client.firebaseKey} className="employee-client-card">
-              <div className="employee-client-card-header">
-                <span className="employee-client-name">{client.clientName}</span>
-                <span className={`modal-client-priority-badge ${client.priority}`}>
-                  {(client.priority || '').charAt(0).toUpperCase() + (client.priority || '').slice(1)}
-                </span>
+        {selectedEmployeeForClients.assignedClients && selectedEmployeeForClients.assignedClients.length > 0 ? (
+          selectedEmployeeForClients.assignedClients.map(client => {
+            const clientName = client.name || `${client.firstName || ''} ${client.lastName || ''}`.trim() || 'Unnamed Client';
+            const priority = client.priority || 'medium';
+            const position = client.position || client.jobsToApply || 'Position not specified';
+            const company = client.company ? ` at ${client.company}` : '';
+            const salary = client.salary || client.expectedSalary || 'Salary not specified';
+            const location = client.location || 'Location not specified';
+            const assignedDate = client.assignedDate ? formatDateToDDMMYYYY(client.assignedDate) : 'Date not specified';
+            const status = client.status ? client.status.charAt(0).toUpperCase() + client.status.slice(1) : 'Not Specified';
+
+            return (
+              <div key={client.registrationKey || client.id || Math.random()} className="employee-client-card">
+                <div className="employee-client-card-header">
+                  <span className="employee-client-name">{clientName}</span>
+                  <span className={`modal-client-priority-badge ${priority}`}>
+  {priority.charAt(0).toUpperCase() + priority.slice(1)} Priority
+</span>
+                </div>
+                
+                <div className="employee-client-position">
+                  {position}{company}
+                </div>
+                
+                <div className="employee-client-details-row">
+                  <span className="employee-client-details-item">
+                    <i className="fas fa-money-bill-wave"></i> {salary}
+                  </span>
+                  <span className="employee-client-details-item">
+                    <i className="fas fa-map-marker-alt"></i> {location}
+                  </span>
+                  <span className="employee-client-details-item">
+                    <i className="fas fa-calendar-alt"></i> Assigned: {assignedDate}
+                  </span>
+                  <span className="employee-client-details-item">
+                    <i className="fas fa-info-circle"></i> Status: {status}
+                  </span>
+                </div>
+                
+                {client.technologySkills && (
+                  <div className="employee-client-skills">
+                    <strong>Skills:</strong> 
+                    <div className="modal-client-skills">
+                      {Array.isArray(client.technologySkills) ? (
+                        client.technologySkills.map((skill, index) => (
+                          <span key={index} className="modal-client-skill-tag">{skill}</span>
+                        ))
+                      ) : (
+                        <span className="modal-client-skill-tag">{client.technologySkills}</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                <div className="modal-client-actions" style={{ justifyContent: 'flex-start', marginTop: '15px' }}>
+                  <button className="modal-assign-button" onClick={() => openReassignClientModal(client)}>
+                    <i className="fas fa-exchange-alt"></i> Reassign
+                  </button>
+                  <button className="modal-view-profile-button" onClick={() => openEditClientModal(client)}>
+                    <i className="fas fa-eye"></i> View Full Profile
+                  </button>
+                </div>
               </div>
-              <div className="employee-client-position">
-                {client.position} at {client.company}
-              </div>
-              <div className="employee-client-details-row">
-                <span className="employee-client-details-item">
-                  <i className="fas fa-money-bill-wave"></i> {client.salary}
-                </span>
-                <span className="employee-client-details-item">
-                  <i className="fas fa-map-marker-alt"></i> {client.location}
-                </span>
-                <span className="employee-client-details-item">
-                  <i className="fas fa-calendar-alt"></i> Assigned: {formatDateToDDMMYYYY(client.assignedDate)}
-                </span>
-                <span className="employee-client-details-item">
-                  <i className="fas fa-info-circle"></i> Status: {client.status.charAt(0).toUpperCase() + client.status.slice(1)}
-                </span>
-              </div>
-              <div className="modal-client-actions" style={{ justifyContent: 'flex-start' }}>
-                <button className="modal-assign-button" onClick={() => openReassignClientModal(client)}>
-                  <i className="fas fa-exchange-alt"></i> Change Employee
-                </button>
-                <button className="modal-view-profile-button" onClick={() => openEditClientModal(client)}>
-                  <i className="fas fa-eye"></i> View Profile
-                </button>
-              </div>
-            </div>
-          ))}
-        {assignedClients.filter(client => client.assignedTo === selectedEmployeeForClients.firebaseKey).length === 0 && (
-          <p style={{ textAlign: 'center', color: 'var(--text-color)' }}>
-            No clients currently assigned to {selectedEmployeeForClients.fullName}.
-          </p>
+            );
+          })
+        ) : (
+          <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-color)' }}>
+            <i className="fas fa-users" style={{ fontSize: '48px', opacity: 0.3, marginBottom: '15px' }}></i>
+            <h4>No Clients Assigned</h4>
+            <p>{selectedEmployeeForClients.fullName || 'This employee'} doesn't have any clients assigned yet.</p>
+          </div>
         )}
       </div>
     </div>
@@ -5767,8 +5987,8 @@ const ApplicationsTab = ({
                 </div>
                 {/* NEW: Platform, Job ID, Applied Date for editing */}
                 <div className="assign-form-group">
-                  <label htmlFor="platform">Platform</label>
-                  <input type="text" id="platform" name="platform" value={clientToEdit.platform || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
+                  <label htmlFor="jobBoards">Job Boards</label>
+                  <input type="text" id="jobBoards" name="jobBoards" value={clientToEdit.jobBoards || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
                 <div className="assign-form-group">
                   <label htmlFor="jobId">Job ID</label>
@@ -6425,6 +6645,100 @@ const ApplicationsTab = ({
           </div>
         </div>
       )}
+
+      {isApplicationDetailModalOpen && selectedApplication && (
+  <Modal show={isApplicationDetailModalOpen} onHide={closeApplicationDetailModal} size="lg" centered>
+    <Modal.Header closeButton>
+      <Modal.Title>Application Details</Modal.Title>
+    </Modal.Header>
+    <Modal.Body>
+      <div className="modal-view-details-grid">
+        <p className="modal-view-detail-item"><strong>Client Name:</strong> {selectedApplication.clientName}</p>
+        <p className="modal-view-detail-item"><strong>Employee:</strong> {selectedApplication.assignedTo}</p>
+        <p className="modal-view-detail-item"><strong>Job Title:</strong> {selectedApplication.jobTitle}</p>
+        <p className="modal-view-detail-item"><strong>Company:</strong> {selectedApplication.company}</p>
+        <p className="modal-view-detail-item"><strong>Job ID:</strong> {selectedApplication.jobId}</p>
+        <p className="modal-view-detail-item"><strong>Job Boards:</strong> {selectedApplication.jobBoards}</p>
+        <p className="modal-view-detail-item"><strong>Job URL:</strong> <a href={selectedApplication.jobUrl} target="_blank" rel="noopener noreferrer">{selectedApplication.jobUrl}</a></p>
+        <p className="modal-view-detail-item"><strong>Applied Date:</strong> {formatDateToDDMMYYYY(selectedApplication.appliedDate)}</p>
+        <p className="modal-view-detail-item"><strong>Status:</strong> {selectedApplication.status}</p>
+        {selectedApplication.status === 'Interview' && (
+          <>
+            <p className="modal-view-detail-item"><strong>Round:</strong> {selectedApplication.round}</p>
+            <p className="modal-view-detail-item"><strong>Interview Date:</strong> {formatDateToDDMMYYYY(selectedApplication.interviewDate)}</p>
+            <p className="modal-view-detail-item"><strong>Recruiter Mail ID:</strong> {selectedApplication.recruiterMail}</p>
+          </>
+        )}
+        <p className="modal-view-detail-item" style={{ gridColumn: '1 / -1' }}><strong>Notes:</strong> {selectedApplication.notes || 'N/A'}</p>
+      </div>
+    </Modal.Body>
+    <Modal.Footer>
+      <Button variant="secondary" onClick={closeApplicationDetailModal}>Close</Button>
+    </Modal.Footer>
+  </Modal>
+)}
+
+
+{isEditApplicationModalOpen && editableApplication && (
+  <Modal show={isEditApplicationModalOpen} onHide={closeEditApplicationModal} size="lg" centered>
+    <Modal.Header closeButton>
+      <Modal.Title>Edit Application</Modal.Title>
+    </Modal.Header>
+    <Modal.Body>
+      <div className="modal-form">
+        <div className="form-group">
+          <label>Job Title</label>
+          <input type="text" name="jobTitle" value={editableApplication.jobTitle} onChange={handleApplicationChange} />
+        </div>
+        <div className="form-group">
+          <label>Company</label>
+          <input type="text" name="company" value={editableApplication.company} onChange={handleApplicationChange} />
+        </div>
+        <div className="form-group">
+          <label>Job Boards</label>
+          <input type="text" name="jobBoards" value={editableApplication.jobBoards} onChange={handleApplicationChange} />
+        </div>
+        <div className="form-group">
+          <label>Job URL</label>
+          <input type="url" name="jobUrl" value={editableApplication.jobUrl} onChange={handleApplicationChange} />
+        </div>
+        <div className="form-group">
+          <label>Status</label>
+          <select name="status" value={editableApplication.status} onChange={handleApplicationChange}>
+            <option value="Applied">Applied</option>
+            <option value="Interview">Interview</option>
+            <option value="Rejected">Rejected</option>
+            <option value="Offered">Offered</option>
+          </select>
+        </div>
+        {editableApplication.status === 'Interview' && (
+          <>
+            <div className="form-group">
+              <label>Round</label>
+              <input type="text" name="round" value={editableApplication.round} onChange={handleApplicationChange} />
+            </div>
+            <div className="form-group">
+              <label>Interview Date</label>
+              <input type="date" name="interviewDate" value={editableApplication.interviewDate} onChange={handleApplicationChange} />
+            </div>
+            <div className="form-group">
+              <label>Recruiter Mail ID</label>
+              <input type="email" name="recruiterMail" value={editableApplication.recruiterMail} onChange={handleApplicationChange} />
+            </div>
+          </>
+        )}
+        <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+          <label>Notes</label>
+          <textarea name="notes" value={editableApplication.notes} onChange={handleApplicationChange}></textarea>
+        </div>
+      </div>
+    </Modal.Body>
+    <Modal.Footer>
+      <Button variant="secondary" onClick={closeEditApplicationModal}>Cancel</Button>
+      <Button variant="primary" onClick={handleUpdateApplication}>Save Changes</Button>
+    </Modal.Footer>
+  </Modal>
+)}
 
       {/* NEW: Notifications Modal */}
       {isNotificationsModalOpen && (
