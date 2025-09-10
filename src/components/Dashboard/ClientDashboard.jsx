@@ -196,8 +196,6 @@ const ClientHeader = ({
 }) => {
 
   const [isServicesDropdownOpen, setIsServicesDropdownOpen] = useState(false);
-      const toggleInterviewsModal = () => setShowInterviewsModal(!showInterviewsModal);
-
   const servicesMenuRef = useRef(null);
 
   // Effect to close profile dropdown when clicking outside
@@ -1881,47 +1879,6 @@ const CoverLetters = ({ files }) => {
 const Interviews = ({ files }) => { // onImageView is no longer needed here
   return (
     <div style={{ display: "flex", flexDirection: "row", gap: "20px", flexWrap: 'wrap', marginTop: '20px', justifyContent: 'center' }}>
-      <div
-                    onClick={toggleInterviewsModal}
-                    className="interviews-card"
-                  >
-                    <div style={{
-                      position: 'absolute',
-                      bottom: '-20px',
-                      right: '-20px',
-                      width: '120px',
-                      height: '120px',
-                      background: 'radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%)',
-                      zIndex: 1
-                    }}></div>
-                    <div style={{
-                      position: 'absolute',
-                      top: '-30px',
-                      left: '-30px',
-                      width: '100px',
-                      height: '100px',
-                      background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)',
-                      zIndex: 1
-                    }}></div>
-                    <div style={{ position: 'relative', zIndex: 2 }}>
-                      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" style={{ marginBottom: '16px' }}>
-                        <path d="M8 7V3M16 7V3M7 11H17M5 21H19C20.1046 21 21 20.1046 21 19V7C21 5.89543 20.1046 5 19 5H5C3.89543 5 3 5.89543 3 7V19C3 20.1046 3.89543 21 5 21Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                      <div style={{ fontSize: '1.25rem', letterSpacing: '0.5px' }}>
-                        INTERVIEWS SCHEDULED
-                      </div>
-                      <div style={{
-                        fontSize: '0.875rem',
-                        opacity: '0.9',
-                        marginTop: '8px',
-                        fontWeight: '400'
-                      }}>
-                        {scheduledInterviews.length} upcoming
-                      </div>
-                    </div>
-                  </div>
-
-
       {files.length > 0 ? files.map(file => (
         <a
           key={file.id || file.name}
@@ -2199,7 +2156,6 @@ const ClientDashboard = () => {
   const [allFiles, setAllFiles] = useState([]);
 
 
-
   // Initialize activeTab from localStorage, default to "Dashboard" if not found
   const [activeTab, setActiveTab] = useState(() => {
     const savedTab = localStorage.getItem('activeClientDashboardTab');
@@ -2409,6 +2365,7 @@ const ClientDashboard = () => {
   };
 
   const toggleMenu = () => setMenuOpen(!menuOpen); // This function is now effectively unused for the UI
+  const toggleInterviewsModal = () => setShowInterviewsModal(!showInterviewsModal);
   const toggleResumeModal = () => setShowResumeModal(!showResumeModal);
   const togglePaymentModal = () => setShowPaymentModal(!showPaymentModal);
   const toggleSubscriptionDetailsModal = () => setShowSubscriptionDetailsModal(!showSubscriptionDetailsModal);
@@ -2511,7 +2468,8 @@ const handleClientProfileClick = useCallback(() => {
 
   // ClientDashboard.jsx
 
-  useEffect(() => {
+// In ClientDashboard.jsx, replace the useEffect hook that fetches client data
+useEffect(() => {
     const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInEmployee'));
     // Ensure you are logged in as a client and have a firebaseKey
     if (!loggedInUserData || !loggedInUserData.firebaseKey) return;
@@ -2520,65 +2478,76 @@ const handleClientProfileClick = useCallback(() => {
     const clientRef = ref(database, `clients/${loggedInUserData.firebaseKey}`);
 
     const unsubscribe = onValue(clientRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        setClientData(data);
+        const data = snapshot.val();
+        if (data) {
+            setClientData(data);
 
-        const registrations = data.serviceRegistrations ? Object.values(data.serviceRegistrations) : [];
-        
-      const combinedFiles = registrations
-        .flatMap(reg => reg.jobApplications || [])
-        .flatMap(app => app.attachments || []);
+            const registrations = data.serviceRegistrations ? Object.values(data.serviceRegistrations) : [];
 
-        setAllFiles(combinedFiles);
+            // 1. Get files from the client's main 'files' node
+            const generalFiles = registrations.flatMap(reg => reg.files || []);
 
+            // 2. Get attachment files from within each job application
+            const applicationAttachments = registrations
+                .flatMap(reg => reg.jobApplications || [])
+                .flatMap(app => app.attachments || []);
 
-        // 2. Combine all job applications from all registrations into a single list.
-        const allApplications = registrations.flatMap(reg => reg.jobApplications || []);
+            // 3. Combine and deduplicate the file lists.
+            // Use a Map to ensure each file (identified by its downloadUrl) is only present once.
+            const allFilesMap = new Map();
 
-        // 3. Process the combined list for the dashboard.
-        const interviews = allApplications.filter(app => app.status === 'Interview');
-        setScheduledInterviews(interviews);
+            [...generalFiles, ...applicationAttachments].forEach(file => {
+                // Use a unique property like downloadUrl as the key for deduplication
+                if (file.downloadUrl) {
+                    allFilesMap.set(file.downloadUrl, file);
+                }
+            });
 
-        // This logic groups applications by date for the worksheet view
-        const groupedApplications = allApplications.reduce((acc, app) => {
-          const dateKey = formatDate(app.appliedDate);
-          if (!acc[dateKey]) {
-            acc[dateKey] = [];
-          }
-          // Also, format the dateAdded property inside the object to be consistent
-          acc[dateKey].push({
-            id: app.id,
-            jobId: app.jobId,
-            website: app.jobBoards,
-            position: app.jobTitle,
-            company: app.company,
-            link: app.jobUrl,
-            jobType: app.jobType || 'N/A', 
-            dateAdded: formatDate(app.appliedDate), // Format this property too
-            jobDescription: app.notes,
-            status: app.status,
-            role: app.role,
-          });
-          return acc;
-        }, {});
-        setApplicationsData(groupedApplications);
+            // 4. Convert the Map values back to an array and set the state
+            const combinedFiles = Array.from(allFilesMap.values());
+            setAllFiles(combinedFiles);
 
-        // --- FIX END ---
+            // 5. This logic is correct and doesn't need to be changed
+            const allApplications = registrations.flatMap(reg => reg.jobApplications || []);
+            const interviews = allApplications.filter(app => app.status === 'Interview');
+            setScheduledInterviews(interviews);
 
-        // Process service registrations to categorize them (this part is correct)
-        const registeredServiceNames = registrations.map(reg => reg.service);
+            // This logic groups applications by date for the worksheet view
+            const groupedApplications = allApplications.reduce((acc, app) => {
+                const dateKey = formatDate(app.appliedDate);
+                if (!acc[dateKey]) {
+                    acc[dateKey] = [];
+                }
+                acc[dateKey].push({
+                    id: app.id,
+                    jobId: app.jobId,
+                    website: app.jobBoards,
+                    position: app.jobTitle,
+                    company: app.company,
+                    link: app.jobUrl,
+                    jobType: app.jobType || 'N/A',
+                    dateAdded: formatDate(app.appliedDate),
+                    jobDescription: app.notes,
+                    status: app.status,
+                    role: app.role,
+                });
+                return acc;
+            }, {});
+            setApplicationsData(groupedApplications);
 
-        const active = allServices.filter(service => registeredServiceNames.includes(service.title));
-        const inactive = allServices.filter(service => !registeredServiceNames.includes(service.title));
+            // Process service registrations to categorize them
+            const registeredServiceNames = registrations.map(reg => reg.service);
 
-        setActiveServices(active);
-        setInactiveServices(inactive);
-      }
+            const active = allServices.filter(service => registeredServiceNames.includes(service.title));
+            const inactive = allServices.filter(service => !registeredServiceNames.includes(service.title));
+
+            setActiveServices(active);
+            setInactiveServices(inactive);
+        }
     });
 
     return () => unsubscribe();
-  }, []);
+}, []);
 
 
   const handleActiveServiceClick = (service) => {
@@ -5480,7 +5449,45 @@ html.dark-mode .notify-success-message {
                 </section>
 
                 <div className="cards-section">
-                  
+                  <div
+                    onClick={toggleInterviewsModal}
+                    className="interviews-card"
+                  >
+                    <div style={{
+                      position: 'absolute',
+                      bottom: '-20px',
+                      right: '-20px',
+                      width: '120px',
+                      height: '120px',
+                      background: 'radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%)',
+                      zIndex: 1
+                    }}></div>
+                    <div style={{
+                      position: 'absolute',
+                      top: '-30px',
+                      left: '-30px',
+                      width: '100px',
+                      height: '100px',
+                      background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)',
+                      zIndex: 1
+                    }}></div>
+                    <div style={{ position: 'relative', zIndex: 2 }}>
+                      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" style={{ marginBottom: '16px' }}>
+                        <path d="M8 7V3M16 7V3M7 11H17M5 21H19C20.1046 21 21 20.1046 21 19V7C21 5.89543 20.1046 5 19 5H5C3.89543 5 3 5.89543 3 7V19C3 20.1046 3.89543 21 5 21Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      <div style={{ fontSize: '1.25rem', letterSpacing: '0.5px' }}>
+                        INTERVIEWS SCHEDULED
+                      </div>
+                      <div style={{
+                        fontSize: '0.875rem',
+                        opacity: '0.9',
+                        marginTop: '8px',
+                        fontWeight: '400'
+                      }}>
+                        {scheduledInterviews.length} upcoming
+                      </div>
+                    </div>
+                  </div>
 
                   <div
                     onClick={toggleResumeModal}
