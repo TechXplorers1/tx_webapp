@@ -112,7 +112,7 @@ const JobSupportContactForm = () => {
 
     // Validation for Step 1
      if (step === 1) {
-        const mandatoryFields = ['firstName', 'lastName'];
+        const mandatoryFields = ['firstName', 'lastName', 'dob', 'gender', 'email', 'mobile', 'ethnicity', 'county', 'address', 'zipCode'];
         mandatoryFields.forEach(field => {
             if (!formData[field]) {
                 errors[field] = 'This field is required.';
@@ -152,7 +152,7 @@ const JobSupportContactForm = () => {
 
     // Validation for Step 2
   if (step === 2) {
-        const mandatoryFields = [];
+        const mandatoryFields = ['securityClearance', 'willingToRelocate', 'workPreference', 'yearsOfExperience', 'jobsToApply', 'currentSalary', 'expectedSalary', 'visaStatus'];
         mandatoryFields.forEach(field => {
             if (!formData[field]) {
                 errors[field] = 'This field is required.';
@@ -171,7 +171,7 @@ const JobSupportContactForm = () => {
 
     // NEW: Validation for Step 3
     if (step === 3) {
-        const mandatoryFields = [];
+        const mandatoryFields = ['universityName', 'universityAddress', 'courseOfStudy', 'graduationFromDate', 'graduationToDate', 'noticePeriod'];
         mandatoryFields.forEach(field => {
             if (!formData[field]) {
                 errors[field] = 'This field is required.';
