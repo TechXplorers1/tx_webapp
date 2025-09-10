@@ -5261,11 +5261,25 @@ const ApplicationsTab = ({
                   {/* REMOVED: <th>ACTIONS</th> */}
                 </tr></thead>
                 <tbody>
-                  {filteredInterviewData.map((interview) => (
+                  {filteredInterviewData.map((interview) => {
+        // FIX: Find the assigned employee object using the 'assignedTo' key
+        const assignedEmployee = allEmployees.find(
+          (emp) => emp.firebaseKey === interview.assignedTo
+        );
+
+        // FIX: Safely get the employee's name and initials, providing a fallback
+        const employeeName = assignedEmployee
+          ? `${assignedEmployee.firstName} ${assignedEmployee.lastName}`
+          : 'N/A';
+        const employeeInitials = assignedEmployee
+          ? getInitials(employeeName)
+          : '??';
+
+        return (
                     <tr key={interview.id}>
                       <td className="employee-cell">
-                        <div className="employee-avatar">{interview.employeeAvatar}</div>
-                        {`${interview.firstName} ${interview.lastName}`}
+                        <div className="employee-avatar">{interview.employeeInitials}</div>
+                        {employeeName}
                       </td>
                       <td>{interview.clientName}</td>
                       <td>{interview.jobTitle}</td>
@@ -5287,7 +5301,8 @@ const ApplicationsTab = ({
                       </td>
                       */}
                     </tr>
-                  ))}
+                  );
+      })}
                   {filteredInterviewData.length === 0 && (
                     <tr>
                       <td colSpan="7" style={{ textAlign: 'center', color: 'var(--text-color)' }}> {/* Updated colspan */}
