@@ -941,67 +941,67 @@ const EmployeeData = () => {
     setShowDeleteFileModal(true);
   };
 
-  const handleConfirmDeleteFile = async () => {
+// Find and replace the existing handleConfirmDeleteFile function
+const handleConfirmDeleteFile = async () => {
     if (!fileToDelete) return;
 
     setIsDeleting(true);
     const { clientFirebaseKey, registrationKey, file } = fileToDelete;
 
     try {
-      // 1. Create a reference from the download URL and delete from Firebase Storage
-      const fileStorageRef = storageRef(getStorage(), file.downloadUrl);
-      await deleteObject(fileStorageRef);
+        // 1. Create a reference from the download URL and delete from Firebase Storage
+        const fileStorageRef = storageRef(getStorage(), file.downloadUrl);
+        await deleteObject(fileStorageRef);
 
-      // 2. Get the current list of files from the Realtime Database
-      const filesRef = ref(database, `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}/files`);
+        // 2. Fetch the current list of files from the Realtime Database once
+        const snapshot = await new Promise(resolve => onValue(ref(database, `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}`), resolve, { onlyOnce: true }));
+        const registrationData = snapshot.val();
+        const currentFiles = registrationData.files || [];
 
-      // This part is the issue. `onValue` fetches once and then stops listening.
-      // We need to fetch the current data, update it, and then save it back.
-      const snapshot = await new Promise(resolve => onValue(ref(database, `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}`), resolve, { onlyOnce: true }));
-      const registrationData = snapshot.val();
-      const currentFiles = registrationData.files || [];
+        // 3. Filter out the deleted file
+        const updatedFiles = currentFiles.filter(f => f.id !== file.id);
 
-      // 3. Filter out the deleted file and update the list in the Realtime Database
-      const updatedFiles = currentFiles.filter(f => f.id !== file.id);
-      await set(filesRef, updatedFiles);
+        // 4. Update the list in the Realtime Database
+        const filesRef = ref(database, `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}/files`);
+        await set(filesRef, updatedFiles);
 
-      // FIX: Immediately update the local state to reflect the changes
-      const updatedClient = {
-        ...fileToDelete.client,
-        files: updatedFiles,
-      };
+        // 5. Update the local state in a single, atomic operation to avoid race conditions
+        const updateClientList = (prevClients) => {
+            return prevClients.map(c => {
+                if (c.registrationKey === registrationKey) {
+                    const updatedClient = {
+                        ...c,
+                        files: updatedFiles,
+                    };
+                    // Ensure the selectedClient points to this new object
+                    setSelectedClient(updatedClient); 
+                    return updatedClient;
+                }
+                return c;
+            });
+        };
 
-      setSelectedClient(updatedClient);
+        // Update the correct client list (active, inactive, new)
+        setActiveClients(updateClientList);
+        setInactiveClients(updateClientList);
+        setNewClients(updateClientList);
 
-      // Update the correct client list (active, inactive, new)
-      const updateClientList = (prevClients) => {
-        return prevClients.map(c =>
-          c.registrationKey === updatedClient.registrationKey ? updatedClient : c
-        );
-      };
-
-      setActiveClients(updateClientList);
-      setInactiveClients(updateClientList);
-      setNewClients(updateClientList);
-
-
-      triggerNotification("File deleted successfully from storage and database!");
+        triggerNotification("File deleted successfully from storage and database!");
 
     } catch (error) {
-      console.error("Error deleting file:", error);
-      if (error.code === 'storage/object-not-found') {
-        alert("File not found in storage, but removing from database.");
-        // To-do: Add logic to remove from database even if storage file is missing
-      } else {
-        alert("Failed to delete file. Please check permissions or try again.");
-      }
+        console.error("Error deleting file:", error);
+        if (error.code === 'storage/object-not-found') {
+            alert("File not found in storage, but removing from database.");
+        } else {
+            alert("Failed to delete file. Please check permissions or try again.");
+        }
     } finally {
-      // 4. Close the modal and reset the state
-      setShowDeleteFileModal(false);
-      setFileToDelete(null);
-      setIsDeleting(false);
+        // 6. Close the modal and reset the state
+        setShowDeleteFileModal(false);
+        setFileToDelete(null);
+        setIsDeleting(false);
     }
-  };
+};
 
 
   const handleDownloadResume = (clientName) => {
@@ -1146,130 +1146,100 @@ const EmployeeData = () => {
     setEditedApplicationFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSaveEditedApplication = async () => {
-    if (!editedApplicationFormData || !selectedClient) return;
+// EmployeeData.jsx
 
-    // Start the saving process and show the spinner
-    setIsSavingChanges(true);
+const handleSaveEditedApplication = async () => {
+  if (!editedApplicationFormData || !selectedClient) return;
 
-    try {
-      const applicationDataToSave = { ...editedApplicationFormData };
-      const attachmentsToSave = [];
-      let hasNewUploads = false;
-      let filesToAddToClient = []; // NEW: Array to hold new file metadata for the client's `files` array
+  setIsSavingChanges(true);
 
-      for (const attachment of applicationDataToSave.attachments || []) {
-        if (attachment.file && !attachment.downloadUrl) {
-          hasNewUploads = true;
-          const { clientFirebaseKey, registrationKey } = selectedClient;
-          const appId = applicationDataToSave.id;
-          const fileName = `${Date.now()}_${attachment.file.name}`;
+  try {
+    const applicationDataToSave = { ...editedApplicationFormData };
+    const attachmentsToSave = [];
+    let hasNewUploads = false;
+    let filesToAddToClient = [];
 
-          const attachmentRef = storageRef(getStorage(), `application_attachments/${clientFirebaseKey}/${registrationKey}/${appId}/${fileName}`);
-          const uploadResult = await uploadBytes(attachmentRef, attachment.file);
-          const downloadURL = await getDownloadURL(uploadResult.ref);
+    for (const attachment of applicationDataToSave.attachments || []) {
+      if (attachment.file && !attachment.downloadUrl) {
+        hasNewUploads = true;
+        const { clientFirebaseKey, registrationKey } = selectedClient;
+        const appId = applicationDataToSave.id;
+        const fileName = `${Date.now()}_${attachment.file.name}`;
 
-          // Create metadata for the `jobApplications` array
-          attachmentsToSave.push({
-            name: attachment.name,
-            size: attachment.size,
-            type: attachment.type,
-            uploadDate: attachment.uploadDate,
-            downloadUrl: downloadURL,
-          });
+        const attachmentRef = storageRef(getStorage(), `application_attachments/${clientFirebaseKey}/${registrationKey}/${appId}/${fileName}`);
+        const uploadResult = await uploadBytes(attachmentRef, attachment.file);
+        const downloadURL = await getDownloadURL(uploadResult.ref);
 
-          // NEW LOGIC START: Prepare file metadata for the client's main `files` array
-          filesToAddToClient.push({
-            id: Date.now() + Math.random(), // Unique ID for the file
-            downloadUrl: downloadURL,
-            name: attachment.name,
-            size: attachment.size,
-            type: 'interview screenshot', // Ensure type is correctly set for the Documents tab
-            uploadDate: attachment.uploadDate,
-            notes: `Screenshot for application: ${applicationDataToSave.jobTitle} at ${applicationDataToSave.company}`,
-          });
-          // NEW LOGIC END
-        } else {
-          attachmentsToSave.push(attachment);
-        }
-      }
-
-      if (hasNewUploads) {
-        triggerNotification("Uploading attachments...");
-      }
-
-      applicationDataToSave.attachments = attachmentsToSave;
-
-      const updatedApplications = (selectedClient.jobApplications || []).map(app =>
-        app.id === applicationDataToSave.id ? applicationDataToSave : app
-      );
-
-      const registrationRef = ref(database, `clients/${selectedClient.clientFirebaseKey}/serviceRegistrations/${selectedClient.registrationKey}`);
-
-      // NEW LOGIC START: Update the main `files` array if there are new attachments
-      if (filesToAddToClient.length > 0) {
-        const currentFiles = selectedClient.files || [];
-        const updatedFiles = [...filesToAddToClient, ...currentFiles];
-
-        // This performs the update operation for both `jobApplications` and `files` simultaneously
-        await update(registrationRef, {
-          jobApplications: updatedApplications,
-          files: updatedFiles,
-        });
-
-        // Update local state for files as well
-        const updatedClientWithFiles = {
-          ...selectedClient,
-          jobApplications: updatedApplications,
-          files: updatedFiles,
+        const newFileMetadata = {
+          name: attachment.name,
+          size: attachment.size,
+          type: attachment.type,
+          uploadDate: new Date().toISOString().split('T')[0],
+          downloadUrl: downloadURL,
+          // Add a unique ID to identify this file across both lists
+          id: Date.now() + Math.random(), 
         };
-        setSelectedClient(updatedClientWithFiles);
 
-        // Update the main lists for the employee
-        const updateClientLists = (prevClients) => {
-          return prevClients.map(c =>
-            c.registrationKey === updatedClientWithFiles.registrationKey ? updatedClientWithFiles : c
-          );
-        };
-        setActiveClients(updateClientLists);
-        setInactiveClients(updateClientLists);
-        setNewClients(updateClientLists);
+        // Add to the application's attachments list
+        attachmentsToSave.push(newFileMetadata);
+
+        // Add to the client's general files list
+        filesToAddToClient.push({ ...newFileMetadata, notes: `Screenshot for application: ${applicationDataToSave.jobTitle} at ${applicationDataToSave.company}` });
 
       } else {
-        // If no new files, just update the `jobApplications` node
-        await update(registrationRef, {
-          jobApplications: updatedApplications,
-        });
-
-        // Update local state for applications only
-        const updatedClient = {
-          ...selectedClient,
-          jobApplications: updatedApplications,
-        };
-        setSelectedClient(updatedClient);
-
-        const updateClientLists = (prevClients) => {
-          return prevClients.map(c =>
-            c.registrationKey === updatedClient.registrationKey ? updatedClient : c
-          );
-        };
-        setActiveClients(updateClientLists);
-        setInactiveClients(updateClientLists);
-        setNewClients(updateClientLists);
+        attachmentsToSave.push(attachment);
       }
-      // NEW LOGIC END
-
-      setShowEditApplicationModal(false);
-      triggerNotification("Application updated successfully!");
-
-    } catch (error) {
-      console.error("Failed to save edited application or upload file:", error);
-      alert("Error saving application. Please try again.");
-    } finally {
-      // Hide the spinner regardless of success or failure
-      setIsSavingChanges(false);
     }
-  };
+
+    if (hasNewUploads) {
+      triggerNotification("Uploading attachments...");
+    }
+
+    // Overwrite the application's attachments list with the updated one
+    applicationDataToSave.attachments = attachmentsToSave;
+
+    const updatedApplications = (selectedClient.jobApplications || []).map(app =>
+      app.id === applicationDataToSave.id ? applicationDataToSave : app
+    );
+
+    const registrationRef = ref(database, `clients/${selectedClient.clientFirebaseKey}/serviceRegistrations/${selectedClient.registrationKey}`);
+
+    // Update the main 'files' array if there are new attachments
+    const currentFiles = selectedClient.files || [];
+    const updatedFiles = [...filesToAddToClient, ...currentFiles];
+
+    await update(registrationRef, {
+      jobApplications: updatedApplications,
+      files: updatedFiles,
+    });
+
+    // Update local state to reflect changes
+    const updatedClient = {
+      ...selectedClient,
+      jobApplications: updatedApplications,
+      files: updatedFiles,
+    };
+    setSelectedClient(updatedClient);
+
+    const updateClientLists = (prevClients) => {
+      return prevClients.map(c =>
+        c.registrationKey === updatedClient.registrationKey ? updatedClient : c
+      );
+    };
+    setActiveClients(updateClientLists);
+    setInactiveClients(updateClientLists);
+    setNewClients(updateClientLists);
+
+    setShowEditApplicationModal(false);
+    triggerNotification("Application updated successfully!");
+
+  } catch (error) {
+    console.error("Failed to save edited application or upload file:", error);
+    alert("Error saving application. Please try again.");
+  } finally {
+    setIsSavingChanges(false);
+  }
+};
 
 
 
@@ -1755,7 +1725,7 @@ const EmployeeData = () => {
     });
   }, [selectedClient, filterWebsites, filterPositions, filterCompanies, searchTerm, startDateFilter, endDateFilter]);
 
-  useEffect(() => {
+useEffect(() => {
     const clientsForTab = activeTab === 'Active Clients' ? activeClients : inactiveClients;
     // Check if a client is already selected and if that client is still in the list
     const currentClientInList = clientsForTab.find(
@@ -1775,7 +1745,7 @@ const EmployeeData = () => {
         setSelectedClient(null);
       }
     }
-  }, [activeTab, newClients, activeClients, inactiveClients, selectedClient]);
+}, [activeTab, newClients, activeClients, inactiveClients]);
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
@@ -4496,14 +4466,18 @@ const EmployeeData = () => {
                 <label style={modalLabelStyle}>Client <span style={{ color: 'red' }}>*</span></label>
                 <select
                   name="clientId"
-                  value={selectedClientForFile.id}
-                  onChange={(e) => setSelectedClientForFile([...activeClients, ...inactiveClients].find(c => c.id === parseInt(e.target.value)))}
-                  style={modalSelectStyle}
+                  value={selectedClientForFile.registrationKey}
+ onChange={(e) => {
+                const selected = [...activeClients, ...inactiveClients].find(
+                    (c) => c.registrationKey === e.target.value
+                );
+                setSelectedClientForFile(selected);
+            }}                  style={modalSelectStyle}
                   required
                   disabled // Client is pre-selected
                 >
                   {[...activeClients, ...inactiveClients].map(client => (
-                    <option key={client.id} value={client.id}>{client.name}</option>
+                    <option key={client.registrationKey} value={client.registrationKey}>{client.name}</option>
                   ))}
                 </select>
               </div>

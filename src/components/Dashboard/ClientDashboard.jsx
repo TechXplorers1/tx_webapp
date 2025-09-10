@@ -196,6 +196,8 @@ const ClientHeader = ({
 }) => {
 
   const [isServicesDropdownOpen, setIsServicesDropdownOpen] = useState(false);
+      const toggleInterviewsModal = () => setShowInterviewsModal(!showInterviewsModal);
+
   const servicesMenuRef = useRef(null);
 
   // Effect to close profile dropdown when clicking outside
@@ -1879,6 +1881,47 @@ const CoverLetters = ({ files }) => {
 const Interviews = ({ files }) => { // onImageView is no longer needed here
   return (
     <div style={{ display: "flex", flexDirection: "row", gap: "20px", flexWrap: 'wrap', marginTop: '20px', justifyContent: 'center' }}>
+      <div
+                    onClick={toggleInterviewsModal}
+                    className="interviews-card"
+                  >
+                    <div style={{
+                      position: 'absolute',
+                      bottom: '-20px',
+                      right: '-20px',
+                      width: '120px',
+                      height: '120px',
+                      background: 'radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%)',
+                      zIndex: 1
+                    }}></div>
+                    <div style={{
+                      position: 'absolute',
+                      top: '-30px',
+                      left: '-30px',
+                      width: '100px',
+                      height: '100px',
+                      background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)',
+                      zIndex: 1
+                    }}></div>
+                    <div style={{ position: 'relative', zIndex: 2 }}>
+                      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" style={{ marginBottom: '16px' }}>
+                        <path d="M8 7V3M16 7V3M7 11H17M5 21H19C20.1046 21 21 20.1046 21 19V7C21 5.89543 20.1046 5 19 5H5C3.89543 5 3 5.89543 3 7V19C3 20.1046 3.89543 21 5 21Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      <div style={{ fontSize: '1.25rem', letterSpacing: '0.5px' }}>
+                        INTERVIEWS SCHEDULED
+                      </div>
+                      <div style={{
+                        fontSize: '0.875rem',
+                        opacity: '0.9',
+                        marginTop: '8px',
+                        fontWeight: '400'
+                      }}>
+                        {scheduledInterviews.length} upcoming
+                      </div>
+                    </div>
+                  </div>
+
+
       {files.length > 0 ? files.map(file => (
         <a
           key={file.id || file.name}
@@ -2156,6 +2199,7 @@ const ClientDashboard = () => {
   const [allFiles, setAllFiles] = useState([]);
 
 
+
   // Initialize activeTab from localStorage, default to "Dashboard" if not found
   const [activeTab, setActiveTab] = useState(() => {
     const savedTab = localStorage.getItem('activeClientDashboardTab');
@@ -2365,7 +2409,6 @@ const ClientDashboard = () => {
   };
 
   const toggleMenu = () => setMenuOpen(!menuOpen); // This function is now effectively unused for the UI
-  const toggleInterviewsModal = () => setShowInterviewsModal(!showInterviewsModal);
   const toggleResumeModal = () => setShowResumeModal(!showResumeModal);
   const togglePaymentModal = () => setShowPaymentModal(!showPaymentModal);
   const toggleSubscriptionDetailsModal = () => setShowSubscriptionDetailsModal(!showSubscriptionDetailsModal);
@@ -2482,17 +2525,13 @@ const handleClientProfileClick = useCallback(() => {
         setClientData(data);
 
         const registrations = data.serviceRegistrations ? Object.values(data.serviceRegistrations) : [];
+        
+      const combinedFiles = registrations
+        .flatMap(reg => reg.jobApplications || [])
+        .flatMap(app => app.attachments || []);
 
-        const generalFiles = registrations.flatMap(reg => reg.files || []);
-
-        // 2. Get attachment files from within each job application
-        const applicationAttachments = registrations
-          .flatMap(reg => reg.jobApplications || []) // Get all applications from all registrations
-          .flatMap(app => app.attachments || []);    // Then get all attachments from each application
-
-        // 3. Combine both sources into one array and set the state
-        const combinedFiles = [...generalFiles, ...applicationAttachments];
         setAllFiles(combinedFiles);
+
 
         // 2. Combine all job applications from all registrations into a single list.
         const allApplications = registrations.flatMap(reg => reg.jobApplications || []);
@@ -5441,45 +5480,7 @@ html.dark-mode .notify-success-message {
                 </section>
 
                 <div className="cards-section">
-                  <div
-                    onClick={toggleInterviewsModal}
-                    className="interviews-card"
-                  >
-                    <div style={{
-                      position: 'absolute',
-                      bottom: '-20px',
-                      right: '-20px',
-                      width: '120px',
-                      height: '120px',
-                      background: 'radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%)',
-                      zIndex: 1
-                    }}></div>
-                    <div style={{
-                      position: 'absolute',
-                      top: '-30px',
-                      left: '-30px',
-                      width: '100px',
-                      height: '100px',
-                      background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)',
-                      zIndex: 1
-                    }}></div>
-                    <div style={{ position: 'relative', zIndex: 2 }}>
-                      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" style={{ marginBottom: '16px' }}>
-                        <path d="M8 7V3M16 7V3M7 11H17M5 21H19C20.1046 21 21 20.1046 21 19V7C21 5.89543 20.1046 5 19 5H5C3.89543 5 3 5.89543 3 7V19C3 20.1046 3.89543 21 5 21Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                      <div style={{ fontSize: '1.25rem', letterSpacing: '0.5px' }}>
-                        INTERVIEWS SCHEDULED
-                      </div>
-                      <div style={{
-                        fontSize: '0.875rem',
-                        opacity: '0.9',
-                        marginTop: '8px',
-                        fontWeight: '400'
-                      }}>
-                        {scheduledInterviews.length} upcoming
-                      </div>
-                    </div>
-                  </div>
+                  
 
                   <div
                     onClick={toggleResumeModal}
