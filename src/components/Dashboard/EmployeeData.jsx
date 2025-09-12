@@ -415,7 +415,7 @@ const EmployeeData = () => {
   // Update useEffect to get the full employee object from sessionStorage
   // In EmployeeData.jsx, replace the useEffect hook that starts with "// NEW: useEffect to get logged-in user data..."
 
-  useEffect(() => {
+ useEffect(() => {
     const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInEmployee'));
     if (!loggedInUserData || !loggedInUserData.firebaseKey) {
       navigate('/login');
@@ -444,8 +444,15 @@ const EmployeeData = () => {
           if (client.serviceRegistrations) {
             Object.keys(client.serviceRegistrations).forEach(regKey => {
               const registration = client.serviceRegistrations[regKey];
+              
+              // FIX: Convert jobApplications from an object to an array here
+              const jobApplicationsArray = registration.jobApplications
+                ? Object.values(registration.jobApplications)
+                : [];
+
               allRegistrations.push({
                 ...registration,
+                jobApplications: jobApplicationsArray, // Use the new array
                 clientFirebaseKey: clientKey,
                 registrationKey: regKey,
                 email: client.email,
@@ -474,7 +481,7 @@ const EmployeeData = () => {
       unsubscribeEmployee();
       unsubscribeClients();
     };
-  }, [navigate]);
+}, [navigate]);
 
 
 
@@ -2754,7 +2761,7 @@ useEffect(() => {
                         <option value="All File Types">All File Types</option>
                         <option value="resume">Resume</option>
                         <option value="cover letter">Cover Letter</option>
-                        <option value="interview screenshot">Interview Screenshot</option>
+                        {/* <option value="interview screenshot">Interview Screenshot</option> */}
                         <option value="portfolio">Portfolio</option>
                         <option value="offers">Offers</option>
                         <option value="other">Other</option>
@@ -3667,7 +3674,7 @@ useEffect(() => {
                         <option value="All File Types">All File Types</option>
                         <option value="resume">Resume</option>
                         <option value="cover letter">Cover Letter</option>
-                        <option value="interview screenshot">Interview Screenshot</option>
+                        {/* <option value="interview screenshot">Interview Screenshot</option> */}
                         <option value="portfolio">Portfolio</option>
                         <option value="report">Offers</option>
                         <option value="other">Other</option>
@@ -4493,7 +4500,7 @@ useEffect(() => {
                   <option value="">Select file type</option>
                   <option value="resume">Resume</option>
                   <option value="cover letter">Cover Letter</option>
-                  <option value="interview screenshot">Interview Screenshot</option>
+                  {/* <option value="interview screenshot">Interview Screenshot</option> */}
                   <option value="portfolio">Portfolio</option>
                   <option value="offers">Offers</option>
                   <option value="other">Others</option>
@@ -4670,7 +4677,7 @@ useEffect(() => {
                 >
                   <option value="resume">Resume</option>
                   <option value="cover letter">Cover Letter</option>
-                  <option value="interview screenshot">Interview Screenshot</option>
+                  {/* <option value="interview screenshot">Interview Screenshot</option> */}
                   <option value="portfolio">Portfolio</option>
                   <option value="offers">Offers</option>
                   <option value="other">Other</option>

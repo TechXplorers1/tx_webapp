@@ -93,7 +93,10 @@ const ManagerWorkSheet = () => {
 
   const [managerFirebaseKey, setManagerFirebaseKey] = useState(null);
 
-      const [newCoverLetterFile, setNewCoverLetterFile] = useState(null);
+  const [newCoverLetterFile, setNewCoverLetterFile] = useState(null);
+
+const [showAttachmentModal, setShowAttachmentModal] = useState(false);
+const [currentAttachments, setCurrentAttachments] = useState([]);
 
 
 
@@ -153,6 +156,16 @@ const openEditApplicationModal = (application) => {
   setIsApplicationDetailModalOpen(false);
 };
 
+const handleAttachmentClick = (attachments) => {
+  setCurrentAttachments(attachments);
+  setShowAttachmentModal(true);
+};
+
+const closeAttachmentModal = () => {
+  setShowAttachmentModal(false);
+  setCurrentAttachments([]); // Clear attachments when closing
+};
+
 const closeEditApplicationModal = () => {
   setIsEditApplicationModalOpen(false);
   setEditableApplication({});
@@ -166,60 +179,56 @@ const handleApplicationChange = (e) => {
   }));
 };
 
+// Find and replace your existing handleUpdateApplication function.
 const handleUpdateApplication = async () => {
-  console.log("Editable application data:", editableApplication);
-  
-  // Check for all required identifiers with better error messages
-  const clientFirebaseKey = editableApplication.clientFirebaseKey;
-  const registrationKey = editableApplication.registrationKey;
-  const applicationId = editableApplication.applicationId;
+    // Check for all required identifiers
+    const clientFirebaseKey = editableApplication.clientFirebaseKey;
+    const registrationKey = editableApplication.registrationKey;
+    const applicationId = editableApplication.id; // Use 'id' for array-based lookups
 
-  if (!clientFirebaseKey) {
-    alert("Error: Missing client Firebase key.");
-    return;
-  }
-  
-  if (!registrationKey) {
-    alert("Error: Missing registration key.");
-    return;
-  }
-  
-  if (!applicationId) {
-    alert("Error: Missing application ID.");
-    return;
-  }
+    if (!clientFirebaseKey || !registrationKey || !applicationId) {
+        alert("Error: Missing required application identifiers.");
+        return;
+    }
 
-  try {
-    const applicationRef = ref(database, 
-      `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}/jobApplications/${applicationId}`
-    );
-    
-    // Create update object without the identifiers to avoid overwriting them
-    const updateData = {...editableApplication};
-    delete updateData.clientFirebaseKey;
-    delete updateData.registrationKey;
-    delete updateData.applicationId;
-    delete updateData.id;
-    delete updateData.key;
-    
-    await update(applicationRef, updateData);
-    
-    // Update local state
-    setApplicationData(prev => prev.map(app => 
-      app.applicationId === applicationId ? {...editableApplication} : app
-    ));
-    
-    setSuccessMessage("Application updated successfully!");
-    setShowSuccessModal(true);
-    closeEditApplicationModal();
-  } catch (error) {
-    console.error("Error updating application:", error);
-    alert("Failed to update application. Please try again.");
-  }
+    try {
+        // 1. Get a reference to the entire jobApplications array
+        const jobApplicationsRef = ref(database,
+            `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}/jobApplications`
+        );
+        
+        // 2. Fetch the current array from the database once
+        const snapshot = await new Promise(resolve => onValue(jobApplicationsRef, resolve, { onlyOnce: true }));
+        const currentApplications = snapshot.val() || [];
+
+        // 3. Create a new array with the updated application
+        const updatedApplications = currentApplications.map(app =>
+            app.id === applicationId ? { ...app, ...editableApplication } : app
+        );
+        
+        // 4. Use 'set' to replace the entire array in the database
+        await set(jobApplicationsRef, updatedApplications);
+        
+        // 5. Update local state
+        setApplicationData(prev => prev.map(app => 
+            app.id === applicationId ? {...editableApplication} : app
+        ));
+        
+        setSuccessMessage("Application updated successfully!");
+        setShowSuccessModal(true);
+        closeEditApplicationModal();
+    } catch (error) {
+        console.error("Error updating application:", error);
+        alert("Failed to update application. Please try again.");
+    }
 };
 
 const handleDeleteApplication = async () => {
-  if (!selectedApplication.clientFirebaseKey || !selectedApplication.registrationKey || !selectedApplication.applicationId) {
+  const clientFirebaseKey = selectedApplication.clientFirebaseKey;
+  const registrationKey = selectedApplication.registrationKey;
+  const applicationId = selectedApplication.id; // Use 'id' for array-based lookups
+  
+  if (!clientFirebaseKey || !registrationKey || !applicationId) {
     alert("Error: Missing required application identifiers.");
     return;
   }
@@ -229,15 +238,26 @@ const handleDeleteApplication = async () => {
   }
 
   try {
-    const applicationRef = ref(database, 
-      `clients/${selectedApplication.clientFirebaseKey}/serviceRegistrations/${selectedApplication.registrationKey}/jobApplications/${selectedApplication.applicationId}`
+    // 1. Get a reference to the entire jobApplications array
+    const jobApplicationsRef = ref(database, 
+      `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}/jobApplications`
     );
     
-    await set(applicationRef, null);
+    // 2. Fetch the current array from the database
+    const snapshot = await new Promise(resolve => onValue(jobApplicationsRef, resolve, { onlyOnce: true }));
+    const currentApplications = snapshot.val() || [];
     
-    // Update local state
+    // 3. Filter out the deleted application to create a new array
+    const updatedApplications = currentApplications.filter(app => 
+      app.id !== applicationId
+    );
+    
+    // 4. Use 'set' to replace the entire array in the database
+    await set(jobApplicationsRef, updatedApplications);
+    
+    // 5. Update local state
     setApplicationData(prev => prev.filter(app => 
-      app.applicationId !== selectedApplication.applicationId
+      app.id !== selectedApplication.id
     ));
     
     setSuccessMessage("Application deleted successfully!");
@@ -392,6 +412,8 @@ const handleDeleteApplication = async () => {
 
   // NEW: useEffect to get logged-in user data from sessionStorage
 // NEW: useEffect to get logged-in user data from sessionStorage and filter data
+// In ManagerWorksheet.jsx, replace the entire useEffect hook
+// that fetches data from Firebase with the following corrected version.
 useEffect(() => {
     const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInEmployee'));
     const managerFirebaseKey = loggedInUserData ? loggedInUserData.firebaseKey : null;
@@ -399,10 +421,8 @@ useEffect(() => {
 
     if (!managerFirebaseKey) {
         setLoading(false);
-        return; // Stop if no manager is logged in
+        return;
     }
-
-    setManagerFirebaseKey(managerFirebaseKey);
 
     const managerRef = ref(database, `users/${managerFirebaseKey}`);
     const unsubscribeManager = onValue(managerRef, (snapshot) => {
@@ -429,8 +449,15 @@ useEffect(() => {
                 if (client.serviceRegistrations) {
                     Object.keys(client.serviceRegistrations).forEach(regKey => {
                         const registration = client.serviceRegistrations[regKey];
+                        
+                        // FIX: Convert the jobApplications object to an array here
+                        const jobApplicationsArray = registration.jobApplications
+                            ? Object.values(registration.jobApplications)
+                            : [];
+
                         allRegistrations.push({
                             ...registration,
+                            jobApplications: jobApplicationsArray, // Use the new array
                             clientFirebaseKey: clientKey,
                             registrationKey: regKey,
                             email: client.email,
@@ -444,21 +471,21 @@ useEffect(() => {
             });
         }
         
-        // Filter for clients assigned to the current manager
         const clientsForManager = allRegistrations.filter(reg => 
             reg.assignedManager === managerFirebaseKey
         );
 
-        // Separate clients by assignment status
         const unassignedForManager = clientsForManager.filter(reg => reg.assignmentStatus === 'pending_employee');
         const assignedByManager = clientsForManager.filter(reg => ['pending_acceptance', 'active'].includes(reg.assignmentStatus));
 
         setUnassignedClients(unassignedForManager);
         setAssignedClients(assignedByManager);
         
-        setApplicationData(assignedByManager.flatMap(clientReg => 
+        setApplicationData(assignedByManager.flatMap(clientReg =>
             (clientReg.jobApplications || []).map(app => ({
                 ...app,
+                clientFirebaseKey: clientReg.clientFirebaseKey,
+                registrationKey: clientReg.registrationKey,
                 clientName: `${clientReg.firstName} ${clientReg.lastName}`,
                 assignedTo: clientReg.assignedTo
             }))
@@ -466,7 +493,13 @@ useEffect(() => {
         setInterviewData(assignedByManager.flatMap(clientReg => 
             (clientReg.jobApplications || [])
                 .filter(app => app.status === 'Interview')
-                .map(app => ({ ...app, clientName: `${clientReg.firstName} ${clientReg.lastName}`, assignedTo: clientReg.assignedTo }))
+                .map(app => ({ 
+                    ...app,
+                    clientFirebaseKey: clientReg.clientFirebaseKey,
+                    registrationKey: clientReg.registrationKey,
+                    clientName: `${clientReg.firstName} ${clientReg.lastName}`, 
+                    assignedTo: clientReg.assignedTo
+                }))
         ));
         
         setLoading(false);
@@ -477,7 +510,6 @@ useEffect(() => {
         if (data) {
             const usersArray = Object.keys(data).map(key => ({ firebaseKey: key, ...data[key] }));
             setAllEmployees(usersArray); 
-            // Filter for employees only for the assignment dropdown
             const employeesOnly = usersArray.filter(user => 
                 user.roles && Array.isArray(user.roles) && user.roles.includes('employee')
             );
@@ -491,7 +523,6 @@ useEffect(() => {
         unsubscribeUsers();
     };
 }, []);
-
  
 
   // State to manage editable profile fields
@@ -575,6 +606,9 @@ const [selectedEmployeeForClients, setSelectedEmployeeForClients] = useState({
     const [newResumeFile, setNewResumeFile] = useState(null);
 
 
+const [applicationFilterDateRange, setApplicationFilterDateRange] = useState({ startDate: '', endDate: '' });
+const [interviewFilterDateRange, setInterviewFilterDateRange] = useState({ startDate: '', endDate: '' });
+
 
   const [filterDateRange, setFilterDateRange] = useState({ startDate: '', endDate: '' });
   const [sortOrder, setSortOrder] = useState('Newest First');
@@ -613,20 +647,63 @@ const [selectedEmployeeForClients, setSelectedEmployeeForClients] = useState({
     return filterDateRange.startDate !== '' || filterDateRange.endDate !== '' || sortOrder !== 'Newest First' || quickFilter !== '';
   };
 
-  const handleClearFilters = () => {
-    setFilterDateRange({ startDate: '', endDate: '' });
-    setSortOrder('Newest First');
-    setQuickFilter('');
-    // Clear specific search/filter states depending on the active tab
+const handleClearFilters = () => {
+    // Clear filters for the currently active tab
     if (activeTab === 'Applications') {
-      setApplicationSearchQuery('');
-      setApplicationFilterEmployee('');
-      setApplicationFilterClient('');
+        setApplicationFilterDateRange({ startDate: '', endDate: '' });
+        setSortOrder('Newest First');
     } else if (activeTab === 'Interviews') {
-      setInterviewSearchQuery('');
-      setInterviewFilterRound('All Rounds');
+        setInterviewFilterDateRange({ startDate: '', endDate: '' });
+        setSortOrder('Newest First');
     }
-  };
+    // Clear specific search/filter states that are not part of the date range
+    setApplicationSearchQuery('');
+    setApplicationFilterEmployee('');
+    setApplicationFilterClient('');
+    setInterviewSearchQuery('');
+    setInterviewFilterRound('All Rounds');
+};
+
+// Inside the ManagerWorkSheet component, replace or add these functions
+const handleClearApplicationsFilters = () => {
+    // Clear all filter states specific to the Applications tab
+    setApplicationFilterDateRange({ startDate: '', endDate: '' });
+    setSortOrder('Newest First');
+    setApplicationSearchQuery('');
+    setApplicationFilterEmployee('');
+    setApplicationFilterClient('');
+};
+
+const areApplicationsFiltersActive = () => {
+    // Check all filter states specific to the Applications tab
+    return (
+        applicationFilterDateRange.startDate !== '' ||
+        applicationFilterDateRange.endDate !== '' ||
+        sortOrder !== 'Newest First' ||
+        applicationSearchQuery !== '' ||
+        applicationFilterEmployee !== '' ||
+        applicationFilterClient !== ''
+    );
+};
+
+const handleClearInterviewsFilters = () => {
+    // Clear all filter states specific to the Interviews tab
+    setInterviewFilterDateRange({ startDate: '', endDate: '' });
+    setSortOrder('Newest First');
+    setInterviewSearchQuery('');
+    setInterviewFilterRound('All Rounds');
+};
+
+const areInterviewsFiltersActive = () => {
+    // Check all filter states specific to the Interviews tab
+    return (
+        interviewFilterDateRange.startDate !== '' ||
+        interviewFilterDateRange.endDate !== '' ||
+        sortOrder !== 'Newest First' ||
+        interviewSearchQuery !== '' ||
+        interviewFilterRound !== 'All Rounds'
+    );
+};
 
   const selectedEmployeeDetails = useMemo(() => {
     if (!selectedEmployee || !displayEmployees.length) return null;
@@ -1663,8 +1740,9 @@ const filteredInterviewData = interviewData.filter(interview => {
     const matchesRound = interviewFilterRound === 'All Rounds' || interview.round === interviewFilterRound;
 
     const interviewDate = new Date(interview.interviewDate);
-    const start = filterDateRange.startDate ? new Date(filterDateRange.startDate) : null;
-    const end = filterDateRange.endDate ? new Date(filterDateRange.endDate) : null;
+    // FIX: Use the interviewFilterDateRange state
+    const start = interviewFilterDateRange.startDate ? new Date(interviewFilterDateRange.startDate) : null;
+    const end = interviewFilterDateRange.endDate ? new Date(interviewFilterDateRange.endDate) : null;
     if(start) start.setHours(0,0,0,0);
     if(end) end.setHours(23,59,59,999);
     const matchesDateRange = (!start || interviewDate >= start) && (!end || interviewDate <= end);
@@ -1704,7 +1782,7 @@ const filteredInterviewData = interviewData.filter(interview => {
   };
 
 
-  const filteredApplicationData = applicationData.filter(app => {
+const filteredApplicationData = applicationData.filter(app => {
     const lowerCaseSearchQuery = applicationSearchQuery.toLowerCase();
     const matchesSearch = 
       (app.assignedTo || '').toLowerCase().includes(lowerCaseSearchQuery) ||
@@ -1716,8 +1794,9 @@ const filteredInterviewData = interviewData.filter(interview => {
     const matchesClient = applicationFilterClient === '' || app.clientName === applicationFilterClient;
 
     const appDate = new Date(app.appliedDate);
-    const start = filterDateRange.startDate ? new Date(filterDateRange.startDate) : null;
-    const end = filterDateRange.endDate ? new Date(filterDateRange.endDate) : null;
+    // FIX: Use the applicationFilterDateRange state
+    const start = applicationFilterDateRange.startDate ? new Date(applicationFilterDateRange.startDate) : null;
+    const end = applicationFilterDateRange.endDate ? new Date(applicationFilterDateRange.endDate) : null;
     if(start) start.setHours(0,0,0,0);
     if(end) end.setHours(23,59,59,999);
     const matchesDateRange = (!start || appDate >= start) && (!end || appDate <= end);
@@ -1734,8 +1813,9 @@ const filteredInterviewData = interviewData.filter(interview => {
   });
 
   // Get unique client names for the filter dropdown - NOW ONLY FROM ASSIGNED CLIENTS
-  const uniqueAssignedClientNames = [...new Set(assignedClients.map(client => client.clientName))];
-    const uniqueAssignedEmployeeNames = [...new Set(assignedClients.map(client => client.assignedTo))];
+const uniqueAssignedClientNames = useMemo(() => {
+  return [...new Set(assignedClients.map(client => `${client.firstName} ${client.lastName}`.trim()))];
+}, [assignedClients]);const uniqueAssignedEmployeeNames = [...new Set(assignedClients.map(client => client.assignedTo))];
 
 
   // Determine if any filter is active for the "Applications" tab
@@ -2063,11 +2143,9 @@ Please provide a summary no longer than 150 words.`;
 
   // --- NEW Component for the Applications Tab UI ---
 const ApplicationsTab = ({ 
-  applicationData, 
+  applicationData,
   employees,
   uniqueClientNames,
-  applicationSearchQuery,
-  handleApplicationSearchChange,
   applicationFilterEmployee,
   handleApplicationFilterEmployeeChange,
   applicationFilterClient,
@@ -2081,6 +2159,11 @@ const ApplicationsTab = ({
   areFiltersActive,
   handleClearFilters
   }) => {
+
+      const [localSearchQuery, setLocalSearchQuery] = useState('');
+  const handleLocalSearchChange = (e) => {
+    setLocalSearchQuery(e.target.value);
+  };
   const [expandedClient, setExpandedClient] = useState(null);
 
   const getInitials = (name) => {
@@ -2090,7 +2173,19 @@ const ApplicationsTab = ({
     return name.substring(0, 2);
   };
 
-  const groupedByClient = applicationData.reduce((acc, app) => {
+    const filteredBySearch = useMemo(() => {
+    const lowerCaseSearch = localSearchQuery.toLowerCase();
+    return applicationData.filter(app => {
+      const matchesSearch =
+        (app.jobTitle || '').toLowerCase().includes(lowerCaseSearch) ||
+        (app.company || '').toLowerCase().includes(lowerCaseSearch) ||
+        (app.clientName || '').toLowerCase().includes(lowerCaseSearch) ||
+        (app.assignedTo || '').toLowerCase().includes(lowerCaseSearch);
+      return matchesSearch;
+    });
+  }, [applicationData, localSearchQuery]);
+
+  const groupedByClient = filteredBySearch.reduce((acc, app) => {
     if (!acc[app.clientName]) {
       acc[app.clientName] = {
         apps: [],
@@ -2105,8 +2200,8 @@ const ApplicationsTab = ({
 <section className="applications-management-section">
       <h2 className="client-assignment-title">Client Applications</h2>
        <FilterComponent
-              filterDateRange={filterDateRange}
-              handleDateRangeChange={handleDateRangeChange}
+              filterDateRange={applicationFilterDateRange}
+              handleDateRangeChange={(e) => setApplicationFilterDateRange(prev => ({ ...prev, [e.target.name]: e.target.value }))}
               sortOrder={sortOrder}
               setSortOrder={setSortOrder}
               quickFilter={quickFilter}
@@ -2123,8 +2218,8 @@ const ApplicationsTab = ({
           <input
             type="text"
             placeholder="Search by Employee, Client, Job Title..."
-            value={applicationSearchQuery}
-            onChange={handleApplicationSearchChange}
+            value={localSearchQuery}
+            onChange={handleLocalSearchChange}
           />
         </div>
         <div className="filter-dropdown">
@@ -2137,15 +2232,15 @@ const ApplicationsTab = ({
 </select>
           <i className="fas fa-chevron-down"></i>
         </div>
-        <div className="filter-dropdown">
-          <select value={applicationFilterClient} onChange={handleApplicationFilterClientChange}>
-            <option value="">Filter by Client</option>
-            {uniqueClientNames.map(name => (
-              <option key={name} value={name}>{name}</option>
-            ))}
-          </select>
-          <i className="fas fa-chevron-down"></i>
-        </div>
+<div className="filter-dropdown">
+  <select value={applicationFilterClient} onChange={handleApplicationFilterClientChange}>
+    <option value="">Filter by Client</option>
+    {uniqueAssignedClientNames.map(name => ( // Now using the correct array
+      <option key={name} value={name}>{name}</option>
+    ))}
+  </select>
+  <i className="fas fa-chevron-down"></i>
+</div>
       </div>
 
       <div className="table-responsive">
@@ -3841,14 +3936,18 @@ const ApplicationsTab = ({
         }
 
         .view-employee-details-button {
-            background: none;
-            border: none;
-            color: var(--icon-color); /* Neutral icon color */
-            font-size: 18px;
+            background-color: var(--modal-view-profile-bg);
+            color: var(--modal-view-profile-color);
+            padding: 8px 15px;
+            border-radius: 8px;
+            border: 1px solid var(--modal-search-border);
             cursor: pointer;
-            padding: 8px; /* Make it easier to click */
-            border-radius: 50%;
-            transition: background-color 0.2s ease, color 0.2s ease;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.3s ease;
         }
 
         .view-employee-details-button:hover {
@@ -5164,9 +5263,9 @@ const ApplicationsTab = ({
                         </div>
                     </div>
                     <div className="employee-card-details">
-                        <div className="success-rate">Success Rate: <span className="success-rate-value">{employee.successRate}%</span></div>
+                        <div className="success-rate">Success Rate: <span className="success-rate-value">{employee.successRate}%</span></div>&nbsp; 
                         <button className="view-employee-details-button" onClick={() => openEmployeeClientsModal(employee)}>
-  <i className="fas fa-eye"></i>
+  <i className="fas fa-eye"></i>View Client
 </button>
                     </div>
                 </div>
@@ -5186,8 +5285,6 @@ const ApplicationsTab = ({
             applicationData={filteredApplicationData}
             employees={displayEmployees}
             uniqueClientNames={uniqueAssignedClientNames}
-            applicationSearchQuery={applicationSearchQuery}
-            handleApplicationSearchChange={handleApplicationSearchChange}
             applicationFilterEmployee={applicationFilterEmployee}
             handleApplicationFilterEmployeeChange={handleApplicationFilterEmployeeChange}
             applicationFilterClient={applicationFilterClient}
@@ -5198,11 +5295,18 @@ const ApplicationsTab = ({
             setSortOrder={setSortOrder}
             quickFilter={quickFilter}
             handleQuickFilterChange={handleQuickFilterChange}
-            areFiltersActive={areFiltersActive}
-            handleClearFilters={handleClearFilters}
+            areFiltersActive={areApplicationsFiltersActive}
+            handleClearFilters={handleClearApplicationsFilters}
           />
 
         )}
+
+        {showAttachmentModal && (
+  <AttachmentModal
+    attachments={currentAttachments}
+    onClose={closeAttachmentModal}
+  />
+)}
 
         {activeTab === 'Interviews' && (
           <section className="interviews-section client-assignment-overview">
@@ -5212,14 +5316,14 @@ const ApplicationsTab = ({
             </div>
 
             <FilterComponent
-              filterDateRange={filterDateRange}
-              handleDateRangeChange={handleDateRangeChange}
+              filterDateRange={interviewFilterDateRange} // Use interviews state
+              handleDateRangeChange={(e) => setInterviewFilterDateRange(prev => ({ ...prev, [e.target.name]: e.target.value }))}
               sortOrder={sortOrder}
               setSortOrder={setSortOrder}
               quickFilter={quickFilter}
               handleQuickFilterChange={handleQuickFilterChange}
-              areFiltersActive={areFiltersActive}
-              handleClearFilters={handleClearFilters}
+              areFiltersActive={areInterviewsFiltersActive}
+              handleClearFilters={handleClearInterviewsFilters}
               sortOptions={['Newest First', 'Oldest First']}
             />
 
@@ -5239,9 +5343,9 @@ const ApplicationsTab = ({
                   onChange={handleInterviewFilterRoundChange}
                 >
                   <option value="All Rounds">All Rounds</option>
-                  <option value="1st Round">1st Round</option>
-                  <option value="2st Round">2st Round</option>
-                  <option value="3rd Round">3rd Round</option>
+                  <option value="1st Round">Round 1</option>
+                  <option value="2st Round">Round 2</option>
+                  <option value="3rd Round">ROund 3</option>
                   {/* Add more rounds as needed based on your data */}
                 </select>
                 <i className="fas fa-chevron-down"></i>
@@ -5256,6 +5360,7 @@ const ApplicationsTab = ({
                   <th>JOB TITLE</th>
                   <th>COMPANY</th>
                   <th>ROUND</th>
+                  <th>ATTACHMENTS</th>
                   <th>DATE</th>
                   <th>STATUS</th> {/* New column header for Status */}
                   {/* REMOVED: <th>ACTIONS</th> */}
@@ -5287,8 +5392,21 @@ const ApplicationsTab = ({
                       <td>
                         <span className="round-badge">{interview.round}</span>
                       </td>
+                       <td className="action-buttons">
+              {interview.attachments && interview.attachments.length > 0 ? (
+                <button
+                  onClick={() => handleAttachmentClick(interview.attachments)}
+                  className="action-button"
+                  title="View Attachments"
+                >
+                  <i className="fas fa-paperclip"></i> ({interview.attachments.length})
+                </button>
+              ) : (
+                <span style={{ color: 'var(--text-color)', opacity: 0.6 }}>N/A</span>
+              )}
+            </td>
                       <td className="date-cell">
-                        {formatDateToDDMMYYYY(interview.date)}
+                        {formatDateToDDMMYYYY(interview.interviewDate)}
                       </td>
                       <td>
                         {interview.status} {/* Display the new status */}
@@ -6871,6 +6989,63 @@ const ApplicationsTab = ({
         </Modal.Footer>
       </Modal>
     </div>
+  );
+};
+
+// In ManagerWorksheet.jsx, place this component code
+// before the final `export default ManagerWorkSheet;` line.
+const AttachmentModal = ({ attachments, onClose }) => {
+  // Use a simple, responsive modal design
+  return (
+    <Modal show={true} onHide={onClose} size="lg" centered>
+      <Modal.Header closeButton>
+        <Modal.Title>Interview Attachments</Modal.Title>
+      </Modal.Header>
+      <Modal.Body style={{ textAlign: 'center' }}>
+        {attachments.length === 0 ? (
+          <p>No attachments available for this interview.</p>
+        ) : (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px', justifyContent: 'center' }}>
+            {attachments.map((attachment, index) => (
+              <a
+                key={attachment.downloadUrl || index}
+                href={attachment.downloadUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ textDecoration: 'none' }}
+              >
+                <div style={{
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  width: '200px',
+                  height: '150px',
+                  backgroundColor: '#f8fafc',
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                  onMouseOver={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                  onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                  <img
+                    src={attachment.downloadUrl}
+                    alt={attachment.name || `Attachment ${index + 1}`}
+                    style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                    onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/200x150/e2e8f0/64748B?text=Image+Error'; }}
+                  />
+                </div>
+              </a>
+            ))}
+          </div>
+        )}
+      </Modal.Body>
+      <Modal.Footer>
+        <Button variant="secondary" onClick={onClose}>Close</Button>
+      </Modal.Footer>
+    </Modal>
   );
 };
 
