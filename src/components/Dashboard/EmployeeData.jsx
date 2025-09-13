@@ -653,7 +653,7 @@ const EmployeeData = () => {
   // States for Modals (Applications Tab)
   const [showAddApplicationModal, setShowAddApplicationModal] = useState(false);
   const [newApplicationFormData, setNewApplicationFormData] = useState({
-    jobTitle: '', company: '', jobType: '', jobBoards: '', jobUrl: '', location: '', notes: '', jobId: '', role: '' // Added jobId
+    jobTitle: '', company: '', jobType: '', jobBoards: '', jobUrl: '', location: '', jobDesc: '', jobId: '', role: '' // Added jobId
   });
   const [selectedClientForApplication, setSelectedClientForApplication] = useState(null);
 
@@ -667,7 +667,7 @@ const EmployeeData = () => {
   // States for Modals (Files Tab)
   const [showUploadFileModal, setShowUploadFileModal] = useState(false);
   const [newFileFormData, setNewFileFormData] = useState({
-    clientId: '', fileType: '', fileName: '', notes: ''
+    clientId: '', fileType: '', fileName: '', jobDesc: ''
   });
   const [selectedClientForFile, setSelectedClientForFile] = useState(null);
 
@@ -1127,7 +1127,7 @@ const handleConfirmDeleteFile = async () => {
         jobBoards: '',
         jobUrl: '',
         location: '',
-        notes: '',
+        jobDesc: '',
         jobId: '',
         role: ''
       });
@@ -1191,7 +1191,7 @@ const handleSaveEditedApplication = async () => {
         attachmentsToSave.push(newFileMetadata);
 
         // Add to the client's general files list
-        filesToAddToClient.push({ ...newFileMetadata, notes: `Screenshot for application: ${applicationDataToSave.jobTitle} at ${applicationDataToSave.company}` });
+        filesToAddToClient.push({ ...newFileMetadata, jobDesc: `Screenshot for application: ${applicationDataToSave.jobTitle} at ${applicationDataToSave.company}` });
 
       } else {
         attachmentsToSave.push(attachment);
@@ -1380,7 +1380,7 @@ const handleSaveEditedApplication = async () => {
   const handleOpenUploadFileModal = (client) => {
     setSelectedClientForFile(client);
     setNewFileFormData({
-      clientId: '', fileType: '', fileName: '', notes: ''
+      clientId: '', fileType: '', fileName: '', jobDesc: ''
     });
     setShowUploadFileModal(true);
   };
@@ -1433,7 +1433,7 @@ const handleSaveEditedApplication = async () => {
         size: `${(fileToUpload.size / 1024).toFixed(1)} KB`,
         type: newFileFormData.fileType,
         uploadDate: new Date().toISOString().split('T')[0],
-        notes: newFileFormData.notes || '',
+        jobDesc: newFileFormData.jobDesc || '',
       };
 
       // 4. Get existing files and add the new one
@@ -1466,7 +1466,7 @@ const handleSaveEditedApplication = async () => {
       // 6. Reset UI and provide feedback
       setShowUploadFileModal(false);
       setFileToUpload(null);
-      setNewFileFormData({ fileType: '', fileName: '', notes: '' });
+      setNewFileFormData({ fileType: '', fileName: '', jobDesc: '' });
       triggerNotification("File uploaded successfully!");
 
     } catch (error) {
@@ -2793,8 +2793,8 @@ useEffect(() => {
                               Status: <span style={{ fontWeight: '600', color: '#10b981' }}>{file.status}</span>
                             </p>
                             <p style={fileUploadDateStyle}>Uploaded: {file.uploadDate}</p>
-                            {file.notes && (
-                              <p style={fileNotesStyle}>Notes: {file.notes}</p>
+                            {file.jobDesc && (
+                              <p style={fileNotesStyle}>Job Description: {file.jobDesc}</p>
                             )}
                             <div style={fileActionsStyle}>
                               <button onClick={() => handleViewFile(file)} style={actionButtonAppStyle}>
@@ -2954,7 +2954,7 @@ useEffect(() => {
               )}
 
               {/* Notes Tab Content */}
-              {activeSubTab === 'Notes' && (
+              {activeSubTab === 'JobDesc' && (
                 <div style={{ ...applicationsSectionStyle, marginTop: '24px', padding: '20px', textAlign: 'center', color: '#64748b' }}>
                   Notes content will go here for {selectedClient.name}.
                 </div>
@@ -2980,130 +2980,106 @@ useEffect(() => {
                       Add Application
                     </button>
                   </div>
-                  {simplifiedServices.includes(selectedClient.service) ? (
-                    // --- RENDER SIMPLIFIED VIEW for ServiceForm clients (View Only) ---
-                    <div style={{ ...clientDataGridStyle, gridTemplateColumns: '1fr' }}>
-                      <div style={clientDataSectionStyle}>
-                        <h3 style={clientDataSectionTitleStyle}>Service Request Details</h3>
-                        <p style={clientDataDetailStyle}><strong>First Name:</strong> {selectedClient.firstName || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Last Name:</strong> {selectedClient.lastName || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Mobile:</strong> {selectedClient.mobile || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Email:</strong> {selectedClient.email || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Service:</strong> {selectedClient.service || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Sub-Services:</strong> {(selectedClient.subServices || []).join(', ') || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>User Type:</strong> {selectedClient.userType || '-'}</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={clientDataGridStyle}>
-                      <div style={clientDataSectionStyle}>
-                        <h3 style={clientDataSectionTitleStyle}>Personal Information</h3>
-                        <p style={clientDataDetailStyle}><strong>First Name:</strong> {selectedClient.firstName || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Middle Name:</strong> {selectedClient.middleName || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Last Name:</strong> {selectedClient.lastName || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Date of Birth:</strong> {selectedClient.dob || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Gender:</strong> {selectedClient.gender || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Ethnicity:</strong> {selectedClient.ethnicity || '-'}</p>
-                      </div>
-
-                      <div style={clientDataSectionStyle}>
-                        <h3 style={clientDataSectionTitleStyle}>Contact Information</h3>
-                        <p style={clientDataDetailStyle}><strong>Address:</strong> {selectedClient.address || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Zip Code:</strong> {selectedClient.zipCode || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Mobile:</strong> {selectedClient.mobile || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Email:</strong> {selectedClient.email || '-'}</p>
-                      </div>
-
-                      <div style={clientDataSectionStyle}>
-                        <h3 style={clientDataSectionTitleStyle}>Job Preferences & Status</h3>
-                        <p style={clientDataDetailStyle}><strong>Security Clearance:</strong> {selectedClient.securityClearance || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Clearance Level:</strong> {selectedClient.clearanceLevel || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Willing to Relocate:</strong> {selectedClient.willingToRelocate || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Work Preference:</strong> {selectedClient.workPreference || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Restricted Companies:</strong> {selectedClient.restrictedCompanies || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Jobs to Apply:</strong> {selectedClient.jobsToApply || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Technology Skills:</strong> {selectedClient.technologySkills || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Current Salary:</strong> {selectedClient.currentSalary || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Expected Salary:</strong> {selectedClient.expectedSalary || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Visa Status:</strong> {selectedClient.visaStatus || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Other Visa Status:</strong> {selectedClient.otherVisaStatus || '-'}</p>
-                      </div>
-
-                      <div style={clientDataSectionStyle}>
-                        <h3 style={clientDataSectionTitleStyle}>Education Details</h3>
-                        <p style={clientDataDetailStyle}><strong>School Name:</strong> {selectedClient.schoolName || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>School Address:</strong> {selectedClient.schoolAddress || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>School Phone:</strong> {selectedClient.schoolPhone || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Course of Study:</strong> {selectedClient.courseOfStudy || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Graduation Date:</strong> {selectedClient.graduationDate || '-'}</p>
-                      </div>
-
-                      <div style={clientDataSectionStyle}>
-                        <h3 style={clientDataSectionTitleStyle}>Employment Details</h3>
-                        <p style={clientDataDetailStyle}><strong>Current Company:</strong> {selectedClient.currentCompany || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Current Designation:</strong> {selectedClient.currentDesignation || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Preferred Interview Time:</strong> {selectedClient.preferredInterviewTime || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Earliest Joining Date:</strong> {selectedClient.earliestJoiningDate || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Relieving Date:</strong> {selectedClient.relievingDate || '-'}</p>
-                      </div>
-
-                      <div style={clientDataSectionStyle}>
-                        <h3 style={clientDataSectionTitleStyle}>References</h3>
-                        <p style={clientDataDetailStyle}><strong>Reference Name:</strong> {selectedClient.referenceName || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Reference Phone:</strong> {selectedClient.referencePhone || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Reference Address:</strong> {selectedClient.referenceAddress || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Reference Email:</strong> {selectedClient.referenceEmail || '-'}</p>
-                      </div>
-
-                      <div style={clientDataSectionStyle}>
-                        <h3 style={clientDataSectionTitleStyle}>Job Portal Accounts</h3>
-                        <p style={clientDataDetailStyle}><strong>Account Name:</strong> {selectedClient.jobPortalAccountName || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Credentials:</strong> {selectedClient.jobPortalCredentials ? '********' : '-'}</p>
-                      </div>
-
-                      <div style={clientDataSectionStyle}>
-                        <h3 style={clientDataSectionTitleStyle}>Resume</h3>
-                        <div style={clientDataDetailStyle}>
-                          <strong>Current File:</strong>
-                          {selectedClient.resumeUrl ? (
-                            <a
-                              href={selectedClient.resumeUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{ marginLeft: '8px', color: '#3b82f6', textDecoration: 'underline' }}
-                            >
-                              {selectedClient.resumeFileName || 'Download File'}
-                            </a>
-                          ) : (
-                            <span style={{ marginLeft: '8px', color: '#64748b' }}>No resume on file.</span>
-                          )}
-                        </div>
-                        <div style={{ ...clientDataDetailStyle, marginTop: '15px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                          <label htmlFor="resumeUpload" style={{ fontWeight: '600' }}>Upload New Resume:</label>
-                          <input
-                            type="file"
-                            id="resumeUpload"
-                            onChange={handleResumeFileChange}
-                            accept=".pdf,.doc,.docx"
-                            style={{ ...modalInputStyle, maxWidth: '400px' }} // Re-using a style for consistency
-                          />
-                          {newResumeFile && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '5px' }}>
-                              <p style={{ margin: 0, fontSize: '0.9em', color: '#475569' }}>
-                                Selected: <strong>{newResumeFile.name}</strong>
-                              </p>
-                              <button
-                                onClick={handleSaveNewResume}
-                                style={{ ...acceptButtonStyle, padding: '6px 12px' }} // Re-using a style
-                              >
-                                Save New Resume
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                        {simplifiedServices.includes(selectedClient.service) ? (
+        // --- RENDER SIMPLIFIED VIEW for ServiceForm clients (View Only) ---
+        <div style={{ ...clientDataGridStyle, gridTemplateColumns: '1fr' }}>
+          <div style={clientDataSectionStyle}>
+            <h3 style={clientDataSectionTitleStyle}>Service Request Details</h3>
+            <p style={clientDataDetailStyle}><strong>First Name:</strong> {selectedClient.firstName || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Last Name:</strong> {selectedClient.lastName || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Mobile:</strong> {selectedClient.mobile || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Email:</strong> {selectedClient.email || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Service:</strong> {selectedClient.service || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Sub-Services:</strong> {(selectedClient.subServices || []).join(', ') || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>User Type:</strong> {selectedClient.userType || '-'}</p>
+          </div>
+        </div>
+      ) : (
+        <div style={clientDataGridStyle}>
+          <div style={clientDataSectionStyle}>
+            <h3 style={clientDataSectionTitleStyle}>Personal Information</h3>
+            <p style={clientDataDetailStyle}><strong>First Name:</strong> {selectedClient.firstName || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Middle Name:</strong> {selectedClient.middleName || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Last Name:</strong> {selectedClient.lastName || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Date of Birth:</strong> {selectedClient.dob || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Gender:</strong> {selectedClient.gender || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Ethnicity:</strong> {selectedClient.ethnicity || '-'}</p>
+          </div>
+          <div style={clientDataSectionStyle}>
+            <h3 style={clientDataSectionTitleStyle}>Contact Information</h3>
+            <p style={clientDataDetailStyle}><strong>Address:</strong> {selectedClient.address || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>County:</strong> {selectedClient.county || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Zip Code:</strong> {selectedClient.zipCode || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Mobile:</strong> {selectedClient.mobile || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Email:</strong> {selectedClient.email || '-'}</p>
+          </div>
+          <div style={clientDataSectionStyle}>
+            <h3 style={clientDataSectionTitleStyle}>Employment Details</h3>
+            <p style={clientDataDetailStyle}><strong>Current Company:</strong> {selectedClient.currentCompany || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Current Designation:</strong> {selectedClient.currentDesignation || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Preferred Interview Time:</strong> {selectedClient.preferredInterviewTime || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Earliest Joining Date:</strong> {selectedClient.earliestJoiningDate || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Relieving Date:</strong> {selectedClient.relievingDate || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Years of Experience:</strong> {selectedClient.yearsOfExperience || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Notice Period:</strong> {selectedClient.noticePeriod || '-'}</p>
+          </div>
+          <div style={clientDataSectionStyle}>
+            <h3 style={clientDataSectionTitleStyle}>Job Preferences & Status</h3>
+            <p style={clientDataDetailStyle}><strong>Jobs to Apply:</strong> {selectedClient.jobsToApply || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Work Preference:</strong> {selectedClient.workPreference || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Willing to Relocate:</strong> {selectedClient.willingToRelocate || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Current Salary:</strong> {selectedClient.currentSalary || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Expected Salary:</strong> {selectedClient.expectedSalary || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Visa Status:</strong> {selectedClient.visaStatus || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Security Clearance:</strong> {selectedClient.securityClearance || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Clearance Level:</strong> {selectedClient.clearanceLevel || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Restricted Companies:</strong> {selectedClient.restrictedCompanies || '-'}</p>
+          </div>
+          <div style={clientDataSectionStyle}>
+            <h3 style={clientDataSectionTitleStyle}>Education Details</h3>
+            <p style={clientDataDetailStyle}><strong>University Name:</strong> {selectedClient.universityName || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>University Address:</strong> {selectedClient.universityAddress || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Course of Study:</strong> {selectedClient.courseOfStudy || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Graduation From Date:</strong> {selectedClient.graduationFromDate || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Graduation To Date:</strong> {selectedClient.graduationToDate || '-'}</p>
+          </div>
+          <div style={clientDataSectionStyle}>
+            <h3 style={clientDataSectionTitleStyle}>References</h3>
+            <p style={clientDataDetailStyle}><strong>Reference Name:</strong> {selectedClient.referenceName || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Reference Phone:</strong> {selectedClient.referencePhone || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Reference Address:</strong> {selectedClient.referenceAddress || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Reference Email:</strong> {selectedClient.referenceEmail || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Reference Role:</strong> {selectedClient.referenceRole || '-'}</p>
+          </div>
+          <div style={clientDataSectionStyle}>
+            <h3 style={clientDataSectionTitleStyle}>Job Portal Accounts</h3>
+            <p style={clientDataDetailStyle}><strong>Account Info:</strong> {selectedClient.jobPortalAccountNameandCredentials || '-'}</p>
+          </div>
+          <div style={clientDataSectionStyle}>
+            <h3 style={clientDataSectionTitleStyle}>Resume & Cover Letter</h3>
+            <p style={clientDataDetailStyle}>
+              <strong>Resume:</strong>
+              {selectedClient.resumeUrl ? (
+                <a href={selectedClient.resumeUrl} target="_blank" rel="noopener noreferrer" style={{ marginLeft: '8px', color: '#3b82f6', textDecoration: 'underline' }}>
+                  {selectedClient.resumeFileName || 'Download Resume'}
+                </a>
+              ) : (
+                <span style={{ marginLeft: '8px', color: '#64748b' }}>No resume on file.</span>
+              )}
+            </p>
+            <p style={clientDataDetailStyle}>
+              <strong>Cover Letter:</strong>
+              {selectedClient.coverLetterUrl ? (
+                <a href={selectedClient.coverLetterUrl} target="_blank" rel="noopener noreferrer" style={{ marginLeft: '8px', color: '#3b82f6', textDecoration: 'underline' }}>
+                  {selectedClient.coverLetterFileName || 'Download Cover Letter'}
+                </a>
+              ) : (
+                <span style={{ marginLeft: '8px', color: '#64748b' }}>No cover letter on file.</span>
+              )}
+            </p>
+          </div>
+        </div>
+      )}
                 </div>
               )}
             </>
@@ -3706,8 +3682,8 @@ useEffect(() => {
                               Status: <span style={{ fontWeight: '600', color: '#10b981' }}>{file.status}</span>
                             </p>
                             <p style={fileUploadDateStyle}>Uploaded: {file.uploadDate}</p>
-                            {file.notes && (
-                              <p style={fileNotesStyle}>Notes: {file.notes}</p>
+                            {file.jobDesc && (
+                              <p style={fileNotesStyle}>Job Description: {file.jobDesc}</p>
                             )}
                             <div style={fileActionsStyle}>
                               <button onClick={() => handleViewFile(file)} style={actionButtonAppStyle}>
@@ -3867,7 +3843,7 @@ useEffect(() => {
               )}
 
               {/* Notes Tab Content for Inactive Clients */}
-              {activeSubTab === 'Notes' && (
+              {activeSubTab === 'JobDesc' && (
                 <div style={{ ...applicationsSectionStyle, marginTop: '24px', padding: '20px', textAlign: 'center', color: '#64748b' }}>
                   Notes content will go here for {selectedClient.name}.
                 </div>
@@ -3893,89 +3869,89 @@ useEffect(() => {
                     </button>
                   </div>
 
-                  {simplifiedServices.includes(selectedClient.service) ? (
-                    // --- RENDER SIMPLIFIED VIEW for ServiceForm clients ---
-                    <div style={{ ...clientDataGridStyle, gridTemplateColumns: '1fr' }}>
-                      <div style={clientDataSectionStyle}>
-                        <h3 style={clientDataSectionTitleStyle}>Service Request Details</h3>
-                        <p style={clientDataDetailStyle}><strong>First Name:</strong> {selectedClient.firstName || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Last Name:</strong> {selectedClient.lastName || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Mobile:</strong> {selectedClient.mobile || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Email:</strong> {selectedClient.email || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Service:</strong> {selectedClient.service || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Sub-Services:</strong> {(selectedClient.subServices || []).join(', ') || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>User Type:</strong> {selectedClient.userType || '-'}</p>
-                      </div>
-                    </div>
-                  ) : (
+ {simplifiedServices.includes(selectedClient.service) ? (
+        // --- RENDER SIMPLIFIED VIEW for ServiceForm clients ---
+        <div style={{ ...clientDataGridStyle, gridTemplateColumns: '1fr' }}>
+          <div style={clientDataSectionStyle}>
+            <h3 style={clientDataSectionTitleStyle}>Service Request Details</h3>
+            <p style={clientDataDetailStyle}><strong>First Name:</strong> {selectedClient.firstName || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Last Name:</strong> {selectedClient.lastName || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Mobile:</strong> {selectedClient.mobile || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Email:</strong> {selectedClient.email || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Service:</strong> {selectedClient.service || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Sub-Services:</strong> {(selectedClient.subServices || []).join(', ') || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>User Type:</strong> {selectedClient.userType || '-'}</p>
+          </div>
+        </div>
+      ) : (
 
-                    <div style={clientDataGridStyle}>
-                      <div style={clientDataSectionStyle}>
-                        <h3 style={clientDataSectionTitleStyle}>Personal Information</h3>
-                        <p style={clientDataDetailStyle}><strong>First Name:</strong> {selectedClient.firstName || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Middle Name:</strong> {selectedClient.middleName || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Last Name:</strong> {selectedClient.lastName || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Date of Birth:</strong> {selectedClient.dob || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Gender:</strong> {selectedClient.gender || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Ethnicity:</strong> {selectedClient.ethnicity || '-'}</p>
-                      </div>
+        <div style={clientDataGridStyle}>
+          <div style={clientDataSectionStyle}>
+            <h3 style={clientDataSectionTitleStyle}>Personal Information</h3>
+            <p style={clientDataDetailStyle}><strong>First Name:</strong> {selectedClient.firstName || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Middle Name:</strong> {selectedClient.middleName || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Last Name:</strong> {selectedClient.lastName || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Date of Birth:</strong> {selectedClient.dob || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Gender:</strong> {selectedClient.gender || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Ethnicity:</strong> {selectedClient.ethnicity || '-'}</p>
+          </div>
 
-                      <div style={clientDataSectionStyle}>
-                        <h3 style={clientDataSectionTitleStyle}>Contact Information</h3>
-                        <p style={clientDataDetailStyle}><strong>Address:</strong> {selectedClient.address || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Zip Code:</strong> {selectedClient.zipCode || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Mobile:</strong> {selectedClient.mobile || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Email:</strong> {selectedClient.email || '-'}</p>
-                      </div>
+          <div style={clientDataSectionStyle}>
+            <h3 style={clientDataSectionTitleStyle}>Contact Information</h3>
+            <p style={clientDataDetailStyle}><strong>Address:</strong> {selectedClient.address || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Zip Code:</strong> {selectedClient.zipCode || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Mobile:</strong> {selectedClient.mobile || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Email:</strong> {selectedClient.email || '-'}</p>
+          </div>
 
-                      <div style={clientDataSectionStyle}>
-                        <h3 style={clientDataSectionTitleStyle}>Job Preferences & Status</h3>
-                        <p style={clientDataDetailStyle}><strong>Security Clearance:</strong> {selectedClient.securityClearance || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Clearance Level:</strong> {selectedClient.clearanceLevel || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Willing to Relocate:</strong> {selectedClient.willingToRelocate || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Work Preference:</strong> {selectedClient.workPreference || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Restricted Companies:</strong> {selectedClient.restrictedCompanies || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Jobs to Apply:</strong> {selectedClient.jobsToApply || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Technology Skills:</strong> {selectedClient.technologySkills || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Current Salary:</strong> {selectedClient.currentSalary || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Expected Salary:</strong> {selectedClient.expectedSalary || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Visa Status:</strong> {selectedClient.visaStatus || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Other Visa Status:</strong> {selectedClient.otherVisaStatus || '-'}</p>
-                      </div>
+          <div style={clientDataSectionStyle}>
+            <h3 style={clientDataSectionTitleStyle}>Job Preferences & Status</h3>
+            <p style={clientDataDetailStyle}><strong>Security Clearance:</strong> {selectedClient.securityClearance || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Clearance Level:</strong> {selectedClient.clearanceLevel || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Willing to Relocate:</strong> {selectedClient.willingToRelocate || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Work Preference:</strong> {selectedClient.workPreference || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Restricted Companies:</strong> {selectedClient.restrictedCompanies || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Jobs to Apply:</strong> {selectedClient.jobsToApply || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Technology Skills:</strong> {selectedClient.technologySkills || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Current Salary:</strong> {selectedClient.currentSalary || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Expected Salary:</strong> {selectedClient.expectedSalary || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Visa Status:</strong> {selectedClient.visaStatus || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Other Visa Status:</strong> {selectedClient.otherVisaStatus || '-'}</p>
+          </div>
 
-                      <div style={clientDataSectionStyle}>
-                        <h3 style={clientDataSectionTitleStyle}>Education Details</h3>
-                        <p style={clientDataDetailStyle}><strong>School Name:</strong> {selectedClient.schoolName || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>School Address:</strong> {selectedClient.schoolAddress || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>School Phone:</strong> {selectedClient.schoolPhone || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Course of Study:</strong> {selectedClient.courseOfStudy || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Graduation Date:</strong> {selectedClient.graduationDate || '-'}</p>
-                      </div>
+          <div style={clientDataSectionStyle}>
+            <h3 style={clientDataSectionTitleStyle}>Education Details</h3>
+            <p style={clientDataDetailStyle}><strong>School Name:</strong> {selectedClient.schoolName || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>School Address:</strong> {selectedClient.schoolAddress || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>School Phone:</strong> {selectedClient.schoolPhone || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Course of Study:</strong> {selectedClient.courseOfStudy || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Graduation Date:</strong> {selectedClient.graduationDate || '-'}</p>
+          </div>
 
-                      <div style={clientDataSectionStyle}>
-                        <h3 style={clientDataSectionTitleStyle}>Employment Details</h3>
-                        <p style={clientDataDetailStyle}><strong>Current Company:</strong> {selectedClient.currentCompany || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Current Designation:</strong> {selectedClient.currentDesignation || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Preferred Interview Time:</strong> {selectedClient.preferredInterviewTime || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Earliest Joining Date:</strong> {selectedClient.earliestJoiningDate || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Relieving Date:</strong> {selectedClient.relievingDate || '-'}</p>
-                      </div>
+          <div style={clientDataSectionStyle}>
+            <h3 style={clientDataSectionTitleStyle}>Employment Details</h3>
+            <p style={clientDataDetailStyle}><strong>Current Company:</strong> {selectedClient.currentCompany || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Current Designation:</strong> {selectedClient.currentDesignation || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Preferred Interview Time:</strong> {selectedClient.preferredInterviewTime || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Earliest Joining Date:</strong> {selectedClient.earliestJoiningDate || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Relieving Date:</strong> {selectedClient.relievingDate || '-'}</p>
+          </div>
 
-                      <div style={clientDataSectionStyle}>
-                        <h3 style={clientDataSectionTitleStyle}>References</h3>
-                        <p style={clientDataDetailStyle}><strong>Reference Name:</strong> {selectedClient.referenceName || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Reference Phone:</strong> {selectedClient.referencePhone || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Reference Address:</strong> {selectedClient.referenceAddress || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Reference Email:</strong> {selectedClient.referenceEmail || '-'}</p>
-                      </div>
+          <div style={clientDataSectionStyle}>
+            <h3 style={clientDataSectionTitleStyle}>References</h3>
+            <p style={clientDataDetailStyle}><strong>Reference Name:</strong> {selectedClient.referenceName || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Reference Phone:</strong> {selectedClient.referencePhone || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Reference Address:</strong> {selectedClient.referenceAddress || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Reference Email:</strong> {selectedClient.referenceEmail || '-'}</p>
+          </div>
 
-                      <div style={clientDataSectionStyle}>
-                        <h3 style={clientDataSectionTitleStyle}>Job Portal Accounts</h3>
-                        <p style={clientDataDetailStyle}><strong>Account Name:</strong> {selectedClient.jobPortalAccountName || '-'}</p>
-                        <p style={clientDataDetailStyle}><strong>Credentials:</strong> {selectedClient.jobPortalCredentials ? '********' : '-'}</p>
-                      </div>
-                    </div>
-                  )}
+          <div style={clientDataSectionStyle}>
+            <h3 style={clientDataSectionTitleStyle}>Job Portal Accounts</h3>
+            <p style={clientDataDetailStyle}><strong>Account Name:</strong> {selectedClient.jobPortalAccountName || '-'}</p>
+            <p style={clientDataDetailStyle}><strong>Credentials:</strong> {selectedClient.jobPortalCredentials ? '********' : '-'}</p>
+          </div>
+        </div>
+      )}
                 </div>
               )}
             </>
@@ -4084,8 +4060,8 @@ useEffect(() => {
               <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
                 <label style={modalLabelStyle}>Job Description</label>
                 <textarea
-                  name="notes"
-                  value={newApplicationFormData.notes}
+                  name="jobDesc"
+                  value={newApplicationFormData.jobDesc}
                   onChange={handleNewApplicationFormChange}
                   style={modalTextareaStyle}
                   placeholder="Any additional notes about this application..."
@@ -4167,7 +4143,7 @@ useEffect(() => {
                 ) : 'N/A'}
               </div>
               <p style={modalViewDetailItemStyle}><strong>Applied Date:</strong> {viewedApplication.appliedDate}</p>
-              <p style={{ ...modalViewDetailItemStyle, gridColumn: '1 / -1' }}><strong>Notes:</strong> {viewedApplication.notes || '-'}</p>
+              <p style={{ ...modalViewDetailItemStyle, gridColumn: '1 / -1' }}><strong>Job Description:</strong> {viewedApplication.jobDesc || '-'}</p>
             </div>
           </Modal.Body>
           <Modal.Footer style={modalFooterStyle}>
@@ -4418,10 +4394,10 @@ useEffect(() => {
                 />
               </div>
               <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
-                <label style={modalLabelStyle}>Notes</label>
+                <label style={modalLabelStyle}>Job Description</label>
                 <textarea
-                  name="notes"
-                  value={editedApplicationFormData.notes}
+                  name="jobDesc"
+                  value={editedApplicationFormData.jobDesc}
                   onChange={handleEditedApplicationFormChange}
                   style={modalTextareaStyle}
                 ></textarea>
@@ -4520,8 +4496,8 @@ useEffect(() => {
               <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
                 <label style={modalLabelStyle}>Details</label>
                 <textarea
-                  name="notes"
-                  value={newFileFormData.notes}
+                  name="jobDesc"
+                  value={newFileFormData.jobDesc}
                   onChange={handleNewFileFormChange}
                   style={modalTextareaStyle}
                   placeholder="Any additional notes about this file..."
@@ -4617,9 +4593,9 @@ useEffect(() => {
                 <p style={modalViewDetailItemStyle}><strong>File Type:</strong> {viewedFile.type}</p>
                 <p style={modalViewDetailItemStyle}><strong>File Size:</strong> {viewedFile.size}</p>
                 <p style={modalViewDetailItemStyle}><strong>Upload Date:</strong> {viewedFile.uploadDate}</p>
-                {viewedFile.notes && (
+                {viewedFile.jobDesc && (
                   <p style={{ ...modalViewDetailItemStyle, gridColumn: '1 / -1' }}>
-                    <strong>Notes:</strong> {viewedFile.notes}
+                    <strong>Job Description:</strong> {viewedFile.jobDesc}
                   </p>
                 )}
               </div>
@@ -4715,10 +4691,10 @@ useEffect(() => {
                 />
               </div>
               <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
-                <label style={modalLabelStyle}>Notes</label>
+                <label style={modalLabelStyle}>Job Description</label>
                 <textarea
-                  name="notes"
-                  value={editedFileFormData.notes}
+                  name="jobDesc"
+                  value={editedFileFormData.jobDesc}
                   onChange={handleEditedFileFormChange}
                   style={modalTextareaStyle}
                 ></textarea>

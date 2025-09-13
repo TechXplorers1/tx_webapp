@@ -2287,7 +2287,7 @@ const ClientDashboard = () => {
     { title: "Web Development", path: "/services/web-app-development" },
     { title: "Digital Marketing", path: "/services/digital-marketing" },
     { title: "IT Talent Supply", path: "/services/it-talent-supply" },
-    { title: "Job Supporting", path: "/services/job-support" },
+    { title: "Job Supporting", path: "/services/job-contact-form" },
     { title: "Cyber Security", path: "/services/cyber-security" },
   ];
 
@@ -2936,7 +2936,7 @@ useEffect(() => {
       'Applied Date': app.dateAdded,
       'Job Boards': app.jobBoards,
       'Job Title': app.position,
-      'Job ID': jobId,
+      'Job ID': app.jobId,
       'Company': app.company,
       'Job Type': app.jobType || 'N/A',
       'Link': app.link,
