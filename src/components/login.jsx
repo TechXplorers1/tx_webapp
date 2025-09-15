@@ -1,15 +1,15 @@
+// In login.jsx, replace the entire file content with this code.
 import React, { useState } from "react";
 import { useNavigate } from 'react-router-dom';
 import JsNavbar from './JsNavbar';
-import { Button, Modal, Form, InputGroup, Alert } from 'react-bootstrap';
+import { Button, Modal, Form, InputGroup, Alert, Spinner } from 'react-bootstrap'; // Import Spinner
 import { FcGoogle } from "react-icons/fc";
 import { MdEmail } from "react-icons/md";
 import { RiLockPasswordFill } from "react-icons/ri";
 import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
 import { useAuth } from '../components/AuthContext';
-import '../styles/AuthForm.css'; // Import the new shared CSS file
+import '../styles/AuthForm.css';
 
-// Import Firebase services
 import { auth, database } from "../../src/firebase";
 import { 
   signInWithEmailAndPassword, 
@@ -27,30 +27,27 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState("");
+  const [isLoggingIn, setIsLoggingIn] = useState(false); // NEW: State for loading
 
-  // Password Reset State
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [modalAlert, setModalAlert] = useState({ type: "", message: "" });
 
-  // --- 楳 Unified Login Processor ---
   const processLogin = async (user) => {
     const dbRef = ref(database);
     const snapshot = await get(child(dbRef, `users/${user.uid}`));
     let userDataFromDb;
 
     if (snapshot.exists()) {
-        // User exists, get their data
         userDataFromDb = snapshot.val();
     } else {
         userDataFromDb = { email: user.email, roles: ['client'] };
         await set(ref(database, 'users/' + user.uid), userDataFromDb);
-        // Also create the placeholder client record for new Google users
         await set(ref(database, 'clients/' + user.uid), { email: user.email, firstName: user.email.split('@')[0], lastName: '' });
     }
     
     const finalUserData = {
-       firebaseKey: user.uid, // --- ADD THIS LINE ---
+       firebaseKey: user.uid,
         uid: user.uid,
         email: user.email,
         roles: userDataFromDb.roles || ['client'],
@@ -60,7 +57,6 @@ export default function LoginPage() {
     sessionStorage.setItem('loggedInEmployee', JSON.stringify(finalUserData));
     login(finalUserData);
 
-    // Role-based navigation
     if (finalUserData.roles.includes('admin')) {
         navigate('/adminpage');
     } else if (finalUserData.roles.includes('manager')) {
@@ -68,18 +64,18 @@ export default function LoginPage() {
     } else if (finalUserData.roles.includes('employee')) {
         navigate('/employees');
     } else {
-        navigate('/'); // Default for clients
+        navigate('/');
     }
   };
 
-
-  // --- 柏 Firebase Email/Password Login Handler ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoginError("");
-
+    setIsLoggingIn(true); // NEW: Start loading
+    
     if (!email || !password) {
       setLoginError("Please enter both email and password.");
+      setIsLoggingIn(false);
       return;
     }
 
@@ -93,11 +89,14 @@ export default function LoginPage() {
             setLoginError("An error occurred during login. Please try again.");
             console.error("Firebase email login error:", error);
         }
+    } finally {
+        setIsLoggingIn(false); // NEW: Stop loading
     }
   };
 
-  // ---  Google Login Handler ---
   const handleGoogleLogin = async () => {
+    setLoginError("");
+    setIsLoggingIn(true); // NEW: Start loading for Google login
     const provider = new GoogleAuthProvider();
     try {
         const result = await signInWithPopup(auth, provider);
@@ -105,10 +104,11 @@ export default function LoginPage() {
     } catch (error) {
         setLoginError("Failed to sign in with Google. Please try again.");
         console.error("Firebase Google login error:", error);
+    } finally {
+        setIsLoggingIn(false); // NEW: Stop loading
     }
   };
 
-  // --- 煤 Firebase Password Reset Handler ---
   const handlePasswordReset = async () => {
     if (!forgotEmail.includes("@")) {
       setModalAlert({ type: "danger", message: "Please enter a valid email address." });
@@ -139,6 +139,7 @@ export default function LoginPage() {
             variant="outline-secondary"
             className="w-100 mb-3 d-flex align-items-center justify-content-center gap-2 google-btn"
             onClick={handleGoogleLogin}
+            disabled={isLoggingIn} // NEW: Disable during login
           >
           <FcGoogle size={22} /> Continue with Google
         </Button>
@@ -189,7 +190,17 @@ export default function LoginPage() {
 
           {loginError && <Alert variant="danger" className="py-2">{loginError}</Alert>}
 
-          <Button type="submit" className="w-100 btn btn-primary text-white fw-bold auth-btn-modern">Log In</Button>
+          <Button type="submit" className="w-100 btn btn-primary text-white fw-bold auth-btn-modern" disabled={isLoggingIn}>
+              {isLoggingIn ? (
+                  <>
+                      <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
+                      Logging In...
+                  </>
+              ) : (
+                  'Log In'
+              )}
+          </Button>
+
 
           <div className="text-center mt-3">
             <span className="auth-link-text">Don't have an account?</span>
@@ -203,7 +214,6 @@ export default function LoginPage() {
         </Form>
       </div>
 
-      {/* Forgot Password Modal */}
       <Modal show={showForgotModal} onHide={() => setShowForgotModal(false)} centered>
         <Modal.Header closeButton><Modal.Title>Reset Password</Modal.Title></Modal.Header>
         <Modal.Body>

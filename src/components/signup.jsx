@@ -1,3 +1,4 @@
+// In signup.jsx, replace the entire file content with this code.
 import React, { useState } from "react";
 import { useNavigate } from 'react-router-dom';
 import { FcGoogle } from "react-icons/fc";
@@ -5,12 +6,10 @@ import { MdEmail } from "react-icons/md";
 import { RiLockPasswordFill } from "react-icons/ri";
 import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
 import JsNavbar from './JsNavbar';
-import { Card, Button, Form, InputGroup, Modal } from 'react-bootstrap';
+import { Card, Button, Form, InputGroup, Modal, Spinner } from 'react-bootstrap'; // Import Spinner
 import { useAuth } from '../components/AuthContext';
-import '../styles/AuthForm.css'; // Import the new shared CSS file
+import '../styles/AuthForm.css';
 
-
-// Import Firebase auth and database services
 import { auth, database } from "../../src/firebase";
 import { 
     createUserWithEmailAndPassword,
@@ -30,6 +29,7 @@ export default function SignupPage() {
   const [passwordError, setPasswordError] = useState("");
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [isSigningUp, setIsSigningUp] = useState(false); // NEW: State for loading
 
   const validatePassword = (value) => {
     if (value.length < 8) return 'Password must be at least 8 characters';
@@ -40,21 +40,17 @@ export default function SignupPage() {
     return null;
   };
 
-  // --- 🔀 Unified Login/Signup Processor (for Google) ---
   const processGoogleUser = async (user) => {
     const dbRef = ref(database);
     const snapshot = await get(child(dbRef, `users/${user.uid}`));
     let userDataFromDb;
 
     if (snapshot.exists()) {
-        // User exists, get their data
         userDataFromDb = snapshot.val();
     } else {
-        // New user signing up via Google
-        // Create a new record for them in the database
         userDataFromDb = {
             email: user.email,
-            roles: ['client'], // Assign a default role
+            roles: ['client'],
         };
         await set(ref(database, 'users/' + user.uid), userDataFromDb);
     }
@@ -67,9 +63,8 @@ export default function SignupPage() {
     };
 
     sessionStorage.setItem('loggedInEmployee', JSON.stringify(finalUserData));
-    login(finalUserData); // Log the user in via context
+    login(finalUserData);
 
-    // Role-based navigation
     if (finalUserData.roles.includes('admin')) {
         navigate('/adminpage');
     } else if (finalUserData.roles.includes('manager')) {
@@ -77,11 +72,10 @@ export default function SignupPage() {
     } else if (finalUserData.roles.includes('employee')) {
         navigate('/employees');
     }else {
-        navigate('/clientdashboard'); // Default for clients
+        navigate('/clientdashboard');
     }
   };
 
-  // --- 🔐 Firebase Email/Password Signup Handler ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     setEmailError("");
@@ -106,47 +100,48 @@ export default function SignupPage() {
     }
 
     if (!hasError) {
-      try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
+        setIsSigningUp(true); // NEW: Start loading
+        try {
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
 
-         const userRecord = {
-          email: user.email,
-          roles: ['client'],
-        };
+            const userRecord = {
+                email: user.email,
+                roles: ['client'],
+            };
 
-         await set(ref(database, 'users/' + user.uid), userRecord);
+            await set(ref(database, 'users/' + user.uid), userRecord);
 
-          const clientRecord = {
-          email: user.email,
-          firstName: user.email.split('@')[0], // Use part of email as a temporary name
-          lastName: '',
-          displayStatuses: ['registered'],
-          // Add other default fields as needed
-        };
+            const clientRecord = {
+                email: user.email,
+                firstName: user.email.split('@')[0],
+                lastName: '',
+                displayStatuses: ['registered'],
+            };
 
-        await set(ref(database, 'clients/' + user.uid), clientRecord);
+            await set(ref(database, 'clients/' + user.uid), clientRecord);
 
-        
-        setShowSuccessModal(true);
+            setShowSuccessModal(true);
 
-        setTimeout(() => {
-          handleCloseSuccessModal();
-        }, 3000);
+            setTimeout(() => {
+                handleCloseSuccessModal();
+            }, 3000);
 
-      } catch (error) {
-        if (error.code === 'auth/email-already-in-use') {
-            setEmailError("An account with this email already exists.");
-        } else {
-            setPasswordError("Failed to create an account. Please try again.");
-            console.error("Firebase signup error:", error);
+        } catch (error) {
+            if (error.code === 'auth/email-already-in-use') {
+                setEmailError("An account with this email already exists.");
+            } else {
+                setPasswordError("Failed to create an account. Please try again.");
+                console.error("Firebase signup error:", error);
+            }
+        } finally {
+            setIsSigningUp(false); // NEW: Stop loading
         }
-      }
     }
   };
 
-  // --- 🇬 Google Signup/Login Handler ---
   const handleGoogleLogin = async () => {
+    setIsSigningUp(true); // NEW: Start loading for Google login
     const provider = new GoogleAuthProvider();
     try {
         const result = await signInWithPopup(auth, provider);
@@ -154,6 +149,8 @@ export default function SignupPage() {
     } catch (error) {
         setPasswordError("Failed to sign in with Google. Please try again.");
         console.error("Firebase Google login error:", error);
+    } finally {
+        setIsSigningUp(false); // NEW: Stop loading
     }
   };
 
@@ -172,6 +169,7 @@ export default function SignupPage() {
             variant="outline-secondary"
             className="w-100 mb-3 d-flex align-items-center justify-content-center gap-2 google-btn"
             onClick={handleGoogleLogin}
+            disabled={isSigningUp} // NEW: Disable during signup
           >
             <FcGoogle size={22} /> Continue with Google
           </Button>
@@ -232,9 +230,17 @@ export default function SignupPage() {
               <Form.Control.Feedback type="invalid">{confirmPasswordError}</Form.Control.Feedback>
             </Form.Group>
 
-              <Button type="submit" className="w-100 btn btn-primary text-white fw-bold auth-btn-modern">
-              Sign Up
+              <Button type="submit" className="w-100 btn btn-primary text-white fw-bold auth-btn-modern" disabled={isSigningUp}>
+              {isSigningUp ? (
+                  <>
+                      <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
+                      Signing Up...
+                  </>
+              ) : (
+                  'Sign Up'
+              )}
             </Button>
+
 
                <div className="text-center mt-3">
               <span className="auth-link-text">Already have an account?</span>

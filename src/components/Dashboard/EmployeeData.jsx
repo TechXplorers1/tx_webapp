@@ -795,8 +795,7 @@ const EmployeeData = () => {
   const [isClientSelectModalOpen, setIsClientSelectModalOpen] = useState(false);
   const [clientSearchTermInModal, setClientSearchTermInModal] = useState('');
   const [newResumeFile, setNewResumeFile] = useState(null);
-  const [fileToUpload, setFileToUpload] = useState(null);
-
+const [newFilesToUpload, setNewFilesToUpload] = useState([]);
 
 
   useEffect(() => {
@@ -1250,37 +1249,42 @@ const handleSaveEditedApplication = async () => {
 
 
 
-  const handlePasteAttachment = useCallback((event) => {
-    // Check if the edit modal is the active context
-    if (!showEditApplicationModal) return;
+// In EmployeeData.jsx, find the handlePasteAttachment function and replace it with this:
+const handlePasteAttachment = useCallback((event) => {
+    // Check if either the edit or upload modal is the active context
+    if (!showEditApplicationModal && !showUploadFileModal) return;
 
     const items = (event.clipboardData || event.originalEvent.clipboardData).items;
     let pastedFiles = [];
 
     for (const item of items) {
-      if (item.kind === 'file' && item.type.startsWith('image/')) { // Only handle pasted images
+      if (item.kind === 'file' && item.type.startsWith('image/')) {
         const file = item.getAsFile();
-        // Create a new file object matching your state's structure
         const newFileObject = {
           name: `Pasted Screenshot ${Date.now()}.${file.type.split('/')[1] || 'png'}`,
           size: `${(file.size / 1024).toFixed(1)} KB`,
-          type: 'interview screenshot', // <-- CORRECTED TYPE
+          type: 'interview screenshot',
           uploadDate: new Date().toISOString().split('T')[0],
-          file: file, // The actual File object
+          file: file,
+          id: Date.now() + Math.random(), // Add a unique ID for the new file
         };
         pastedFiles.push(newFileObject);
       }
     }
 
     if (pastedFiles.length > 0) {
-      // Add the pasted files to the attachments in the edit form state
-      setEditedApplicationFormData(prev => ({
-        ...prev,
-        attachments: [...(prev.attachments || []), ...pastedFiles],
-      }));
+      if (showEditApplicationModal) {
+        setEditedApplicationFormData(prev => ({
+          ...prev,
+          attachments: [...(prev.attachments || []), ...pastedFiles],
+        }));
+      } else if (showUploadFileModal) {
+        // FIX: Add pasted files to the newFilesToUpload state
+        setNewFilesToUpload(prev => [...prev, ...pastedFiles]);
+      }
       triggerNotification(`${pastedFiles.length} file(s) pasted successfully!`);
     }
-  }, [showEditApplicationModal]); // Dependencies for useCallback
+  }, [showEditApplicationModal, showUploadFileModal]); // Add showUploadFileModal as a dependency
 
   // This useEffect adds and removes the paste event listener
   useEffect(() => {
@@ -1406,74 +1410,70 @@ const handleSaveEditedApplication = async () => {
 
   // In EmployeeData.jsx, replace the existing handleSaveNewFile function
 
-  const handleSaveNewFile = async () => {
-    // 1. Validation
-    if (!selectedClientForFile || !newFileFormData.fileType || !fileToUpload) {
-      alert('Please select a client, file type, and a file to upload.');
+// In EmployeeData.jsx, find and replace the existing handleSaveNewFile function
+const handleSaveNewFile = async () => {
+    if (!selectedClientForFile || !newFileFormData.fileType || newFilesToUpload.length === 0) {
+      alert('Please select a client, file type, and at least one file to upload.');
       return;
     }
 
     setIsUploading(true);
     const { clientFirebaseKey, registrationKey } = selectedClientForFile;
+    const uploadedFilesMetadata = [];
 
     try {
-      triggerNotification("Uploading file, please wait..."); // Inform user
+      triggerNotification("Uploading file(s), please wait...");
 
-      // 2. Upload the file to Firebase Storage
-      const storagePath = `client_files/${clientFirebaseKey}/${registrationKey}/${Date.now()}_${fileToUpload.name}`;
-      const fileRef = storageRef(getStorage(), storagePath);
-      await uploadBytes(fileRef, fileToUpload);
-      const downloadURL = await getDownloadURL(fileRef);
+      // FIX: Loop through the newFilesToUpload array instead of a single file
+      for (const file of newFilesToUpload) {
+        const storagePath = `client_files/${clientFirebaseKey}/${registrationKey}/${Date.now()}_${file.name}`;
+        const fileRef = storageRef(getStorage(), storagePath);
+        await uploadBytes(fileRef, file.file); // Use the File object inside the metadata object
+        const downloadURL = await getDownloadURL(fileRef);
 
-      // 3. Prepare metadata for the Realtime Database
-      const newFileMetadata = {
-        id: Date.now(),
-        downloadUrl: downloadURL,
-        name: fileToUpload.name,
-        size: `${(fileToUpload.size / 1024).toFixed(1)} KB`,
-        type: newFileFormData.fileType,
-        uploadDate: new Date().toISOString().split('T')[0],
-        jobDesc: newFileFormData.jobDesc || '',
-      };
+        const newFileMetadata = {
+          id: Date.now() + Math.random(),
+          downloadUrl: downloadURL,
+          name: file.name,
+          size: file.size,
+          type: newFileFormData.fileType,
+          uploadDate: new Date().toISOString().split('T')[0],
+          notes: newFileFormData.notes || '',
+        };
+        uploadedFilesMetadata.push(newFileMetadata);
+      }
 
-      // 4. Get existing files and add the new one
       const filesRef = ref(database, `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}/files`);
       const existingFiles = selectedClientForFile.files || [];
-      const updatedFiles = [newFileMetadata, ...existingFiles]; // Prepend new file to the list
+      const updatedFiles = [...uploadedFilesMetadata, ...existingFiles];
 
-      // 5. Save the updated file list back to the database
       await set(filesRef, updatedFiles);
 
-      // FIX: Immediately update the local state to reflect the changes
       const updatedClient = {
         ...selectedClientForFile,
-        files: updatedFiles
+        files: updatedFiles,
       };
 
       setSelectedClient(updatedClient);
-
       const updateClientList = (prevClients) => {
         return prevClients.map(c =>
           c.registrationKey === updatedClient.registrationKey ? updatedClient : c
         );
       };
-
-      // Update the correct client list (active, inactive, new)
       setActiveClients(updateClientList);
       setInactiveClients(updateClientList);
       setNewClients(updateClientList);
 
-      // 6. Reset UI and provide feedback
       setShowUploadFileModal(false);
-      setFileToUpload(null);
-      setNewFileFormData({ fileType: '', fileName: '', jobDesc: '' });
-      triggerNotification("File uploaded successfully!");
+      setNewFilesToUpload([]); // FIX: Reset the files array
+      setNewFileFormData({ fileType: '', fileName: '', notes: '' }); // Reset form data
+      triggerNotification("File(s) uploaded successfully!");
 
     } catch (error) {
-      console.error("Error uploading file:", error);
+      console.error("Error uploading file(s):", error);
       alert("File upload failed. Please try again.");
     } finally {
-      setIsUploading(false); // Stop loading spinner regardless of outcome
+      setIsUploading(false);
     }
   };
 
@@ -2794,9 +2794,9 @@ useEffect(() => {
                               Status: <span style={{ fontWeight: '600', color: '#10b981' }}>{file.status}</span>
                             </p>
                             <p style={fileUploadDateStyle}>Uploaded: {file.uploadDate}</p>
-                            {file.jobDesc && (
+                            {/* {file.jobDesc && (
                               <p style={fileNotesStyle}>Job Description: {file.jobDesc}</p>
-                            )}
+                            )} */}
                             <div style={fileActionsStyle}>
                               <button onClick={() => handleViewFile(file)} style={actionButtonAppStyle}>
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -3683,9 +3683,9 @@ useEffect(() => {
                               Status: <span style={{ fontWeight: '600', color: '#10b981' }}>{file.status}</span>
                             </p>
                             <p style={fileUploadDateStyle}>Uploaded: {file.uploadDate}</p>
-                            {file.jobDesc && (
+                            {/* {file.jobDesc && (
                               <p style={fileNotesStyle}>Job Description: {file.jobDesc}</p>
-                            )}
+                            )} */}
                             <div style={fileActionsStyle}>
                               <button onClick={() => handleViewFile(file)} style={actionButtonAppStyle}>
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -4058,7 +4058,7 @@ useEffect(() => {
                   placeholder="e.g., ABC-12345"
                 />
               </div>
-              <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
+              {/* <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
                 <label style={modalLabelStyle}>Job Description</label>
                 <textarea
                   name="jobDesc"
@@ -4067,7 +4067,7 @@ useEffect(() => {
                   style={modalTextareaStyle}
                   placeholder="Any additional notes about this application..."
                 ></textarea>
-              </div>
+              </div> */}
             </div>
           </Modal.Body>
           <Modal.Footer style={modalFooterStyle}>
@@ -4144,7 +4144,7 @@ useEffect(() => {
                 ) : 'N/A'}
               </div>
               <p style={modalViewDetailItemStyle}><strong>Applied Date:</strong> {viewedApplication.appliedDate}</p>
-              <p style={{ ...modalViewDetailItemStyle, gridColumn: '1 / -1' }}><strong>Job Description:</strong> {viewedApplication.jobDesc || '-'}</p>
+              {/* <p style={{ ...modalViewDetailItemStyle, gridColumn: '1 / -1' }}><strong>Job Description:</strong> {viewedApplication.jobDesc || '-'}</p> */}
             </div>
           </Modal.Body>
           <Modal.Footer style={modalFooterStyle}>
@@ -4295,7 +4295,7 @@ useEffect(() => {
                     />
                   </div>
                   <div style={modalFormFieldGroupStyle}>
-                    <label style={modalLabelStyle}>Interview Time<span style={{ color: 'red' }}>*</span></label>
+                    <label style={modalLabelStyle}>Interview Time</label>
                     <input
                       type="time"
                       name="interviewTime"
@@ -4394,7 +4394,7 @@ useEffect(() => {
                   disabled
                 />
               </div>
-              <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
+              {/* <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
                 <label style={modalLabelStyle}>Job Description</label>
                 <textarea
                   name="jobDesc"
@@ -4402,7 +4402,7 @@ useEffect(() => {
                   onChange={handleEditedApplicationFormChange}
                   style={modalTextareaStyle}
                 ></textarea>
-              </div>
+              </div> */}
             </div>
           </Modal.Body>
           <Modal.Footer style={modalFooterStyle}>
@@ -4443,69 +4443,129 @@ useEffect(() => {
           <Modal.Header closeButton style={modalHeaderStyle}>
             <Modal.Title style={modalTitleStyle}>Upload File</Modal.Title>
           </Modal.Header>
-          <Modal.Body style={modalBodyStyle}>
-            <p style={{ textAlign: 'center', color: '#64748b', marginBottom: '20px' }}>Upload resume, interview screenshot, or other documents for your clients. Files will be automatically sent to clients.</p>
-            <div style={modalFormGridStyle}>
-              <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Client <span style={{ color: 'red' }}>*</span></label>
-                <select
-                  name="clientId"
-                  value={selectedClientForFile.registrationKey}
- onChange={(e) => {
-                const selected = [...activeClients, ...inactiveClients].find(
-                    (c) => c.registrationKey === e.target.value
-                );
-                setSelectedClientForFile(selected);
-            }}                  style={modalSelectStyle}
-                  required
-                  disabled // Client is pre-selected
-                >
-                  {[...activeClients, ...inactiveClients].map(client => (
-                    <option key={client.registrationKey} value={client.registrationKey}>{client.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>File Type <span style={{ color: 'red' }}>*</span></label>
-                <select
-                  name="fileType"
-                  value={newFileFormData.fileType}
-                  onChange={handleNewFileFormChange}
-                  style={modalSelectStyle}
-                  required
-                >
-                  <option value="">Select file type</option>
-                  <option value="resume">Resume</option>
-                  <option value="cover letter">Cover Letter</option>
-                  {/* <option value="interview screenshot">Interview Screenshot</option> */}
-                  <option value="portfolio">Portfolio</option>
-                  <option value="offers">Offers</option>
-                  <option value="other">Others</option>
-                </select>
-              </div>
-              <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
-                <label style={modalLabelStyle}>File <span style={{ color: 'red' }}>*</span></label>
-                <input
-                  type="file"
-                  name="fileName"
-                  onChange={handleNewFileFormChange}
-                  style={modalInputStyle}
-                  required
-                />
-                <p style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '5px' }}>Supported formats: PDF, DOC, DOCX, PNG, JPG, JPEG (Max 10MB)</p>
-              </div>
-              <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
-                <label style={modalLabelStyle}>Details</label>
-                <textarea
-                  name="jobDesc"
-                  value={newFileFormData.jobDesc}
-                  onChange={handleNewFileFormChange}
-                  style={modalTextareaStyle}
-                  placeholder="Any additional notes about this file..."
-                ></textarea>
-              </div>
+   // In EmployeeData.jsx, find the `showUploadFileModal` block and replace its Modal.Body with this:
+<Modal.Body style={modalBodyStyle}>
+  <p style={{ textAlign: 'center', color: '#64748b', marginBottom: '20px' }}>Upload resume, interview screenshot, or other documents for your clients. Files will be automatically sent to clients.</p>
+  <div style={modalFormGridStyle}>
+    <div style={modalFormFieldGroupStyle}>
+      <label style={modalLabelStyle}>Client <span style={{ color: 'red' }}>*</span></label>
+      <select
+        name="clientId"
+        value={selectedClientForFile.registrationKey}
+        onChange={(e) => {
+          const selected = [...activeClients, ...inactiveClients].find(
+            (c) => c.registrationKey === e.target.value
+          );
+          setSelectedClientForFile(selected);
+        }}
+        style={modalSelectStyle}
+        required
+        disabled
+      >
+        {[...activeClients, ...inactiveClients].map(client => (
+          <option key={client.registrationKey} value={client.registrationKey}>{client.name}</option>
+        ))}
+      </select>
+    </div>
+    <div style={modalFormFieldGroupStyle}>
+      <label style={modalLabelStyle}>File Type <span style={{ color: 'red' }}>*</span></label>
+      <select
+        name="fileType"
+        value={newFileFormData.fileType}
+        onChange={handleNewFileFormChange}
+        style={modalSelectStyle}
+        required
+      >
+        <option value="">Select file type</option>
+        <option value="resume">Resume</option>
+        <option value="cover letter">Cover Letter</option>
+        {/* <option value="interview screenshot">Interview Screenshot</option> */}
+        <option value="portfolio">Portfolio</option>
+        <option value="offers">Offers</option>
+        <option value="other">Others</option>
+      </select>
+    </div>
+    <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
+      <label style={modalLabelStyle}>File <span style={{ color: 'red' }}>*</span></label>
+
+      {/* NEW: Attachment Preview */}
+      {newFilesToUpload.length > 0 && (
+        <div className="attachments-preview-container">
+          {newFilesToUpload.map((file, index) => (
+            <div key={file.id} className="attachment-item">
+              {file.type === 'interview screenshot' ? (
+                <img src={URL.createObjectURL(file.file)} alt={file.name} className="attachment-image-preview" />
+              ) : (
+                <div className="attachment-file-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                    <polyline points="13 2 13 9 20 9"></polyline>
+                  </svg>
+                </div>
+              )}
+              <span className="attachment-name">{file.name}</span>
+              <button
+                onClick={() => {
+                  setNewFilesToUpload(prev => prev.filter(f => f.id !== file.id));
+                }}
+                className="attachment-remove-btn"
+              >
+                &times;
+              </button>
             </div>
-          </Modal.Body>
+          ))}
+        </div>
+      )}
+
+      {/* NEW: Custom file input for drag/drop and paste */}
+      <div className="custom-file-input-container">
+        <button
+          type="button"
+          className="add-attachment-btn"
+          onClick={() => {
+            if (fileInputRef.current) {
+              fileInputRef.current.click();
+            }
+          }}
+        >
+          +
+        </button>
+        <input
+          type="file"
+          multiple
+          ref={fileInputRef}
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            const newFiles = Array.from(e.target.files).map(file => ({
+              id: Date.now() + Math.random(),
+              name: file.name,
+              size: `${(file.size / 1024).toFixed(1)} KB`,
+              type: newFileFormData.fileType || 'other',
+              uploadDate: new Date().toISOString().split('T')[0],
+              file: file,
+            }));
+            setNewFilesToUpload(prev => [...prev, ...newFiles]);
+          }}
+        />
+        <div className="file-input-facade">
+          <span className="file-input-placeholder">
+            Add file or paste a screenshot
+          </span>
+        </div>
+      </div>
+    </div>
+    <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
+      <label style={modalLabelStyle}>Details</label>
+      <textarea
+        name="notes"
+        value={newFileFormData.notes}
+        onChange={(e) => setNewFileFormData(prev => ({ ...prev, notes: e.target.value }))}
+        style={modalTextareaStyle}
+        placeholder="Any additional notes about this file..."
+      ></textarea>
+    </div>
+  </div>
+</Modal.Body>
           <Modal.Footer style={modalFooterStyle}>
             <button
               onClick={() => setShowUploadFileModal(false)}
@@ -4596,7 +4656,7 @@ useEffect(() => {
                 <p style={modalViewDetailItemStyle}><strong>Upload Date:</strong> {viewedFile.uploadDate}</p>
                 {viewedFile.jobDesc && (
                   <p style={{ ...modalViewDetailItemStyle, gridColumn: '1 / -1' }}>
-                    <strong>Job Description:</strong> {viewedFile.jobDesc}
+                    {/* <strong>Job Description:</strong> {viewedFile.jobDesc} */}
                   </p>
                 )}
               </div>
@@ -4691,7 +4751,7 @@ useEffect(() => {
                   style={modalInputStyle}
                 />
               </div>
-              <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
+              {/* <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
                 <label style={modalLabelStyle}>Job Description</label>
                 <textarea
                   name="jobDesc"
@@ -4699,7 +4759,7 @@ useEffect(() => {
                   onChange={handleEditedFileFormChange}
                   style={modalTextareaStyle}
                 ></textarea>
-              </div>
+              </div> */}
             </div>
           </Modal.Body>
           <Modal.Footer style={modalFooterStyle}>

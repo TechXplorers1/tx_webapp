@@ -1649,7 +1649,7 @@ const Applications = ({
                   <th style={{ padding: '12px', textAlign: 'center' }}>Company</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Job Type</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Link</th>
-                  <th style={{ padding: '12px', textAlign: 'center' }}>Job Description</th>
+                  {/* <th style={{ padding: '12px', textAlign: 'center' }}>Job Description</th> */}
                 </tr>
               </thead>
               <tbody>
@@ -1675,7 +1675,7 @@ const Applications = ({
                         Link
                       </a>
                     </td>
-                    <td style={{ padding: '12px' }}>
+                    {/* <td style={{ padding: '12px' }}>
                       <Button
                         variant="link"
                         onClick={() => handleOpenJobDescriptionModal(app.jobDescription)}
@@ -1683,7 +1683,7 @@ const Applications = ({
                       >
                         View
                       </Button>
-                    </td>
+                    </td> */}
                   </tr>
                 ))}
               </tbody>
@@ -2941,7 +2941,7 @@ useEffect(() => {
       'Company': app.company,
       'Job Type': app.jobType || 'N/A',
       'Link': app.link,
-      'Job Description': app.jobDescription
+      // 'Job Description': app.jobDescription
     }));
 
     const ws = utils.json_to_sheet(dataToExport); // Use utils from named import
