@@ -178,6 +178,7 @@ const Radio = ({ selectedRadioPlan, handleRadioPlanChange }) => {
 const ClientHeader = ({
   clientUserName,
   clientInitials,
+  onLogoClick,
   isDarkMode,
   toggleTheme,
   toggleSidebar, // This prop is no longer used for the hamburger menu, but kept for consistency
@@ -537,7 +538,7 @@ const ClientHeader = ({
       </style>
       <header className="ad-header">
         <div className="ad-header-left">
-          <div className="ad-logo">
+          <div className="ad-logo" onClick={onLogoClick} style={{ cursor: 'pointer' }}>
             <span>Tech</span>
             <span className="ad-logo-x">X</span>
             <span>plorers</span>
@@ -4993,6 +4994,7 @@ html.dark-mode .notify-success-message {
         unreadNotificationsCount={unreadNotificationsCount}
         onNotificationClick={handleNotificationClick}
         onLogoutClick={handleLogout}
+        onLogoClick={() => navigate('/')}
         activeServices={activeServices}
         inactiveServices={inactiveServices}
         onActiveServiceClick={handleActiveServiceClick}

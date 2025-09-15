@@ -227,7 +227,7 @@ const ClientManagement = () => {
     setClientToDelete(null);
   };
 
-  const handleAssignClient = async (registration) => {
+const handleAssignClient = async (registration) => {
     if (!registration || !registration.managerFirebaseKey) {
       alert('Please select a manager for this service first.');
       return;
@@ -235,20 +235,27 @@ const ClientManagement = () => {
     const registrationRef = ref(database, `clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}`);
     try {
       await update(registrationRef, {
-        manager: `${registration.managerFirstName} ${registration.managerLastName}`,
+        // FIX: Use the existing 'registration.manager' property which holds the full name
+        manager: registration.manager,
         assignedManager: registration.managerFirebaseKey,
         assignmentStatus: 'pending_employee'
       });
       // OPTIMISTIC UPDATE: Update local state immediately for a responsive UI
       setServiceRegistrations(prev => prev.map(reg => 
         reg.registrationKey === registration.registrationKey 
-          ? { ...reg, manager: `${registration.managerFirstName} ${registration.managerLastName}`, assignedManager: registration.managerFirebaseKey, assignmentStatus: 'pending_employee' }
+          ? { 
+              ...reg, 
+              // FIX: Use the existing 'registration.manager' property for local state
+              manager: registration.manager, 
+              assignedManager: registration.managerFirebaseKey, 
+              assignmentStatus: 'pending_employee' 
+            }
           : reg
       ));
     } catch (error) {
       console.error("Failed to assign manager:", error);
     }
-  };
+};
 
 
     const handleRestoreClient = async (registration) => {

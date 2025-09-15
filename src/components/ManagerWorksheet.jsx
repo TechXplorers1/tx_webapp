@@ -5688,6 +5688,7 @@ const ApplicationsTab = ({
                     <th>POSITION</th>
                     <th>SALARY</th>
                     <th>ASSIGNED TO</th>
+                    <th>APPLICATION COUNT</th>
                     <th>PRIORITY</th>
                     {/* REMOVED: <th>STATUS</th> */}
                     <th>ASSIGNED DATE</th>
@@ -5699,6 +5700,8 @@ const ApplicationsTab = ({
                   // FIX: Find the assigned employee's full name using their firebaseKey
                   const assignedEmployee = allEmployees.find(emp => emp.firebaseKey === client.assignedTo);
                   const assignedEmployeeName = assignedEmployee ? `${assignedEmployee.firstName} ${assignedEmployee.lastName}` : 'N/A';
+                                const applicationCount = (client.jobApplications || []).length; // Get the count
+
                   
                   return (
                     <tr key={client.registrationKey}>
@@ -5728,6 +5731,11 @@ const ApplicationsTab = ({
                           {assignedEmployeeName}
                         </div>
                       </td>
+                      <td> {/* NEW: Application Count Cell */}
+                    <div style={{ textAlign: 'center' }}>
+                      {applicationCount}
+                    </div>
+                  </td>
                       <td>
                         <span className={`modal-client-priority-badge ${client.priority}`}>
                           {(client.priority || '').charAt(0).toUpperCase() + (client.priority || '').slice(1)}
@@ -5777,7 +5785,7 @@ const ApplicationsTab = ({
       <div className="employee-info-section" style={{ marginBottom: '20px', padding: '15px', backgroundColor: 'var(--card-bg)', borderRadius: '8px' }}>
         <h4>Employee Information</h4>
         <p><strong>Name:</strong> {selectedEmployeeForClients.fullName || 'N/A'}</p>
-        <p><strong>Role:</strong> {selectedEmployeeForClients.role || (selectedEmployeeForClients.roles && selectedEmployeeForClients.roles.join(', ')) || 'N/A'}</p>
+        <p><strong>Role:</strong> {selectedEmployeeForClients.role || (selectedEmployeeForClients.role && selectedEmployeeForClients.role.join(', ')) || 'N/A'}</p>
         <p><strong>Email:</strong> {selectedEmployeeForClients.workEmail || selectedEmployeeForClients.email || 'N/A'}</p>
         <p><strong>Total Assigned Clients:</strong> {selectedEmployeeForClients.assignedClients ? selectedEmployeeForClients.assignedClients.length : 0}</p>
       </div>

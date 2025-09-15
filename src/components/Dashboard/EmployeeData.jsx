@@ -13,6 +13,7 @@ const simplifiedServices = ['Mobile Development', 'Web Development', 'Digital Ma
 const AdminHeader = ({
   adminUserName,
   adminInitials,
+  onLogoClick,
   isDarkMode,
   toggleTheme,
   toggleSidebar,
@@ -307,7 +308,7 @@ const AdminHeader = ({
       </style>
       <header className="ad-header">
         <div className="ad-header-left">
-          <div className="ad-logo">
+          <div className="ad-logo" onClick={onLogoClick} style={{ cursor: 'pointer' }}>
             <span>Tech</span>
             <span className="ad-logo-x">X</span>
             <span>plorers</span>
@@ -351,13 +352,12 @@ const AdminHeader = ({
                   </svg>
                   Profile
                 </li>
-                <li className="profile-dropdown-item logout" onClick={() => window.location.href = '/'}>
-                  {/* Log Out Icon (Door with arrow from screenshot) */}
+                {/* <li className="profile-dropdown-item logout" onClick={() => window.location.href = '/'}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1rem', height: '1rem' }}>
                     <path d="M10 4H4C3.44772 4 3 4.44772 3 5V19C3 19.5523 3.44772 20 4 20H10C10.5523 20 11 19.5523 11 19V17H13V19C13 20.6569 11.6569 22 10 22H4C2.34315 22 1 20.6569 1 19V5C1 3.34315 2.34315 2 4 2H10C11.6569 2 13 3.34315 13 5V7H11V5C11 4.44772 10.5523 4 10 4ZM19.2929 10.2929L22.2929 13.2929C22.6834 13.6834 22.6834 14.3166 22.2929 14.7071L19.2929 17.7071C18.9024 18.0976 18.2692 18.0976 17.8787 17.7071C17.4882 17.3166 17.4882 16.6834 17.8787 16.2929L19.5858 14.5858H11C10.4477 14.5858 10 14.1381 10 13.5858C10 13.0335 10.4477 12.5858 11 12.5858H19.5858L17.8787 10.8787C17.4882 10.4882 17.4882 9.85497 17.8787 9.46447C18.2692 9.07395 18.9024 9.07395 19.2929 9.46447Z" />
                   </svg>
                   Log out
-                </li>
+                </li> */}
               </ul>
             )}
           </div>
@@ -1776,6 +1776,7 @@ useEffect(() => {
   showProfileModal={showEmployeeProfileModal}
   setShowProfileModal={setShowEmployeeProfileModal}
   onNotificationClick={handleNotificationIconClick}
+  onLogoClick={() => navigate('/')}
 />
       {/* Centralized CSS styles for hover effects and animations */}
       <style>
@@ -2222,7 +2223,7 @@ useEffect(() => {
                   Currently viewing data for: {`${selectedClient.firstName} ${selectedClient.lastName}`}
                 </p>
                 <p style={{ fontSize: '0.9rem', color: '#475569', margin: 0 }}>
-                  Role: {selectedClient.role} | Job Location: {selectedClient.location} | Salary: {selectedClient.jobType}
+                  Manager: {selectedClient.manager} | Job Location: {selectedClient.location} | Salary: {selectedClient.jobType}
                 </p>
               </div>
 
