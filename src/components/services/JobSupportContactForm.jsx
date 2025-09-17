@@ -130,7 +130,7 @@ const handleChange = (e, index, fieldName) => {
 
     // Validation for Step 1
     if (step === 1) {
-        const mandatoryFields = ['firstName', 'lastName'];
+        const mandatoryFields = ['firstName', 'lastName', 'dob', 'gender', 'email', 'mobile', 'ethnicity', 'county', 'address', 'zipCode'];
         mandatoryFields.forEach(field => {
             if (!formData[field]) {
                 errors[field] = 'This field is required.';
@@ -170,7 +170,7 @@ const handleChange = (e, index, fieldName) => {
 
     // Validation for Step 2
     if (step === 2) {
-        const mandatoryFields = [];
+        const mandatoryFields = ['securityClearance', 'willingToRelocate', 'workPreference', 'yearsOfExperience', 'jobsToApply', 'currentSalary', 'expectedSalary', 'visaStatus'];
         mandatoryFields.forEach(field => {
             if (!formData[field]) {
                 errors[field] = 'This field is required.';
@@ -189,10 +189,20 @@ const handleChange = (e, index, fieldName) => {
 
     // FIX: Validation for Step 3 now loops through the array
     if (step === 3) {
+       const mandatoryFields = ['noticePeriod'];
+        mandatoryFields.forEach(field => {
+            if (!formData[field]) {
+                errors[field] = 'This field is required.';
+                isValid = false;
+            }
+        });
       formData.educationDetails.forEach((edu, index) => {
-        if (!edu.universityName || !edu.courseOfStudy) {
+        if (!edu.universityName || !edu.universityAddress ||  !edu.courseOfStudy || !edu.graduationFromDate || !edu.graduationToDate) {
           errors[`universityName-${index}`] = 'University Name is required.';
-          errors[`courseOfStudy-${index}`] = 'Course of Study is required.';
+          errors[`universityAddress-${index}`] = 'University Address is required.';
+           errors[`courseOfStudy-${index}`] = 'Course of Study is required.';
+          errors[`graduationFromDate-${index}`] = 'Graduation From Date is required.';
+           errors[`graduationToDate-${index}`] = 'Graduation To Date is required.';
           isValid = false;
         }
       });

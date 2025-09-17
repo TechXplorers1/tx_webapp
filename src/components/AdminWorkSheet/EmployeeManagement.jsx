@@ -1,7 +1,10 @@
-import React, {useState, useEffect } from 'react';
+// In EmployeeManagement.jsx, replace the entire file content with this code.
+import React, { useState, useEffect, useRef } from 'react';
 import { database, auth } from '../../firebase'; // Import your Firebase config
 import { ref, onValue, push, set, remove, update } from "firebase/database";
 import { createUserWithEmailAndPassword } from "firebase/auth";
+import { Spinner } from 'react-bootstrap';
+
 
 const EmployeeManagement = () => {
   // --- Employee Management States ---
@@ -14,7 +17,7 @@ const EmployeeManagement = () => {
   const [isDeleteConfirmModalOpen, setIsDeleteConfirmModalOpen] = useState(false);
   const [employeeToDeleteId, setEmployeeToDeleteId] = useState(null);
   const [currentEmployeeToEdit, setCurrentEmployeeToEdit] = useState(null);
-    const [isStatusConfirmModalOpen, setIsStatusConfirmModalOpen] = useState(false);
+  const [isStatusConfirmModalOpen, setIsStatusConfirmModalOpen] = useState(false);
   const [employeeToUpdateStatus, setEmployeeToUpdateStatus] = useState(null);
   const [newEmployee, setNewEmployee] = useState({
     workEmail: '',
@@ -43,23 +46,29 @@ const EmployeeManagement = () => {
   const [pendingEmployeeUpdate, setPendingEmployeeUpdate] = useState(null);
   const [employeeToDeleteDetails, setEmployeeToDeleteDetails] = useState(null);
 
-    // Department Management States
-    const [departments, setDepartments] = useState([
-      { id: 1, name: 'Management', description: 'Executive and senior management team', head: 'Sarah Wilson', employees: 5, status: 'active', createdDate: '15/01/2023' },
-      { id: 2, name: 'Development', description: 'Software development and engineering', head: 'Michael Johnson', employees: 12, status: 'active', createdDate: '15/01/2023' },
-      { id: 3, name: 'Design', description: 'UI/UX design and creative services', head: 'Not assigned', employees: 6, status: 'active', createdDate: '15/01/2023' },
-      { id: 4, name: 'Marketing', description: 'Marketing and brand management', head: 'Not assigned', employees: 8, status: 'active', createdDate: '15/01/2023' },
-      { id: 5, name: 'Sales', description: 'Sales and business development', head: 'Not assigned', employees: 10, status: 'active', createdDate: '15/01/2023' },
-      { id: 6, name: 'Operations', description: 'Operations and process management', head: 'Not assigned', employees: 7, status: 'active', createdDate: '15/01/2023' },
-      { id: 7, name: 'Finance', description: 'Financial planning and accounting', head: 'Not assigned', employees: 4, status: 'active', createdDate: '15/01/2023' },
-      { id: 8, name: 'Support', description: 'Customer support and service', head: 'Not assigned', employees: 9, status: 'active', createdDate: '15/01/2023' },
-      { id: 9, name: 'Quality Assurance', description: 'Quality testing and assurance', head: 'Not assigned', employees: 5, status: 'active', createdDate: '15/01/2023' },
-      { id: 10, name: 'Tech Placement', description: 'Technology recruitment and placement', head: 'Michael Johnson', employees: 8, status: 'active', createdDate: '15/01/2023' },
-      { id: 11, name: 'HR', description: 'Human resources and talent management', head: 'Not assigned', employees: 3, status: 'active', createdDate: '15/01/2023' },
-      { id: 12, name: 'External', description: 'External clients and partners', head: 'Not assigned', employees: 0, status: 'active', createdDate: '15/01/2023' },
-    ]);
+  // NEW: State for loading spinners
+  const [isCreatingEmployee, setIsCreatingEmployee] = useState(false);
+  const [isUpdatingEmployee, setIsUpdatingEmployee] = useState(false);
+  const [isDeletingEmployee, setIsDeletingEmployee] = useState(false);
 
-    const departmentOptions = departments.map(d => d.name);
+
+  // Department Management States
+  const [departments, setDepartments] = useState([
+    { id: 1, name: 'Management', description: 'Executive and senior management team', head: 'Sarah Wilson', employees: 5, status: 'active', createdDate: '15/01/2023' },
+    { id: 2, name: 'Development', description: 'Software development and engineering', head: 'Michael Johnson', employees: 12, status: 'active', createdDate: '15/01/2023' },
+    { id: 3, name: 'Design', description: 'UI/UX design and creative services', head: 'Not assigned', employees: 6, status: 'active', createdDate: '15/01/2023' },
+    { id: 4, name: 'Marketing', description: 'Marketing and brand management', head: 'Not assigned', employees: 8, status: 'active', createdDate: '15/01/2023' },
+    { id: 5, name: 'Sales', description: 'Sales and business development', head: 'Not assigned', employees: 10, status: 'active', createdDate: '15/01/2023' },
+    { id: 6, name: 'Operations', description: 'Operations and process management', head: 'Not assigned', employees: 7, status: 'active', createdDate: '15/01/2023' },
+    { id: 7, name: 'Finance', description: 'Financial planning and accounting', head: 'Not assigned', employees: 4, status: 'active', createdDate: '15/01/2023' },
+    { id: 8, name: 'Support', description: 'Customer support and service', head: 'Not assigned', employees: 9, status: 'active', createdDate: '15/01/2023' },
+    { id: 9, name: 'Quality Assurance', description: 'Quality testing and assurance', head: 'Not assigned', employees: 5, status: 'active', createdDate: '15/01/2023' },
+    { id: 10, name: 'Tech Placement', description: 'Technology recruitment and placement', head: 'Michael Johnson', employees: 8, status: 'active', createdDate: '15/01/2023' },
+    { id: 11, name: 'HR', description: 'Human resources and talent management', head: 'Not assigned', employees: 3, status: 'active', createdDate: '15/01/2023' },
+    { id: 12, name: 'External', description: 'External clients and partners', head: 'Not assigned', employees: 0, status: 'active', createdDate: '15/01/2023' },
+  ]);
+
+  const departmentOptions = departments.map(d => d.name);
   departmentOptions.unshift('No department assigned');
 
   const roleOptions = [
@@ -85,7 +94,7 @@ const EmployeeManagement = () => {
   );
 
 
-   useEffect(() => {
+  useEffect(() => {
     const usersRef = ref(database, 'users');
     
     // Set up a listener for real-time data fetching
@@ -122,51 +131,51 @@ const EmployeeManagement = () => {
     return () => unsubscribe();
   }, []);
 
-   useEffect(() => {
-          const loadEmployees = async () => {
-              try {
-                  const savedEmployees = localStorage.getItem('users');
-                  if (savedEmployees && JSON.parse(savedEmployees).length > 0) {
-                      setEmployees(JSON.parse(savedEmployees));
-                  } else {
-                      const response = await fetch('/employees.json');
-                      if (!response.ok) {
-                          throw new Error('Network response was not ok');
-                      }
-                      const data = await response.json();
-                      setEmployees(data);
-                  }
-              } catch (err) {
-                  setError(err.message);
-                  console.error("Failed to load employees:", err);
-              } finally {
-                  setLoading(false);
-              }
-          };
-          loadEmployees();
-      }, []);
-  
-      useEffect(() => {
-          if (!loading && employees.length > 0) {
-              localStorage.setItem('users', JSON.stringify(employees));
+  useEffect(() => {
+    const loadEmployees = async () => {
+      try {
+        const savedEmployees = localStorage.getItem('users');
+        if (savedEmployees && JSON.parse(savedEmployees).length > 0) {
+          setEmployees(JSON.parse(savedEmployees));
+        } else {
+          const response = await fetch('/employees.json');
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
           }
-      }, [employees, loading]);
-  
-      useEffect(() => {
-          const handleStorageChange = (event) => {
-              if (event.key === 'users' && event.newValue) {
-                  try {
-                      setEmployees(JSON.parse(event.newValue));
-                  } catch (error) {
-                      console.error("Failed to parse employees from storage event", error);
-                  }
-              }
-          };
-          window.addEventListener('storage', handleStorageChange);
-          return () => {
-              window.removeEventListener('storage', handleStorageChange);
-          };
-      }, []);
+          const data = await response.json();
+          setEmployees(data);
+        }
+      } catch (err) {
+        setError(err.message);
+        console.error("Failed to load employees:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadEmployees();
+  }, []);
+
+  useEffect(() => {
+    if (!loading && employees.length > 0) {
+      localStorage.setItem('users', JSON.stringify(employees));
+    }
+  }, [employees, loading]);
+
+  useEffect(() => {
+    const handleStorageChange = (event) => {
+      if (event.key === 'users' && event.newValue) {
+        try {
+          setEmployees(JSON.parse(event.newValue));
+        } catch (error) {
+          console.error("Failed to parse employees from storage event", error);
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   const handleAddEmployeeClick = () => {
     setIsAddEmployeeModalOpen(true);
@@ -175,7 +184,7 @@ const EmployeeManagement = () => {
   const handleCloseAddEmployeeModal = () => {
     setIsAddEmployeeModalOpen(false);
     setNewEmployee({
-          role: 'employee',
+      role: 'employee',
       workEmail: '',
       department: 'No department assigned',
       accountStatus: 'Active',
@@ -197,7 +206,7 @@ const EmployeeManagement = () => {
     });
   };
 
-   const handleNewemployeeChange = (e) => {
+  const handleNewemployeeChange = (e) => {
     const { name, value } = e.target;
     setNewEmployee(prevemployee => ({
       ...prevemployee,
@@ -216,12 +225,12 @@ const EmployeeManagement = () => {
 
 
 
- const handleCreateEmployeeAccount = async (e) => {
+  const handleCreateEmployeeAccount = async (e) => {
     e.preventDefault();
-    
+    setIsCreatingEmployee(true); // NEW: Start loading
 
     // Construct the new employee object from the form state
-   const newEmployeeData = {
+    const newEmployeeData = {
       // Personal Info
       firstName: newEmployee.firstName,
       lastName: newEmployee.lastName,
@@ -250,23 +259,18 @@ const EmployeeManagement = () => {
       department: newEmployee.department,
     };
 
-      try {
-      // --- MODIFICATION START ---
-      // Step 1: Create the user in Firebase Authentication
+    try {
       const userCredential = await createUserWithEmailAndPassword(
         auth,
-        newEmployee.workEmail, // Use the employee's work email
-        newEmployee.temporaryPassword // Use the generated temporary password
+        newEmployee.workEmail,
+        newEmployee.temporaryPassword
       );
       const user = userCredential.user;
 
-      // Step 2: Add the unique auth UID (firebaseKey) to the data object
       newEmployeeData.firebaseKey = user.uid;
       
-      // Step 3: Save the complete employee record to the Realtime Database under the new UID
       const userRef = ref(database, `users/${user.uid}`);
       await set(userRef, newEmployeeData);
-      // --- MODIFICATION END ---
       
       console.log("Employee created successfully in Firebase Auth and Database!");
       handleCloseAddEmployeeModal();
@@ -278,51 +282,52 @@ const EmployeeManagement = () => {
         console.error("Error creating employee:", error);
         alert("Failed to create employee. Please check the details and try again.");
       }
+    } finally {
+      setIsCreatingEmployee(false); // NEW: Stop loading
     }
   };
 
   const getEmployeeChanges = (original, updated) => {
     const changes = [];
     const fieldsToCompare = [
-        'firstName', 'lastName', 'gender', 'dateOfBirth', 'maritalStatus',
-        'personalNumber', 'alternativeNumber', 'personalEmail', 'workEmail',
-        'address', 'city', 'state', 'zipcode', 'country', 'dateOfJoin'
+      'firstName', 'lastName', 'gender', 'dateOfBirth', 'maritalStatus',
+      'personalNumber', 'alternativeNumber', 'personalEmail', 'workEmail',
+      'address', 'city', 'state', 'zipcode', 'country', 'dateOfJoin'
     ];
 
-    // Loop through the fields and compare original vs. updated values
     fieldsToCompare.forEach(field => {
-        if (original[field] !== updated[field]) {
-            const fieldName = field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-            changes.push(`${fieldName} changed`);
-        }
+      if (original[field] !== updated[field]) {
+        const fieldName = field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+        changes.push(`${fieldName} changed`);
+      }
     });
-    // Extract original role and department from roles array for comparison
+
     const originalRole = roleOptions.find(opt => (original.roles || []).includes(opt.value.toLowerCase()))?.value || 'Employee';
     const originalDepartment = departmentOptions.find(dept => (original.roles || []).includes(dept.toLowerCase())) || 'No department assigned';
     const originalAccountStatus = accountStatusOptions.find(status => (original.roles || []).includes(status.toLowerCase())) || 'Active';
 
-   if (originalRole !== updated.role) {
-        changes.push(`Role changed`);
+    if (originalRole !== updated.role) {
+      changes.push(`Role changed`);
     }
     if (originalDepartment !== updated.department) {
-        changes.push(`Department changed`);
+      changes.push(`Department changed`);
     }
     if (originalAccountStatus !== updated.accountStatus) {
-        changes.push(`Account Status changed`);
+      changes.push(`Account Status changed`);
     }
 
     return changes.length > 0 ? changes.join(', ') : 'no changes';
   };
 
-   const handleEditEmployeeClick = (firebaseKey) => {
-    const employee = employees.find(u => u.firebaseKey === firebaseKey); // Use firebaseKey to find the employee
+  const handleEditEmployeeClick = (firebaseKey) => {
+    const employee = employees.find(u => u.firebaseKey === firebaseKey);
     if (employee) {
       const employeeDepartment = departmentOptions.find(dept => (employee.roles || []).includes(dept.toLowerCase())) || 'No department assigned';
       const employeeAccountStatus = accountStatusOptions.find(status => (employee.roles || []).includes(status.toLowerCase())) || 'Active';
       const employeeRole = roleOptions.find(role => (employee.roles || []).includes(role.value.toLowerCase()))?.value || 'Employee';
 
       setCurrentEmployeeToEdit({
-        firebaseKey: employee.firebaseKey, // Make sure to include the firebaseKey
+        firebaseKey: employee.firebaseKey,
         role: employeeRole,
         department: employeeDepartment,
         accountStatus: employeeAccountStatus,
@@ -351,7 +356,7 @@ const EmployeeManagement = () => {
     setCurrentEmployeeToEdit(null);
   };
 
- const handleEditemployeeChange = (e) => {
+  const handleEditemployeeChange = (e) => {
     const { name, value } = e.target;
     setCurrentEmployeeToEdit(prevemployee => ({
       ...prevemployee,
@@ -361,7 +366,6 @@ const EmployeeManagement = () => {
   
   const handleUpdateEmployeeAccount = (e) => {
     e.preventDefault();
-    // Use firebaseKey to find the original employee
     const originalEmployee = employees.find(emp => emp.firebaseKey === currentEmployeeToEdit.firebaseKey);
     const changes = getEmployeeChanges(originalEmployee, currentEmployeeToEdit);
 
@@ -373,71 +377,76 @@ const EmployeeManagement = () => {
     }
     
     setPendingEmployeeUpdate(currentEmployeeToEdit);
-    // You can make this message more detailed if you want by passing 'changes'
     setConfirmUpdateMessage(`Are you sure you want to apply the following changes: ${changes}?`);
     setIsConfirmUpdateModalOpen(true);
     setConfirmActionType('employeeUpdate');
   };
 
-   const confirmEmployeeUpdate = async () => {
+  const confirmEmployeeUpdate = async () => {
     if (!pendingEmployeeUpdate || !pendingEmployeeUpdate.firebaseKey) {
       console.error("Update failed: Employee data or Firebase key is missing.");
       return;
     }
 
-    const { firebaseKey, ...employeeDataToUpdate } = pendingEmployeeUpdate;
+    setIsUpdatingEmployee(true); // NEW: Start loading
 
-    // Construct the data object for Firebase (without the key)
+    const { firebaseKey, ...employeeDataToUpdate } = pendingEmployeeUpdate;
+    const originalEmployee = employees.find(emp => emp.firebaseKey === firebaseKey);
+
     const updatedData = {
-        ...employees.find(emp => emp.firebaseKey === firebaseKey), // Start with original data
-        ...employeeDataToUpdate, // Apply changes
-       accountStatus: pendingEmployeeUpdate.accountStatus,
-        roles: [pendingEmployeeUpdate.role.toLowerCase()],
-        department: pendingEmployeeUpdate.department
+      ...originalEmployee,
+      ...employeeDataToUpdate,
+      accountStatus: pendingEmployeeUpdate.accountStatus,
+      roles: [pendingEmployeeUpdate.role.toLowerCase()],
+      department: pendingEmployeeUpdate.department
     };
-    delete updatedData.id; // Remove the old numeric ID if it exists
+    delete updatedData.id;
 
     try {
-        const usersRef = ref(database, `users/${firebaseKey}`);
-        await update(usersRef, updatedData);
-        console.log("Employee updated successfully in Firebase!");
+      const usersRef = ref(database, `users/${firebaseKey}`);
+      await update(usersRef, updatedData);
+      console.log("Employee updated successfully in Firebase!");
     } catch (error) {
-        console.error("Error updating employee in Firebase:", error);
-        alert("Failed to update employee. Please try again.");
+      console.error("Error updating employee in Firebase:", error);
+      alert("Failed to update employee. Please try again.");
+    } finally {
+      setIsUpdatingEmployee(false); // NEW: Stop loading
+      handleCloseEditEmployeeModal();
+      setIsConfirmUpdateModalOpen(false);
+      setPendingEmployeeUpdate(null);
     }
-
-    handleCloseEditEmployeeModal();
-    setIsConfirmUpdateModalOpen(false);
-    setPendingEmployeeUpdate(null);
   };
   
   const handleDeleteEmployeeClick = (employeeId) => {
-      const employee = employees.find(emp => emp.firebaseKey === employeeId);
-      setEmployeeToDeleteDetails(employee);
-      setConfirmUpdateMessage(`Are you sure you want to delete employee '${employee.name}'? This action cannot be undone.`);
-      setIsConfirmUpdateModalOpen(true);
-      setConfirmActionType('employeeDelete');
+    const employee = employees.find(emp => emp.firebaseKey === employeeId);
+    setEmployeeToDeleteDetails(employee);
+    setConfirmUpdateMessage(`Are you sure you want to delete employee '${employee.firstName} ${employee.lastName}'? This action cannot be undone.`);
+    setIsConfirmUpdateModalOpen(true);
+    setConfirmActionType('employeeDelete');
   };
   
   const handleConfirmDelete = async () => {
     if (!employeeToDeleteDetails || !employeeToDeleteDetails.firebaseKey) {
-        console.error("Delete failed: Employee data or Firebase key is missing.");
-        return;
+      console.error("Delete failed: Employee data or Firebase key is missing.");
+      return;
     }
 
+    setIsDeletingEmployee(true); // NEW: Start loading
+
     try {
-        const usersRef = ref(database, `users/${employeeToDeleteDetails.firebaseKey}`);
-        await remove(usersRef);
-        console.log("Employee deleted successfully from Firebase!");
+      const usersRef = ref(database, `users/${employeeToDeleteDetails.firebaseKey}`);
+      await remove(usersRef);
+      console.log("Employee deleted successfully from Firebase!");
     } catch (error) {
-        console.error("Error deleting employee from Firebase:", error);
-        alert("Failed to delete employee. Please try again.");
+      console.error("Error deleting employee from Firebase:", error);
+      alert("Failed to delete employee. Please try again.");
+    } finally {
+      setIsDeletingEmployee(false); // NEW: Stop loading
+      setIsConfirmUpdateModalOpen(false);
+      setEmployeeToDeleteDetails(null);
     }
-      
-    setIsConfirmUpdateModalOpen(false);
-    setEmployeeToDeleteDetails(null);
   };
-  
+
 
   const getInitials = (name) => {
     if (!name) return '';
@@ -447,14 +456,12 @@ const EmployeeManagement = () => {
     return '';
   };
 
-    const handleStatusToggle = (employee) => {
+  const handleStatusToggle = (employee) => {
     const newStatus = employee.accountStatus === 'Active' ? 'Inactive' : 'Active';
-    // Store the employee and the intended new status in state
     setEmployeeToUpdateStatus({ ...employee, newStatus: newStatus });
     setIsStatusConfirmModalOpen(true);
   };
 
-  // MODIFICATION: Add a function to confirm and execute the status update in Firebase
   const confirmStatusUpdate = async () => {
     if (!employeeToUpdateStatus) return;
 
@@ -468,13 +475,12 @@ const EmployeeManagement = () => {
       console.error("Failed to update employee status in Firebase:", error);
       alert("An error occurred while updating the employee's status.");
     } finally {
-      // Close the modal and reset the state regardless of success or failure
       setIsStatusConfirmModalOpen(false);
       setEmployeeToUpdateStatus(null);
     }
   };
 
- 
+
 
   const getRoleTagBg = (role) => {
     switch (role.toLowerCase()) {
@@ -953,7 +959,7 @@ const EmployeeManagement = () => {
               </div>
             </div>
             <div className="employee-list">
-               {filteredEmployees.map(employee => (
+              {filteredEmployees.map(employee => (
                 <div className="employee-card" key={employee.firebaseKey}>
                   <div className="employee-card-left">
                     <div className="employee-avatar">{getInitials(`${employee.firstName} ${employee.lastName}`)}</div>
@@ -976,10 +982,8 @@ const EmployeeManagement = () => {
                       />
                       <span className="toggle-slider"></span>
                     </label>
-                    {/* Pass firebaseKey to the edit handler */}
                     <button className="action-btn" onClick={() => handleEditEmployeeClick(employee.firebaseKey)}>Edit</button>
                     
-                    {/* The delete handler also needs firebaseKey */}
                     <button className="action-btn delete-btn" onClick={() => handleDeleteEmployeeClick(employee.firebaseKey)}>Delete</button>
                   </div>
                 </div>
@@ -1273,7 +1277,16 @@ const EmployeeManagement = () => {
                 <p className="role-description">The employee will be prompted to change this password on first login.</p>
               </div>
               <div className="modal-footer modal-form-full-width">
-                <button type="submit" className="create-employee-btn">Create employee Account</button>
+                <button type="submit" className="create-employee-btn" disabled={isCreatingEmployee}>
+                  {isCreatingEmployee ? (
+                    <>
+                      <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
+                      Creating...
+                    </>
+                  ) : (
+                    "Create Employee Account"
+                  )}
+                </button>
               </div>
             </form>
           </div>
@@ -1394,7 +1407,16 @@ const EmployeeManagement = () => {
 
             <div className="modal-footer modal-form-full-width">
               <button type="button" className="confirm-cancel-btn" onClick={handleCloseEditEmployeeModal}>Cancel</button>
-              <button type="button" className="confirm-save-btn" onClick={handleUpdateEmployeeAccount}>Update Account</button>
+              <button type="button" className="confirm-save-btn" onClick={handleUpdateEmployeeAccount} disabled={isUpdatingEmployee}>
+                {isUpdatingEmployee ? (
+                  <>
+                    <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
+                    Updating...
+                  </>
+                ) : (
+                  "Update Account"
+                )}
+              </button>
             </div>
           </div>
         </div>
@@ -1410,23 +1432,32 @@ const EmployeeManagement = () => {
                 <h3 className="modal-title">Confirm Deletion</h3>
                 <p className="modal-subtitle">Are you sure you want to delete this employee? This action cannot be undone.</p>
               </div>
-              <button className="modal-close-btn" onClick={handleCancelDelete}>&times;</button>
+              <button className="modal-close-btn" onClick={() => setIsDeleteConfirmModalOpen(false)}>&times;</button>
             </div>
             <div className="confirm-modal-buttons">
-              <button type="button" className="confirm-cancel-btn" onClick={handleCancelDelete}>Cancel</button>
-              <button type="button" className="confirm-delete-btn" onClick={handleConfirmDelete}>Delete</button>
+              <button type="button" className="confirm-cancel-btn" onClick={() => setIsDeleteConfirmModalOpen(false)}>Cancel</button>
+              <button type="button" className="confirm-delete-btn" onClick={handleConfirmDelete} disabled={isDeletingEmployee}>
+                {isDeletingEmployee ? (
+                  <>
+                    <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
+                    Deleting...
+                  </>
+                ) : (
+                  "Confirm Delete"
+                )}
+              </button>
             </div>
           </div>
         </div>
       )}
 
-       {/* MODIFICATION: Add the new Status Change Confirmation Modal */}
+      {/* MODIFICATION: Add the new Status Change Confirmation Modal */}
       {isStatusConfirmModalOpen && employeeToUpdateStatus && (
         <div className="modal-overlay open">
           <div className="modal-content">
             <div className="modal-header">
-                <h3 className="modal-title">Confirm Status Change</h3>
-                <button className="modal-close-btn" onClick={() => setIsStatusConfirmModalOpen(false)}>&times;</button>
+              <h3 className="modal-title">Confirm Status Change</h3>
+              <button className="modal-close-btn" onClick={() => setIsStatusConfirmModalOpen(false)}>&times;</button>
             </div>
             <p>
               Are you sure you want to change the status of 
@@ -1452,14 +1483,36 @@ const EmployeeManagement = () => {
         <div className="modal-overlay open">
           <div className="modal-content">
             <div className="modal-header">
-                <h3 className="modal-title">Confirm Action</h3>
-                <button className="modal-close-btn" onClick={() => setIsConfirmUpdateModalOpen(false)}>&times;</button>
+              <h3 className="modal-title">Confirm Action</h3>
+              <button className="modal-close-btn" onClick={() => setIsConfirmUpdateModalOpen(false)}>&times;</button>
             </div>
             <p>{confirmUpdateMessage}</p>
             <div className="confirm-modal-buttons">
               <button type="button" className="confirm-cancel-btn" onClick={() => setIsConfirmUpdateModalOpen(false)}>Cancel</button>
-              {confirmActionType === 'employeeUpdate' && <button type="button" className="create-employee-btn" onClick={confirmEmployeeUpdate}>Confirm Update</button>}
-              {confirmActionType === 'employeeDelete' && <button type="button" className="confirm-delete-btn" onClick={handleConfirmDelete}>Confirm Delete</button>}
+              {confirmActionType === 'employeeUpdate' && (
+                <button type="button" className="create-employee-btn" onClick={confirmEmployeeUpdate} disabled={isUpdatingEmployee}>
+                  {isUpdatingEmployee ? (
+                    <>
+                      <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
+                      Updating...
+                    </>
+                  ) : (
+                    "Confirm Update"
+                  )}
+                </button>
+              )}
+              {confirmActionType === 'employeeDelete' && (
+                <button type="button" className="confirm-delete-btn" onClick={handleConfirmDelete} disabled={isDeletingEmployee}>
+                  {isDeletingEmployee ? (
+                    <>
+                      <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
+                      Deleting...
+                    </>
+                  ) : (
+                    "Confirm Delete"
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -1471,3 +1524,4 @@ const EmployeeManagement = () => {
 
 
 export default EmployeeManagement;
+
