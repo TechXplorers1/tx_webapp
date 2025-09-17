@@ -411,29 +411,33 @@ const EmployeeData = () => {
     lastLogin: new Date().toLocaleString(),
   });
 
+  const getLocalDateString = (date = new Date()) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
   // NEW: useEffect to get logged-in user data from sessionStorage
   // Update useEffect to get the full employee object from sessionStorage
   // In EmployeeData.jsx, replace the useEffect hook that starts with "// NEW: useEffect to get logged-in user data..."
 
- useEffect(() => {
+useEffect(() => {
     const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInEmployee'));
     if (!loggedInUserData || !loggedInUserData.firebaseKey) {
       navigate('/login');
       return;
     }
-
     const employeeFirebaseKey = loggedInUserData.firebaseKey;
     const employeeRef = ref(database, `users/${employeeFirebaseKey}`);
     const clientsRef = ref(database, 'clients');
     
-    // Fetch employee details once for profile modal
     const unsubscribeEmployee = onValue(employeeRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
         setEmployeeDetails(data);
       }
     });
-
     const unsubscribeClients = onValue(clientsRef, (snapshot) => {
       const clientsData = snapshot.val();
       const allRegistrations = [];
@@ -444,15 +448,12 @@ const EmployeeData = () => {
           if (client.serviceRegistrations) {
             Object.keys(client.serviceRegistrations).forEach(regKey => {
               const registration = client.serviceRegistrations[regKey];
-              
-              // FIX: Convert jobApplications from an object to an array here
               const jobApplicationsArray = registration.jobApplications
                 ? Object.values(registration.jobApplications)
                 : [];
-
               allRegistrations.push({
                 ...registration,
-                jobApplications: jobApplicationsArray, // Use the new array
+                jobApplications: jobApplicationsArray,
                 clientFirebaseKey: clientKey,
                 registrationKey: regKey,
                 email: client.email,
@@ -466,7 +467,6 @@ const EmployeeData = () => {
           }
         });
       }
-
       const myRegistrations = allRegistrations.filter(reg => reg.assignedTo === employeeFirebaseKey);
       const newAssigned = myRegistrations.filter(c => c.assignmentStatus === 'pending_acceptance');
       const active = myRegistrations.filter(c => c.assignmentStatus === 'active');
@@ -1076,59 +1076,28 @@ const handleConfirmDeleteFile = async () => {
     setNewApplicationFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSaveNewApplication = async () => {
+const handleSaveNewApplication = async () => {
     if (!selectedClient) return;
-
     const newApp = {
       id: Date.now(),
       ...newApplicationFormData,
       status: 'Applied',
-      appliedDate: new Date().toISOString().split('T')[0],
+      appliedDate: getLocalDateString(), // FIX: Use local date string
       attachments: []
     };
-
-
     const existingApplications = selectedClient.jobApplications || [];
     const updatedApplications = [newApp, ...existingApplications];
-
     const registrationRef = ref(database, `clients/${selectedClient.clientFirebaseKey}/serviceRegistrations/${selectedClient.registrationKey}/jobApplications`);
-
     try {
       await set(registrationRef, updatedApplications);
-
-      const updatedClient = {
-        ...selectedClient,
-        jobApplications: updatedApplications
-      };
+      const updatedClient = { ...selectedClient, jobApplications: updatedApplications };
       setSelectedClient(updatedClient);
-
-      // Also update in the correct client list (active, inactive, new)
-      setActiveClients(prev =>
-        prev.map(c =>
-          c.registrationKey === updatedClient.registrationKey ? updatedClient : c
-        )
-      );
-      setInactiveClients(prev =>
-        prev.map(c =>
-          c.registrationKey === updatedClient.registrationKey ? updatedClient : c
-        )
-      );
-      setNewClients(prev =>
-        prev.map(c =>
-          c.registrationKey === updatedClient.registrationKey ? updatedClient : c
-        )
-      );
+      setActiveClients(prev => prev.map(c => c.registrationKey === updatedClient.registrationKey ? updatedClient : c));
+      setInactiveClients(prev => prev.map(c => c.registrationKey === updatedClient.registrationKey ? updatedClient : c));
+      setNewClients(prev => prev.map(c => c.registrationKey === updatedClient.registrationKey ? updatedClient : c));
       setShowAddApplicationModal(false);
       setNewApplicationFormData({
-        jobTitle: '',
-        company: '',
-        jobType: '',
-        jobBoards: '',
-        jobUrl: '',
-        location: '',
-        jobDesc: '',
-        jobId: '',
-        role: ''
+        jobTitle: '', company: '', jobType: '', jobBoards: '', jobUrl: '', location: '', jobDesc: '', jobId: '', role: ''
       });
       triggerNotification("Application added successfully!");
     } catch (error) {
@@ -1156,9 +1125,7 @@ const handleConfirmDeleteFile = async () => {
 
 const handleSaveEditedApplication = async () => {
   if (!editedApplicationFormData || !selectedClient) return;
-
   setIsSavingChanges(true);
-
   try {
     const applicationDataToSave = { ...editedApplicationFormData };
     const attachmentsToSave = [];
@@ -1171,74 +1138,41 @@ const handleSaveEditedApplication = async () => {
         const { clientFirebaseKey, registrationKey } = selectedClient;
         const appId = applicationDataToSave.id;
         const fileName = `${Date.now()}_${attachment.file.name}`;
-
         const attachmentRef = storageRef(getStorage(), `application_attachments/${clientFirebaseKey}/${registrationKey}/${appId}/${fileName}`);
         const uploadResult = await uploadBytes(attachmentRef, attachment.file);
         const downloadURL = await getDownloadURL(uploadResult.ref);
-
         const newFileMetadata = {
           name: attachment.name,
           size: attachment.size,
           type: attachment.type,
-          uploadDate: new Date().toISOString().split('T')[0],
+          uploadDate: getLocalDateString(), // FIX: Use local date string
           downloadUrl: downloadURL,
-          // Add a unique ID to identify this file across both lists
-          id: Date.now() + Math.random(), 
+          id: Date.now() + Math.random(),
         };
-
-        // Add to the application's attachments list
         attachmentsToSave.push(newFileMetadata);
-
-        // Add to the client's general files list
         filesToAddToClient.push({ ...newFileMetadata, jobDesc: `Screenshot for application: ${applicationDataToSave.jobTitle} at ${applicationDataToSave.company}` });
-
       } else {
         attachmentsToSave.push(attachment);
       }
     }
-
     if (hasNewUploads) {
       triggerNotification("Uploading attachments...");
     }
-
-    // Overwrite the application's attachments list with the updated one
     applicationDataToSave.attachments = attachmentsToSave;
-
-    const updatedApplications = (selectedClient.jobApplications || []).map(app =>
-      app.id === applicationDataToSave.id ? applicationDataToSave : app
-    );
-
+    const updatedApplications = (selectedClient.jobApplications || []).map(app => app.id === applicationDataToSave.id ? applicationDataToSave : app);
     const registrationRef = ref(database, `clients/${selectedClient.clientFirebaseKey}/serviceRegistrations/${selectedClient.registrationKey}`);
-
-    // Update the main 'files' array if there are new attachments
     const currentFiles = selectedClient.files || [];
     const updatedFiles = [...filesToAddToClient, ...currentFiles];
 
-    await update(registrationRef, {
-      jobApplications: updatedApplications,
-      files: updatedFiles,
-    });
-
-    // Update local state to reflect changes
-    const updatedClient = {
-      ...selectedClient,
-      jobApplications: updatedApplications,
-      files: updatedFiles,
-    };
+    await update(registrationRef, { jobApplications: updatedApplications, files: updatedFiles, });
+    const updatedClient = { ...selectedClient, jobApplications: updatedApplications, files: updatedFiles, };
     setSelectedClient(updatedClient);
-
-    const updateClientLists = (prevClients) => {
-      return prevClients.map(c =>
-        c.registrationKey === updatedClient.registrationKey ? updatedClient : c
-      );
-    };
+    const updateClientLists = (prevClients) => { return prevClients.map(c => c.registrationKey === updatedClient.registrationKey ? updatedClient : c); };
     setActiveClients(updateClientLists);
     setInactiveClients(updateClientLists);
     setNewClients(updateClientLists);
-
     setShowEditApplicationModal(false);
     triggerNotification("Application updated successfully!");
-
   } catch (error) {
     console.error("Failed to save edited application or upload file:", error);
     alert("Error saving application. Please try again.");
@@ -2489,151 +2423,169 @@ useEffect(() => {
                   </div>
 
                   <h2 style={sectionTitleStyle}>Client Job Applications</h2>
-                  <p style={subLabelStyle}>Manage job applications for each assigned client</p>
+    <p style={subLabelStyle}>Manage job applications for each assigned client</p>
+    
+    <div key={selectedClient.id} style={clientApplicationsContainerStyle}>
+      <div style={clientApplicationsHeaderStyle}>
+        <div style={initialsCircleStyle}>{selectedClient.initials}</div>
+        <div style={{ flexGrow: 1 }}>
+          <p style={clientNameStyle}>
+            {selectedClient.name}
+            <span style={{
+              ...priorityBadgeStyle,
+              backgroundColor: selectedClient.priority === 'high' ? '#fee2e2' : selectedClient.priority === 'medium' ? '#fef3c7' : '#e0f2fe',
+              color: selectedClient.priority === 'high' ? '#dc2626' : selectedClient.priority === 'medium' ? '#d97706' : '#2563eb'
+            }}>
+              {selectedClient.priority}
+            </span>
+          </p>
+          <p style={clientCodeStyle}>{selectedClient.role || selectedClient.position} - {selectedClient.location}</p>
+        </div>
+        <div style={clientAppStatsStyle}>
+          <span>Total: <strong>{selectedClient?.jobApplications?.length ?? 0}</strong></span>
+          <span>Interviews: <strong>{selectedClient?.jobApplications?.filter(app => app.status === 'Interview').length ?? 0}</strong></span>
+          <span>Applied: <strong>{selectedClient?.jobApplications?.filter(app => app.status === 'Applied').length ?? 0}</strong></span>
+        </div>
+        <button
+          style={addApplicationButtonStyle}
+          onClick={() => handleOpenAddApplicationModal(selectedClient)}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Add Application
+        </button>
+      </div>
+      
+      {/* Search and Filter Controls */}
+      <div style={applicationTableControlsStyle}>
+        <input
+          type="text"
+          placeholder="Search applications..."
+          style={searchInputStyle}
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          style={statusFilterSelectStyle}
+        >
+          <option value="All Statuses">All Statuses</option>
+          <option value="Applied">Applied</option>
+          <option value="Interview">Interview</option>
+          <option value="Rejected">Rejected</option>
+          <option value="Offered">Offered</option>
+        </select>
+      </div>
 
-                  <div key={selectedClient.id} style={clientApplicationsContainerStyle}>
-                    <div style={clientApplicationsHeaderStyle}>
-                      <div style={initialsCircleStyle}>{selectedClient.initials}</div>
-                      <div style={{ flexGrow: 0 }}>
-                        <p style={clientNameStyle}>{`${selectedClient.firstName} ${selectedClient.lastName}`} <span style={{ ...priorityBadgeStyle, backgroundColor: selectedClient.priority === 'high' ? '#fee2e2' : selectedClient.priority === 'medium' ? '#fef3c7' : '#e0f2fe', color: selectedClient.priority === 'high' ? '#dc2626' : selectedClient.priority === 'medium' ? '#d97706' : '#2563eb' }}>{selectedClient.priority}</span></p>
-                        <p style={clientCodeStyle}>{selectedClient.role || selectedClient.position} - {selectedClient.location}</p>
-                      </div>
-                      <div style={clientAppStatsStyle}>
-                        <span>Showing: <strong>{getFilteredAndSortedApplications(selectedClient?.jobApplications).length}</strong></span>
-                        <span>Total: <strong>{selectedClient?.jobApplications?.length ?? 0}</strong></span>
-                        <span>Interviews: <strong>{selectedClient?.jobApplications?.filter(app => app.status === 'Interview').length ?? 0}</strong></span>
-                        <span>Applied: <strong>{selectedClient?.jobApplications?.filter(app => app.status === 'Applied').length ?? 0}</strong></span>
-                      </div>
-                      <button
-                        style={addApplicationButtonStyle}
-                        onClick={() => handleOpenAddApplicationModal(selectedClient)}
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <line x1="12" y1="5" x2="12" y2="19"></line>
-                          <line x1="5" y1="12" x2="19" y2="12"></line>
-                        </svg>
-                        Add Application
-                      </button>
-                    </div>
+      {/* Date-wise Application Table */}
+      <div style={applicationTableWrapperStyle}>
+        {/* Get filtered and sorted applications, then group by date */}
+        {Object.keys(getFilteredAndSortedApplications(selectedClient.jobApplications || [])
+          .reduce((acc, app) => {
+            const dateKey = app.appliedDate;
+            if (!acc[dateKey]) {
+              acc[dateKey] = [];
+            }
+            acc[dateKey].push(app);
+            return acc;
+          }, {})).sort((a, b) => new Date(b) - new Date(a)) // Sort dates newest first
+          .map(dateKey => (
+            <div key={dateKey} style={{ marginBottom: '20px' }}>
+              <div style={{
+                background: '#f1f5f9',
+                color: '#475569',
+                padding: '12px 16px',
+                borderRadius: '8px',
+                marginBottom: '10px',
+                fontWeight: '600'
+              }}>
+                {dateKey}
+                <span style={{ float: 'right' }}>
+                  {getFilteredAndSortedApplications(selectedClient.jobApplications || []).filter(app => app.appliedDate === dateKey).length} application(s)
+                </span>
+              </div>
 
-                    <div style={applicationTableControlsStyle}>
-                      <input
-                        type="text"
-                        placeholder="Search applications..."
-                        style={searchInputStyle}
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                      />
-                      <select
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                        style={statusFilterSelectStyle}
-                      >
-                        <option value="All Statuses">All Statuses</option>
-                        <option value="Applied">Applied</option>
-                        <option value="Interview">Interview</option>
-                        <option value="Rejected">Rejected</option>
-                        <option value="Offered">Offered</option>
-                      </select>
-                    </div>
+              <table style={applicationTableStyle}>
+                <thead>
+                  <tr>
+                    <th style={applicationTableHeaderCellStyle}>Job Title</th>
+                    <th style={applicationTableHeaderCellStyle}>Company</th>
+                    <th style={applicationTableHeaderCellStyle}>Job Boards</th>
+                    <th style={applicationTableHeaderCellStyle}>Job ID</th>
+                    <th style={applicationTableHeaderCellStyle}>Link</th>
+                    <th style={applicationTableHeaderCellStyle}>Applied Date</th>
+                    <th style={applicationTableHeaderCellStyle}>Attachments</th>
+                    <th style={applicationTableHeaderCellStyle}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {getFilteredAndSortedApplications(selectedClient.jobApplications || []).filter(app => app.appliedDate === dateKey).length === 0 ? (
+                    <tr>
+                      <td colSpan="8" style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>
+                        No applications found for this client on {dateKey}.
+                      </td>
+                    </tr>
+                  ) : (
+                    getFilteredAndSortedApplications(selectedClient.jobApplications || []).filter(app => app.appliedDate === dateKey)
+                      .map((app) => (
+                        <tr key={app.id}>
+                          <td style={applicationTableDataCellStyle}>{app.jobTitle}</td>
+                          <td style={applicationTableDataCellStyle}>{app.company}</td>
+                          <td style={applicationTableDataCellStyle}>{app.jobBoards}</td>
+                          <td style={applicationTableDataCellStyle}>{app.jobId || '-'}</td>
+                          <td style={applicationTableDataCellStyle}>
+                            {app.jobUrl && (
+                              <a href={app.jobUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>Link</a>
+                            )}
+                          </td>
+                          <td style={applicationTableDataCellStyle}>{app.appliedDate}</td>
+                          <td style={applicationTableDataCellStyle}>
+                            {app.attachments && app.attachments.length > 0 ? (
+                              <button
+                                onClick={() => {
+                                  setViewedApplication(app);
+                                  setShowViewApplicationModal(true);
+                                }}
+                                style={{
+                                  background: 'none', border: 'none', color: '#3b82f6', textDecoration: 'underline',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                View ({app.attachments.length})
+                              </button>
+                            ) : 'N/A'}
+                          </td>
+                          <td style={applicationTableDataCellStyle}>
+                            <button onClick={() => handleViewApplication(app)} style={actionButtonAppStyle}>
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                            </button>
+                            <button onClick={() => handleEditApplication(app)} style={actionButtonAppStyle}>
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path></svg>
+                            </button>
+                            <button onClick={() => handleRequestDeleteApplication(selectedClient, app)} style={deleteButtonAppStyle}>
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          ))}
 
-                    <div style={applicationTableWrapperStyle}>
-                      <table style={applicationTableStyle}>
-                        <thead>
-                          <tr>
-                            <th style={applicationTableHeaderCellStyle}>S.No</th>
-                            <th style={applicationTableHeaderCellStyle}>Job Title</th>
-                            <th style={applicationTableHeaderCellStyle}>Company</th>
-                            <th style={applicationTableHeaderCellStyle}>Job Type</th>
-                            <th style={applicationTableHeaderCellStyle}>Job Boards</th>
-                            <th style={applicationTableHeaderCellStyle}>Job ID</th>
-                            <th style={applicationTableHeaderCellStyle}>Link</th>
-                            <th style={applicationTableHeaderCellStyle}>Applied Date</th>
-                            <th style={applicationTableHeaderCellStyle}>Attachments</th>
-                            <th style={applicationTableHeaderCellStyle}>Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {getFilteredAndSortedApplications(selectedClient.jobApplications || []).length === 0 ? (
-                            <tr>
-                              <td colSpan="9" style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>
-                                No applications found for this client.
-                              </td>
-                            </tr>
-                          ) : (
-                            getFilteredAndSortedApplications(selectedClient.jobApplications || []).map((app, index) => (
-                              <tr key={app.id}>
-                                <td style={applicationTableDataCellStyle}>
-                                  {getFilteredAndSortedApplications(selectedClient.jobApplications).length - index}
-                                </td>
-                                <td style={applicationTableDataCellStyle}>{app.jobTitle}</td>
-                                <td style={applicationTableDataCellStyle}>{app.company}</td>
-                                <td style={applicationTableDataCellStyle}>{app.jobType}</td>
-                                <td style={applicationTableDataCellStyle}>{app.jobBoards}</td>
-                                <td style={applicationTableDataCellStyle}>{app.jobId || '-'}</td> {/* Display Job ID */}
-                                <td style={applicationTableDataCellStyle}>
-                                  {app.jobUrl && (
-                                    <a href={app.jobUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>
-                                      Link
-                                    </a>
-                                  )}
-                                </td>
-
-                                <td style={applicationTableDataCellStyle}>{app.appliedDate}</td>
-
-                                <td style={applicationTableDataCellStyle}>
-                                  {app.attachments && app.attachments.length > 0 ? (
-                                    <button
-                                      onClick={() => {
-                                        setViewedApplication(app);
-                                        setShowViewApplicationModal(true);
-                                      }}
-                                      style={{
-                                        background: 'none',
-                                        border: 'none',
-                                        color: '#3b82f6',
-                                        textDecoration: 'underline',
-                                        cursor: 'pointer'
-                                      }}
-                                    >
-                                      View ({app.attachments.length})
-                                    </button>
-                                  ) : 'N/A'}
-                                </td>
-
-
-                                <td style={applicationTableDataCellStyle}>
-                                  <button onClick={() => handleViewApplication(app)} style={actionButtonAppStyle}>
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                      <circle cx="12" cy="12" r="3"></circle>
-                                    </svg>
-                                  </button>
-                                  <button onClick={() => handleEditApplication(app)} style={actionButtonAppStyle}>
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-                                      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                      <path d="M12 20h9"></path>
-                                      <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
-                                    </svg>
-                                  </button>
-                                  <button onClick={() => handleRequestDeleteApplication(selectedClient, app)} style={deleteButtonAppStyle}>
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                      <polyline points="3 6 5 6 21 6"></polyline>
-                                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                      <line x1="10" y1="11" x2="10" y2="17"></line>
-                                      <line x1="14" y1="11" x2="14" y2="17"></line>
-                                    </svg>
-                                  </button>
-                                </td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              )}
+        {selectedClient.jobApplications && selectedClient.jobApplications.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>
+            No applications found for this client.
+          </div>
+        )}
+      </div>
+    </div>
+    </div>
+)}
 
               {/* Files Tab Content */}
               {activeSubTab === 'Files' && (

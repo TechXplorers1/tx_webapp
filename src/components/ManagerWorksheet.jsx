@@ -737,6 +737,13 @@ const areInterviewsFiltersActive = () => {
     }
   };
 
+  const getLocalDateString = (date = new Date()) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 
   // Initial dummy data for unassigned clients (7 clients)
   const initialUnassignedClientsData = [
@@ -1729,33 +1736,43 @@ const openEmployeeClientsModal = (employee) => {
     setInterviewFilterRound(event.target.value);
   };
 
-const filteredInterviewData = interviewData.filter(interview => {
+const filteredInterviewData = useMemo(() => {
     const lowerCaseSearchQuery = interviewSearchQuery.toLowerCase();
-    const matchesSearch = 
-      (interview.assignedTo || '').toLowerCase().includes(lowerCaseSearchQuery) ||
-      (interview.clientName || '').toLowerCase().includes(lowerCaseSearchQuery) ||
-      (interview.jobTitle || '').toLowerCase().includes(lowerCaseSearchQuery) ||
-      (interview.company || '').toLowerCase().includes(lowerCaseSearchQuery);
-      
-    const matchesRound = interviewFilterRound === 'All Rounds' || interview.round === interviewFilterRound;
+    
+    // Create an employee map for efficient lookup
+    const employeeMap = new Map(allEmployees.map(emp => [emp.firebaseKey, emp]));
 
-    const interviewDate = new Date(interview.interviewDate);
-    // FIX: Use the interviewFilterDateRange state
-    const start = interviewFilterDateRange.startDate ? new Date(interviewFilterDateRange.startDate) : null;
-    const end = interviewFilterDateRange.endDate ? new Date(interviewFilterDateRange.endDate) : null;
-    if(start) start.setHours(0,0,0,0);
-    if(end) end.setHours(23,59,59,999);
-    const matchesDateRange = (!start || interviewDate >= start) && (!end || interviewDate <= end);
+    return interviewData.filter(interview => {
+        // Find the employee's name for the search
+        const employee = employeeMap.get(interview.assignedTo);
+        const employeeName = employee ? `${employee.firstName} ${employee.lastName}`.toLowerCase() : '';
 
-    return matchesSearch && matchesRound && matchesDateRange;
-  }).sort((a, b) => {
-      const dateA = new Date(a.interviewDate);
-      const dateB = new Date(b.interviewDate);
-      if (sortOrder === 'Newest First') return dateB - dateA;
-      if (sortOrder === 'Oldest First') return dateA - dateB;
-      // Add other sort options if needed
-      return 0;
-  });
+        const matchesSearch = 
+            employeeName.includes(lowerCaseSearchQuery) ||
+            (interview.clientName || '').toLowerCase().includes(lowerCaseSearchQuery) ||
+            (interview.jobTitle || '').toLowerCase().includes(lowerCaseSearchQuery) ||
+            (interview.company || '').toLowerCase().includes(lowerCaseSearchQuery) ||
+            // FIX: Add 'round' to the search criteria
+            (interview.round || '').toLowerCase().includes(lowerCaseSearchQuery);
+        
+        const matchesRound = interviewFilterRound === 'All Rounds' || interview.round === interviewFilterRound;
+
+        const interviewDate = new Date(interview.interviewDate);
+        const start = interviewFilterDateRange.startDate ? new Date(interviewFilterDateRange.startDate) : null;
+        const end = interviewFilterDateRange.endDate ? new Date(interviewFilterDateRange.endDate) : null;
+        if(start) start.setHours(0,0,0,0);
+        if(end) end.setHours(23,59,59,999);
+        const matchesDateRange = (!start || interviewDate >= start) && (!end || interviewDate <= end);
+
+        return matchesSearch && matchesRound && matchesDateRange;
+    }).sort((a, b) => {
+        const dateA = new Date(a.interviewDate);
+        const dateB = new Date(b.interviewDate);
+        if (sortOrder === 'Newest First') return dateB - dateA;
+        if (sortOrder === 'Oldest First') return dateA - dateB;
+        return 0;
+    });
+}, [interviewData, interviewSearchQuery, interviewFilterRound, interviewFilterDateRange, sortOrder, allEmployees]);
 
 
   // Handlers for Applications tab search and filter
@@ -1782,40 +1799,57 @@ const filteredInterviewData = interviewData.filter(interview => {
   };
 
 
-const filteredApplicationData = applicationData.filter(app => {
-    const lowerCaseSearchQuery = applicationSearchQuery.toLowerCase();
-    const matchesSearch = 
-      (app.assignedTo || '').toLowerCase().includes(lowerCaseSearchQuery) ||
-      (app.clientName || '').toLowerCase().includes(lowerCaseSearchQuery) ||
-      (app.jobTitle || '').toLowerCase().includes(lowerCaseSearchQuery) ||
-      (app.company || '').toLowerCase().includes(lowerCaseSearchQuery);
-      
-    const matchesEmployee = applicationFilterEmployee === '' || app.assignedTo === applicationFilterEmployee;
-    const matchesClient = applicationFilterClient === '' || app.clientName === applicationFilterClient;
+const filteredApplicationData = useMemo(() => {
+    // Helper function to get employee name
+    const getEmployeeName = (employeeKey) => {
+        const employee = allEmployees.find(emp => emp.firebaseKey === employeeKey);
+        return employee ? `${employee.firstName} ${employee.lastName}`.trim() : '';
+    };
 
-    const appDate = new Date(app.appliedDate);
-    // FIX: Use the applicationFilterDateRange state
-    const start = applicationFilterDateRange.startDate ? new Date(applicationFilterDateRange.startDate) : null;
-    const end = applicationFilterDateRange.endDate ? new Date(applicationFilterDateRange.endDate) : null;
-    if(start) start.setHours(0,0,0,0);
-    if(end) end.setHours(23,59,59,999);
-    const matchesDateRange = (!start || appDate >= start) && (!end || appDate <= end);
-    
-    return matchesSearch && matchesEmployee && matchesClient && matchesDateRange;
-  }).sort((a, b) => {
-      const dateA = new Date(a.appliedDate);
-      const dateB = new Date(b.appliedDate);
-      if (sortOrder === 'Newest First') return dateB - dateA;
-      if (sortOrder === 'Oldest First') return dateA - dateB;
-      if (sortOrder === 'Job Title A-Z') return (a.jobTitle || '').localeCompare(b.jobTitle || '');
-      if (sortOrder === 'Company A-Z') return (a.company || '').localeCompare(b.company || '');
-      return 0;
-  });
+    let filtered = applicationData.filter(app => {
+        const lowerCaseSearchQuery = applicationSearchQuery.toLowerCase();
+        
+        // FIX: Added employee name to search logic
+        const employeeName = getEmployeeName(app.assignedTo);
+
+        const matchesSearch = 
+            (employeeName || '').toLowerCase().includes(lowerCaseSearchQuery) ||
+            (app.clientName || '').toLowerCase().includes(lowerCaseSearchQuery) ||
+            (app.jobTitle || '').toLowerCase().includes(lowerCaseSearchQuery) ||
+            (app.company || '').toLowerCase().includes(lowerCaseSearchQuery);
+        
+        const matchesEmployee = applicationFilterEmployee === '' || app.assignedTo === applicationFilterEmployee;
+        const matchesClient = applicationFilterClient === '' || app.clientName === applicationFilterClient;
+
+        const appDate = new Date(app.appliedDate);
+        const start = applicationFilterDateRange.startDate ? new Date(applicationFilterDateRange.startDate) : null;
+        const end = applicationFilterDateRange.endDate ? new Date(applicationFilterDateRange.endDate) : null;
+        if(start) start.setHours(0,0,0,0);
+        if(end) end.setHours(23,59,59,999);
+        const matchesDateRange = (!start || appDate >= start) && (!end || appDate <= end);
+        
+        return matchesSearch && matchesEmployee && matchesClient && matchesDateRange;
+    });
+
+    filtered.sort((a, b) => {
+        const dateA = new Date(a.appliedDate);
+        const dateB = new Date(b.appliedDate);
+        if (sortOrder === 'Newest First') return dateB - dateA;
+        if (sortOrder === 'Oldest First') return dateA - dateB;
+        if (sortOrder === 'Job Title A-Z') return (a.jobTitle || '').localeCompare(b.jobTitle || '');
+        if (sortOrder === 'Company A-Z') return (a.company || '').localeCompare(b.company || '');
+        return 0;
+    });
+
+    return filtered;
+}, [applicationData, applicationSearchQuery, applicationFilterEmployee, applicationFilterClient, applicationFilterDateRange, sortOrder, allEmployees]);
 
   // Get unique client names for the filter dropdown - NOW ONLY FROM ASSIGNED CLIENTS
 const uniqueAssignedClientNames = useMemo(() => {
   return [...new Set(assignedClients.map(client => `${client.firstName} ${client.lastName}`.trim()))];
-}, [assignedClients]);const uniqueAssignedEmployeeNames = [...new Set(assignedClients.map(client => client.assignedTo))];
+}, [assignedClients]);
+
+const uniqueAssignedEmployeeNames = [...new Set(assignedClients.map(client => client.assignedTo))];
 
 
   // Determine if any filter is active for the "Applications" tab
@@ -2157,14 +2191,17 @@ const ApplicationsTab = ({
   quickFilter,
   handleQuickFilterChange,
   areFiltersActive,
-  handleClearFilters
+  handleClearFilters,
+  openApplicationDetailModal,
+  openEditApplicationModal,
+  handleDeleteApplication
   }) => {
 
       const [localSearchQuery, setLocalSearchQuery] = useState('');
   const handleLocalSearchChange = (e) => {
     setLocalSearchQuery(e.target.value);
   };
-  const [expandedClient, setExpandedClient] = useState(null);
+  const [expandedDate, setExpandedDate] = useState(null);
 
   const getInitials = (name) => {
     if (!name) return '';
@@ -2173,17 +2210,26 @@ const ApplicationsTab = ({
     return name.substring(0, 2);
   };
 
-    const filteredBySearch = useMemo(() => {
+const filteredBySearch = useMemo(() => {
     const lowerCaseSearch = localSearchQuery.toLowerCase();
+    
+    // Create an employee map for efficient lookup
+    const employeeMap = new Map(employees.map(emp => [emp.firebaseKey, emp]));
+
     return applicationData.filter(app => {
+      // Find the employee's name for search
+      const employee = employeeMap.get(app.assignedTo);
+      const employeeName = employee ? `${employee.firstName} ${employee.lastName}`.toLowerCase() : '';
+
       const matchesSearch =
-        (app.jobTitle || '').toLowerCase().includes(lowerCaseSearch) ||
-        (app.company || '').toLowerCase().includes(lowerCaseSearch) ||
+        employeeName.includes(lowerCaseSearch) ||
         (app.clientName || '').toLowerCase().includes(lowerCaseSearch) ||
-        (app.assignedTo || '').toLowerCase().includes(lowerCaseSearch);
+        (app.jobTitle || '').toLowerCase().includes(lowerCaseSearch) ||
+        (app.company || '').toLowerCase().includes(lowerCaseSearch);
+        
       return matchesSearch;
     });
-  }, [applicationData, localSearchQuery]);
+  }, [applicationData, localSearchQuery, employees]);
 
   const groupedByClient = filteredBySearch.reduce((acc, app) => {
     if (!acc[app.clientName]) {
@@ -2196,7 +2242,20 @@ const ApplicationsTab = ({
     return acc;
   }, {});
 
-  return (
+    const groupedByDate = useMemo(() => {
+    return applicationData.reduce((acc, app) => {
+        const dateKey = getLocalDateString(new Date(app.appliedDate));
+        if (!acc[dateKey]) {
+            acc[dateKey] = [];
+        }
+        acc[dateKey].push(app);
+        return acc;
+    }, {});
+  }, [applicationData]);
+
+  const sortedDates = Object.keys(groupedByDate).sort((a, b) => new Date(b) - new Date(a));
+
+   return (
 <section className="applications-management-section">
       <h2 className="client-assignment-title">Client Applications</h2>
        <FilterComponent
@@ -2235,7 +2294,7 @@ const ApplicationsTab = ({
 <div className="filter-dropdown">
   <select value={applicationFilterClient} onChange={handleApplicationFilterClientChange}>
     <option value="">Filter by Client</option>
-    {uniqueAssignedClientNames.map(name => ( // Now using the correct array
+    {uniqueClientNames.map(name => ( // Now using the correct array
       <option key={name} value={name}>{name}</option>
     ))}
   </select>
@@ -2250,104 +2309,120 @@ const ApplicationsTab = ({
               <th>Employee</th>
               <th>Client</th>
               <th>Job Title</th>
+              <th>Applied Date</th>
               <th>Total Applications</th>
               <th>Details</th>
             </tr>
           </thead>
           <tbody>
-            {Object.entries(groupedByClient).map(([clientName, data]) => {
-              // Find the employee using the firebaseKey
-              const employee = employees.find(e => e.firebaseKey === data.employeeKey);
-              const isExpanded = expandedClient === clientName;
-              return (
-                <React.Fragment key={clientName}>
-                  <tr onClick={() => setExpandedClient(isExpanded ? null : clientName)} style={{ cursor: 'pointer' }}>
-                    <td className="employee-cell">
-                      <div className="employee-avatar">{employee ? getInitials(`${employee.firstName} ${employee.lastName}`) : '??'}</div>
-                      {employee ? `${employee.firstName} ${employee.lastName}` : 'Unknown Employee'}
-                    </td>
-                    <td>{clientName}</td>
-                    <td>{data.apps[0]?.jobTitle}</td>
-                    <td style={{ textAlign: 'center' }}>{data.apps.length}</td>
-                    <td style={{ textAlign: 'center' }}>
-                      <span style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', display: 'inline-block', transition: 'transform 0.2s' }}><i className="fas fa-chevron-down"></i></span>
-                    </td>
-                  </tr>
-                  {isExpanded && (
-                    <tr>
-                      <td colSpan="5" style={{ padding: '0 15px', backgroundColor: 'var(--bg-color)' }}>
-                        <div style={{ padding: '15px', border: '1px solid var(--header-border-color)', borderRadius: '8px', margin: '10px 0' }}>
-                          <table className="applications-table" style={{ minWidth: 'auto' }}>
-                            <thead>
-                              <tr>
-                                <th>Company</th>
-                                <th>Job Boards</th>
-                                <th>Job ID</th>
-                                <th>Link</th>
-                                <th>Applied Date</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {data.apps.map(app => (
-                                <tr key={app.id}>
-                                  <td>{app.company}</td>
-                                  <td>{app.jobBoards}</td>
-                                  <td>{app.jobId}</td>
-                                  <td><a href={app.jobUrl} target="_blank" rel="noopener noreferrer">Link</a></td>
-                                  <td>{formatDateToDDMMYYYY(app.appliedDate)}</td>
-                                  <td>
-        <div className="action-buttons">
-          <button 
-            className="action-button" 
-            onClick={() => openApplicationDetailModal(app)}
-            title="View Details"
-          >
-            <i className="fas fa-eye"></i>
-          </button>
-          <button 
-            className="action-button" 
-            onClick={() => openEditApplicationModal(app)}
-            title="Edit Application"
-          >
-            <i className="fas fa-edit"></i>
-          </button>
-          <button 
-            className="action-button" 
-            onClick={() => {
-              setSelectedApplication(app);
-              handleDeleteApplication();
-            }}
-            title="Delete Application"
-          >
-            <i className="fas fa-trash"></i>
-          </button>
-        </div>
-      </td>
+            {sortedDates.length > 0 ? (
+                sortedDates.map(dateKey => {
+                    const dateApplications = groupedByDate[dateKey];
+                    const isExpanded = expandedDate === dateKey;
+                    const firstApp = dateApplications[0];
+                    const employee = employees.find(e => e.firebaseKey === firstApp.assignedTo);
+                    const clientName = firstApp.clientName;
+
+                    return (
+                        <React.Fragment key={dateKey}>
+                            <tr onClick={() => setExpandedDate(isExpanded ? null : dateKey)} style={{ cursor: 'pointer' }}>
+                                <td className="employee-cell">
+                                    <div className="employee-avatar">{employee ? getInitials(`${employee.firstName} ${employee.lastName}`) : '??'}</div>
+                                    {employee ? `${employee.firstName} ${employee.lastName}` : 'Unknown Employee'}
+                                </td>
+                                <td>{clientName}</td>
+                                <td>{firstApp.jobTitle}</td>
+                                <td style={{ textAlign: 'center' }}>
+                                  {formatDateToDDMMYYYY(dateKey)}
+                                </td>
+                                <td style={{ textAlign: 'center' }}>{dateApplications.length}</td>
+                                <td style={{ textAlign: 'center' }}>
+                                    <span style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', display: 'inline-block', transition: 'transform 0.2s' }}>
+                                        <i className="fas fa-chevron-down"></i>
+                                    </span>
+                                </td>
+                            </tr>
+                            {isExpanded && (
+                                <tr>
+                                    <td colSpan="5" style={{ padding: '0 15px', backgroundColor: 'var(--bg-color)' }}>
+                                        <div style={{ padding: '15px', border: '1px solid var(--header-border-color)', borderRadius: '8px', margin: '10px 0' }}>
+                                            <table className="applications-table" style={{ minWidth: 'auto' }}>
+                                                <thead>
+                                                    <tr>
+                                                        <th>Company</th>
+                                                        <th>Job Boards</th>
+                                                        <th>Job ID</th>
+                                                        <th>Link</th>
+                                                        <th>Applied Date</th>
+                                                        <th>Status</th>
+                                                        <th>Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {dateApplications.map(app => (
+                                                        <tr key={app.id}>
+                                                            <td>{app.company}</td>
+                                                            <td>{app.jobBoards}</td>
+                                                            <td>{app.jobId}</td>
+                                                            <td><a href={app.jobUrl} target="_blank" rel="noopener noreferrer">Link</a></td>
+                                                            <td>{formatDateToDDMMYYYY(app.appliedDate)}</td>
+                                                            <td>
+                                                                <span className={`status-badge status-${app.status?.toLowerCase()}`}>
+                                                                    {app.status}
+                                                                </span>
+                                                            </td>
+                                                            <td>
+                                                                <div className="action-buttons">
+                                                                    <button
+                                                                        className="action-button"
+                                                                        onClick={() => openApplicationDetailModal(app)}
+                                                                        title="View Details"
+                                                                    >
+                                                                        <i className="fas fa-eye"></i>
+                                                                    </button>
+                                                                    <button
+                                                                        className="action-button"
+                                                                        onClick={() => openEditApplicationModal(app)}
+                                                                        title="Edit Application"
+                                                                    >
+                                                                        <i className="fas fa-edit"></i>
+                                                                    </button>
+                                                                    <button
+                                                                        className="action-button"
+                                                                        onClick={() => {
+                                                                            setSelectedApplication(app);
+                                                                            handleDeleteApplication();
+                                                                        }}
+                                                                        title="Delete Application"
+                                                                    >
+                                                                        <i className="fas fa-trash"></i>
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </td>
                                 </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
-              );
-            })}
-             {Object.keys(groupedByClient).length === 0 && (
-                    <tr>
-                      <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-color)' }}>
+                            )}
+                        </React.Fragment>
+                    );
+                })
+            ) : (
+                <tr>
+                    <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-color)' }}>
                         No applications found matching your criteria.
-                      </td>
-                    </tr>
-                  )}
+                    </td>
+                </tr>
+            )}
           </tbody>
         </table>
       </div>
     </section>
   );
 };
-
 
   return (
     <div className="manager-dashboard-container">
