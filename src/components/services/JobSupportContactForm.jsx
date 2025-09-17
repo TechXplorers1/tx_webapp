@@ -1,3 +1,4 @@
+// In JobSupportContactForm.jsx, replace the entire file content with this updated version.
 import React, { useState, useEffect, useRef } from 'react';
 import { Container, Form, Button, Row, Col, Alert, Modal, ProgressBar, Spinner } from 'react-bootstrap';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -6,7 +7,6 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import { database } from '../../firebase';
 import { ref, push, set, update } from "firebase/database";
 import { useAuth } from '../../components/AuthContext';
-
 
 
 const JobSupportContactForm = () => {
@@ -18,58 +18,55 @@ const JobSupportContactForm = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 5;
 
-  // Define the initial state for the form data
+  // FIX: Refactored initialFormData to use an array for education details
   const initialFormData = {
     service: 'Job Supporting',
-    // Personal Information
     firstName: '',
     middleName: '',
     lastName: '',
     dob: '',
     gender: '',
     ethnicity: '',
-    // Contact Information
     address: '',
-    county: '', // NEW: New 'County' field
+    county: '',
     zipCode: '',
     countryCode: '+1',
     mobile: '',
     email: '',
-    // Employment Information
     securityClearance: '',
     clearanceLevel: '',
     willingToRelocate: '',
     workPreference: '',
     restrictedCompanies: '',
     yearsOfExperience: '',
-    // Job Preferences
-    jobsToApply: '', // Changed to be a textarea
+    jobsToApply: '',
     currentSalary: '',
     expectedSalary: '',
     visaStatus: '',
     otherVisaStatus: '',
-    // Education
-    universityName: '',
-    universityAddress: '',
-    courseOfStudy: '',
-    graduationFromDate: '',
-    graduationToDate: '',
-    noticePeriod: '',
-    // Current Employment
+    
+    // FIX: Changed education fields to an array of objects
+    educationDetails: [{
+      universityName: '',
+      universityAddress: '',
+      courseOfStudy: '',
+      graduationFromDate: '',
+      graduationToDate: '',
+      
+    }],
+    
     currentCompany: '',
     currentDesignation: '',
+    noticePeriod: '',
     preferredInterviewTime: '',
     earliestJoiningDate: '',
     relievingDate: '',
-    // References
     referenceName: '',
     referencePhone: '',
     referenceAddress: '',
     referenceEmail: '',
     referenceRole: '',
-    // Job Portal Information
     jobPortalAccountNameandCredentials: '',
-    // Resume Upload
     resume: null,
     coverLetter: null,
   };
@@ -82,37 +79,58 @@ const JobSupportContactForm = () => {
   const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
   const [countrySearchTerm, setCountrySearchTerm] = useState('');
   
-  // NEW: State for validation errors
   const [validationErrors, setValidationErrors] = useState({});
-    
-  // FIX: Separate state for file objects to preserve them across steps
   const [resumeFile, setResumeFile] = useState(null);
   const [coverLetterFile, setCoverLetterFile] = useState(null);
 
-  const handleChange = (e) => {
+// FIX: Updated handleChange to handle changes in the educationDetails array
+const handleChange = (e, index, fieldName) => {
     const { name, value, files } = e.target;
     if (name === "resume") {
-      setResumeFile(files[0] || null); // FIX: Update new state for resume
+      setResumeFile(files ? Array.from(files) : null);
     } else if (name === "coverLetter") {
-      setCoverLetterFile(files[0] || null); // FIX: Update new state for cover letter
-    }
-    else {
+      setCoverLetterFile(files[0] || null);
+    } else if (fieldName) { // Handle changes for dynamic education fields
+      const updatedEducation = [...formData.educationDetails];
+      updatedEducation[index][fieldName] = value;
+      setFormData(prev => ({ ...prev, educationDetails: updatedEducation }));
+    } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
   };
 
-      const handleViewDashboard = () => {
-        navigate('/clientdashboard');
-    };
 
-  // NEW: Refactored validateForm to handle all steps and show field-specific errors
+  const handleAddEducationEntry = () => {
+    setFormData(prev => ({
+      ...prev,
+      educationDetails: [...prev.educationDetails, {
+        universityName: '',
+        universityAddress: '',
+        courseOfStudy: '',
+        graduationFromDate: '',
+        graduationToDate: '',
+      }]
+    }));
+  };
+
+  const handleRemoveEducationEntry = (index) => {
+    const updatedEducation = [...formData.educationDetails];
+    updatedEducation.splice(index, 1);
+    setFormData(prev => ({ ...prev, educationDetails: updatedEducation }));
+  };
+
+  const handleViewDashboard = () => {
+    navigate('/clientdashboard');
+  };
+
+  // FIX: Refactored validateForm to handle all steps and show field-specific errors
   const validateForm = (step) => {
     const errors = {};
     let isValid = true;
 
     // Validation for Step 1
-     if (step === 1) {
-        const mandatoryFields = ['firstName', 'lastName', 'dob', 'gender', 'email', 'mobile', 'ethnicity', 'county', 'address', 'zipCode'];
+    if (step === 1) {
+        const mandatoryFields = ['firstName', 'lastName'];
         mandatoryFields.forEach(field => {
             if (!formData[field]) {
                 errors[field] = 'This field is required.';
@@ -151,8 +169,8 @@ const JobSupportContactForm = () => {
     }
 
     // Validation for Step 2
-  if (step === 2) {
-        const mandatoryFields = ['securityClearance', 'willingToRelocate', 'workPreference', 'yearsOfExperience', 'jobsToApply', 'currentSalary', 'expectedSalary', 'visaStatus'];
+    if (step === 2) {
+        const mandatoryFields = [];
         mandatoryFields.forEach(field => {
             if (!formData[field]) {
                 errors[field] = 'This field is required.';
@@ -169,28 +187,19 @@ const JobSupportContactForm = () => {
         }
     }
 
-    // NEW: Validation for Step 3
+    // FIX: Validation for Step 3 now loops through the array
     if (step === 3) {
-        const mandatoryFields = ['universityName', 'universityAddress', 'courseOfStudy', 'graduationFromDate', 'graduationToDate', 'noticePeriod'];
-        mandatoryFields.forEach(field => {
-            if (!formData[field]) {
-                errors[field] = 'This field is required.';
-                isValid = false;
-            }
-        });
-        if (formData.graduationFromDate && formData.graduationToDate) {
-            const fromDate = new Date(formData.graduationFromDate);
-            const toDate = new Date(formData.graduationToDate);
-            if (toDate <= fromDate) {
-                errors.graduationToDate = "To date must be greater than From date.";
-                isValid = false;
-            }
+      formData.educationDetails.forEach((edu, index) => {
+        if (!edu.universityName || !edu.courseOfStudy) {
+          errors[`universityName-${index}`] = 'University Name is required.';
+          errors[`courseOfStudy-${index}`] = 'Course of Study is required.';
+          isValid = false;
         }
+      });
     }
 
     // Validation for Step 5
     if (step === 5) {
-      // FIX: Check the dedicated file state, not formData
       if (!resumeFile) {
         errors.resume = "Please upload your resume.";
         isValid = false;
@@ -204,7 +213,7 @@ const JobSupportContactForm = () => {
 
   const handlePreview = (e) => {
     e.preventDefault();
-    if (validateForm(totalSteps)) { // Validate final step before preview
+    if (validateForm(totalSteps)) {
       setShowPreviewModal(true);
     } else {
       setSubmitStatus({ success: false, message: 'Please fix the errors in the form before submitting.' });
@@ -215,7 +224,7 @@ const JobSupportContactForm = () => {
     setShowPreviewModal(false);
   };
 
-  const handleConfirmAndSubmit = async (e) => {
+const handleConfirmAndSubmit = async (e) => {
     if (e) e.preventDefault();
     if (!validateForm(totalSteps)) {
       setShowPreviewModal(false);
@@ -230,130 +239,122 @@ const JobSupportContactForm = () => {
         throw new Error("You must be logged in to submit this form.");
       }
 
-       let resumeUrl = '';
-        let resumeFileName = '';
-        let coverLetterUrl = '';
-        let coverLetterFileName = '';
+      const resumesData = [];
+      let coverLetterUrl = '';
+      let coverLetterFileName = '';
       
       const newRegistrationRef = push(ref(database, `clients/${user.firebaseKey}/serviceRegistrations`));
       const registrationKey = newRegistrationRef.key;
 
-      // FIX: Use the resumeFile state for upload
-      if (resumeFile) {
-        resumeFileName = resumeFile.name;
-        const fileRef = storageRef(getStorage(), `resumes/${user.firebaseKey}/${registrationKey}/${resumeFileName}`);
-        
-        const uploadResult = await uploadBytes(fileRef, resumeFile);
-        resumeUrl = await getDownloadURL(uploadResult.ref);
+      if (resumeFile && resumeFile.length > 0) {
+        for (const file of resumeFile) {
+          const fileRef = storageRef(getStorage(), `resumes/${user.firebaseKey}/${registrationKey}/${file.name}`);
+          const uploadResult = await uploadBytes(fileRef, file);
+          const resumeUrl = await getDownloadURL(uploadResult.ref);
+          resumesData.push({
+            name: file.name,
+            url: resumeUrl,
+            size: file.size,
+          });
+        }
       }
 
-       if (coverLetterFile) {
-            coverLetterFileName = coverLetterFile.name;
-            const fileRef = storageRef(getStorage(), `coverletters/${user.firebaseKey}/${registrationKey}/${coverLetterFileName}`);
-            const uploadResult = await uploadBytes(fileRef, coverLetterFile);
-            coverLetterUrl = await getDownloadURL(uploadResult.ref);
-        }
+      if (coverLetterFile) {
+        coverLetterFileName = coverLetterFile.name;
+        const fileRef = storageRef(getStorage(), `coverletters/${user.firebaseKey}/${registrationKey}/${coverLetterFileName}`);
+        const uploadResult = await uploadBytes(fileRef, coverLetterFile);
+        coverLetterUrl = await getDownloadURL(uploadResult.ref);
+      }
 
     const newServiceRegistration = {
-         service: 'Job Supporting',
-            registeredDate: new Date().toISOString().split('T')[0],
-            paymentStatus: 'Pending',
-            assignmentStatus: 'registered',
-            assignedManager: '',
+        service: 'Job Supporting',
+        registeredDate: new Date().toISOString().split('T')[0],
+        paymentStatus: 'Pending',
+        assignmentStatus: 'registered',
+        assignedManager: '',
 
-            // Personal Information
-            firstName: formData.firstName,
-            middleName: formData.middleName,
-            lastName: formData.lastName,
-            dob: formData.dob,
-            gender: formData.gender,
-            ethnicity: formData.ethnicity,
-            
-            // Contact Information
-            address: formData.address,
-            county: formData.county,
-            zipCode: formData.zipCode,
-            country: countryName,
-            mobile: `${formData.countryCode} ${formData.mobile}`,
-            email: formData.email,
+        // Personal Information
+        firstName: formData.firstName,
+        middleName: formData.middleName,
+        lastName: formData.lastName,
+        dob: formData.dob,
+        gender: formData.gender,
+        ethnicity: formData.ethnicity,
+        
+        // Contact Information
+        address: formData.address,
+        county: formData.county,
+        zipCode: formData.zipCode,
+        country: countryName,
+        mobile: `${formData.countryCode} ${formData.mobile}`,
+        email: formData.email,
 
-            // Employment Information
-            securityClearance: formData.securityClearance,
-            clearanceLevel: formData.clearanceLevel,
-            willingToRelocate: formData.willingToRelocate,
-            workPreference: formData.workPreference,
-            restrictedCompanies: formData.restrictedCompanies,
-            yearsOfExperience: formData.yearsOfExperience,
+        // Employment Information
+        securityClearance: formData.securityClearance,
+        clearanceLevel: formData.clearanceLevel,
+        willingToRelocate: formData.willingToRelocate,
+        workPreference: formData.workPreference,
+        restrictedCompanies: formData.restrictedCompanies,
+        yearsOfExperience: formData.yearsOfExperience,
 
-            // Job Preferences
-            jobsToApply: formData.jobsToApply,
-            currentSalary: formData.currentSalary,
-            expectedSalary: formData.expectedSalary,
-            visaStatus: formData.visaStatus === 'other' ? formData.otherVisaStatus : formData.visaStatus,
-            otherVisaStatus: formData.visaStatus === 'other' ? formData.otherVisaStatus : '',
+        // Job Preferences
+        jobsToApply: formData.jobsToApply,
+        currentSalary: formData.currentSalary,
+        expectedSalary: formData.expectedSalary,
+        visaStatus: formData.visaStatus === 'other' ? formData.otherVisaStatus : formData.visaStatus,
+        otherVisaStatus: formData.visaStatus === 'other' ? formData.otherVisaStatus : '',
 
-            // Education
-            universityName: formData.universityName,
-            universityAddress: formData.universityAddress,
-            courseOfStudy: formData.courseOfStudy,
-            graduationFromDate: formData.graduationFromDate,
-            graduationToDate: formData.graduationToDate,
-            noticePeriod: formData.noticePeriod,
+        // FIX: Store the new educationDetails array
+        educationDetails: formData.educationDetails,
+        
+        // Current Employment
+        currentCompany: formData.currentCompany,
+        currentDesignation: formData.currentDesignation,
+        noticePeriod: formData.noticePeriod,
+        preferredInterviewTime: formData.preferredInterviewTime,
+        earliestJoiningDate: formData.earliestJoiningDate,
+        relievingDate: formData.relievingDate,
+        
+        // References
+        referenceName: formData.referenceName,
+        referencePhone: formData.referencePhone,
+        referenceAddress: formData.referenceAddress,
+        referenceEmail: formData.referenceEmail,
+        referenceRole: formData.referenceRole,
 
-            // Current Employment
-            currentCompany: formData.currentCompany,
-            currentDesignation: formData.currentDesignation,
-            preferredInterviewTime: formData.preferredInterviewTime,
-            earliestJoiningDate: formData.earliestJoiningDate,
-            relievingDate: formData.relievingDate,
-            
-            // References
-            referenceName: formData.referenceName,
-            referencePhone: formData.referencePhone,
-            referenceAddress: formData.referenceAddress,
-            referenceEmail: formData.referenceEmail,
-            referenceRole: formData.referenceRole,
-
-            // Job Portal Information
-            jobPortalAccountNameandCredentials: formData.jobPortalAccountNameandCredentials,
-            
-            // Documents
-            resumeUrl: resumeUrl,
-            resumeFileName: resumeFileName,
-            coverLetterUrl: coverLetterUrl,
-            coverLetterFileName: coverLetterFileName,
+        // Job Portal Information
+        jobPortalAccountNameandCredentials: formData.jobPortalAccountNameandCredentials,
+        
+        resumes: resumesData,
+        coverLetterUrl: coverLetterUrl,
+        coverLetterFileName: coverLetterFileName,
     };
     const clientProfileUpdate = {
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            mobile: `${formData.countryCode} ${formData.mobile}`,
-            email: formData.email,
-        };
-            
-            
-            await set(newRegistrationRef, newServiceRegistration);
-            
-            // 2. Update the main client profile with the latest contact info
-            const clientProfileRef = ref(database, `clients/${user.firebaseKey}`);
-            await update(clientProfileRef, clientProfileUpdate);
-            
-            console.log("Job Support registration saved successfully.");
- setSubmitStatus({ success: true, message: 'Form submitted successfully!' });
-      setShowSuccessModal(true);
-      setFormData(initialFormData);
-       setResumeFile(null); // Reset file states
-        setCoverLetterFile(null);
-      // setTimeout(() => {
-      //     setShowSuccessModal(false);
-      //     navigate("/");
-      // }, 3000);
-        } catch (error) {
-            setSubmitStatus({ success: false, message: 'Submission failed. Please try again.' });
-            console.error("Failed to save to Firebase", error);
-        } finally {
-            setIsSubmitting(false);
-            setShowPreviewModal(false);
-        }
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        mobile: `${formData.countryCode} ${formData.mobile}`,
+        email: formData.email,
+    };
+        
+        
+    await set(newRegistrationRef, newServiceRegistration);
+    
+    const clientProfileRef = ref(database, `clients/${user.firebaseKey}`);
+    await update(clientProfileRef, clientProfileUpdate);
+    
+    console.log("Job Support registration saved successfully.");
+    setSubmitStatus({ success: true, message: 'Form submitted successfully!' });
+    setShowSuccessModal(true);
+    setFormData(initialFormData);
+    setResumeFile(null);
+    setCoverLetterFile(null);
+    } catch (error) {
+        setSubmitStatus({ success: false, message: 'Submission failed. Please try again.' });
+        console.error("Failed to save to Firebase", error);
+    } finally {
+        setIsSubmitting(false);
+        setShowPreviewModal(false);
+    }
   };
 
   const countryCodes = [ { shortCode: 'US', dialCode: '+1', name: 'United States' }, { shortCode: 'CA', dialCode: '+1', name: 'Canada' }, { shortCode: 'GB', dialCode: '+44', name: 'United Kingdom' }, { shortCode: 'IN', dialCode: '+91', name: 'India' }, { shortCode: 'AU', dialCode: '+61', name: 'Australia' }, { shortCode: 'DE', dialCode: '+49', name: 'Germany' }, { shortCode: 'FR', dialCode: '+33', name: 'France' }, { shortCode: 'JP', dialCode: '+81', name: 'Japan' }, { shortCode: 'CN', dialCode: '+86', name: 'China' }, { shortCode: 'BR', dialCode: '+55', name: 'Brazil' }, { shortCode: 'ZA', dialCode: '+27', name: 'South Africa' }, { shortCode: 'MX', dialCode: '+52', name: 'Mexico' }, { shortCode: 'ES', dialCode: '+34', name: 'Spain' }, { shortCode: 'IT', dialCode: '+39', name: 'Italy' }, { shortCode: 'NL', dialCode: '+31', name: 'Netherlands' }, { shortCode: 'SE', dialCode: '+46', name: 'Sweden' }, { shortCode: 'NO', dialCode: '+47', name: 'Norway' }, { shortCode: 'DK', dialCode: '+45', name: 'Denmark' }, { shortCode: 'FI', dialCode: '+358', name: 'Finland' }, { shortCode: 'CH', dialCode: '+41', name: 'Switzerland' }, { shortCode: 'AT', dialCode: '+43', name: 'Austria' }, { shortCode: 'BE', dialCode: '+32', name: 'Belgium' }, { shortCode: 'IE', dialCode: '+353', name: 'Ireland' }, { shortCode: 'NZ', dialCode: '+64', name: 'New Zealand' }, { shortCode: 'SG', dialCode: '+65', name: 'Singapore' }, { shortCode: 'HK', dialCode: '+852', name: 'Hong Kong' }, { shortCode: 'KR', dialCode: '+82', name: 'South Korea' }, { shortCode: 'AE', dialCode: '+971', name: 'United Arab Emirates' }, { shortCode: 'SA', dialCode: '+966', name: 'Saudi Arabia' }, { shortCode: 'RU', dialCode: '+7', name: 'Russia' }, ];
@@ -368,7 +369,7 @@ const JobSupportContactForm = () => {
 
   const prevStep = () => {
     setCurrentStep(prev => (prev > 1 ? prev - 1 : prev));
-    setValidationErrors({}); // Clear errors when going back
+    setValidationErrors({});
   };
 
   const containerStyle = { backgroundColor: 'rgba(255, 255, 255, 0.95)', padding: '30px', borderRadius: '10px', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)', marginTop: '50px', marginBottom: '50px', position: 'relative' };
@@ -381,13 +382,9 @@ const JobSupportContactForm = () => {
   const previewValueDisplay = { padding: '0.4rem 0.6rem', fontSize: '0.95rem', backgroundColor: '#e9ecef', borderRadius: '5px', border: '1px solid #ced4da', minHeight: '38px', display: 'flex', alignItems: 'center', wordBreak: 'break-word' };
   const previewTextAreaDisplay = { ...previewValueDisplay, minHeight: '80px', alignItems: 'flex-start' };
 
-// In JobSupportContactForm.jsx, REPLACE your existing `modernStyles` variable with this one.
-
-  // In JobSupportContactForm.jsx, REPLACE your existing `modernStyles` variable with this one.
-
   const modernStyles = `
     .job-support-form-wrapper {
-      background: #f8f9fa; /* Light grey background for the whole page */
+      background: #f8f9fa;
       min-height: 100vh;
       display: flex;
       align-items: center;
@@ -405,7 +402,7 @@ const JobSupportContactForm = () => {
       margin-bottom: 50px;
       position: relative;
       width: 100%;
-      max-width: 900px; /* Wider for better layout */
+      max-width: 900px;
     }
 
     .back-button-modern {
@@ -457,13 +454,13 @@ const JobSupportContactForm = () => {
       padding-bottom: 0.75rem;
     }
 
-    .form-label { /* Applied to all Form.Label components */
+    .form-label {
       font-weight: 500;
       color: #495057;
       margin-bottom: 0.5rem;
     }
 
-    .form-control, .form-select { /* Applied to all Form.Control and Form.Select */
+    .form-control, .form-select {
       border-radius: 8px;
       border: 1px solid #ced4da;
       padding: 0.75rem 1rem;
@@ -489,7 +486,7 @@ const JobSupportContactForm = () => {
       padding: 0.75rem 2rem;
       font-size: 1rem;
       font-weight: 600;
-      border-radius: 50px; /* Pill shape */
+      border-radius: 50px;
       border: 1px solid;
       transition: all 0.3s ease;
     }
@@ -506,7 +503,7 @@ const JobSupportContactForm = () => {
       background-color: #0d6efd;
       border-color: #0d6efd;
       color: white;
-      margin-left: auto; /* Push to the right */
+      margin-left: auto;
     }
     .nav-button.next:hover {
       background-color: #0b5ed7;
@@ -517,14 +514,13 @@ const JobSupportContactForm = () => {
       background: linear-gradient(45deg, #198754, #157347);
       border-color: #198754;
       color: white;
-      margin-left: auto; /* Push to the right */
+      margin-left: auto;
     }
     .nav-button.preview:hover {
       transform: translateY(-2px);
       box-shadow: 0 4px 15px rgba(25, 135, 84, 0.3);
     }
 
-    /* Custom Dropdown for Country Code */
     .country-dropdown-container {
       position: relative;
     }
@@ -560,96 +556,33 @@ const JobSupportContactForm = () => {
       padding: 6px;
     }
     
-    /* --- DARK MODE STYLES --- */
-    .dark-mode .job-support-form-wrapper {
-        background: #1a202c !important;
-    }
-    .dark-mode .form-container-modern {
-        background-color: #2d3748 !important;
-        color: #e2e8f0 !important;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
-    }
-    .dark-mode .back-button-modern,
-    .dark-mode .form-header-modern,
-    .dark-mode .step-header-modern,
-    .dark-mode .form-label {
-        color: #e2e8f0 !important;
-    }
-    .dark-mode .form-control,
-    .dark-mode .form-select {
-        background-color: #1f2937 !important;
-        color: #e2e8f0 !important;
-        border-color: #4a5568 !important;
-    }
-    .dark-mode .form-control::placeholder {
-        color: #a0aec0 !important;
-    }
-    .dark-mode .form-control:focus,
-    .dark-mode .form-select:focus {
-        border-color: #4299e1 !important;
-        box-shadow: 0 0 0 0.25rem rgba(66, 153, 225, 0.25) !important;
-    }
-    .dark-mode .form-select {
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23a0aec0' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
-    }
-    .dark-mode .progress-bar-modern .progress {
-        background-color: #4a5568 !important;
-    }
-    .dark-mode .navigation-buttons,
-    .dark-mode .step-header-modern {
-        border-color: #4a5568 !important;
-    }
-    .dark-mode .nav-button.prev {
-        background-color: transparent !important;
-        border-color: #a0aec0 !important;
-        color: #a0aec0 !important;
-    }
-    .dark-mode .nav-button.prev:hover {
-        background-color: #a0aec0 !important;
-        color: #1a202c !important;
-    }
-    .dark-mode .country-dropdown-list {
-        background: #1f2937 !important;
-        border-color: #4a5568 !important;
-    }
-    .dark-mode .country-dropdown-item {
-        color: #e2e8f0 !important;
-    }
-    .dark-mode .country-dropdown-item:hover {
-        background-color: #374151 !important;
-    }
-    .dark-mode .country-dropdown-search input {
-        background-color: #2d3748 !important;
-        color: #e2e8f0 !important;
-        border-color: #4a5568 !important;
-    }
-    .dark-mode .modal-content {
-        background-color: #2d3748 !important;
-        color: #e2e8f0 !important;
-    }
-    .dark-mode .modal-header, .dark-mode .modal-footer {
-        border-color: #4a5568 !important;
-    }
-    .dark-mode .modal-title, .dark-mode .modal-body h4 {
-        color: #e2e8f0 !important;
-    }
-    .dark-mode .btn-close {
-        filter: invert(1) grayscale(100%) brightness(200%);
-    }
-    .dark-mode div[style*="background-color: rgb(248, 249, 250)"] {
-        background-color: #1f2937 !important;
-    }
-    .dark-mode div[style*="background-color: rgb(233, 236, 239)"] {
-        background-color: #374151 !important;
-        color: #e2e8f0 !important;
-        border-color: #4a5568 !important;
-    }
-    .dark-mode .text-danger {
-        color: #f56565 !important;
-    }
-    .dark-mode .text-muted {
-        color: #a0aec0 !important;
-    }
+    .dark-mode .job-support-form-wrapper { background: #1a202c !important; }
+    .dark-mode .form-container-modern { background-color: #2d3748 !important; color: #e2e8f0 !important; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important; }
+    .dark-mode .back-button-modern, .dark-mode .form-header-modern, .dark-mode .step-header-modern, .dark-mode .form-label { color: #e2e8f0 !important; }
+    .dark-mode .form-control, .dark-mode .form-select { background-color: #1f2937 !important; color: #e2e8f0 !important; border-color: #4a5568 !important; }
+    .dark-mode .form-control::placeholder { color: #a0aec0 !important; }
+    .dark-mode .form-control:focus, .dark-mode .form-select:focus { border-color: #4299e1 !important; box-shadow: 0 0 0 0.25rem rgba(66, 153, 225, 0.25) !important; }
+    .dark-mode .form-select { background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23a0aec0' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important; }
+    .dark-mode .progress-bar-modern .progress { background-color: #4a5568 !important; }
+    .dark-mode .navigation-buttons, .dark-mode .step-header-modern { border-color: #4a5568 !important; }
+    .dark-mode .nav-button.prev { background-color: transparent !important; border-color: #a0aec0 !important; color: #a0aec0 !important; }
+    .dark-mode .nav-button.prev:hover { background-color: #a0aec0 !important; color: #1a202c !important; }
+    .dark-mode .country-dropdown-list { background: #1f2937 !important; border-color: #4a5568 !important; }
+    .dark-mode .country-dropdown-item { color: #e2e8f0 !important; }
+    .dark-mode .country-dropdown-item:hover { background-color: #374151 !important; }
+    .dark-mode .country-dropdown-search input { background-color: #2d3748 !important; color: #e2e8f0 !important; border-color: #4a5568 !important; }
+    .dark-mode .modal-content { background-color: #2d3748 !important; color: #e2e8f0 !important; }
+    .dark-mode .modal-header, .dark-mode .modal-footer { border-color: #4a5568 !important; }
+    .dark-mode .modal-title, .dark-mode .modal-body h4 { color: #e2e8f0 !important; }
+    .dark-mode .btn-close { filter: invert(1) grayscale(100%) brightness(200%); }
+    .dark-mode div[style*="background-color: rgb(248, 249, 250)"] { background-color: #1f2937 !important; }
+    .dark-mode div[style*="background-color: rgb(233, 236, 239)"] { background-color: #374151 !important; color: #e2e8f0 !important; border-color: #4a5568 !important; }
+    .dark-mode .text-danger { color: #f56565 !important; }
+    .dark-mode .text-muted { color: #a0aec0 !important; }
+    .education-entry-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .education-entry-actions button { padding: 6px 12px; border-radius: 5px; font-size: 0.9rem; font-weight: 500; cursor: pointer; }
+    .education-add-button { background-color: #28a745; color: white; border: none; }
+    .education-remove-button { background-color: #dc3545; color: white; border: none; }
   `;
 
   const checkmarkStyles = `
@@ -783,7 +716,6 @@ const keyframes = `
                 </Row>
                 <Row className="mb-3">
                 
-                  {/* NEW: New County field */}
                   <Form.Group as={Col} md={4} controlId="formCounty">
                     <Form.Label>County <span className="text-danger">*</span></Form.Label>
                     <Form.Control type="text" name="county" value={formData.county} onChange={handleChange} isInvalid={!!validationErrors.county} required />
@@ -857,7 +789,6 @@ const keyframes = `
                 <Row className="mb-3">
                     <Form.Group as={Col} controlId="formJobsToApply">
                     <Form.Label>Jobs to Apply <span className="text-danger">*</span></Form.Label>
-                    {/* NEW: Changed to textarea */}
                     <Form.Control as="textarea" rows={3} name="jobsToApply" placeholder="e.g., Software Engineer, Project Manager" value={formData.jobsToApply} onChange={handleChange} isInvalid={!!validationErrors.jobsToApply} required />
                     <Form.Control.Feedback type="invalid">{validationErrors.jobsToApply}</Form.Control.Feedback>
                   </Form.Group>
@@ -890,43 +821,64 @@ const keyframes = `
               </section>
             )}
 
-            {/* Step 3: Education & Current Employment (Optional) */}
+            {/* FIX: Step 3 now handles multiple education entries dynamically */}
             {currentStep === 3 && (
               <section className="step-section">
                 <h4 className="step-header-modern">Step 3: Education & Current Employment (Optional)</h4>
-                <Row className="mb-3">
-                  <Form.Group as={Col} controlId="formUniversityName"><Form.Label>University Name<span className="text-danger">*</span></Form.Label><Form.Control type="text" name="universityName" value={formData.universityName} onChange={handleChange} isInvalid={!!validationErrors.universityName} />
-                                      <Form.Control.Feedback type="invalid">{validationErrors.universityName}</Form.Control.Feedback>
-</Form.Group>
-                  <Form.Group as={Col} controlId="formUniversityAddress"><Form.Label>University Address<span className="text-danger">*</span></Form.Label><Form.Control type="text" name="universityAddress" value={formData.universityAddress} onChange={handleChange} isInvalid={!!validationErrors.universityAddress} />
-                                      <Form.Control.Feedback type="invalid">{validationErrors.universityAddress}</Form.Control.Feedback>
-</Form.Group>
-                  <Form.Group as={Col} controlId="formCourseOfStudy"><Form.Label>Course of Study<span className="text-danger">*</span></Form.Label><Form.Control type="text" name="courseOfStudy" value={formData.courseOfStudy} onChange={handleChange} isInvalid={!!validationErrors.courseOfStudy} />
-                                      <Form.Control.Feedback type="invalid">{validationErrors.courseOfStudy}</Form.Control.Feedback>
-</Form.Group>
-                </Row>
-                <Row className="mb-3">
-                  <Form.Group as={Col} controlId="formGraduationFromDate">
-                    <Form.Label>Graduation From Date<span className="text-danger">*</span></Form.Label>
-                    <Form.Control type="date" name="graduationFromDate" value={formData.graduationFromDate} onChange={handleChange} isInvalid={!!validationErrors.graduationFromDate} />
-                    <Form.Control.Feedback type="invalid">{validationErrors.graduationFromDate}</Form.Control.Feedback>
-                  </Form.Group>
-                  <Form.Group as={Col} controlId="formGraduationToDate">
-                    <Form.Label>Graduation To Date<span className="text-danger">*</span></Form.Label>
-                    <Form.Control type="date" name="graduationToDate" value={formData.graduationToDate} onChange={handleChange} isInvalid={!!validationErrors.graduationToDate} />
-                    <Form.Control.Feedback type="invalid">{validationErrors.graduationToDate}</Form.Control.Feedback>
-                  </Form.Group>
-                  <Form.Group as={Col} controlId="formNoticePeriod">
-                    <Form.Label>Notice Period<span className="text-danger">*</span></Form.Label>
-                    <Form.Select name="noticePeriod" value={formData.noticePeriod} onChange={handleChange} isInvalid={!!validationErrors.noticePeriod} required>
-                      <option value="">Select Notice Period</option><option value="immediately">Immediately</option><option value="1_week">1 Week</option><option value="2_week">2 Weeks</option><option value="3_week">3 Weeks</option><option value="1_month">1 Month</option>
-                    </Form.Select>
-                    <Form.Control.Feedback type="invalid">{validationErrors.noticePeriod}</Form.Control.Feedback>
-                  </Form.Group>
-                </Row>
+                {formData.educationDetails.map((edu, index) => (
+                  <div key={index} className="mb-4 p-3" style={{ border: '1px solid #e9ecef', borderRadius: '8px', position: 'relative' }}>
+                    <h5 style={{ fontSize: '1.1rem', marginBottom: '1rem', color: '#495057' }}>Education Entry {index + 1}</h5>
+                    <Row className="mb-3">
+                      <Form.Group as={Col} controlId={`formUniversityName-${index}`}>
+                        <Form.Label>University Name<span className="text-danger">*</span></Form.Label>
+                        <Form.Control type="text" name="universityName" value={edu.universityName} onChange={(e) => handleChange(e, index, 'universityName')} isInvalid={!!validationErrors[`universityName-${index}`]} />
+                        <Form.Control.Feedback type="invalid">{validationErrors[`universityName-${index}`]}</Form.Control.Feedback>
+                      </Form.Group>
+                      <Form.Group as={Col} controlId={`formUniversityAddress-${index}`}>
+                        <Form.Label>University Address<span className="text-danger">*</span></Form.Label>
+                        <Form.Control type="text" name="universityAddress" value={edu.universityAddress} onChange={(e) => handleChange(e, index, 'universityAddress')} isInvalid={!!validationErrors[`universityAddress-${index}`]} />
+                        <Form.Control.Feedback type="invalid">{validationErrors[`universityAddress-${index}`]}</Form.Control.Feedback>
+                      </Form.Group>
+                      <Form.Group as={Col} controlId={`formCourseOfStudy-${index}`}>
+                        <Form.Label>Course of Study<span className="text-danger">*</span></Form.Label>
+                        <Form.Control type="text" name="courseOfStudy" value={edu.courseOfStudy} onChange={(e) => handleChange(e, index, 'courseOfStudy')} isInvalid={!!validationErrors[`courseOfStudy-${index}`]} />
+                        <Form.Control.Feedback type="invalid">{validationErrors[`courseOfStudy-${index}`]}</Form.Control.Feedback>
+                      </Form.Group>
+                    </Row>
+                    <Row className="mb-3">
+                      <Form.Group as={Col} controlId={`formGraduationFromDate-${index}`}>
+                        <Form.Label>Graduation From Date<span className="text-danger">*</span></Form.Label>
+                        <Form.Control type="date" name="graduationFromDate" value={edu.graduationFromDate} onChange={(e) => handleChange(e, index, 'graduationFromDate')} isInvalid={!!validationErrors[`graduationFromDate-${index}`]} />
+                        <Form.Control.Feedback type="invalid">{validationErrors[`graduationFromDate-${index}`]}</Form.Control.Feedback>
+                      </Form.Group>
+                      <Form.Group as={Col} controlId={`formGraduationToDate-${index}`}>
+                        <Form.Label>Graduation To Date<span className="text-danger">*</span></Form.Label>
+                        <Form.Control type="date" name="graduationToDate" value={edu.graduationToDate} onChange={(e) => handleChange(e, index, 'graduationToDate')} isInvalid={!!validationErrors[`graduationToDate-${index}`]} />
+                        <Form.Control.Feedback type="invalid">{validationErrors[`graduationToDate-${index}`]}</Form.Control.Feedback>
+                      </Form.Group>
+                     
+                    </Row>
+                    {formData.educationDetails.length > 1 && (
+                      <Button variant="danger" onClick={() => handleRemoveEducationEntry(index)} style={{ position: 'absolute', top: '10px', right: '10px', width: '30px', height: '30px', borderRadius: '50%', padding: 0 }}>-</Button>
+                    )}
+                  </div>
+                ))}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
+                  <Button variant="success" onClick={handleAddEducationEntry} style={{ padding: '6px 12px' }}>
+                    + Add More
+                  </Button>
+                </div>
+                <h5 style={{ marginTop: '2rem' }}>Current Employment</h5>
                 <Row className="mb-3">
                   <Form.Group as={Col} controlId="formCurrentCompany"><Form.Label>Current Company</Form.Label><Form.Control type="text" name="currentCompany" value={formData.currentCompany} onChange={handleChange} isInvalid={!!validationErrors.currentCompany} /></Form.Group>
                   <Form.Group as={Col} controlId="formCurrentDesignation"><Form.Label>Current Designation</Form.Label><Form.Control type="text" name="currentDesignation" value={formData.currentDesignation} onChange={handleChange} isInvalid={!!validationErrors.currentDesignation} /></Form.Group>
+                   <Form.Group as={Col} controlId="formNoticePeriod">
+                        <Form.Label>Notice Period<span className="text-danger">*</span></Form.Label>
+                        <Form.Select name="noticePeriod" value={formData.noticePeriod} onChange={handleChange} isInvalid={!!validationErrors.noticePeriod} required>
+                          <option value="">Select Notice Period</option><option value="immediately">Immediately</option><option value="1_week">1 Week</option><option value="2_week">2 Weeks</option><option value="3_week">3 Weeks</option><option value="1_month">1 Month</option>
+                        </Form.Select>
+                        <Form.Control.Feedback type="invalid">{validationErrors.noticePeriod}</Form.Control.Feedback>
+                      </Form.Group>
                 </Row>
                 <Row className="mb-3">
                   <Form.Group as={Col} controlId="formPreferredInterviewTime"><Form.Label>Preferred Interview Time</Form.Label><Form.Control type="text" name="preferredInterviewTime" value={formData.preferredInterviewTime} onChange={handleChange} isInvalid={!!validationErrors.preferredInterviewTime} /></Form.Group>
@@ -970,16 +922,16 @@ const keyframes = `
                     required
                     accept=".pdf,.doc,.docx"
                     isInvalid={!!validationErrors.resume}
+                    multiple
                   />
                   <Form.Control.Feedback type="invalid">{validationErrors.resume}</Form.Control.Feedback>
-                  {/* FIX: Display file name from state, not form value */}
-                  {resumeFile && (
-                    <Form.Text className="text-success d-block mt-1">
-                      Selected file: **{resumeFile.name}**
-                    </Form.Text>
-                  )}
-                  <Form.Text className="text-muted d-block mt-1">Please upload your resume in PDF, DOC, or DOCX format.</Form.Text>
-                </Form.Group>
+                 {resumeFile && resumeFile.length > 0 && (
+    <Form.Text className="text-success d-block mt-1">
+      Selected files: **{resumeFile.map(file => file.name).join(', ')}**
+    </Form.Text>
+  )}
+  <Form.Text className="text-muted d-block mt-1">Please upload your resume(s) in PDF, DOC, or DOCX format.</Form.Text>
+</Form.Group>
                 <Form.Group as={Col} controlId="formcoverLetter" className="mb-3 mt-4">
                   <Form.Label>Cover Letter</Form.Label>
                   <Form.Control type="file" name="coverLetter" onChange={handleChange} accept=".pdf,.doc,.docx" isInvalid={!!validationErrors.coverLetter} />
@@ -994,7 +946,6 @@ const keyframes = `
               </section>
             )}
 
-            {/* MODIFICATION: Navigation Buttons */}
             <div className="navigation-buttons">
               {currentStep > 1 && (
                 <Button className="nav-button prev" onClick={prevStep}>Previous</Button>
@@ -1013,17 +964,14 @@ const keyframes = `
         <Modal show={showPreviewModal} onHide={handleClosePreviewModal} centered size="lg">
           <Modal.Header closeButton><Modal.Title>Preview Your Details</Modal.Title></Modal.Header>
           <Modal.Body style={previewModalContentStyle}>
-            {/* Personal Information Preview */}
             <h4 className="border-bottom pb-2 mb-3" style={subHeaderStyle}>Personal Information</h4>
             <Row className="mb-3"><Col><Form.Label>First Name:</Form.Label><div style={previewValueDisplay}>{formData.firstName || 'N/A'}</div></Col><Col><Form.Label>Middle Name:</Form.Label><div style={previewValueDisplay}>{formData.middleName || 'N/A'}</div></Col><Col><Form.Label>Last Name:</Form.Label><div style={previewValueDisplay}>{formData.lastName || 'N/A'}</div></Col></Row>
             <Row className="mb-3"><Col><Form.Label>Date of Birth:</Form.Label><div style={previewValueDisplay}>{formData.dob || 'N/A'}</div></Col><Col><Form.Label>Gender:</Form.Label><div style={previewValueDisplay}>{formData.gender || 'N/A'}</div></Col><Col><Form.Label>Ethnicity:</Form.Label><div style={previewValueDisplay}>{formData.ethnicity || 'N/A'}</div></Col></Row>
             
-            {/* Contact Information Preview */}
             <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Contact Information</h4>
-            <Row className="mb-3"><Col><Form.Label>Address:</Form.Label><div style={previewValueDisplay}>{formData.address || 'N/A'}</div></Col><Col md={4}><Form.Label>County:</Form.Label><div style={previewValueDisplay}>{formData.county || 'N/A'}</div></Col><Col md={4}><Form.Label>Zip Code:</Form.Label><div style={previewValueDisplay}>{formData.zipCode || 'N/A'}</div></Col></Row>
+            <Row className="mb-3"><Col><Form.Label>Address:</Form.Label><div style={previewValueDisplay}>{formData.address || 'N/A'}</div></Col><Col><Form.Label>County:</Form.Label><div style={previewValueDisplay}>{formData.county || 'N/A'}</div></Col><Col md={4}><Form.Label>Zip Code:</Form.Label><div style={previewValueDisplay}>{formData.zipCode || 'N/A'}</div></Col></Row>
             <Row className="mb-3"><Col><Form.Label>Country:</Form.Label><div style={previewValueDisplay}>{countryCodes.find(c => c.dialCode === formData.countryCode)?.name || 'N/A'} ({formData.countryCode || 'N/A'})</div></Col><Col><Form.Label>Mobile:</Form.Label><div style={previewValueDisplay}>{formData.mobile || 'N/A'}</div></Col><Col><Form.Label>Email:</Form.Label><div style={previewValueDisplay}>{formData.email || 'N/A'}</div></Col></Row>
             
-            {/* Employment Information Preview */}
             <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Employment Information</h4>
             <Row className="mb-3"><Col><Form.Label>Security Clearance:</Form.Label><div style={previewValueDisplay}>{formData.securityClearance || 'N/A'}</div></Col>{formData.securityClearance === 'yes' && (<Col><Form.Label>Clearance Level:</Form.Label><div style={previewValueDisplay}>{formData.clearanceLevel || 'N/A'}</div></Col>)}<Col><Form.Label>Willing to Relocate:</Form.Label><div style={previewValueDisplay}>{formData.willingToRelocate || 'N/A'}</div></Col></Row>
             <Row className="mb-3">
@@ -1034,19 +982,24 @@ const keyframes = `
               <Col><Form.Label>Restricted Companies:</Form.Label><div style={previewValueDisplay}>{formData.restrictedCompanies || 'N/A'}</div></Col>
             </Row>
 
-            {/* Job Preferences Preview */}
             <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Job Preferences</h4>
             <Row className="mb-3"><Col><Form.Label>Jobs to Apply For:</Form.Label><div style={previewValueDisplay}>{formData.jobsToApply || 'N/A'}</div></Col></Row>
             <Row className="mb-3"><Col><Form.Label>Current Salary:</Form.Label><div style={previewValueDisplay}>{formData.currentSalary || 'N/A'}</div></Col><Col><Form.Label>Expected Salary:</Form.Label><div style={previewValueDisplay}>{formData.expectedSalary || 'N/A'}</div></Col><Col><Form.Label>Visa Status:</Form.Label><div style={previewValueDisplay}>{formData.visaStatus || 'N/A'}</div></Col>{formData.visaStatus === 'other' && (<Col><Form.Label>Please specify:</Form.Label><div style={previewValueDisplay}>{formData.otherVisaStatus || 'N/A'}</div></Col>)}</Row>
             
-            {/* Education Preview */}
+            {/* FIX: Preview of Education Details now maps over the array */}
             <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Education</h4>
-            <Row className="mb-3"><Col><Form.Label>University Name:</Form.Label><div style={previewValueDisplay}>{formData.universityName || 'N/A'}</div></Col><Col><Form.Label>University Address:</Form.Label><div style={previewValueDisplay}>{formData.universityAddress || 'N/A'}</div></Col><Col><Form.Label>Course of Study:</Form.Label><div style={previewValueDisplay}>{formData.courseOfStudy || 'N/A'}</div></Col></Row>
-            <Row className="mb-3"><Col><Form.Label>Graduation From Date:</Form.Label><div style={previewValueDisplay}>{formData.graduationFromDate || 'N/A'}</div></Col><Col><Form.Label>Graduation To Date:</Form.Label><div style={previewValueDisplay}>{formData.graduationToDate || 'N/A'}</div></Col><Col><Form.Label>Notice Period:</Form.Label><div style={previewValueDisplay}>{formData.noticePeriod || 'N/A'}</div></Col></Row>
+            {formData.educationDetails.map((edu, index) => (
+                <div key={index} className="mb-3 p-3" style={{ border: '1px solid #ced4da', borderRadius: '8px' }}>
+                    <h5 style={{ fontSize: '1rem', marginBottom: '1rem', fontWeight: 600 }}>Education Entry {index + 1}</h5>
+                    <Row className="mb-2"><Col><Form.Label>University Name:</Form.Label><div style={previewValueDisplay}>{edu.universityName || 'N/A'}</div></Col><Col><Form.Label>University Address:</Form.Label><div style={previewValueDisplay}>{edu.universityAddress || 'N/A'}</div></Col></Row>
+                    <Row className="mb-2"><Col><Form.Label>Course of Study:</Form.Label><div style={previewValueDisplay}>{edu.courseOfStudy || 'N/A'}</div></Col><Col><Form.Label>Graduation From Date:</Form.Label><div style={previewValueDisplay}>{edu.graduationFromDate || 'N/A'}</div></Col></Row>
+                    <Row className="mb-2"><Col><Form.Label>Graduation To Date:</Form.Label><div style={previewValueDisplay}>{edu.graduationToDate || 'N/A'}</div></Col></Row>
+                </div>
+            ))}
             
             {/* Current Employment Preview */}
             <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Current Employment</h4>
-            <Row className="mb-3"><Col><Form.Label>Current Company:</Form.Label><div style={previewValueDisplay}>{formData.currentCompany || 'N/A'}</div></Col><Col><Form.Label>Current Designation:</Form.Label><div style={previewValueDisplay}>{formData.currentDesignation || 'N/A'}</div></Col></Row>
+            <Row className="mb-3"><Col><Form.Label>Current Company:</Form.Label><div style={previewValueDisplay}>{formData.currentCompany || 'N/A'}</div></Col><Col><Form.Label>Current Designation:</Form.Label><div style={previewValueDisplay}>{formData.currentDesignation || 'N/A'}</div></Col><Col><Form.Label>Notice Period:</Form.Label><div style={previewValueDisplay}>{formData.noticePeriod || 'N/A'}</div></Col><Col><Form.Label>Notice Period:</Form.Label><div style={previewValueDisplay}>{formData.noticePeriod || 'N/A'}</div></Col></Row>
             <Row className="mb-3"><Col><Form.Label>Preferred Interview Time:</Form.Label><div style={previewValueDisplay}>{formData.preferredInterviewTime || 'N/A'}</div></Col><Col><Form.Label>Earliest Joining Date:</Form.Label><div style={previewValueDisplay}>{formData.earliestJoiningDate || 'N/A'}</div></Col><Col><Form.Label>Relieving Date:</Form.Label><div style={previewValueDisplay}>{formData.relievingDate || 'N/A'}</div></Col></Row>
             
             {/* References Preview */}
@@ -1054,16 +1007,16 @@ const keyframes = `
             <Row className="mb-3"><Col><Form.Label>Reference Name:</Form.Label><div style={previewValueDisplay}>{formData.referenceName || 'N/A'}</div></Col><Col><Form.Label>Reference Phone:</Form.Label><div style={previewValueDisplay}>{formData.referencePhone || 'N/A'}</div></Col><Col><Form.Label>Reference Address:</Form.Label><div style={previewValueDisplay}>{formData.referenceAddress || 'N/A'}</div></Col></Row>
             <Row className="mb-3"><Col><Form.Label>Reference Email:</Form.Label><div style={previewValueDisplay}>{formData.referenceEmail || 'N/A'}</div></Col><Col><Form.Label>Reference Role:</Form.Label><div style={previewValueDisplay}>{formData.referenceRole || 'N/A'}</div></Col></Row>
             
-            {/* Job Portal Information Preview */}
             <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Job Portal Information</h4>
-            <Form.Group controlId="previewJobPortalCredentials" className="mb-3"><Form.Label>Job Portal Account Name & Credentials:</Form.Label><div style={previewTextAreaDisplay}>{formData.jobPortalAccountNameandCredentials || 'N/A'}</div></Form.Group>
+            <Form.Group controlId="previewJobPortalCredentials" className="mb-3"><Form.Label>Account Name & Credentials:</Form.Label><div style={previewTextAreaDisplay}>{formData.jobPortalAccountNameandCredentials || 'N/A'}</div></Form.Group>
             
-            {/* FIX: Display resume and cover letter file names */}
             <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Uploaded Documents</h4>
-            <Row className="mb-3">
+           <Row className="mb-3">
               <Col>
-                <Form.Label>Resume File Name:</Form.Label>
-                <div style={previewValueDisplay}>{resumeFile ? resumeFile.name : 'N/A'}</div>
+                <Form.Label>Resume File(s):</Form.Label>
+                <div style={previewValueDisplay}>
+                  {resumeFile && resumeFile.length > 0 ? resumeFile.map(file => file.name).join(', ') : 'N/A'}
+                </div>
               </Col>
               <Col>
                 <Form.Label>Cover Letter File Name:</Form.Label>
@@ -1106,7 +1059,6 @@ const keyframes = `
                         <p style={successMessageStyle}>To View Your DashBoard, please click the below button</p>
                     </Modal.Body>
                     <Modal.Footer style={{ justifyContent: 'center', borderTop: 'none' }}>
-                        {/* New 'View Your Dashboard' button */}
                         <Button variant="primary" onClick={handleViewDashboard} style={{ padding: '10px 20px', borderRadius: '8px', fontWeight: '600' }}>
                             View Your Dashboard
                         </Button>

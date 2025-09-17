@@ -6142,33 +6142,38 @@ const ApplicationsTab = ({
               </div>
 
               {/* Education Details */}
-              <div className="client-preview-section">
-                <h4 className="client-preview-section-title">Education Details</h4>
-                  <div className="assign-form-group">
-                                    <label>University Name</label>
-                                    <input type="text" name="universityName" value={clientToEdit.universityName || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
-                                </div>
-                                <div className="assign-form-group">
-                                    <label>University Address</label>
-                                    <textarea name="universityAddress" value={clientToEdit.universityAddress || ''} onChange={handleEditClientChange} readOnly={!isEditingClient}></textarea>
-                                </div>
-                <div className="assign-form-group">
-                  <label htmlFor="courseOfStudy">Course of Study</label>
-                  <input type="text" id="courseOfStudy" name="courseOfStudy" value={clientToEdit.courseOfStudy || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
-                </div>
-                <div className="assign-form-group">
-                  <label htmlFor="graduationFromDate">Graduation From Date</label>
-                  <input type="date" id="graduationFromDate" name="graduationFromDate" value={clientToEdit.graduationFromDate || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
-                </div>
-                <div className="assign-form-group">
-                  <label htmlFor="graduationToDate">Graduation To Date</label>
-                  <input type="date" id="graduationToDate" name="graduationToDate" value={clientToEdit.graduationToDate || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
-                </div>
-                <div className="assign-form-group">
-                  <label htmlFor="noticePeriod">Notice Period</label>
-                  <input type="text" id="noticePeriod" name="noticePeriod" value={clientToEdit.noticePeriod || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
-                </div>
-              </div>
+             <div className="client-preview-section">
+  <h4 className="client-preview-section-title">Education Details</h4>
+  {clientToEdit.educationDetails && clientToEdit.educationDetails.length > 0 ? (
+    clientToEdit.educationDetails.map((edu, index) => (
+      <div key={index} style={{ marginBottom: '1rem', padding: '1rem', border: '1px solid #e0e0e0', borderRadius: '8px' }}>
+        <h5 style={{ fontSize: '1rem', marginBottom: '1rem' }}>Education Entry {index + 1}</h5>
+        <div className="assign-form-group">
+          <label>University Name</label>
+          <input type="text" name={`universityName-${index}`} value={edu.universityName || ''} onChange={(e) => handleEditClientChange(e, index, 'universityName')} readOnly={!isEditingClient} />
+        </div>
+        <div className="assign-form-group">
+          <label>University Address</label>
+          <input type="text" name={`universityAddress-${index}`} value={edu.universityAddress || ''} onChange={(e) => handleEditClientChange(e, index, 'universityAddress')} readOnly={!isEditingClient} />
+        </div>
+        <div className="assign-form-group">
+          <label>Course of Study</label>
+          <input type="text" name={`courseOfStudy-${index}`} value={edu.courseOfStudy || ''} onChange={(e) => handleEditClientChange(e, index, 'courseOfStudy')} readOnly={!isEditingClient} />
+        </div>
+        <div className="assign-form-group">
+          <label>Graduation From Date</label>
+          <input type="date" name={`graduationFromDate-${index}`} value={edu.graduationFromDate || ''} onChange={(e) => handleEditClientChange(e, index, 'graduationFromDate')} readOnly={!isEditingClient} />
+        </div>
+        <div className="assign-form-group">
+          <label>Graduation To Date</label>
+          <input type="date" name={`graduationToDate-${index}`} value={edu.graduationToDate || ''} onChange={(e) => handleEditClientChange(e, index, 'graduationToDate')} readOnly={!isEditingClient} />
+        </div>
+      </div>
+    ))
+  ) : (
+    <div className="read-only-value">No education details provided.</div>
+  )}
+</div>
 
               {/* Employment Details */}
               <div className="client-preview-section">
@@ -6180,6 +6185,10 @@ const ApplicationsTab = ({
                 <div className="assign-form-group">
                   <label htmlFor="currentDesignation">Current Designation</label>
                   <input type="text" id="currentDesignation" name="currentDesignation" value={clientToEdit.currentDesignation || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
+                </div>
+                <div className="assign-form-group">
+                  <label htmlFor="noticePeriod">Notice Period</label>
+                  <input type="text" id="noticePeriod" name="noticePeriod" value={clientToEdit.noticePeriod || ''} onChange={handleEditClientChange} readOnly={!isEditingClient} />
                 </div>
                 <div className="assign-form-group">
                   <label htmlFor="preferredInterviewTime">Preferred Interview Time</label>
@@ -6230,58 +6239,56 @@ const ApplicationsTab = ({
               </div>
 
               {/* NEW: Resume Download Section */}
-              <div className="client-preview-section">
-                <h4 className="client-preview-section-title">Resume</h4>
-               {isEditingClient ? (
-                  // EDIT MODE VIEW
-                  <div className="assign-form-group">
-                    <label htmlFor="resumeUpload">Upload New Resume (optional)</label>
-                    {newResumeFile ? (
-                      <p style={{ fontSize: '0.9em', color: '#28a745' }}>
-                        New file selected: <strong>{newResumeFile.name}</strong>
-                      </p>
-                    ) : (
-                      <p style={{ fontSize: '0.9em', color: 'var(--subtitle-color)' }}>
-                        Current file: {clientToEdit.resumeFileName ? (
-                          <a href={clientToEdit.resumeUrl} target="_blank" rel="noopener noreferrer">
-                            {clientToEdit.resumeFileName}
-                          </a>
-                        ) : 'No resume on file.'}
-                      </p>
-                    )}
-                    <input 
-                      type="file" 
-                      id="resumeUpload" 
-                      name="resume" 
-                      onChange={handleResumeFileChange} 
-                      accept=".pdf,.doc,.docx" 
-                    />
-                    <small style={{ color: 'var(--subtitle-color)', marginTop: '5px' }}>
-                      Uploading a new file will replace the current one upon saving.
-                    </small>
-                  </div>
-                ) : (
-                  // VIEW-ONLY MODE
-                  <div className="assign-form-group">
-                    <label>File Name</label>
-                    <div className="read-only-value" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span>{clientToEdit.resumeFileName || 'No resume uploaded.'}</span>
-                      {clientToEdit.resumeUrl && (
-                        <a
-                          href={clientToEdit.resumeUrl}
-                          download={clientToEdit.resumeFileName}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="assign-form-button assign"
-                          style={{ textDecoration: 'none' }}
-                        >
-                          Download
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
+  
+<div className="client-preview-section">
+  <h4 className="client-preview-section-title">Resume(s)</h4>
+  {isEditingClient ? (
+    // EDIT MODE VIEW
+    <div className="assign-form-group">
+      <label htmlFor="resumeUpload">Upload New Resume(s) (optional)</label>
+      {/* Display a list of currently selected files if any */}
+      {newResumeFile && newResumeFile.length > 0 ? (
+        <p style={{ fontSize: '0.9em', color: '#28a745' }}>
+          New files selected: <strong>{newResumeFile.map(file => file.name).join(', ')}</strong>
+        </p>
+      ) : (
+        <p style={{ fontSize: '0.9em', color: 'var(--subtitle-color)' }}>
+          {clientToEdit.resumes && clientToEdit.resumes.length > 0 ? `Current files: ${clientToEdit.resumes.map(r => r.name).join(', ')}` : 'No resumes on file.'}
+        </p>
+      )}
+      <input 
+        type="file" 
+        id="resumeUpload" 
+        name="resume" 
+        onChange={handleResumeFileChange} // Ensure this handler can take multiple files
+        accept=".pdf,.doc,.docx" 
+        multiple
+      />
+      <small style={{ color: 'var(--subtitle-color)', marginTop: '5px' }}>
+        Uploading a new file will replace the current one upon saving.
+      </small>
+    </div>
+  ) : (
+    // VIEW-ONLY MODE
+    clientToEdit.resumes && clientToEdit.resumes.length > 0 ? (
+      clientToEdit.resumes.map((resume, index) => (
+        <div key={index} className="assign-form-group">
+          <label>File Name</label>
+          <div className="read-only-value" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>{resume.name || 'No resume uploaded.'}</span>
+            {resume.url && (
+              <a href={resume.url} download={resume.name} target="_blank" rel="noopener noreferrer" className="assign-form-button assign" style={{ textDecoration: 'none' }}>
+                Download
+              </a>
+            )}
+          </div>
+        </div>
+      ))
+    ) : (
+      <div className="read-only-value">No resumes uploaded.</div>
+    )
+  )}
+</div>
 
               {/* NEW: Cover Letter Section */}
                             <div className="client-preview-section">

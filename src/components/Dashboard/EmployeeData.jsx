@@ -2187,7 +2187,7 @@ useEffect(() => {
                       </p>
                     </div>
                   </div>
-                  <p style={newClientDetailStyle}><strong>Applying For:</strong> {client.jobsApplyFor}</p>
+                  <p style={newClientDetailStyle}><strong>Applying For:</strong> {client.jobsToApply}</p>
                   <p style={newClientDetailStyle}><strong>Registered:</strong> {client.registeredDate}</p>
                   <p style={newClientDetailStyle}><strong>Country:</strong> {client.country}</p>
                   <p style={newClientDetailStyle}><strong>Visa Status:</strong> {client.visaStatus}</p>
@@ -3036,14 +3036,23 @@ useEffect(() => {
             <p style={clientDataDetailStyle}><strong>Clearance Level:</strong> {selectedClient.clearanceLevel || '-'}</p>
             <p style={clientDataDetailStyle}><strong>Restricted Companies:</strong> {selectedClient.restrictedCompanies || '-'}</p>
           </div>
-          <div style={clientDataSectionStyle}>
-            <h3 style={clientDataSectionTitleStyle}>Education Details</h3>
-            <p style={clientDataDetailStyle}><strong>University Name:</strong> {selectedClient.universityName || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>University Address:</strong> {selectedClient.universityAddress || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Course of Study:</strong> {selectedClient.courseOfStudy || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Graduation From Date:</strong> {selectedClient.graduationFromDate || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Graduation To Date:</strong> {selectedClient.graduationToDate || '-'}</p>
-          </div>
+         <div style={clientDataSectionStyle}>
+  <h3 style={clientDataSectionTitleStyle}>Education Details</h3>
+  {(selectedClient.educationDetails || []).length > 0 ? (
+    (selectedClient.educationDetails || []).map((edu, index) => (
+      <div key={index} style={{ marginBottom: '15px', padding: '15px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+        <h4 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '10px' }}>Entry {index + 1}</h4>
+        <p style={clientDataDetailStyle}><strong>University Name:</strong> {edu.universityName || '-'}</p>
+        <p style={clientDataDetailStyle}><strong>University Address:</strong> {edu.universityAddress || '-'}</p>
+        <p style={clientDataDetailStyle}><strong>Course of Study:</strong> {edu.courseOfStudy || '-'}</p>
+        <p style={clientDataDetailStyle}><strong>Graduation From Date:</strong> {edu.graduationFromDate || '-'}</p>
+        <p style={clientDataDetailStyle}><strong>Graduation To Date:</strong> {edu.graduationToDate || '-'}</p>
+      </div>
+    ))
+  ) : (
+    <p style={clientDataDetailStyle}>No education details provided.</p>
+  )}
+</div>
           <div style={clientDataSectionStyle}>
             <h3 style={clientDataSectionTitleStyle}>References</h3>
             <p style={clientDataDetailStyle}><strong>Reference Name:</strong> {selectedClient.referenceName || '-'}</p>
@@ -3056,29 +3065,31 @@ useEffect(() => {
             <h3 style={clientDataSectionTitleStyle}>Job Portal Accounts</h3>
             <p style={clientDataDetailStyle}><strong>Account Info:</strong> {selectedClient.jobPortalAccountNameandCredentials || '-'}</p>
           </div>
-          <div style={clientDataSectionStyle}>
-            <h3 style={clientDataSectionTitleStyle}>Resume & Cover Letter</h3>
-            <p style={clientDataDetailStyle}>
-              <strong>Resume:</strong>
-              {selectedClient.resumeUrl ? (
-                <a href={selectedClient.resumeUrl} target="_blank" rel="noopener noreferrer" style={{ marginLeft: '8px', color: '#3b82f6', textDecoration: 'underline' }}>
-                  {selectedClient.resumeFileName || 'Download Resume'}
-                </a>
-              ) : (
-                <span style={{ marginLeft: '8px', color: '#64748b' }}>No resume on file.</span>
-              )}
-            </p>
-            <p style={clientDataDetailStyle}>
-              <strong>Cover Letter:</strong>
-              {selectedClient.coverLetterUrl ? (
-                <a href={selectedClient.coverLetterUrl} target="_blank" rel="noopener noreferrer" style={{ marginLeft: '8px', color: '#3b82f6', textDecoration: 'underline' }}>
-                  {selectedClient.coverLetterFileName || 'Download Cover Letter'}
-                </a>
-              ) : (
-                <span style={{ marginLeft: '8px', color: '#64748b' }}>No cover letter on file.</span>
-              )}
-            </p>
-          </div>
+<div style={clientDataSectionStyle}>
+  <h3 style={clientDataSectionTitleStyle}>Resume & Cover Letter</h3>
+  <p style={clientDataDetailStyle}>
+    <strong>Resume(s):</strong>
+    {(selectedClient.resumes || []).length > 0 ? (
+      (selectedClient.resumes || []).map((resume, index) => (
+        <a key={index} href={resume.url} target="_blank" rel="noopener noreferrer" style={{ marginLeft: '8px', color: '#3b82f6', textDecoration: 'underline' }}>
+          {resume.name || `Resume ${index + 1}`}
+        </a>
+      ))
+    ) : (
+      <span style={{ marginLeft: '8px', color: '#64748b' }}>No resumes on file.</span>
+    )}
+  </p>
+  <p style={clientDataDetailStyle}>
+    <strong>Cover Letter:</strong>
+    {selectedClient.coverLetterUrl ? (
+      <a href={selectedClient.coverLetterUrl} target="_blank" rel="noopener noreferrer" style={{ marginLeft: '8px', color: '#3b82f6', textDecoration: 'underline' }}>
+        {selectedClient.coverLetterFileName || 'Download Cover Letter'}
+      </a>
+    ) : (
+      <span style={{ marginLeft: '8px', color: '#64748b' }}>No cover letter on file.</span>
+    )}
+  </p>
+</div>
         </div>
       )}
                 </div>
@@ -3920,14 +3931,23 @@ useEffect(() => {
             <p style={clientDataDetailStyle}><strong>Other Visa Status:</strong> {selectedClient.otherVisaStatus || '-'}</p>
           </div>
 
-          <div style={clientDataSectionStyle}>
-            <h3 style={clientDataSectionTitleStyle}>Education Details</h3>
-            <p style={clientDataDetailStyle}><strong>School Name:</strong> {selectedClient.schoolName || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>School Address:</strong> {selectedClient.schoolAddress || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>School Phone:</strong> {selectedClient.schoolPhone || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Course of Study:</strong> {selectedClient.courseOfStudy || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Graduation Date:</strong> {selectedClient.graduationDate || '-'}</p>
-          </div>
+         <div style={clientDataSectionStyle}>
+  <h3 style={clientDataSectionTitleStyle}>Education Details</h3>
+  {(selectedClient.educationDetails || []).length > 0 ? (
+    (selectedClient.educationDetails || []).map((edu, index) => (
+      <div key={index} style={{ marginBottom: '15px', padding: '15px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+        <h4 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '10px' }}>Entry {index + 1}</h4>
+        <p style={clientDataDetailStyle}><strong>University Name:</strong> {edu.universityName || '-'}</p>
+        <p style={clientDataDetailStyle}><strong>University Address:</strong> {edu.universityAddress || '-'}</p>
+        <p style={clientDataDetailStyle}><strong>Course of Study:</strong> {edu.courseOfStudy || '-'}</p>
+        <p style={clientDataDetailStyle}><strong>Graduation From Date:</strong> {edu.graduationFromDate || '-'}</p>
+        <p style={clientDataDetailStyle}><strong>Graduation To Date:</strong> {edu.graduationToDate || '-'}</p>
+      </div>
+    ))
+  ) : (
+    <p style={clientDataDetailStyle}>No education details provided.</p>
+  )}
+</div>
 
           <div style={clientDataSectionStyle}>
             <h3 style={clientDataSectionTitleStyle}>Employment Details</h3>

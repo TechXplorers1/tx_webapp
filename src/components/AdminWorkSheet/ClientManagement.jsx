@@ -1699,33 +1699,38 @@ const handleAssignClient = async (registration) => {
                       </div>
                     )}
                   </div>
-                  <div className="client-preview-section">
-                    <h4 className="client-preview-section-title">Education Details</h4>
-                    <div className="assign-form-group">
-                      <label>University Name</label>
-                      <div className="read-only-value">{selectedClientForDetails.universityName || '-'}</div>
-                    </div>
-                    <div className="assign-form-group">
-                      <label>University Address</label>
-                      <div className="read-only-value">{selectedClientForDetails.universityAddress || '-'}</div>
-                    </div>
-                    <div className="assign-form-group">
-                      <label>Course of Study</label>
-                      <div className="read-only-value">{selectedClientForDetails.courseOfStudy || '-'}</div>
-                    </div>
-                    <div className="assign-form-group">
-                      <label>Graduation From Date</label>
-                      <div className="read-only-value">{selectedClientForDetails.graduationFromDate || '-'}</div>
-                    </div>
-                    <div className="assign-form-group">
-                      <label>Graduation To Date</label>
-                      <div className="read-only-value">{selectedClientForDetails.graduationToDate || '-'}</div>
-                    </div>
-                    <div className="assign-form-group">
-                      <label>Notice Period</label>
-                      <div className="read-only-value">{selectedClientForDetails.noticePeriod || '-'}</div>
-                    </div>
-                  </div>
+                 <div className="client-preview-section">
+  <h4 className="client-preview-section-title">Education Details</h4>
+  {selectedClientForDetails.educationDetails && selectedClientForDetails.educationDetails.length > 0 ? (
+    selectedClientForDetails.educationDetails.map((edu, index) => (
+      <div key={index} style={{ marginBottom: '1rem', padding: '1rem', border: '1px solid #e0e0e0', borderRadius: '8px' }}>
+        <h5 style={{ fontSize: '1rem', marginBottom: '1rem' }}>Education Entry {index + 1}</h5>
+        <div className="assign-form-group">
+          <label>University Name:</label>
+          <div className="read-only-value">{edu.universityName || '-'}</div>
+        </div>
+        <div className="assign-form-group">
+          <label>University Address:</label>
+          <div className="read-only-value">{edu.universityAddress || '-'}</div>
+        </div>
+        <div className="assign-form-group">
+          <label>Course of Study:</label>
+          <div className="read-only-value">{edu.courseOfStudy || '-'}</div>
+        </div>
+        <div className="assign-form-group">
+          <label>Graduation From Date:</label>
+          <div className="read-only-value">{edu.graduationFromDate || '-'}</div>
+        </div>
+        <div className="assign-form-group">
+          <label>Graduation To Date:</label>
+          <div className="read-only-value">{edu.graduationToDate || '-'}</div>
+        </div>
+      </div>
+    ))
+  ) : (
+    <div className="read-only-value">No education details provided.</div>
+  )}
+</div>
                   <div className="client-preview-section">
                     <h4 className="client-preview-section-title">Employment Details</h4>
                     <div className="assign-form-group">
@@ -1735,6 +1740,10 @@ const handleAssignClient = async (registration) => {
                     <div className="assign-form-group">
                       <label>Current Designation</label>
                       <div className="read-only-value">{selectedClientForDetails.currentDesignation || '-'}</div>
+                    </div>
+                    <div className="assign-form-group">
+                      <label>Notice Period</label>
+                      <div className="read-only-value">{selectedClientForDetails.noticePeriod || '-'}</div>
                     </div>
                     <div className="assign-form-group">
                       <label>Preferred Interview Time</label>
@@ -1780,19 +1789,21 @@ const handleAssignClient = async (registration) => {
                     </div>
                   </div>
                   <div className="client-preview-section">
-                    <h4 className="client-preview-section-title">Resume</h4>
-                    {selectedClientForDetails.resumeUrl ? (
-                      <div className="assign-form-group">
-                        <label>File Name</label>
-                       <div className="read-only-value" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span>{selectedClientForDetails.resumeFileName || 'No resume uploaded.'}</span>
-                        {selectedClientForDetails.resumeUrl && (<a href={selectedClientForDetails.resumeUrl} download={selectedClientForDetails.resumeFileName} target="_blank" rel="noopener noreferrer" className="assign-form-button assign" style={{ textDecoration: 'none' }}>Download</a>)}
-                      </div>
-                      </div>
-                    ) : (
-                      <div className="read-only-value">No resume uploaded.</div>
-                    )}
-                  </div>
+  <h4 className="client-preview-section-title">Resume(s)</h4>
+  {selectedClientForDetails.resumes && selectedClientForDetails.resumes.length > 0 ? (
+    selectedClientForDetails.resumes.map((resume, index) => (
+      <div key={index} className="assign-form-group">
+        <label>Resume {index + 1}</label>
+        <div className="read-only-value" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>{resume.name}</span>
+          <a href={resume.url} download={resume.name} target="_blank" rel="noopener noreferrer" className="assign-form-button assign" style={{ textDecoration: 'none' }}>Download</a>
+        </div>
+      </div>
+    ))
+  ) : (
+    <div className="read-only-value">No resumes uploaded.</div>
+  )}
+</div>
                   <div className="client-preview-section">
                     <h4 className="client-preview-section-title">Cover Letter</h4>
                     {selectedClientForDetails.coverLetterUrl ? (
@@ -2011,39 +2022,37 @@ const handleAssignClient = async (registration) => {
                     )}
                   </div>
                   <div className="client-preview-section">
-                    <h4 className="client-preview-section-title">Education Details</h4>
-                    <div className="assign-form-group">
-                      <label htmlFor="universityName">University Name</label>
-                      <input type="text" id="universityName" name="universityName" value={currentClientToEdit.universityName || ''} onChange={handleEditClientChange} />
-                    </div>
-                    <div className="assign-form-group">
-                      <label htmlFor="universityAddress">University Address</label>
-                      <input type="text" id="universityAddress" name="universityAddress" value={currentClientToEdit.universityAddress || ''} onChange={handleEditClientChange} />
-                    </div>
-                    <div className="assign-form-group">
-                      <label htmlFor="courseOfStudy">Course of Study</label>
-                      <input type="text" id="courseOfStudy" name="courseOfStudy" value={currentClientToEdit.courseOfStudy || ''} onChange={handleEditClientChange} />
-                    </div>
-                    <div className="assign-form-group">
-                      <label htmlFor="graduationFromDate">Graduation From Date</label>
-                      <input type="date" id="graduationFromDate" name="graduationFromDate" value={currentClientToEdit.graduationFromDate || ''} onChange={handleEditClientChange} />
-                    </div>
-                    <div className="assign-form-group">
-                      <label htmlFor="graduationToDate">Graduation To Date</label>
-                      <input type="date" id="graduationToDate" name="graduationToDate" value={currentClientToEdit.graduationToDate || ''} onChange={handleEditClientChange} />
-                    </div>
-                    <div className="assign-form-group">
-                      <label htmlFor="noticePeriod">Notice Period</label>
-                      <select id="noticePeriod" name="noticePeriod" value={currentClientToEdit.noticePeriod || ''} onChange={handleEditClientChange}>
-                        <option value="">Select Notice Period</option>
-                        <option value="immediately">Immediately</option>
-                        <option value="1_week">1 Week</option>
-                        <option value="2_week">2 Weeks</option>
-                        <option value="3_week">3 Weeks</option>
-                        <option value="1_month">1 Month</option>
-                      </select>
-                    </div>
-                  </div>
+  <h4 className="client-preview-section-title">Education Details</h4>
+  {currentClientToEdit.educationDetails && currentClientToEdit.educationDetails.length > 0 ? (
+    currentClientToEdit.educationDetails.map((edu, index) => (
+      <div key={index} style={{ marginBottom: '1rem', padding: '1rem', border: '1px solid #e0e0e0', borderRadius: '8px' }}>
+        <h5 style={{ fontSize: '1rem', marginBottom: '1rem' }}>Education Entry {index + 1}</h5>
+        <div className="assign-form-group">
+          <label>University Name:</label>
+          <div className="read-only-value">{edu.universityName || '-'}</div>
+        </div>
+        <div className="assign-form-group">
+          <label>University Address:</label>
+          <div className="read-only-value">{edu.universityAddress || '-'}</div>
+        </div>
+        <div className="assign-form-group">
+          <label>Course of Study:</label>
+          <div className="read-only-value">{edu.courseOfStudy || '-'}</div>
+        </div>
+        <div className="assign-form-group">
+          <label>Graduation From Date:</label>
+          <div className="read-only-value">{edu.graduationFromDate || '-'}</div>
+        </div>
+        <div className="assign-form-group">
+          <label>Graduation To Date:</label>
+          <div className="read-only-value">{edu.graduationToDate || '-'}</div>
+        </div>
+      </div>
+    ))
+  ) : (
+    <div className="read-only-value">No education details provided.</div>
+  )}
+</div>
                   <div className="client-preview-section">
                     <h4 className="client-preview-section-title">Employment Details</h4>
                     <div className="assign-form-group">
@@ -2053,6 +2062,17 @@ const handleAssignClient = async (registration) => {
                     <div className="assign-form-group">
                       <label htmlFor="currentDesignation">Current Designation</label>
                       <input type="text" id="currentDesignation" name="currentDesignation" value={currentClientToEdit.currentDesignation || ''} onChange={handleEditClientChange} />
+                    </div>
+                     <div className="assign-form-group">
+                      <label htmlFor="noticePeriod">Notice Period</label>
+                      <select id="noticePeriod" name="noticePeriod" value={currentClientToEdit.noticePeriod || ''} onChange={handleEditClientChange}>
+                        <option value="">Select Notice Period</option>
+                        <option value="immediately">Immediately</option>
+                        <option value="1_week">1 Week</option>
+                        <option value="2_week">2 Weeks</option>
+                        <option value="3_week">3 Weeks</option>
+                        <option value="1_month">1 Month</option>
+                      </select>
                     </div>
                     <div className="assign-form-group">
                       <label htmlFor="preferredInterviewTime">Preferred Interview Time</label>
@@ -2097,19 +2117,22 @@ const handleAssignClient = async (registration) => {
                       <textarea id="jobPortalAccountNameandCredentials" name="jobPortalAccountNameandCredentials" value={currentClientToEdit.jobPortalAccountNameandCredentials || ''} onChange={handleEditClientChange}></textarea>
                     </div>
                   </div>
-                  <div className="client-preview-section">
-                    <h4 className="client-preview-section-title">Resume</h4>
-                    <div className="assign-form-group">
-                      <label htmlFor="newResumeFile">Upload New Resume (optional)</label>
-                      <input
-                        type="file"
-                        id="newResumeFile"
-                        name="newResumeFile"
-                        onChange={handleEditClientChange}
-                        accept=".pdf,.doc,.docx"
-                      />
-                    </div>
-                  </div>
+                 <div className="client-preview-section">
+  <h4 className="client-preview-section-title">Resumes</h4>
+  {currentClientToEdit.resumes && currentClientToEdit.resumes.length > 0 ? (
+    currentClientToEdit.resumes.map((resume, index) => (
+      <div key={index} className="assign-form-group">
+        <label>Resume {index + 1}</label>
+        <div className="read-only-value" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>{resume.name}</span>
+          <a href={resume.url} download={resume.name} target="_blank" rel="noopener noreferrer" className="assign-form-button assign" style={{ textDecoration: 'none' }}>Download</a>
+        </div>
+      </div>
+    ))
+  ) : (
+    <div className="read-only-value">No resumes uploaded.</div>
+  )}
+</div>
                   <div className="client-preview-section">
                     <h4 className="client-preview-section-title">Cover Letter</h4>
                     <div className="assign-form-group">
