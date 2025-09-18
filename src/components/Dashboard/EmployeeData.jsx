@@ -553,6 +553,36 @@ useEffect(() => {
   // NEW: Handle opening profile modal and initializing edit state
   // FIX: This function now correctly copies the employeeDetails into the editedEmployeeDetails state
 
+  const getLocalDateTimeString = (date = new Date()) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+};
+
+const formatToIST = (utcString) => {
+  if (!utcString) return 'N/A';
+  try {
+    const date = new Date(utcString);
+    const options = {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true, // Use 12-hour clock
+      timeZone: 'Asia/Kolkata', // Set to Indian Standard Time
+    };
+    return new Intl.DateTimeFormat('en-IN', options).format(date);
+  } catch (e) {
+    console.error('Error formatting date to IST:', e);
+    return utcString;
+  }
+};
 
 
   const handleOpenProfileModal = async () => {
@@ -823,63 +853,75 @@ const [newFilesToUpload, setNewFilesToUpload] = useState([]);
   const allActivities = (selectedClient ? [selectedClient] : []).flatMap(client => {
     const clientActivities = [];
 
+    const formatTimestamp = (isoString) => {
+      if (!isoString) return { date: 'N/A', time: 'N/A' };
+      try {
+        const date = new Date(isoString);
+        const formattedDate = date.toLocaleDateString('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit' });
+        const formattedTime = date.toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit' });
+        return { date: formattedDate, time: formattedTime };
+      } catch (e) {
+        console.error("Error parsing timestamp:", isoString);
+        return { date: isoString, time: 'N/A' };
+      }
+    };
+
     // Job application activities
     (client.jobApplications || []).forEach(app => {
+      const timestamp = formatTimestamp(app.appliedDate);
+      
       clientActivities.push({
         clientId: client.id,
         initials: client.initials,
         name: client.name,
         description: `Applied for ${app.jobTitle} position at ${app.company}`,
         type: 'job application',
-        date: app.appliedDate,
-        time: '4:00 PM', // Placeholder for time
+        timestamp: app.timestamp || new Date(app.appliedDate).toISOString(),
         status: app.status === 'Interview' ? 'Active' : 'Completed',
       });
       if (app.status === 'Interview') {
+        const interviewTimestamp = formatTimestamp(app.interviewDate || app.appliedDate);
         clientActivities.push({
           clientId: client.id,
           initials: client.initials,
           name: client.name,
-          description: `Interview scheduled with ${app.company} for ${app.jobTitle} position (Round: ${app.round || 'N/A'}, Date: ${app.interviewDate || 'N/A'}, Mail: ${app.recruiterMail || 'N/A'})`,
+          description: `Interview scheduled with ${app.company} for ${app.jobTitle} position (Round: ${app.round || 'N/A'}, Mail: ${app.recruiterMail || 'N/A'})`,
           type: 'interview scheduled',
-          date: app.interviewDate || app.appliedDate, // Use interview date if available, otherwise applied date
-          time: '9:30 PM', // Placeholder for time
+          timestamp: app.timestamp || new Date(app.appliedDate).toISOString(), // FIX: Use new timestamp
           status: 'Active',
         });
       }
-      // Add more application-related activities as needed (e.g., Rejected, Offered)
     });
 
     // File activities
     (client.files || []).forEach(file => {
+      const timestamp = formatTimestamp(file.uploadDate);
       clientActivities.push({
         clientId: client.id,
         initials: client.initials,
         name: client.name,
         description: `Uploaded ${file.type} for ${client.name} position`,
         type: 'file upload',
-        date: file.uploadDate,
-        time: '2:15 PM', // Placeholder for time
+        timestamp: file.timestamp || new Date(file.uploadDate).toISOString(), // FIX: Use new timestamp
         status: 'Active',
       });
     });
 
-    // Resume update activities
-    (client.resumeUpdates || []).forEach(update => {
-      clientActivities.push({
-        clientId: client.id,
-        initials: client.initials,
-        name: client.name,
-        description: `Resume update: ${update.details}`,
-        type: 'resume update',
-        date: update.date,
-        time: '1:00 PM', // Placeholder for time
-        status: update.status,
-      });
+   // Resume update activities
+  (client.resumeUpdates || []).forEach(update => {
+    clientActivities.push({
+      clientId: client.id,
+      initials: client.initials,
+      name: client.name,
+      description: `Resume update: ${update.details}`,
+      type: 'resume update',
+      timestamp: update.timestamp || new Date(update.date).toISOString(), // FIX: Use new timestamp
+      status: update.status,
     });
+  });
 
-    return clientActivities;
-  }).sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort by date, newest first
+  return clientActivities;
+}).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); // FIX: Sort by new timestamp property
 
 
   // Helper function to get the latest resume update date for a client
@@ -1083,6 +1125,7 @@ const handleSaveNewApplication = async () => {
       ...newApplicationFormData,
       status: 'Applied',
       appliedDate: getLocalDateString(), // FIX: Use local date string
+      timestamp: new Date().toISOString(),
       attachments: []
     };
     const existingApplications = selectedClient.jobApplications || [];
@@ -1146,6 +1189,7 @@ const handleSaveEditedApplication = async () => {
           size: attachment.size,
           type: attachment.type,
           uploadDate: getLocalDateString(), // FIX: Use local date string
+          timestamp: new Date().toISOString(),
           downloadUrl: downloadURL,
           id: Date.now() + Math.random(),
         };
@@ -1371,7 +1415,8 @@ const handleSaveNewFile = async () => {
           name: file.name,
           size: file.size,
           type: newFileFormData.fileType,
-          uploadDate: new Date().toISOString().split('T')[0],
+          uploadDate: getLocalDateTimeString(),
+          timestamp: new Date().toISOString(),
           notes: newFileFormData.notes || '',
         };
         uploadedFilesMetadata.push(newFileMetadata);
@@ -1619,6 +1664,23 @@ const handleSaveNewFile = async () => {
       alert("Error accepting client.");
     }
   };
+
+  const formatDateTime = (timestamp) => {
+  if (!timestamp) return { date: 'N/A', time: 'N/A' };
+  try {
+    const date = new Date(timestamp);
+    const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+    const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
+
+    const formattedDate = date.toLocaleDateString('en-US', dateOptions);
+    const formattedTime = date.toLocaleTimeString('en-US', timeOptions);
+
+    return { date: formattedDate, time: formattedTime };
+  } catch (e) {
+    console.error("Error formatting timestamp:", e);
+    return { date: 'Invalid Date', time: 'N/A' };
+  }
+};
 
   // ... inside the EmployeeData component, before the return statement ...
 
@@ -2475,7 +2537,7 @@ useEffect(() => {
           <option value="All Statuses">All Statuses</option>
           <option value="Applied">Applied</option>
           <option value="Interview">Interview</option>
-          <option value="Rejected">Rejected</option>
+          {/* <option value="Rejected">Rejected</option> */}
           <option value="Offered">Offered</option>
         </select>
       </div>
@@ -2890,7 +2952,7 @@ useEffect(() => {
                                 <line x1="8" y1="2" x2="8" y2="6"></line>
                                 <line x1="3" y1="10" x2="21" y2="10"></line>
                               </svg>
-                              {activity.date}, {activity.time}
+                              {formatToIST(activity.timestamp)}
                             </p>
                           </div>
                           <div style={{ ...activityBadgeStyle, ...getActivityBadgeStyle(activity.type) }}>
@@ -3384,7 +3446,7 @@ useEffect(() => {
                         <option value="All Statuses">All Statuses</option>
                         <option value="Applied">Applied</option>
                         <option value="Interview">Interview</option>
-                        <option value="Rejected">Rejected</option>
+                        {/* <option value="Rejected">Rejected</option> */}
                         <option value="Offered">Offered</option>
                       </select>
                     </div>
@@ -4079,6 +4141,7 @@ useEffect(() => {
                 <>
                   <p style={modalViewDetailItemStyle}><strong>Round:</strong> {viewedApplication.round || '-'}</p>
                   <p style={modalViewDetailItemStyle}><strong>Interview Date:</strong> {viewedApplication.interviewDate || '-'}</p>
+                  <p style={modalViewDetailItemStyle}><strong>Interview Time:</strong> {viewedApplication.interviewTime || '-'}</p>
                   <p style={modalViewDetailItemStyle}><strong>Recruiter Mail ID:</strong> {viewedApplication.recruiterMail || '-'}</p>
                 </>
               )}
@@ -4115,7 +4178,8 @@ useEffect(() => {
                   </div>
                 ) : 'N/A'}
               </div>
-              <p style={modalViewDetailItemStyle}><strong>Applied Date:</strong> {viewedApplication.appliedDate}</p>
+              <p style={modalViewDetailItemStyle}><strong>Applied Date:</strong> {formatDateTime(viewedApplication.timestamp).date}</p>
+    <p style={modalViewDetailItemStyle}><strong>Applied Time:</strong> {formatDateTime(viewedApplication.timestamp).time}</p>
               {/* <p style={{ ...modalViewDetailItemStyle, gridColumn: '1 / -1' }}><strong>Job Description:</strong> {viewedApplication.jobDesc || '-'}</p> */}
             </div>
           </Modal.Body>
@@ -4227,7 +4291,7 @@ useEffect(() => {
                 >
                   <option value="Applied">Applied</option>
                   <option value="Interview">Interview</option>
-                  <option value="Rejected">Rejected</option>
+                  {/* <option value="Rejected">Rejected</option> */}
                   <option value="Offered">Offered</option>
                 </select>
               </div>

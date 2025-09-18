@@ -130,6 +130,23 @@ const [isApplicationDetailModalOpen, setIsApplicationDetailModalOpen] = useState
 const [isEditApplicationModalOpen, setIsEditApplicationModalOpen] = useState(false);
 const [editableApplication, setEditableApplication] = useState({});
 
+const formatDateTime = (timestamp) => {
+    if (!timestamp) return { date: 'N/A', time: 'N/A' };
+    try {
+        const date = new Date(timestamp);
+        const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+        const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
+
+        const formattedDate = date.toLocaleDateString('en-US', dateOptions);
+        const formattedTime = date.toLocaleTimeString('en-US', timeOptions);
+
+        return { date: formattedDate, time: formattedTime };
+    } catch (e) {
+        console.error("Error formatting timestamp:", e);
+        return { date: 'Invalid Date', time: 'N/A' };
+    }
+};
+
 // Add these functions to handle application operations
 const openApplicationDetailModal = (application) => {
   setSelectedApplication(application);
@@ -142,7 +159,7 @@ const closeApplicationDetailModal = () => {
 };
 
 const openEditApplicationModal = (application) => {
-  console.log("Original application data:", application);
+  
   
   // Ensure we're passing all the necessary identifiers
   setEditableApplication({
@@ -2191,10 +2208,7 @@ const ApplicationsTab = ({
   quickFilter,
   handleQuickFilterChange,
   areFiltersActive,
-  handleClearFilters,
-  openApplicationDetailModal,
-  openEditApplicationModal,
-  handleDeleteApplication
+  handleClearFilters
   }) => {
 
       const [localSearchQuery, setLocalSearchQuery] = useState('');
@@ -2254,6 +2268,8 @@ const filteredBySearch = useMemo(() => {
   }, [applicationData]);
 
   const sortedDates = Object.keys(groupedByDate).sort((a, b) => new Date(b) - new Date(a));
+
+
 
    return (
 <section className="applications-management-section">
@@ -5211,9 +5227,9 @@ const filteredBySearch = useMemo(() => {
                 <div className="profile-dropdown-item" onClick={handleProfileClick}>
                   <i className="fas fa-user-circle"></i> Profile
                 </div>
-                <div className="profile-dropdown-item" onClick={handleLogout}>
+                {/* <div className="profile-dropdown-item" onClick={handleLogout}>
                   <i className="fas fa-sign-out-alt"></i> Logout
-                </div>
+                </div> */}
               </div>
             )}
           </div>
@@ -5436,6 +5452,7 @@ const filteredBySearch = useMemo(() => {
                   <th>COMPANY</th>
                   <th>ROUND</th>
                   <th>ATTACHMENTS</th>
+                  <th>TIME</th>
                   <th>DATE</th>
                   <th>STATUS</th> {/* New column header for Status */}
                   {/* REMOVED: <th>ACTIONS</th> */}
@@ -5480,9 +5497,13 @@ const filteredBySearch = useMemo(() => {
                 <span style={{ color: 'var(--text-color)', opacity: 0.6 }}>N/A</span>
               )}
             </td>
+             <td className="date-cell">
+                        {formatDateToDDMMYYYY(interview.interviewTime)}
+                      </td>
                       <td className="date-cell">
                         {formatDateToDDMMYYYY(interview.interviewDate)}
                       </td>
+                     
                       <td>
                         {interview.status} {/* Display the new status */}
                       </td>
@@ -6883,7 +6904,8 @@ const filteredBySearch = useMemo(() => {
         <p className="modal-view-detail-item"><strong>Job ID:</strong> {selectedApplication.jobId}</p>
         <p className="modal-view-detail-item"><strong>Job Boards:</strong> {selectedApplication.jobBoards}</p>
         <p className="modal-view-detail-item"><strong>Job URL:</strong> <a href={selectedApplication.jobUrl} target="_blank" rel="noopener noreferrer">{selectedApplication.jobUrl}</a></p>
-        <p className="modal-view-detail-item"><strong>Applied Date:</strong> {formatDateToDDMMYYYY(selectedApplication.appliedDate)}</p>
+     <p className="modal-view-detail-item"><strong>Applied Date:</strong> {formatDateTime(selectedApplication.timestamp).date}</p>
+    <p className="modal-view-detail-item"><strong>Applied Time:</strong> {formatDateTime(selectedApplication.timestamp).time}</p>
         <p className="modal-view-detail-item"><strong>Status:</strong> {selectedApplication.status}</p>
         {selectedApplication.status === 'Interview' && (
           <>

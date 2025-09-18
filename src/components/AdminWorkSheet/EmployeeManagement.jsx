@@ -965,7 +965,7 @@ const EmployeeManagement = () => {
                     <div className="employee-avatar">{getInitials(`${employee.firstName} ${employee.lastName}`)}</div>
                     <div className="employee-info">
                       <div className="employee-name">{`${employee.firstName} ${employee.lastName}`}</div>
-                      <div className="employee-email">{employee.personalEmail}</div>
+                      <div className="employee-email">{employee.workEmail}</div>
                       <div className="employee-roles">
                         {(employee.roles || []).map(role => (
                           <span key={role} className="role-tag" style={{ backgroundColor: getRoleTagBg(role), color: getRoleTagText(role) }}>{role}</span>
