@@ -1953,6 +1953,121 @@ const Others = ({ files }) => {
   );
 };
 
+// --- InterviewsScheduled Tab Content (New Component) ---
+const InterviewsScheduled = ({ interviews, onAttachmentClick, showAttachmentModal, currentAttachments, closeAttachmentModal }) => {
+  return (
+    <div style={{
+      backgroundColor: '#fff',
+      padding: '20px',
+      borderRadius: '8px',
+      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+    }}>
+      <h3 style={{
+        marginBottom: '25px',
+        textAlign: 'center',
+        color: '#1e293b',
+        fontSize: '1.5rem',
+        fontWeight: '600'
+      }}>
+        Scheduled Interviews
+      </h3>
+      {interviews.length > 0 ? (
+        <div className="modal-table-container">
+          <table className="modal-table">
+            <thead>
+              <tr>
+                <th className="modal-table-header">Date</th>
+                <th className="modal-table-header">Time</th>
+                <th className="modal-table-header">Job ID</th>
+                <th className="modal-table-header">Company</th>
+                <th className="modal-table-header">Job Type</th>
+                <th className="modal-table-header">Recruiter Mail ID</th>
+                <th className="modal-table-header">Round</th>
+                <th className="modal-table-header">Attachment</th>
+              </tr>
+            </thead>
+            <tbody>
+              {interviews.map((interview) => (
+                <tr key={interview.id} className="modal-table-row">
+                  <td className="modal-table-cell">
+                    <div style={{ fontWeight: '500' }}>{interview.appliedDate}</div>
+                  </td>
+                  <td className="modal-table-cell">{interview.interviewTime}</td>
+                  <td className="modal-table-cell">{interview.jobId}</td>
+                  <td style={{ fontWeight: '600' }} className="modal-table-cell">{interview.company}</td>
+                   <td style={{ fontWeight: '600' }} className="modal-table-cell">{interview.jobType}</td>
+                  <td className="modal-table-cell">{interview.recruiterMail}</td>
+                  <td className="modal-table-cell">
+                    <div style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      padding: '4px 12px',
+                      borderRadius: '16px',
+                      backgroundColor:
+                        interview.round === 'Round 1' ? '#EFF6FF' :
+                          interview.round === 'Round 2' ? '#ECFDF5' :
+                            interview.round === 'Round 3' ? '#FEF3C7' : '#F3E8FF',
+                      color:
+                        interview.round === 'Round 1' ? '#1D4ED8' :
+                          interview.round === 'Round 2' ? '#047857' :
+                            interview.round === 'Round 3' ? '#92400E' : '#6B21A8',
+                      fontSize: '0.75rem',
+                      fontWeight: '600',
+                      textTransform: 'uppercase'
+                    }}>
+                      {interview.round}
+                    </div>
+                  </td>
+                  <td className="modal-table-cell">
+                    {interview.attachments && interview.attachments.length > 0 ? (
+                      <button
+                        onClick={() => onAttachmentClick(interview.attachments)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: '5px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          color: '#3b82f6',
+                          fontWeight: '600',
+                          fontSize: '0.85rem',
+                          borderRadius: '4px',
+                          transition: 'background-color 0.2s',
+                        }}
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                          <polyline points="13 2 13 9 20 9"></polyline>
+                          <path d="M16 21v-6a2 2 0 0 1 2-2h2l-5 5-5-5h2a2 2 0 0 1 2 2v6z"></path>
+                        </svg>
+                        ({interview.attachments.length})
+                      </button>
+                    ) : (
+                      <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>N/A</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p style={{ textAlign: 'center', color: '#666' }}>No interviews scheduled.</p>
+      )}
+
+      {showAttachmentModal && (
+        <AttachmentModal
+          attachments={currentAttachments}
+          onClose={closeAttachmentModal}
+        />
+      )}
+    </div>
+  );
+};
+
+
 // --- WorksheetView Component (New) ---
 // This component will house the Applications and Documents tabs
 const WorksheetView = ({ setActiveTab, activeWorksheetTab, setActiveWorksheetTab,
@@ -1971,7 +2086,8 @@ const WorksheetView = ({ setActiveTab, activeWorksheetTab, setActiveWorksheetTab
   isGlobalFilterActive, clearAllFilters, getApplicationsSectionTitle, filteredApplicationsForDisplay,
   downloadApplicationsData, applicationsData, allApplicationsFlattened,
   activeSubTab, setActiveSubTab, clientData, // New prop to pass sub-tab state for Documents
-  setIsInWorksheetView, onImageView // New prop to allow WorksheetView to set its own visibility
+  setIsInWorksheetView, onImageView, // New prop to allow WorksheetView to set its own visibility
+  scheduledInterviews, handleAttachmentClick , closeAttachmentModal, currentAttachments, showAttachmentModal// New props for interviews
 }) => {
   return (
     <div style={{
@@ -2056,6 +2172,21 @@ const WorksheetView = ({ setActiveTab, activeWorksheetTab, setActiveWorksheetTab
         >
           Documents
         </button>
+        <button
+          style={{
+            padding: "10px 20px",
+            border: "1px solid #ccc",
+            borderRadius: "8px",
+            cursor: "pointer",
+            transition: "background-color 0.3s ease",
+            backgroundColor: activeWorksheetTab === "Interviews Scheduled" ? "#007bff" : "#e9ecef",
+            color: activeWorksheetTab === "Interviews Scheduled" ? "#fff" : "#333",
+            borderColor: activeWorksheetTab === "Interviews Scheduled" ? "#007bff" : "#ccc",
+          }}
+          onClick={() => setActiveWorksheetTab("Interviews Scheduled")}
+        >
+          Interviews Scheduled
+        </button>
       </div>
 
       {/* Conditional Rendering based on activeWorksheetTab */}
@@ -2079,7 +2210,7 @@ const WorksheetView = ({ setActiveTab, activeWorksheetTab, setActiveWorksheetTab
           tempStartDate={tempStartDate}
           setTempStartDate={setTempStartDate}
           tempEndDate={tempEndDate}
-          setTempEndDate={tempEndDate}
+          setTempEndDate={setTempEndDate}
           handleDateRangeChangeFromCalendar={handleDateRangeChangeFromCalendar}
           handleApplyDateRange={handleApplyDateRange}
           handleClearDateRangeInModal={handleClearDateRangeInModal}
@@ -2140,6 +2271,13 @@ const WorksheetView = ({ setActiveTab, activeWorksheetTab, setActiveWorksheetTab
           handleSubTabChange={setActiveSubTab}
           clientFiles={clientData ? clientData.files : []}
           onImageView={onImageView}
+        />
+      )}
+
+      {activeWorksheetTab === "Interviews Scheduled" && (
+        <InterviewsScheduled 
+            interviews={scheduledInterviews} 
+            onAttachmentClick={handleAttachmentClick} 
         />
       )}
     </div>
@@ -2258,7 +2396,7 @@ const ClientDashboard = () => {
 
   // States from clientdashboard.txt
   const [menuOpen, setMenuOpen] = useState(false); // No longer used for hamburger menu
-  const [showInterviewsModal, setShowInterviewsModal] = useState(false);
+   const [showInterviewsModal, setShowInterviewsModal] = useState(false);
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showSubscriptionDetailsModal, setShowSubscriptionDetailsModal] = useState(false);
@@ -2366,7 +2504,7 @@ const ClientDashboard = () => {
   };
 
   const toggleMenu = () => setMenuOpen(!menuOpen); // This function is now effectively unused for the UI
-  const toggleInterviewsModal = () => setShowInterviewsModal(!showInterviewsModal);
+   const toggleInterviewsModal = () => setShowInterviewsModal(!showInterviewsModal);
   const toggleResumeModal = () => setShowResumeModal(!showResumeModal);
   const togglePaymentModal = () => setShowPaymentModal(!showPaymentModal);
   const toggleSubscriptionDetailsModal = () => setShowSubscriptionDetailsModal(!showSubscriptionDetailsModal);
@@ -2698,18 +2836,6 @@ useEffect(() => {
       }
     }
   };
-
-  // Mock data for Scheduled Interviews (UPDATED with attachment field)
-  // const scheduledInterviews = [
-  //   { id: 1, date: '2025-06-15', jobId: 'TX101', time: '10:00 AM', company: 'Innovate Solutions', role: 'Software Developer', recruiterMailId: 'alice.j@innovate.com', round: 'Round 1', attachments: ['https://placehold.co/200x150/FFD700/000000?text=Screenshot+1'] },
-  //   { id: 2, date: '2025-06-18', jobId: 'TX102', time: '02:30 PM', company: 'Global Tech Corp', role: 'UX Designer', recruiterMailId: 'bob.w@globaltech.com', round: 'Round 2', attachments: ['https://placehold.co/200x150/ADD8E6/000000?text=Design+Brief', 'https://placehold.co/200x150/90EE90/000000?text=Wireframes'] },
-  //   { id: 3, date: '2025-06-20', jobId: 'TX103', time: '11:00 AM', company: 'Data Insights Ltd.', role: 'Data Analyst', recruiterMailId: 'charlie.b@datainsights.com', round: 'Final Round', attachments: [] },
-  //   { id: 4, date: '2025-06-22', jobId: 'TX104', time: '09:00 AM', company: 'FutureTech Inc.', role: 'Project Manager', recruiterMailId: 'david.l@futuretech.net', round: 'Round 1', attachments: ['https://placehold.co/200x150/FFC0CB/000000?text=Project+Spec'] },
-  //   { id: 5, date: '2025-06-25', jobId: 'TX105', time: '01:00 PM', company: 'Digital Innovators', role: 'DevOps Engineer', recruiterMailId: 'eve.d@digitalinnov.io', round: 'Round 3', attachments: [] },
-  //   { id: 6, date: '2025-06-28', jobId: 'TX106', time: '03:45 PM', company: 'Quant Computing', role: 'Machine Learning Scientist', recruiterMailId: 'frank.w@quantcomp.ai', round: 'Round 2', attachments: ['https://placehold.co/200x150/DDA0DD/000000?text=Algorithm+Flow'] },
-  //   { id: 7, date: '2025-07-01', jobId: 'TX107', time: '10:30 AM', company: 'CyberSec Solutions', role: 'Cybersecurity Analyst', recruiterMailId: 'grace.k@cybersec.com', round: 'Round 1', attachments: ['https://placehold.co/200x150/F08080/000000?text=Security+Report'] },
-  //   { id: 8, date: '2025-07-03', jobId: 'TX108', time: '04:00 PM', company: 'HealthTech Connect', role: 'Mobile App Developer', recruiterMailId: 'henry.g@healthtech.org', round: 'Final Round', attachments: [] },
-  // ];
 
   // Mock data for Resume & Job Portal Updates
   const resumeUpdates = [
@@ -3170,9 +3296,9 @@ useEffect(() => {
 
   // Determine if the overlay should be visible (for all modals and sidebar)
   const isOverlayVisible = useMemo(() => {
-    return menuOpen || showInterviewsModal || showResumeModal || showPaymentModal || showSubscriptionDetailsModal ||
+    return menuOpen || showResumeModal || showPaymentModal || showSubscriptionDetailsModal ||
       showNotificationsModal || showAttachmentModal || showDateRangeModal || showJobDescriptionModal || showFilterModal || showPaymentOptionsModal;
-  }, [menuOpen, showInterviewsModal, showResumeModal, showPaymentModal,
+  }, [menuOpen, showResumeModal, showPaymentModal,
     , showSubscriptionDetailsModal,
     showNotificationsModal, showAttachmentModal, showDateRangeModal, showJobDescriptionModal, showFilterModal, showPaymentOptionsModal]);
 
@@ -5465,87 +5591,7 @@ html.dark-mode .notify-success-message {
                   </div>
                 </section>
 
-                <div className="cards-section">
-                  <div
-                    onClick={toggleInterviewsModal}
-                    className="interviews-card"
-                  >
-                    <div style={{
-                      position: 'absolute',
-                      bottom: '-20px',
-                      right: '-20px',
-                      width: '120px',
-                      height: '120px',
-                      background: 'radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%)',
-                      zIndex: 1
-                    }}></div>
-                    <div style={{
-                      position: 'absolute',
-                      top: '-30px',
-                      left: '-30px',
-                      width: '100px',
-                      height: '100px',
-                      background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)',
-                      zIndex: 1
-                    }}></div>
-                    <div style={{ position: 'relative', zIndex: 2 }}>
-                      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" style={{ marginBottom: '16px' }}>
-                        <path d="M8 7V3M16 7V3M7 11H17M5 21H19C20.1046 21 21 20.1046 21 19V7C21 5.89543 20.1046 5 19 5H5C3.89543 5 3 5.89543 3 7V19C3 20.1046 3.89543 21 5 21Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                      <div style={{ fontSize: '1.25rem', letterSpacing: '0.5px' }}>
-                        INTERVIEWS SCHEDULED
-                      </div>
-                      <div style={{
-                        fontSize: '0.875rem',
-                        opacity: '0.9',
-                        marginTop: '8px',
-                        fontWeight: '400'
-                      }}>
-                        {scheduledInterviews.length} upcoming
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    onClick={toggleResumeModal}
-                    className="resume-card"
-                  >
-                    <div style={{
-                      position: 'absolute',
-                      bottom: '-20px',
-                      right: '-20px',
-                      width: '120px',
-                      height: '120px',
-                      background: 'radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%)',
-                      zIndex: 1
-                    }}></div>
-                    <div style={{
-                      position: 'absolute',
-                      top: '-30px',
-                      left: '-30px',
-                      width: '100px',
-                      height: '100px',
-                      background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)',
-                      zIndex: 1
-                    }}></div>
-                    <div style={{ position: 'relative', zIndex: 2 }}>
-                      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" style={{ marginBottom: '16px' }}>
-                        <path d="M9 12H15M9 16H15M10 3H14C15.1046 3 16 3.89543 16 5V20C16 20.5523 15.5523 21 15 21H9C8.44772 21 8 20.5523 8 20V5C8 3.89543 8.89543 3 10 3Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                      <div style={{ fontSize: '1.25rem', letterSpacing: '0.5px' }}>
-                        RESUME UPDATES
-                      </div>
-                      <div style={{
-                        fontSize: '0.875rem',
-                        opacity: '0.9',
-                        marginTop: '8px',
-                        fontWeight: '400'
-                      }}>
-                        {filteredResumeUpdates.length} recent updates
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                
               </>
             )}
 
@@ -5627,6 +5673,11 @@ html.dark-mode .notify-success-message {
                 clientData={clientData}
                 setIsInWorksheetView={setIsInWorksheetView}
                 onImageView={handleImageView}
+                    scheduledInterviews={scheduledInterviews}
+    handleAttachmentClick={handleAttachmentClick}
+    closeAttachmentModal={closeAttachmentModal}
+    currentAttachments={currentAttachments}
+    showAttachmentModal={showAttachmentModal}
               />
             )}
 
@@ -5708,6 +5759,11 @@ html.dark-mode .notify-success-message {
                 setIsInWorksheetView={setIsInWorksheetView} // Pass down
                 clientData={updatedClientData}
                 onImageView={handleImageView}
+                    scheduledInterviews={scheduledInterviews}
+    handleAttachmentClick={handleAttachmentClick}
+    closeAttachmentModal={closeAttachmentModal}
+    currentAttachments={currentAttachments}
+    showAttachmentModal={showAttachmentModal}
               />
             )}
             <Modal show={showImageViewer} onHide={() => setShowImageViewer(false)} size="lg" centered>
@@ -5798,6 +5854,11 @@ html.dark-mode .notify-success-message {
             setIsInWorksheetView={setIsInWorksheetView} // Pass down
             clientData={updatedClientData}
             onImageView={handleImageView}
+                scheduledInterviews={scheduledInterviews}
+    handleAttachmentClick={handleAttachmentClick}
+    closeAttachmentModal={closeAttachmentModal}
+    currentAttachments={currentAttachments}
+    showAttachmentModal={showAttachmentModal}
           />
           )
         )}
