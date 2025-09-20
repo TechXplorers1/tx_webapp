@@ -4342,4 +4342,457 @@
 //             color: var(--modal-export-button-color);
 //             padding: 8px 15px;
 //             border-radius: 8px;
-//             border: 1px solid var
+//             border: 1px solid var(--modal-search-border);
+//             cursor: pointer;
+//             font-size: 14px;
+//             font-weight: 500;
+//             display: flex;
+//             align-items: center;
+//             gap: 8px;
+//             transition: background-color 0.2s ease, border-color 0.2s ease, color 0.3s ease;
+//             white-space: nowrap;
+//         }
+
+//         .clear-filter-button:hover {
+//             background-color: var(--modal-export-button-hover-bg);
+//             border-color: var(--modal-export-button-hover-border);
+//         }
+
+//         /* LLM Summary Section */
+//         .llm-summary-section {
+//             background-color: var(--llm-section-bg);
+//             border: 1px solid var(--llm-section-border);
+//             border-radius: 8px;
+//             padding: 15px;
+//             margin-top: 15px;
+//             font-size: 14px;
+//             color: var(--llm-text-color);
+//             transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+//         }
+
+//         .llm-summary-section h4 {
+//             font-size: 16px;
+//             font-weight: 600;
+//             color: var(--llm-text-color);
+//             margin-top: 0;
+//             margin-bottom: 10px;
+//             transition: color 0.3s ease;
+//         }
+
+//         .llm-summary-section p {
+//             margin: 0;
+//             line-height: 1.5;
+//         }
+
+//         .llm-loading-indicator {
+//             display: flex;
+//             align-items: center;
+//             justify-content: center;
+//             gap: 10px;
+//             padding: 15px;
+//             font-size: 15px;
+//             color: var(--llm-loading-color);
+//             font-weight: 500;
+//         }
+
+//         .llm-loading-indicator i {
+//             animation: spin 1s linear infinite;
+//         }
+
+//         @keyframes spin {
+//             0% { transform: rotate(0deg); }
+//             100% { transform: rotate(360deg); }
+//         }
+//         `}
+//       </style>
+
+//       {/* Header Section */}
+//       <header className="header-section">
+//         <h1 className="header-logo">
+//           Tech<span className="x-highlight">X</span>plorers
+//         </h1>
+//         <div className="header-actions">
+//           {/* Notification button */}
+//           <button className="header-button" onClick={openNotificationsModal}>
+//             <i className="fas fa-bell"></i>
+//             <span className="notification-badge">{notifications.length}</span>
+//           </button>
+//           {/* Theme toggle button - moved next to notification */}
+//           {/* <button className="header-button" onClick={toggleTheme}>
+//             <i className={theme === 'light' ? 'fas fa-moon' : 'fas fa-sun'}></i>
+//           </button> */}
+//           {/* User Profile with Dropdown */}
+//           <div className="user-profile" onClick={toggleProfileDropdown} ref={profileDropdownRef}>
+//             <div className='user-info'>
+//               <span>{userName}</span>
+//               <span className="manager-badge">Manager</span>
+//             </div>
+//             <div className="user-avatar">{userAvatarLetter}</div>
+//             <i className="fas fa-chevron-down dropdown-arrow"></i>
+
+//             {isProfileDropdownOpen && (
+//               <div className="profile-dropdown">
+//                 <div className="profile-dropdown-item" onClick={handleProfileClick}>
+//                   <i className="fas fa-user-circle"></i> Profile
+//                 </div>
+//                 {/* <div className="profile-dropdown-item" onClick={handleLogout}>
+//                   <i className="fas fa-sign-out-alt"></i> Logout
+//                 </div> */}
+//               </div>
+//             )}
+//           </div>
+//         </div>
+//       </header>
+
+//       {/* Main Content Title and Subtitle */}
+//       <section className="tab-section-header">
+//         <h1>Welcome, {userName}!</h1>
+//         <p>Manage your employee assignments and applications efficiently.</p>
+//       </section>
+
+//       {/* Radio Button Navigation */}
+//       <nav className="radio-group">
+//         <div className="radio-option">
+//           <input
+//             type="radio"
+//             id="assignmentsRadio"
+//             name="tabSelection"
+//             value="Assignments"
+//             checked={activeTab === 'Assignments'}
+//             onChange={handleRadioChange}
+//           />
+//           <label htmlFor="assignmentsRadio">Clients</label>
+//         </div>
+//         <div className="radio-option">
+//           <input
+//             type="radio"
+//             id="assignedRadio"
+//             name="tabSelection"
+//             value="Assigned"
+//             checked={activeTab === 'Assigned'}
+//             onChange={handleRadioChange}
+//           />
+//           <label htmlFor="assignedRadio">Employees</label>
+//         </div>
+//         <div className="radio-option">
+//           <input
+//             type="radio"
+//             id="applicationsRadio"
+//             name="tabSelection"
+//             value="Applications"
+//             checked={activeTab === 'Applications'}
+//             onChange={handleRadioChange}
+//           />
+//           <label htmlFor="applicationsRadio">Applications</label>
+//         </div>
+//         <div className="radio-option">
+//           <input
+//             type="radio"
+//             id="interviewsRadio"
+//             name="tabSelection"
+//             value="Interviews"
+//             checked={activeTab === 'Interviews'}
+//             onChange={handleRadioChange}
+//           />
+//           <label htmlFor="interviewsRadio">Interviews</label>
+//         </div>
+//       </nav>
+
+//       {/* Tab Content */}
+//       <div className="tab-content">
+//         {activeTab === 'Assignments' && (
+//           <section className="client-assignment-overview">
+//             <div className="client-assignment-header">
+//               <h2 className="client-assignment-title">Client Assignment Overview</h2>
+//               {/* Removed Assign New Client button */}
+//             </div>
+//             <div className="assignment-cards-grid">
+//               {/* Unassigned Card - now clickable to open modal */}
+//               <div className="assignment-card" onClick={() => setIsUnassignedClientsModalOpen(true)}>
+//                 <div className="assignment-card-value">{totalUnassignedCount}</div>
+//                 <div className="assignment-card-title">Clients Unassigned</div>
+//                 <div className="assignment-card-description">View all unassigned clients</div>
+//               </div>
+
+//               {/* Total Clients Card (formerly Assigned) - now clickable to open new modal */}
+//               <div className="assignment-card assigned" onClick={openTotalClientsModal}>
+//                 <div className="assignment-card-value">{totalClientsCount}</div>
+//                 <div className="assignment-card-title">Total assigned Clients</div>
+//                 <div className="assignment-card-description">View all assigned clients</div>
+//               </div>
+//             </div>
+//           </section>
+//         )}
+
+// {activeTab === 'Assigned' && (
+//     <section className="assigned-employee-overview client-assignment-overview">
+//         <div className="client-assignment-header">
+//             <h2 className="client-assignment-title">My Employees</h2>
+//             <div className="clients-count-badge">
+//                 Total {totalAssignedClientsByEmployee} clients
+//             </div>
+//             <button className="assign-client-button" onClick={() => setIsAddEmployeeModalOpen(true)}>
+//                 <i className="fas fa-user-plus"></i> Add Employee
+//             </button>
+//         </div>
+        
+//         <div className="applications-filters assigned-employee-search-bar" style={{ marginBottom: '20px' }}>
+//             <div className="search-input-wrapper">
+//                 <i className="fas fa-search"></i>
+//                 <input
+//                     type="text"
+//                     placeholder="Search employees..."
+//                     value={assignedEmployeeSearchQuery}
+//                     onChange={handleAssignedEmployeeSearchChange}
+//                 />
+//             </div>
+//         </div>
+        
+//         <div className="employee-cards-grid">
+//             {filteredEmployees.map((employee) => (
+//                 <div key={employee.firebaseKey} className="employee-card">
+//                     <div className="employee-card-header">
+//                         <div className="employee-avatar-large">{getInitials(employee.fullName)}</div>
+//                         <div className="employee-info">
+//                             <div className="employee-name">{employee.fullName}</div>
+//                             <div className="employee-role">{employee.role}</div>
+//                         </div>
+//                         <div className="clients-count-badge">
+//                             {assignedClients.filter(c => c.assignedTo === employee.firebaseKey).length} clients
+//                         </div>
+//                     </div>
+//                     <div className="employee-card-details">
+//                         <div className="success-rate">Success Rate: <span className="success-rate-value">{employee.successRate}%</span></div>&nbsp; 
+//                         <button className="view-employee-details-button" onClick={() => openEmployeeClientsModal(employee)}>
+//   <i className="fas fa-eye"></i>View Client
+// </button>
+//                     </div>
+//                 </div>
+//             ))}
+//             {filteredEmployees.length === 0 && (
+//                 <p style={{ textAlign: 'center', color: 'var(--text-color)', gridColumn: '1 / -1' }}>
+//                     No employees assigned to your clients.
+//                 </p>
+//             )}
+//         </div>
+//     </section>
+// )}
+
+//        {/* --- NEW Applications Tab UI --- */}
+//         {activeTab === 'Applications' && (
+//           <ApplicationsTab
+//             applicationData={filteredApplicationData}
+//             employees={displayEmployees}
+//             uniqueClientNames={uniqueAssignedClientNames}
+//             applicationFilterEmployee={applicationFilterEmployee}
+//             handleApplicationFilterEmployeeChange={handleApplicationFilterEmployeeChange}
+//             applicationFilterClient={applicationFilterClient}
+//             handleApplicationFilterClientChange={handleApplicationFilterClientChange}
+//             applicationFilterDateRange={applicationFilterDateRange}
+//             handleApplicationFilterDateRangeChange={(e) => setApplicationFilterDateRange(prev => ({ ...prev, [e.target.name]: e.target.value }))}
+//             sortOrder={sortOrder}
+//             setSortOrder={setSortOrder}
+//             applicationSearchQuery={applicationSearchQuery}
+//             handleApplicationSearchChange={handleApplicationSearchChange}
+//             areFiltersActive={areApplicationsFiltersActive}
+//             handleClearFilters={handleClearApplicationsFilters}
+//             onViewDetails={openApplicationDetailModal}
+//             onEdit={openEditApplicationModal}
+//             onDelete={(app) => {
+//                 setSelectedApplication(app);
+//                 handleDeleteApplication();
+//             }}
+//           />
+
+//         )}
+
+//         {showAttachmentModal && (
+//   <AttachmentModal
+//     attachments={currentAttachments}
+//     onClose={closeAttachmentModal}
+//   />
+// )}
+
+//         {activeTab === 'Interviews' && (
+//           <section className="interviews-section client-assignment-overview">
+//             <div className="client-assignment-header interviews-header">
+//               <h2 className="client-assignment-title">Interview Management</h2>
+//               <span className="total-interviews-badge">{filteredInterviewData.length} total interviews</span>
+//             </div>
+
+//             <FilterComponent
+//               filterDateRange={interviewFilterDateRange} // Use interviews state
+//               handleDateRangeChange={(e) => setInterviewFilterDateRange(prev => ({ ...prev, [e.target.name]: e.target.value }))}
+//               sortOrder={sortOrder}
+//               setSortOrder={setSortOrder}
+//               quickFilter={quickFilter}
+//               handleQuickFilterChange={handleQuickFilterChange}
+//               areFiltersActive={areInterviewsFiltersActive}
+//               handleClearFilters={handleClearInterviewsFilters}
+//               sortOptions={['Newest First', 'Oldest First']}
+//             />
+
+//             <div className="applications-filters"> {/* Reusing applications-filters for consistent styling */}
+//               <div className="search-input-wrapper">
+//                 <i className="fas fa-search"></i>
+//                 <input
+//                   type="text"
+//                   placeholder="Search interviews..."
+//                   value={interviewSearchQuery}
+//                   onChange={handleInterviewSearchChange}
+//                 />
+//               </div>
+//               <div className="filter-dropdown">
+//                 <select
+//                   value={interviewFilterRound}
+//                   onChange={handleInterviewFilterRoundChange}
+//                 >
+//                   <option value="All Rounds">All Rounds</option>
+//                   <option value="1st Round">Round 1</option>
+//                   <option value="2st Round">Round 2</option>
+//                   <option value="3rd Round">ROund 3</option>
+//                   {/* Add more rounds as needed based on your data */}
+//                 </select>
+//                 <i className="fas fa-chevron-down"></i>
+//               </div>
+//             </div>
+
+//             <div className="table-responsive">
+//               <table className="interview-table">
+//                 <thead><tr>
+//                   <th>EMPLOYEE</th>
+//                   <th>CLIENT</th>
+//                   <th>JOB TITLE</th>
+//                   <th>COMPANY</th>
+//                   <th>ROUND</th>
+//                   <th>ATTACHMENTS</th>
+//                   <th>TIME</th>
+//                   <th>DATE</th>
+//                   <th>STATUS</th> {/* New column header for Status */}
+//                   {/* REMOVED: <th>ACTIONS</th> */}
+//                 </tr></thead>
+//                 <tbody>
+//                   {filteredInterviewData.map((interview) => {
+//         // FIX: Find the assigned employee object using the 'assignedTo' key
+//         const assignedEmployee = allEmployees.find(
+//           (emp) => emp.firebaseKey === interview.assignedTo
+//         );
+
+//         // FIX: Safely get the employee's name and initials, providing a fallback
+//         const employeeName = assignedEmployee
+//           ? `${assignedEmployee.firstName} ${assignedEmployee.lastName}`
+//           : 'N/A';
+//         const employeeInitials = assignedEmployee
+//           ? getInitials(employeeName)
+//           : '??';
+
+//         return (
+//                     <tr key={interview.id}>
+//                       <td className="employee-cell">
+//                         <div className="employee-avatar">{employeeInitials}</div>
+//                         {employeeName}
+//                       </td>
+//                       <td>{interview.clientName}</td>
+//                       <td>{interview.jobTitle}</td>
+//                       <td>{interview.company}</td>
+//                       <td>
+//                         <span className="round-badge">{interview.round}</span>
+//                       </td>
+//                        <td className="action-buttons">
+//               {interview.attachments && interview.attachments.length > 0 ? (
+//                 <button
+//                   onClick={() => handleAttachmentClick(interview.attachments)}
+//                   className="action-button"
+//                   title="View Attachments"
+//                 >
+//                   <i className="fas fa-paperclip"></i> ({interview.attachments.length})
+//                 </button>
+//               ) : (
+//                 <span style={{ color: 'var(--text-color)', opacity: 0.6 }}>N/A</span>
+//               )}
+//             </td>
+//              <td className="date-cell">
+//                         {interview.interviewTime}
+//                       </td>
+//                       <td className="date-cell">
+//                         {formatDateToDDMMYYYY(interview.interviewDate)}
+//                       </td>
+                     
+//                       <td>
+//                         {interview.status} {/* Display the new status */}
+//                       </td>
+//                     </tr>
+//                   );
+//       })}
+//                   {filteredInterviewData.length === 0 && (
+//                     <tr>
+//                       <td colSpan="9" style={{ textAlign: 'center', color: 'var(--text-color)' }}> 
+//                         No interviews to display matching your criteria.
+//                       </td>
+//                     </tr>
+//                   )}
+//                 </tbody>
+//               </table>
+//             </div>
+//           </section>
+//         )}
+//       </div>
+//     </div>
+//   );
+// };
+
+// const AttachmentModal = ({ attachments, onClose }) => {
+//   return (
+//     <Modal show={true} onHide={onClose} size="lg" centered>
+//       <Modal.Header closeButton>
+//         <Modal.Title>Interview Attachments</Modal.Title>
+//       </Modal.Header>
+//       <Modal.Body style={{ textAlign: 'center' }}>
+//         {attachments.length === 0 ? (
+//           <p>No attachments available for this interview.</p>
+//         ) : (
+//           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px', justifyContent: 'center' }}>
+//             {attachments.map((attachment, index) => (
+//               <a
+//                 key={attachment.downloadUrl || index}
+//                 href={attachment.downloadUrl}
+//                 target="_blank"
+//                 rel="noopener noreferrer"
+//                 style={{ textDecoration: 'none' }}
+//               >
+//                 <div style={{
+//                   border: '1px solid #e2e8f0',
+//                   borderRadius: '8px',
+//                   overflow: 'hidden',
+//                   width: '200px',
+//                   height: '150px',
+//                   backgroundColor: '#f8fafc',
+//                   cursor: 'pointer',
+//                   transition: 'transform 0.2s ease',
+//                   display: 'flex',
+//                   alignItems: 'center',
+//                   justifyContent: 'center'
+//                 }}
+//                   onMouseOver={e => e.currentTarget.style.transform = 'scale(1.05)'}
+//                   onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
+//                 >
+//                   <img
+//                     src={attachment.downloadUrl}
+//                     alt={attachment.name || `Attachment ${index + 1}`}
+//                     style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+//                     onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/200x150/e2e8f0/64748B?text=Image+Error'; }}
+//                   />
+//                 </div>
+//               </a>
+//             ))}
+//           </div>
+//         )}
+//       </Modal.Body>
+//       <Modal.Footer>
+//         <Button variant="secondary" onClick={onClose}>Close</Button>
+//       </Modal.Footer>
+//     </Modal>
+//   );
+// };
+
+// export default ManagerWorkSheet;

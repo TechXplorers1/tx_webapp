@@ -3270,23 +3270,20 @@ useEffect(() => {
 
 
       // Date Range Filter logic (applies only if startDateFilter or endDateFilter are explicitly set)
-      let matchesDateRange = true;
-      if (startDateFilter || endDateFilter) {
-        // Convert DD-MM-YYYY (app.dateAdded) to YYYY-MM-DD for Date constructor comparability
-        // And normalize to start/end of day for accurate range comparison
-        const appDate = new Date(convertDDMMYYYYtoYYYYMMDD(app.dateAdded));
-        appDate.setHours(0, 0, 0, 0); // Normalize to start of day
-
-        const start = startDateFilter ? new Date(convertDDMMYYYYtoYYYYMMDD(startDateFilter)) : null;
-        const end = endDateFilter ? new Date(convertDDMMYYYYtoYYYYMMDD(endDateFilter)) : null;
-
-        if (start) start.setHours(0, 0, 0, 0);
-        if (end) end.setHours(23, 59, 59, 999);
-
-        matchesDateRange =
-          (!start || appDate >= start) &&
-          (!end || appDate <= end);
-      }
+  let matchesDateRange = true;
+if (startDateFilter || endDateFilter) {
+  // Convert DD-MM-YYYY (app.dateAdded) to YYYY-MM-DD for Date constructor comparability
+  // And normalize to start/end of day for accurate range comparison
+  const appDate = new Date(convertDDMMYYYYtoYYYYMMDD(app.dateAdded));
+  appDate.setHours(0, 0, 0, 0); // Normalize to start of day
+  const start = startDateFilter ? new Date(convertDDMMYYYYtoYYYYMMDD(startDateFilter)) : null;
+  const end = endDateFilter ? new Date(convertDDMMYYYYtoYYYYMMDD(endDateFilter)) : null;
+  if (start) start.setHours(0, 0, 0, 0);
+  if (end) end.setHours(23, 59, 59, 999);
+  matchesDateRange =
+    (!start || appDate >= start) &&
+    (!end || appDate <= end);
+}
 
       // Combine all conditions
       return matchesWebsite && matchesPosition && matchesCompany && matchesSearchTerm && matchesDateRange;

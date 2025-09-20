@@ -196,25 +196,32 @@ const handleChange = (e, index, fieldName) => {
                 isValid = false;
             }
         });
-      formData.educationDetails.forEach((edu, index) => {
-        if (!edu.universityName || !edu.universityAddress ||  !edu.courseOfStudy || !edu.graduationFromDate || !edu.graduationToDate) {
-          errors[`universityName-${index}`] = 'University Name is required.';
-          errors[`universityAddress-${index}`] = 'University Address is required.';
-           errors[`courseOfStudy-${index}`] = 'Course of Study is required.';
-          errors[`graduationFromDate-${index}`] = 'Graduation From Date is required.';
-           errors[`graduationToDate-${index}`] = 'Graduation To Date is required.';
-          isValid = false;
+        formData.educationDetails.forEach((edu, index) => {
+        const eduFields = ['universityName', 'universityAddress', 'courseOfStudy', 'graduationFromDate', 'graduationToDate'];
+        eduFields.forEach(field => {
+          if (!edu[field]) {
+            isValid = false;
+          }
+        });
+
+        // NEW: Validate that 'From Date' is earlier than 'To Date'
+        if (edu.graduationFromDate && edu.graduationToDate) {
+            const fromDate = new Date(edu.graduationFromDate);
+            const toDate = new Date(edu.graduationToDate);
+            if (fromDate >= toDate) {
+                errors[`graduationToDate-${index}`] = 'To date must be after From date.';
+                isValid = false;
+            }
         }
       });
     }
 
     // Validation for Step 5
-   if (step === 5) {
-      if (!resumeFile || resumeFile.length === 0) {
+    if (step === 5) {
+      if (!resumeFile) {
         errors.resume = "Please upload your resume.";
         isValid = false;
       }
-     
     }
 
     setValidationErrors(errors);
@@ -924,40 +931,37 @@ const keyframes = `
                   <Form.Control name="jobPortalAccountNameandCredentials" value={formData.jobPortalAccountNameandCredentials} onChange={handleChange} as="textarea" rows={3} isInvalid={!!validationErrors.jobPortalAccountNameandCredentials} />
                 </Form.Group>
                 <Row className="mb-3">
-    <Form.Group as={Col} controlId="formResume" className="mb-3 mt-4">
-      <Form.Label>Upload Your Resume <span className="text-danger">*</span></Form.Label>
-      <Form.Control
-        type="file"
-        name="resume"
-        onChange={handleChange}
-        required
-        accept=".pdf,.doc,.docx"
-        isInvalid={!!validationErrors.resume}
-        multiple
-      />
-      <Form.Control.Feedback type="invalid">{validationErrors.resume}</Form.Control.Feedback>
-      {/* FIX: Adjust the file display logic to show multiple files */}
-      {resumeFile && resumeFile.length > 0 && (
-        <Form.Text className="text-success d-block mt-1">
-          Selected files: **{resumeFile.map(file => file.name).join(', ')}**
-        </Form.Text>
-      )}
-      <Form.Text className="text-muted d-block mt-1">Please upload your resume(s) in PDF, DOC, or DOCX format.</Form.Text>
-    </Form.Group>
-    <Form.Group as={Col} controlId="formcoverLetter" className="mb-3 mt-4">
-      <Form.Label>Cover Letter <span className="text-danger">*</span></Form.Label>
-      <Form.Control type="file" name="coverLetter" onChange={handleChange} accept=".pdf,.doc,.docx" isInvalid={!!validationErrors.coverLetter} />
-      <Form.Control.Feedback type="invalid">{validationErrors.coverLetter}</Form.Control.Feedback>
-      {coverLetterFile && (
-        <Form.Text className="text-success d-block mt-1">
-          Selected file: **{coverLetterFile.name}**
-        </Form.Text>
-      )}
-      <Form.Text className="text-muted d-block mt-1">Please upload your Cover Letter in PDF, DOC, or DOCX format.</Form.Text>
-    </Form.Group>
-    </Row>
-  </section>
-
+                <Form.Group as={Col} controlId="formResume" className="mb-3 mt-4">
+                  <Form.Label>Upload Your Resume <span className="text-danger">*</span></Form.Label>
+                  <Form.Control
+                    type="file"
+                    name="resume"
+                    onChange={handleChange}
+                    required
+                    accept=".pdf,.doc,.docx"
+                    isInvalid={!!validationErrors.resume}
+                    multiple
+                  />
+                  <Form.Control.Feedback type="invalid">{validationErrors.resume}</Form.Control.Feedback>
+                 {resumeFile && resumeFile.length > 0 && (
+    <Form.Text className="text-success d-block mt-1">
+      Selected files: **{resumeFile.map(file => file.name).join(', ')}**
+    </Form.Text>
+  )}
+  <Form.Text className="text-muted d-block mt-1">Please upload your resume(s) in PDF, DOC, or DOCX format.</Form.Text>
+</Form.Group>
+                <Form.Group as={Col} controlId="formcoverLetter" className="mb-3 mt-4">
+                  <Form.Label>Cover Letter</Form.Label>
+                  <Form.Control type="file" name="coverLetter" onChange={handleChange} accept=".pdf,.doc,.docx" isInvalid={!!validationErrors.coverLetter} />
+                  {coverLetterFile && (
+                    <Form.Text className="text-success d-block mt-1">
+                      Selected file: **{coverLetterFile.name}**
+                    </Form.Text>
+                  )}
+                  <Form.Text className="text-muted d-block mt-1">Please upload your Cover Letter in PDF, DOC, or DOCX format.</Form.Text>
+                </Form.Group>
+                </Row>
+              </section>
             )}
 
             <div className="navigation-buttons">

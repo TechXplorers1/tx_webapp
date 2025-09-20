@@ -24,7 +24,8 @@ const AdminHeader = ({
   showProfileModal,
   setShowProfileModal,
   // New prop for notification click
-  onNotificationClick
+  onNotificationClick,
+  onLogoutClick
 }) => {
 
   // Effect to close profile dropdown when clicking outside
@@ -1773,6 +1774,7 @@ useEffect(() => {
   setShowProfileModal={setShowEmployeeProfileModal}
   onNotificationClick={handleNotificationIconClick}
   onLogoClick={() => navigate('/')}
+  onLogoutClick={handleLogout}
 />
       {/* Centralized CSS styles for hover effects and animations */}
       <style>
