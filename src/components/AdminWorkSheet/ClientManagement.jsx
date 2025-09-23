@@ -18,6 +18,7 @@ const ClientManagement = () => {
   const [selectedClientForDetails, setSelectedClientForDetails] = useState(null);
   const [isEditClientModalOpen, setIsEditClientModalOpen] = useState(false);
   const [currentClientToEdit, setCurrentClientToEdit] = useState(null);
+  const [newCoverLetterFile, setNewCoverLetterFile] = useState(null); // Add this for cover letters
   const [selectedServiceFilter, setSelectedServiceFilter] = useState('All');
   const simplifiedServices = ['Mobile Development', 'Web Development', 'Digital Marketing', 'IT Talent Supply', 'Cyber Security'];
   const [newResumeFile, setNewResumeFile] = useState(null);
@@ -160,6 +161,38 @@ const ClientManagement = () => {
       [name]: value,
     }));
   };
+
+
+  // New helper functions to manage the educationDetails array in state
+const handleAddEducationEntry = () => {
+  setCurrentClientToEdit(prev => ({
+    ...prev,
+    educationDetails: [...(prev.educationDetails || []), {
+      universityName: '',
+      universityAddress: '',
+      courseOfStudy: '',
+      graduationFromDate: '',
+      graduationToDate: '',
+    }]
+  }));
+};
+
+const handleRemoveEducationEntry = (index) => {
+  const updatedEducation = [...(currentClientToEdit.educationDetails || [])];
+  updatedEducation.splice(index, 1);
+  setCurrentClientToEdit(prev => ({ ...prev, educationDetails: updatedEducation }));
+};
+
+// New handler for changes within the education details array
+const handleEducationChange = (e, index, field) => {
+  const { value } = e.target;
+  const updatedEducation = [...(currentClientToEdit.educationDetails || [])];
+  updatedEducation[index] = {
+    ...updatedEducation[index],
+    [field]: value
+  };
+  setCurrentClientToEdit(prev => ({ ...prev, educationDetails: updatedEducation }));
+};
 
   const handleGeneratePaymentLink = () => {
 
@@ -358,6 +391,7 @@ const handleAssignClient = async (registration) => {
     setIsEditClientModalOpen(false);
     setCurrentClientToEdit(null);
     setNewResumeFile(null); // Reset file input state
+    setNewCoverLetterFile(null);
   };
 
   const handleEditClientChange = (e) => {
@@ -365,6 +399,8 @@ const handleAssignClient = async (registration) => {
     // Handle new file selection separately
     if (name === "newResumeFile") {
       setNewResumeFile(files[0]);
+      } else if (name === "newCoverLetterFile") {
+        setNewCoverLetterFile(files[0]);
     } else {
       setCurrentClientToEdit(prev => ({
         ...prev,
@@ -372,6 +408,12 @@ const handleAssignClient = async (registration) => {
       }));
     }
   };
+
+const handleCoverLetterFileChange = (e) => {
+    if (e.target.files[0]) {
+        setNewCoverLetterFile(e.target.files[0]);
+    }
+};
 
   const handleSaveClientDetails = async (e) => {
     e.preventDefault();
@@ -397,6 +439,15 @@ const handleAssignClient = async (registration) => {
         updates.resumeFileName = newResumeFile.name;
         delete updates.newResumeFile;
       }
+       if (newCoverLetterFile) {
+            const storage = getStorage();
+            const filePath = `coverletters/${currentClientToEdit.clientFirebaseKey}/${currentClientToEdit.registrationKey}/${newCoverLetterFile.name}`;
+            const fileRef = storageRef(storage, filePath);
+
+            await uploadBytes(fileRef, newCoverLetterFile);
+            updates.coverLetterUrl = await getDownloadURL(fileRef);
+            updates.coverLetterFileName = newCoverLetterFile.name;
+        }
 
       const {
         firstName, lastName, email, mobile,
@@ -412,7 +463,7 @@ const handleAssignClient = async (registration) => {
       console.log("Client details updated successfully in Firebase.");
       handleCloseEditClientModal();
       setNewResumeFile(null);
-
+      setNewCoverLetterFile(null);
       setShowSuccessModal(true);
       setTimeout(() => {
         setShowSuccessModal(false);
@@ -425,6 +476,7 @@ const handleAssignClient = async (registration) => {
       setIsSaving(false);
     }
   };
+  
 
   // --- Rendering Functions ---
  const renderClientTable = (registrationsToRender, serviceType, currentClientFilter, title = '') => {
@@ -467,15 +519,14 @@ const handleAssignClient = async (registration) => {
                                             {getManagerName(registration.assignedManager)}
                                         </td>
                                     )}
-                                    <td><button onClick={() => handleViewClientDetails(registration)} className="action-button view">View</button></td>
-                                    <td style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-start' }}>
-                                        <div className="action-buttons">
-                                            {currentClientFilter === 'registered' && (<><button onClick={() => handleAcceptClient(registration)} className="action-button accept">Accept</button><button onClick={() => handleDeclineClient(registration)} className="action-button decline">Decline</button></>)}
-                                            {(currentClientFilter === 'unassigned' || currentClientFilter === 'restored') && <button onClick={() => handleAssignClient(registration)} className="action-button assign" disabled={!registration.manager}>Save</button>}
-                                            {currentClientFilter === 'active' && (<button onClick={() => handleOpenManagerModal(registration)} className="action-button edit-manager">Edit Manager</button>)}
-                                            {/* FIX: Changed the onClick handler to the updated handleRestoreClient */}
-                                            {currentClientFilter === 'rejected' && (<><button onClick={() => handleRestoreClient(registration)} className="action-button restore">Restore</button><button onClick={() => handleDeleteRejectedClient(registration)} className="action-button delete-btn">Delete</button></>)}
-                                        </div>
+                                     <td><button onClick={() => handleViewClientDetails(registration)} className="action-button view">View</button></td>
+                <td style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-start' }}>
+                  <div className="action-buttons">
+                    {currentClientFilter === 'registered' && (<><button onClick={() => handleAcceptClient(registration)} className="action-button accept">Accept</button><button onClick={() => handleDeclineClient(registration)} className="action-button decline">Decline</button></>)}
+                    {(currentClientFilter === 'unassigned' || currentClientFilter === 'restored') && <button onClick={() => handleAssignClient(registration)} className="action-button assign" disabled={!registration.manager}>Save</button>}
+                    {currentClientFilter === 'active' && (<button onClick={() => handleOpenManagerModal(registration)} className="action-button edit-manager">Edit Manager</button>)}
+                    {currentClientFilter === 'rejected' && (<><button onClick={() => handleRestoreClient(registration)} className="action-button restore">Restore</button><button onClick={() => handleDeleteRejectedClient(registration)} className="action-button delete-btn">Delete</button></>)}
+                  </div>
                                         {/* Send Payment Link Button */}
                                         <button
                                             onClick={() => handleOpenPaymentModal(registration)}
@@ -2021,37 +2072,53 @@ const handleAssignClient = async (registration) => {
                       </div>
                     )}
                   </div>
-                  <div className="client-preview-section">
+<div className="client-preview-section">
   <h4 className="client-preview-section-title">Education Details</h4>
   {currentClientToEdit.educationDetails && currentClientToEdit.educationDetails.length > 0 ? (
     currentClientToEdit.educationDetails.map((edu, index) => (
       <div key={index} style={{ marginBottom: '1rem', padding: '1rem', border: '1px solid #e0e0e0', borderRadius: '8px' }}>
-        <h5 style={{ fontSize: '1rem', marginBottom: '1rem' }}>Education Entry {index + 1}</h5>
+        <h5 style={{ fontSize: '1rem', marginBottom: '1rem' }}>
+          Education Entry {index + 1}
+          {currentClientToEdit.educationDetails.length > 1 && (
+            <button
+              type="button"
+              onClick={() => handleRemoveEducationEntry(index)}
+              style={{ float: 'right', background: '#dc3545', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '5px', cursor: 'pointer' }}
+            >
+              Remove
+            </button>
+          )}
+        </h5>
         <div className="assign-form-group">
-          <label>University Name:</label>
-          <div className="read-only-value">{edu.universityName || '-'}</div>
+          <label>University Name</label>
+          <input type="text" name="universityName" value={edu.universityName || ''} onChange={(e) => handleEducationChange(e, index, 'universityName')} />
         </div>
         <div className="assign-form-group">
-          <label>University Address:</label>
-          <div className="read-only-value">{edu.universityAddress || '-'}</div>
+          <label>University Address</label>
+          <input type="text" name="universityAddress" value={edu.universityAddress || ''} onChange={(e) => handleEducationChange(e, index, 'universityAddress')} />
         </div>
         <div className="assign-form-group">
-          <label>Course of Study:</label>
-          <div className="read-only-value">{edu.courseOfStudy || '-'}</div>
+          <label>Course of Study</label>
+          <input type="text" name="courseOfStudy" value={edu.courseOfStudy || ''} onChange={(e) => handleEducationChange(e, index, 'courseOfStudy')} />
         </div>
         <div className="assign-form-group">
-          <label>Graduation From Date:</label>
-          <div className="read-only-value">{edu.graduationFromDate || '-'}</div>
+          <label>Graduation From Date</label>
+          <input type="date" name="graduationFromDate" value={edu.graduationFromDate || ''} onChange={(e) => handleEducationChange(e, index, 'graduationFromDate')} />
         </div>
         <div className="assign-form-group">
-          <label>Graduation To Date:</label>
-          <div className="read-only-value">{edu.graduationToDate || '-'}</div>
+          <label>Graduation To Date</label>
+          <input type="date" name="graduationToDate" value={edu.graduationToDate || ''} onChange={(e) => handleEducationChange(e, index, 'graduationToDate')} />
         </div>
       </div>
     ))
   ) : (
     <div className="read-only-value">No education details provided.</div>
   )}
+  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
+    <button type="button" onClick={handleAddEducationEntry} className="assign-form-button assign" style={{ padding: '8px 16px' }}>
+      + Add Education
+    </button>
+  </div>
 </div>
                   <div className="client-preview-section">
                     <h4 className="client-preview-section-title">Employment Details</h4>
@@ -2134,18 +2201,17 @@ const handleAssignClient = async (registration) => {
   )}
 </div>
                   <div className="client-preview-section">
-                    <h4 className="client-preview-section-title">Cover Letter</h4>
-                    <div className="assign-form-group">
-                      <label htmlFor="coverLetterFile">Upload New Cover Letter (optional)</label>
-                      <input
-                        type="file"
-                        id="coverLetterFile"
-                        name="coverLetterFile"
-                        onChange={handleEditClientChange}
-                        accept=".pdf,.doc,.docx"
-                      />
+                        <h4 className="client-preview-section-title">Cover Letter</h4>
+                        <div className="assign-form-group">
+                            <label>Current File:</label>
+                            <div className="read-only-value">{currentClientToEdit.coverLetterFileName || 'No cover letter uploaded.'}</div>
+                        </div>
+                        <div className="assign-form-group">
+                            <label htmlFor="newCoverLetterFile">Upload New Cover Letter (replaces current)</label>
+                            <input type="file" id="newCoverLetterFile" name="newCoverLetterFile" onChange={handleCoverLetterFileChange} accept=".pdf,.doc,.docx" />
+                            {newCoverLetterFile && <p style={{ fontSize: '0.8rem', marginTop: '5px', color: '#28a745' }}>New file: {newCoverLetterFile.name}</p>}
+                        </div>
                     </div>
-                  </div>
                 </div>
               </>
             )}

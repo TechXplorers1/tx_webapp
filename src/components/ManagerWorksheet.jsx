@@ -83,6 +83,8 @@ const ManagerWorkSheet = () => {
   const [clients, setClients] = useState([]); // REMOVE THIS LINE
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [editableEducationDetails, setEditableEducationDetails] = useState([]);
+
 
   // State to manage the active tab, now including 'Assigned', 'Interviews', 'Notes'
   const [activeTab, setActiveTab] = useState('Assignments'); // Default to 'Assignments'
@@ -156,6 +158,32 @@ const openApplicationDetailModal = (application) => {
 const closeApplicationDetailModal = () => {
   setIsApplicationDetailModalOpen(false);
   setSelectedApplication(null);
+};
+
+const handleEducationChange = (e, index, field) => {
+    const { value } = e.target;
+    const updatedEducation = [...editableEducationDetails];
+    updatedEducation[index] = {
+        ...updatedEducation[index],
+        [field]: value
+    };
+    setEditableEducationDetails(updatedEducation);
+};
+
+const handleAddEducationEntry = () => {
+    setEditableEducationDetails(prev => [...prev, {
+        universityName: '',
+        universityAddress: '',
+        courseOfStudy: '',
+        graduationFromDate: '',
+        graduationToDate: '',
+    }]);
+};
+
+const handleRemoveEducationEntry = (index) => {
+    const updatedEducation = [...editableEducationDetails];
+    updatedEducation.splice(index, 1);
+    setEditableEducationDetails(updatedEducation);
 };
 
 const openEditApplicationModal = (application) => {
@@ -1248,21 +1276,20 @@ const filteredEmployees = displayEmployees.filter(employee => {
   };
 
   // NEW: Function to open Client Preview/Edit Modal
-  const openEditClientModal = (clientObject) => {
-    // Find the comprehensive client data
-    // const client = mockDetailedClientsData.find(c => c.name === clientName || c.clientName === clientName);
-
-    if (clientObject) {
-      setClientToEdit({ ...clientObject }); // Create a copy for editing
-      setIsEditingClient(false); // Set to read-only initially
-      setIsEditClientModalOpen(true);
-      setLlmResponse(''); // Clear previous LLM response
-      setNewResumeFile(null);
-    } else {
-      console.warn(`Client with name not found for editing.`);
-      alert(`Client details for are not available for editing.`);
-    }
-  };
+ const openEditClientModal = (clientObject) => {
+  if (clientObject) {
+    setClientToEdit({ ...clientObject });
+    // Initialize editable education details from the client object
+    setEditableEducationDetails(clientObject.educationDetails || []);
+    setIsEditingClient(false);
+    setIsEditClientModalOpen(true);
+    setLlmResponse('');
+    setNewResumeFile(null);
+  } else {
+    console.warn(`Client with name not found for editing.`);
+    alert(`Client details for are not available for editing.`);
+  }
+};
 
   // NEW: Function to close Client Preview/Edit Modal
   const closeEditClientModal = () => {
@@ -1300,7 +1327,7 @@ const filteredEmployees = displayEmployees.filter(employee => {
       return;
     }
 
-    let updatedClientData = { ...clientToEdit };
+    let updatedClientData = { ...clientToEdit, educationDetails: editableEducationDetails };
 
     // Handle new resume upload if a file was selected
     if (newResumeFile) {
@@ -5581,36 +5608,54 @@ const filteredBySearch = useMemo(() => {
               </div>
 
               {/* Education Details */}
-             <div className="client-preview-section">
+<div className="client-preview-section">
   <h4 className="client-preview-section-title">Education Details</h4>
-  {clientToEdit.educationDetails && clientToEdit.educationDetails.length > 0 ? (
-    clientToEdit.educationDetails.map((edu, index) => (
+  {editableEducationDetails.length > 0 ? (
+    editableEducationDetails.map((edu, index) => (
       <div key={index} style={{ marginBottom: '1rem', padding: '1rem', border: '1px solid #e0e0e0', borderRadius: '8px' }}>
-        <h5 style={{ fontSize: '1rem', marginBottom: '1rem' }}>Education Entry {index + 1}</h5>
+        <h5 style={{ fontSize: '1rem', marginBottom: '1rem' }}>
+          Education Entry {index + 1}
+          {editableEducationDetails.length > 1 && (
+            <button
+              type="button"
+              onClick={() => handleRemoveEducationEntry(index)}
+              style={{ float: 'right', background: '#dc3545', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '5px', cursor: 'pointer' }}
+            >
+              Remove
+            </button>
+          )}
+        </h5>
         <div className="assign-form-group">
           <label>University Name</label>
-          <input type="text" name={`universityName-${index}`} value={edu.universityName || ''} onChange={(e) => handleEditClientChange(e, index, 'universityName')} readOnly={!isEditingClient} />
+          <input type="text" name="universityName" value={edu.universityName || ''} onChange={(e) => handleEducationChange(e, index, 'universityName')} readOnly={!isEditingClient} />
         </div>
         <div className="assign-form-group">
           <label>University Address</label>
-          <input type="text" name={`universityAddress-${index}`} value={edu.universityAddress || ''} onChange={(e) => handleEditClientChange(e, index, 'universityAddress')} readOnly={!isEditingClient} />
+          <input type="text" name="universityAddress" value={edu.universityAddress || ''} onChange={(e) => handleEducationChange(e, index, 'universityAddress')} readOnly={!isEditingClient} />
         </div>
         <div className="assign-form-group">
           <label>Course of Study</label>
-          <input type="text" name={`courseOfStudy-${index}`} value={edu.courseOfStudy || ''} onChange={(e) => handleEditClientChange(e, index, 'courseOfStudy')} readOnly={!isEditingClient} />
+          <input type="text" name="courseOfStudy" value={edu.courseOfStudy || ''} onChange={(e) => handleEducationChange(e, index, 'courseOfStudy')} readOnly={!isEditingClient} />
         </div>
         <div className="assign-form-group">
           <label>Graduation From Date</label>
-          <input type="date" name={`graduationFromDate-${index}`} value={edu.graduationFromDate || ''} onChange={(e) => handleEditClientChange(e, index, 'graduationFromDate')} readOnly={!isEditingClient} />
+          <input type="date" name="graduationFromDate" value={edu.graduationFromDate || ''} onChange={(e) => handleEducationChange(e, index, 'graduationFromDate')} readOnly={!isEditingClient} />
         </div>
         <div className="assign-form-group">
           <label>Graduation To Date</label>
-          <input type="date" name={`graduationToDate-${index}`} value={edu.graduationToDate || ''} onChange={(e) => handleEditClientChange(e, index, 'graduationToDate')} readOnly={!isEditingClient} />
+          <input type="date" name="graduationToDate" value={edu.graduationToDate || ''} onChange={(e) => handleEducationChange(e, index, 'graduationToDate')} readOnly={!isEditingClient} />
         </div>
       </div>
     ))
   ) : (
     <div className="read-only-value">No education details provided.</div>
+  )}
+  {isEditingClient && (
+    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
+      <button type="button" onClick={handleAddEducationEntry} className="assign-form-button assign" style={{ padding: '8px 16px' }}>
+        + Add Education
+      </button>
+    </div>
   )}
 </div>
 
