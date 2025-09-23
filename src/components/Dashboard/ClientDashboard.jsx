@@ -619,6 +619,16 @@ const ClientHeader = ({
                   </svg>
                   Your Profile
                 </li>
+                <li className="profile-dropdown-item" onClick={onLogoClick}>
+                  {/* User Icon */}
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" fill="currentColor" style={{ width: '1rem', height: '1rem' }}>
+  <path d="M541 229.16 310.6 25.5c-7.7-6.9-19.5-6.9-27.2 0L35 229.16c-10.2 9.2-11 25-1.8 35.2s25 11 35.2 1.8L96 247.1V464c0 26.5 
+    21.5 48 48 48h112V336h64v176h112c26.5 0 48-21.5 48-48V247.1l27.6 19.1c4.5 3.1 9.6 4.6 14.6 4.6 
+    7.1 0 14.2-3.1 19-9 9.2-10.2 8.4-26-1.8-35.2z"/>
+</svg>
+
+                  Home Page
+                </li>
 
                 {/* <li className="profile-dropdown-item logout" onClick={onLogoutClick}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1rem', height: '1rem' }}>
@@ -5134,7 +5144,7 @@ html.dark-mode .notify-success-message {
         onSubscriptionClick={handleSubscriptionClick}
         unreadNotificationsCount={unreadNotificationsCount}
         onNotificationClick={handleNotificationClick}
-        onLogoutClick={handleLogout}
+        // onLogoutClick={handleLogout}
         onLogoClick={() => navigate('/')}
         activeServices={activeServices}
         inactiveServices={inactiveServices}
