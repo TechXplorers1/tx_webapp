@@ -21,7 +21,7 @@ const ClientManagement = () => {
   const [newCoverLetterFile, setNewCoverLetterFile] = useState(null); // Add this for cover letters
   const [selectedServiceFilter, setSelectedServiceFilter] = useState('All');
   const simplifiedServices = ['Mobile Development', 'Web Development', 'Digital Marketing', 'IT Talent Supply', 'Cyber Security'];
-  const [newResumeFile, setNewResumeFile] = useState(null);
+  const [newResumeFiles, setNewResumeFiles] = useState({});
   const [serviceRegistrations, setServiceRegistrations] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -111,6 +111,14 @@ const ClientManagement = () => {
     }
   };
 
+    const handleResumeFileChange = (e, index) => {
+    if (e.target.files[0]) {
+      setNewResumeFiles(prev => ({
+        ...prev,
+        [index]: e.target.files[0] // Store the new file with its corresponding index
+      }));
+    }
+  };
     const handleDeclineClient = async (registration) => {
         if (!registration || !registration.clientFirebaseKey || !registration.registrationKey) {
             console.error("Missing registration details to decline client.");
@@ -390,7 +398,7 @@ const handleAssignClient = async (registration) => {
   const handleCloseEditClientModal = () => {
     setIsEditClientModalOpen(false);
     setCurrentClientToEdit(null);
-    setNewResumeFile(null); // Reset file input state
+    setNewResumeFiles({}); // Reset file input state
     setNewCoverLetterFile(null);
   };
 
@@ -421,33 +429,53 @@ const handleCoverLetterFileChange = (e) => {
       alert("Error: No client selected or client is missing a key.");
       return;
     }
-    setIsSaving(true); 
-
+    setIsSaving(true);
 
     try {
-      const updates = { ...currentClientToEdit };
+      const storage = getStorage();
+      // Create a mutable copy of the existing resumes array to update
+      const updatedResumes = [...(currentClientToEdit.resumes || [])];
 
-      if (newResumeFile) {
-        const storage = getStorage();
-        const filePath = `resumes/${currentClientToEdit.clientFirebaseKey}/${currentClientToEdit.registrationKey}/${newResumeFile.name}`;
+      // Process all selected file uploads concurrently
+      const uploadPromises = Object.entries(newResumeFiles).map(async ([indexStr, file]) => {
+        const index = parseInt(indexStr, 10);
+        const filePath = `resumes/${currentClientToEdit.clientFirebaseKey}/${currentClientToEdit.registrationKey}/${file.name}`;
         const fileRef = storageRef(storage, filePath);
 
-        await uploadBytes(fileRef, newResumeFile);
-        const resumeUrl = await getDownloadURL(fileRef);
+        await uploadBytes(fileRef, file);
+        const downloadUrl = await getDownloadURL(fileRef);
 
-        updates.resumeUrl = resumeUrl;
-        updates.resumeFileName = newResumeFile.name;
-        delete updates.newResumeFile;
-      }
-       if (newCoverLetterFile) {
-            const storage = getStorage();
-            const filePath = `coverletters/${currentClientToEdit.clientFirebaseKey}/${currentClientToEdit.registrationKey}/${newCoverLetterFile.name}`;
-            const fileRef = storageRef(storage, filePath);
+        // Return the new resume data object along with its original index
+        return {
+          index,
+          data: {
+            name: file.name,
+            url: downloadUrl,
+            size: file.size,
+          }
+        };
+      });
+      
+      const uploadResults = await Promise.all(uploadPromises);
 
-            await uploadBytes(fileRef, newCoverLetterFile);
-            updates.coverLetterUrl = await getDownloadURL(fileRef);
-            updates.coverLetterFileName = newCoverLetterFile.name;
+      // Update the resumes array with the new data at the correct positions
+      uploadResults.forEach(({ index, data }) => {
+        if (updatedResumes[index]) {
+          updatedResumes[index] = data;
         }
+      });
+
+      // Prepare the final object to be saved
+      const updates = { ...currentClientToEdit, resumes: updatedResumes };
+      
+      // Handle cover letter upload (existing logic)
+      if (newCoverLetterFile) {
+        const filePath = `coverletters/${currentClientToEdit.clientFirebaseKey}/${currentClientToEdit.registrationKey}/${newCoverLetterFile.name}`;
+        const fileRef = storageRef(storage, filePath);
+        await uploadBytes(fileRef, newCoverLetterFile);
+        updates.coverLetterUrl = await getDownloadURL(fileRef);
+        updates.coverLetterFileName = newCoverLetterFile.name;
+      }
 
       const {
         firstName, lastName, email, mobile,
@@ -460,14 +488,9 @@ const handleCoverLetterFileChange = (e) => {
       await update(regRef, registrationUpdates);
       await update(clientProfileRef, { firstName, lastName, email, mobile });
 
-      console.log("Client details updated successfully in Firebase.");
       handleCloseEditClientModal();
-      setNewResumeFile(null);
-      setNewCoverLetterFile(null);
       setShowSuccessModal(true);
-      setTimeout(() => {
-        setShowSuccessModal(false);
-      }, 3000);
+      setTimeout(() => setShowSuccessModal(false), 3000);
 
     } catch (error) {
       console.error("Failed to update client details in Firebase:", error);
@@ -476,7 +499,6 @@ const handleCoverLetterFileChange = (e) => {
       setIsSaving(false);
     }
   };
-  
 
   // --- Rendering Functions ---
  const renderClientTable = (registrationsToRender, serviceType, currentClientFilter, title = '') => {
@@ -2185,21 +2207,38 @@ const handleCoverLetterFileChange = (e) => {
                     </div>
                   </div>
                  <div className="client-preview-section">
-  <h4 className="client-preview-section-title">Resumes</h4>
-  {currentClientToEdit.resumes && currentClientToEdit.resumes.length > 0 ? (
-    currentClientToEdit.resumes.map((resume, index) => (
-      <div key={index} className="assign-form-group">
-        <label>Resume {index + 1}</label>
-        <div className="read-only-value" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span>{resume.name}</span>
-          <a href={resume.url} download={resume.name} target="_blank" rel="noopener noreferrer" className="assign-form-button assign" style={{ textDecoration: 'none' }}>Download</a>
-        </div>
-      </div>
-    ))
-  ) : (
-    <div className="read-only-value">No resumes uploaded.</div>
-  )}
-</div>
+                    <h4 className="client-preview-section-title">Resume(s)</h4>
+                    
+                    {/* FIX: Use optional chaining (?.) to prevent crash if currentClientToEdit is null */}
+                    {currentClientToEdit?.resumes && currentClientToEdit.resumes.length > 0 ? (
+                      currentClientToEdit.resumes.map((resume, index) => (
+                        <div key={index} className="assign-form-group" style={{ marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid #e0e0e0' }}>
+                          <label htmlFor={`newResumeFile-${index}`}>
+                            Resume {index + 1}: <span style={{ fontWeight: 'normal', color: '#6b7280' }}>{resume.name}</span>
+                          </label>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '5px' }}>
+                            {/* Hidden file input, triggered by the label button */}
+                            <input
+                              type="file"
+                              id={`newResumeFile-${index}`}
+                              name={`newResumeFile-${index}`}
+                              onChange={(e) => handleResumeFileChange(e, index)}
+                              accept=".pdf,.doc,.docx"
+                              style={{ display: 'none' }} 
+                            />
+                            {/* This label acts as the visible "Choose File" button */}
+                            <label htmlFor={`newResumeFile-${index}`} className="action-button assign" style={{ cursor: 'pointer', textDecoration: 'none', backgroundColor: '#007bff', color: 'white' }}>
+                              Update File
+                            </label>
+                            {/* Display the name of the newly selected file for feedback */}
+                            {newResumeFiles[index] && <span style={{ fontSize: '0.85rem', color: '#28a745' }}>New: {newResumeFiles[index].name}</span>}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="read-only-value">No resumes available to update.</div>
+                    )}
+                  </div>
                   <div className="client-preview-section">
                         <h4 className="client-preview-section-title">Cover Letter</h4>
                         <div className="assign-form-group">

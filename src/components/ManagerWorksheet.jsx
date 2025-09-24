@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'; // Import useRef
 import { useNavigate } from 'react-router-dom';
-import { Modal, Button } from 'react-bootstrap'; // Using react-bootstrap Modal
+import { Modal, Button, Spinner } from 'react-bootstrap'; // Using react-bootstrap Modal
 import { getDatabase, ref, onValue, update, push, set } from "firebase/database"; // Import Firebase functions
 import { database, auth } from '../firebase'; // Import your Firebase config
 import { createUserWithEmailAndPassword } from "firebase/auth";
@@ -10,64 +10,7 @@ import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "fire
 
 
 
-const FilterComponent = ({
-  filterDateRange,
-  handleDateRangeChange,
-  sortOrder,
-  setSortOrder,
-  quickFilter,
-  handleQuickFilterChange,
-  areFiltersActive,
-  handleClearFilters,
-  sortOptions
-}) => {
-  return (
-    <div className="filter-container-style">
-      <div className="filter-group-style">
-        <label className="filter-label-style">Date Range</label>
-        <div className="date-range-input-group-style">
-          <input
-            type="date"
-            name="startDate"
-            value={filterDateRange.startDate}
-            onChange={handleDateRangeChange}
-            className="date-input-style"
-          />
-          <span style={{ margin: '0 8px', color: '#64748b' }}>to</span>
-          <input
-            type="date"
-            name="endDate"
-            value={filterDateRange.endDate}
-            onChange={handleDateRangeChange}
-            className="date-input-style"
-          />
-        </div>
-      </div>
 
-      <div className="filter-group-style" style={{ marginLeft: 'auto' }}>
-        <label className="filter-label-style">Sort Order</label>
-        <select
-          value={sortOrder}
-          onChange={(e) => setSortOrder(e.target.value)}
-          className="select-filter-style"
-        >
-          {sortOptions.map(option => <option key={option} value={option}>{option}</option>)}
-        </select>
-      </div>
-
-
-      {areFiltersActive() && (
-        <div className="clear-filters-button-container-style">
-          <label className="filter-label-style">Actions</label>
-          <button onClick={handleClearFilters} className="clear-filters-button-style">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 4H8l-7 16 7 16h13a2 2 0 0 0 2-2V6a2 0 0 0-2-2z"></path><line x1="18" y1="9" x2="12" y2="15"></line><line x1="12" y1="9" x2="18" y2="15"></line></svg>
-            Clear Filters
-          </button>
-        </div>
-      )}
-    </div>
-  );
-};
 
 
 const ManagerWorkSheet = () => {
@@ -84,6 +27,11 @@ const ManagerWorkSheet = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [editableEducationDetails, setEditableEducationDetails] = useState([]);
+  const [dailyApplicationCount, setDailyApplicationCount] = useState(0);
+const [filteredApplicationCount, setFilteredApplicationCount] = useState(0);
+const [selectedEmployeeDailyCount, setSelectedEmployeeDailyCount] = useState(0);
+const [isSaving, setIsSaving] = useState(false);
+const [originalClientData, setOriginalClientData] = useState(null);
 
 
   // State to manage the active tab, now including 'Assigned', 'Interviews', 'Notes'
@@ -200,6 +148,16 @@ const openEditApplicationModal = (application) => {
   setIsEditApplicationModalOpen(true);
   setIsApplicationDetailModalOpen(false);
 };
+
+
+  const handleSuccessModalClose = () => {
+    setShowSuccessModal(false); // Close the success pop-up
+    
+    // If the employee's client list modal is open, close it as well.
+    if (isEmployeeClientsModalOpen) {
+      closeEmployeeClientsModal();
+    }
+  };
 
 const handleAttachmentClick = (attachments) => {
   setCurrentAttachments(attachments);
@@ -648,8 +606,7 @@ const [selectedEmployeeForClients, setSelectedEmployeeForClients] = useState({
   // NEW: State for LLM response and loading status
   const [llmResponse, setLlmResponse] = useState('');
   const [isLoadingLLMResponse, setIsLoadingLLMResponse] = useState(false);
-    const [newResumeFile, setNewResumeFile] = useState(null);
-
+const [newResumeFiles, setNewResumeFiles] = useState({});
 
 const [applicationFilterDateRange, setApplicationFilterDateRange] = useState({ startDate: '', endDate: '' });
 const [interviewFilterDateRange, setInterviewFilterDateRange] = useState({ startDate: '', endDate: '' });
@@ -687,6 +644,7 @@ const [interviewFilterDateRange, setInterviewFilterDateRange] = useState({ start
     setFilterDateRange({ startDate, endDate });
     setQuickFilter(filterType);
   };
+
   
   const areFiltersActive = () => {
     return filterDateRange.startDate !== '' || filterDateRange.endDate !== '' || sortOrder !== 'Newest First' || quickFilter !== '';
@@ -708,6 +666,15 @@ const handleClearFilters = () => {
     setInterviewSearchQuery('');
     setInterviewFilterRound('All Rounds');
 };
+
+  const handleIndividualResumeChange = (e, index) => {
+    if (e.target.files && e.target.files[0]) {
+      setNewResumeFiles(prev => ({
+        ...prev,
+        [index]: e.target.files[0] // Store the file with its corresponding index
+      }));
+    }
+  };
 
 // Inside the ManagerWorkSheet component, replace or add these functions
 const handleClearApplicationsFilters = () => {
@@ -787,6 +754,66 @@ const areInterviewsFiltersActive = () => {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+};
+
+
+const FilterComponent = ({
+  filterDateRange,
+  handleDateRangeChange,
+  sortOrder,
+  setSortOrder,
+  quickFilter,
+  handleQuickFilterChange,
+  areFiltersActive,
+  handleClearFilters,
+  sortOptions
+}) => {
+  return (
+    <div className="filter-container-style">
+      <div className="filter-group-style">
+        <label className="filter-label-style">Date Range</label>
+        <div className="date-range-input-group-style">
+          <input
+            type="date"
+            name="startDate"
+            value={filterDateRange.startDate}
+            onChange={handleDateRangeChange}
+            className="date-input-style"
+          />
+          <span style={{ margin: '0 8px', color: '#64748b' }}>to</span>
+          <input
+            type="date"
+            name="endDate"
+            value={filterDateRange.endDate}
+            onChange={handleDateRangeChange}
+            className="date-input-style"
+          />
+        </div>
+      </div>
+
+      <div className="filter-group-style" style={{ marginLeft: 'auto' }}>
+        <label className="filter-label-style">Sort Order</label>
+        <select
+          value={sortOrder}
+          onChange={(e) => setSortOrder(e.target.value)}
+          className="select-filter-style"
+        >
+          {sortOptions.map(option => <option key={option} value={option}>{option}</option>)}
+        </select>
+      </div>
+
+
+      {areFiltersActive() && (
+        <div className="clear-filters-button-container-style">
+          <label className="filter-label-style">Actions</label>
+          <button onClick={handleClearFilters} className="clear-filters-button-style">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 4H8l-7 16 7 16h13a2 2 0 0 0 2-2V6a2 0 0 0-2-2z"></path><line x1="18" y1="9" x2="12" y2="15"></line><line x1="12" y1="9" x2="18" y2="15"></line></svg>
+            Clear Filters
+          </button>
+        </div>
+      )}
+    </div>
+  );
 };
 
 
@@ -1235,6 +1262,38 @@ const filteredApplicationData = useMemo(() => {
     return filtered;
 }, [applicationData, applicationSearchQuery, applicationFilterEmployee, applicationFilterClient, applicationFilterDateRange, sortOrder, allEmployees]);
 
+
+  // Add this useMemo hook within the ManagerWorkSheet component
+const applicationCounts = useMemo(() => {
+  const today = getLocalDateString();
+  
+  // 1. Calculate today's count for all employees
+  const todayCount = filteredApplicationData.filter(app => app.appliedDate === today).length;
+
+  // 2. Calculate filtered count based on the date range
+  let filteredCount = filteredApplicationData.length;
+  const start = applicationFilterDateRange.startDate;
+  const end = applicationFilterDateRange.endDate;
+  if (start || end) {
+      filteredCount = filteredApplicationData.filter(app => {
+          const appDate = new Date(app.appliedDate);
+          const startDate = start ? new Date(start) : null;
+          const endDate = end ? new Date(end) : null;
+          return (!startDate || appDate >= startDate) && (!endDate || appDate <= endDate);
+      }).length;
+  }
+
+  // 3. Calculate today's count for a specific employee if one is selected
+  let employeeTodayCount = 0;
+  if (applicationFilterEmployee) {
+      employeeTodayCount = filteredApplicationData.filter(app => 
+          app.assignedTo === applicationFilterEmployee && app.appliedDate === today
+      ).length;
+  }
+
+  return { todayCount, filteredCount, employeeTodayCount };
+}, [filteredApplicationData, applicationFilterDateRange, applicationFilterEmployee]);
+
   // Get unique client names for the filter dropdown - NOW ONLY FROM ASSIGNED CLIENTS
 const uniqueAssignedClientNames = useMemo(() => {
   return [...new Set(assignedClients.map(client => `${client.firstName} ${client.lastName}`.trim()))];
@@ -1271,25 +1330,25 @@ const filteredEmployees = displayEmployees.filter(employee => {
 
     const handleResumeFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
-      setNewResumeFile(e.target.files[0]);
+      setNewResumeFiles(e.target.files[0]);
     }
   };
 
   // NEW: Function to open Client Preview/Edit Modal
- const openEditClientModal = (clientObject) => {
-  if (clientObject) {
-    setClientToEdit({ ...clientObject });
-    // Initialize editable education details from the client object
-    setEditableEducationDetails(clientObject.educationDetails || []);
-    setIsEditingClient(false);
-    setIsEditClientModalOpen(true);
-    setLlmResponse('');
-    setNewResumeFile(null);
-  } else {
-    console.warn(`Client with name not found for editing.`);
-    alert(`Client details for are not available for editing.`);
-  }
-};
+  const openEditClientModal = (clientObject) => {
+    if (clientObject) {
+      setOriginalClientData(clientObject); // Store the original data for comparison
+      setClientToEdit({ ...clientObject });
+      setEditableEducationDetails(clientObject.educationDetails || []);
+      setIsEditingClient(false);
+      setIsEditClientModalOpen(true);
+      setLlmResponse('');
+      setNewResumeFiles({});
+    } else {
+      console.warn(`Client object was not provided for editing.`);
+      alert(`Client details are not available for editing.`);
+    }
+  };
 
   // NEW: Function to close Client Preview/Edit Modal
   const closeEditClientModal = () => {
@@ -1297,7 +1356,7 @@ const filteredEmployees = displayEmployees.filter(employee => {
     setClientToEdit(null);
     setIsEditingClient(false); // Reset edit mode on close
     setLlmResponse(''); // Clear LLM response on close
-    setNewResumeFile(null);
+    setNewResumeFiles({});
   };
 
   // NEW: Handle changes in the edit client form
@@ -1319,87 +1378,93 @@ const filteredEmployees = displayEmployees.filter(employee => {
   };
 
   // NEW: Handle updating client details
- const handleUpdateClient = async () => {
-    // 1. Check for the correct keys to ensure we can save.
+// Replace the entire handleUpdateClient function with this one
+  const handleUpdateClient = async () => {
     if (!clientToEdit || !clientToEdit.clientFirebaseKey || !clientToEdit.registrationKey) {
       console.error("Cannot update: missing client or registration key.");
-      alert("An error occurred while trying to save client details.");
       return;
     }
 
-    let updatedClientData = { ...clientToEdit, educationDetails: editableEducationDetails };
-
-    // Handle new resume upload if a file was selected
-    if (newResumeFile) {
-      try {
-        const fileRef = storageRef(getStorage(), `resumes/${clientToEdit.clientFirebaseKey}/${clientToEdit.registrationKey}/${newResumeFile.name}`);
-        const uploadResult = await uploadBytes(fileRef, newResumeFile);
-        const downloadURL = await getDownloadURL(uploadResult.ref);
-
-        // Update the data object with the new resume info
-        updatedClientData.resumeUrl = downloadURL;
-        updatedClientData.resumeFileName = newResumeFile.name;
-        
-      } catch (uploadError) {
-        console.error("Failed to upload new resume:", uploadError);
-        alert("Error uploading resume. Client details were not saved.");
-        return; // Stop the save process if upload fails
-      }
-    }
-
-            // NEW: Handle new cover letter upload if a file was selected
-        if (newCoverLetterFile) {
-            try {
-                const fileRef = storageRef(getStorage(), `coverletters/${clientToEdit.clientFirebaseKey}/${clientToEdit.registrationKey}/${newCoverLetterFile.name}`);
-                const uploadResult = await uploadBytes(fileRef, newCoverLetterFile);
-                const downloadURL = await getDownloadURL(uploadResult.ref);
-                updatedClientData.coverLetterUrl = downloadURL;
-                updatedClientData.coverLetterFileName = newCoverLetterFile.name;
-            } catch (uploadError) {
-                console.error("Failed to upload new cover letter:", uploadError);
-                alert("Error uploading cover letter. Client details were not saved.");
-                return;
-            }
-        }
-
-    // 2. Separate the data: some fields belong to the main client profile,
-    //    and the rest belong to the specific service registration.
-    const {
-        clientFirebaseKey,
-        registrationKey,
-        // Parent client fields
-        firstName,
-        lastName,
-        email,
-        mobile,
-        // The rest of the data is for the registration
-        ...registrationData
-    } = updatedClientData;
-
-    // 3. Define the two paths we need to update in Firebase.
-    const registrationRef = ref(database, `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}`);
-    const clientProfileRef = ref(database, `clients/${clientFirebaseKey}`);
-
-    // 4. Prepare the objects for the two separate updates.
-    const profileUpdate = {
-        firstName,
-        lastName,
-        email,
-        mobile
-    };
-
+    setIsSaving(true);
     try {
-        // 5. Perform both updates: one for the registration and one for the main profile.
-        await update(registrationRef, registrationData);
-        await update(clientProfileRef, profileUpdate);
+      const updatedClientData = { ...clientToEdit, educationDetails: editableEducationDetails };
+      
+      // --- This section handles all file uploads (resumes, cover letter) ---
+      const storage = getStorage();
+      if (Object.keys(newResumeFiles).length > 0) {
+        // ... (resume upload logic remains the same)
+        const updatedResumesArray = [...(updatedClientData.resumes || [])];
+        const uploadPromises = Object.entries(newResumeFiles).map(async ([indexStr, file]) => {
+            const index = parseInt(indexStr, 10);
+            const filePath = `resumes/${clientToEdit.clientFirebaseKey}/${clientToEdit.registrationKey}/${file.name}`;
+            const fileRef = storageRef(storage, filePath);
+            await uploadBytes(fileRef, file);
+            const downloadURL = await getDownloadURL(fileRef);
+            return { index, data: { name: file.name, url: downloadURL, size: file.size } };
+        });
+        const uploadResults = await Promise.all(uploadPromises);
+        uploadResults.forEach(({ index, data }) => {
+            if (updatedResumesArray[index]) updatedResumesArray[index] = data;
+        });
+        updatedClientData.resumes = updatedResumesArray;
+      }
+      if (newCoverLetterFile) {
+        // ... (cover letter upload logic remains the same)
+        const fileRef = storageRef(storage, `coverletters/${clientToEdit.clientFirebaseKey}/${clientToEdit.registrationKey}/${newCoverLetterFile.name}`);
+        await uploadBytes(fileRef, newCoverLetterFile);
+        const downloadURL = await getDownloadURL(fileRef);
+        updatedClientData.coverLetterUrl = downloadURL;
+        updatedClientData.coverLetterFileName = newCoverLetterFile.name;
+      }
 
-        setSuccessMessage(`Successfully updated details for ${firstName} ${lastName}.`);
-        setShowSuccessModal(true);
-        // setIsEditingClient(false); // Switch back to view mode
-        closeEditClientModal(); // Close the modal on success
+      // --- This section updates the database (remains the same) ---
+      const { clientFirebaseKey, registrationKey, firstName, lastName, email, mobile, ...registrationData } = updatedClientData;
+      const registrationRef = ref(database, `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}`);
+      const clientProfileRef = ref(database, `clients/${clientFirebaseKey}`);
+      const profileUpdate = { firstName, lastName, email, mobile };
+      await update(registrationRef, registrationData);
+      await update(clientProfileRef, profileUpdate);
+      
+      // --- NEW: Generate a detailed success message ---
+      const getChanges = (original, updated) => {
+          const changes = [];
+          const keysToCompare = ['firstName', 'lastName', 'email', 'mobile', 'priority', 'status', 'jobsToApply', 'expectedSalary'];
+          
+          keysToCompare.forEach(key => {
+              const originalValue = original[key] || 'N/A';
+              const updatedValue = updated[key] || 'N/A';
+              if (originalValue !== updatedValue) {
+                  changes.push(`<li><strong>${key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:</strong> "${originalValue}" to "${updatedValue}"</li>`);
+              }
+          });
+          if (Object.keys(newResumeFiles).length > 0) changes.push(`<li><strong>Resumes:</strong> Updated ${Object.keys(newResumeFiles).length} file(s).</li>`);
+          if (newCoverLetterFile) changes.push(`<li><strong>Cover Letter:</strong> Updated file.</li>`);
+          return changes.join('');
+      };
+
+      const changesString = getChanges(originalClientData, updatedClientData);
+
+      const successMsg = (
+          <div>
+              <p>Details for {firstName} {lastName} were updated successfully.</p>
+              {changesString && (
+                  <>
+                      <h5 style={{ marginTop: '15px', textAlign: 'left' }}>Changes Made:</h5>
+                      <ul style={{ textAlign: 'left', fontSize: '0.9rem', listStylePosition: 'inside' }} dangerouslySetInnerHTML={{ __html: changesString }} />
+                  </>
+              )}
+          </div>
+      );
+
+      setSuccessMessage(successMsg); // Set the new JSX message
+      setShowSuccessModal(true);
+      closeEditClientModal();
+
     } catch (error) {
-        console.error("Failed to update client details:", error);
-        alert("Error updating client details.");
+      console.error("Failed to update client details:", error);
+      alert("Error updating client details.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -1578,7 +1643,11 @@ const ApplicationsTab = ({
   quickFilter,
   handleQuickFilterChange,
   areFiltersActive,
-  handleClearFilters
+  handleClearFilters,
+    dailyApplicationCount,
+  filteredApplicationCount,
+  selectedEmployeeDailyCount,
+  applicationFilterDateRange
   }) => {
 
       const [localSearchQuery, setLocalSearchQuery] = useState('');
@@ -1655,6 +1724,23 @@ const filteredBySearch = useMemo(() => {
               handleClearFilters={handleClearFilters}
               sortOptions={['Newest First', 'Oldest First', 'Job Title A-Z', 'Company A-Z']}
             />
+
+            <div className="application-counts-display">
+        {/* Count for all employees today */}
+        {!applicationFilterEmployee && (
+            <span className="count-badge">Today's Applications: <strong>{dailyApplicationCount}</strong></span>
+        )}
+        
+        {/* Count for selected employee today */}
+        {applicationFilterEmployee && (
+            <span className="count-badge">Applications for this employee (Today): <strong>{selectedEmployeeDailyCount}</strong></span>
+        )}
+
+        {/* Count for the applied date range filter */}&nbsp;&nbsp;
+        {(applicationFilterDateRange.startDate || applicationFilterDateRange.endDate) && (
+            <span className="count-badge">Applications for selected dates: <strong>{filteredApplicationCount}</strong></span>
+        )}
+      </div>
       
       {/* Search and Filter Section */}
       <div className="applications-filters">
@@ -4758,6 +4844,10 @@ const filteredBySearch = useMemo(() => {
             handleQuickFilterChange={handleQuickFilterChange}
             areFiltersActive={areApplicationsFiltersActive}
             handleClearFilters={handleClearApplicationsFilters}
+                dailyApplicationCount={applicationCounts.todayCount}
+    filteredApplicationCount={applicationCounts.filteredCount}
+    selectedEmployeeDailyCount={applicationCounts.employeeTodayCount}
+    applicationFilterDateRange={applicationFilterDateRange}
           />
 
         )}
@@ -5001,7 +5091,7 @@ const filteredBySearch = useMemo(() => {
                           <span><i className="fas fa-envelope"></i> {client.email || 'N/A'}</span>
                           <span><i className="fas fa-calendar-alt"></i><strong>Registered:</strong> {client.registeredDate || 'N/A'}</span>
                           <span><i className="fas fa-user-tie"></i><strong>Designation:</strong> {client.currentDesignation || 'N/A'}</span>
-                          <span><i className="fas fa-money-bill-wave"></i><strong>Salary:</strong> {client.currentSalary ? `$${client.currentSalary}` : 'N/A'}</span>
+                          <span><i className="fas fa-money-bill-wave"></i><strong>Expected Salary:</strong> {client.expectedSalary ? `$${client.expectedSalary}` : 'N/A'}</span>
                         </>
                       )}
                     </div>
@@ -5725,54 +5815,63 @@ const filteredBySearch = useMemo(() => {
               {/* NEW: Resume Download Section */}
   
 <div className="client-preview-section">
-  <h4 className="client-preview-section-title">Resume(s)</h4>
-  {isEditingClient ? (
-    // EDIT MODE VIEW
-    <div className="assign-form-group">
-      <label htmlFor="resumeUpload">Upload New Resume(s) (optional)</label>
-      {/* Display a list of currently selected files if any */}
-      {newResumeFile && newResumeFile.length > 0 ? (
-        <p style={{ fontSize: '0.9em', color: '#28a745' }}>
-          New files selected: <strong>{newResumeFile.map(file => file.name).join(', ')}</strong>
-        </p>
-      ) : (
-        <p style={{ fontSize: '0.9em', color: 'var(--subtitle-color)' }}>
-          {clientToEdit.resumes && clientToEdit.resumes.length > 0 ? `Current files: ${clientToEdit.resumes.map(r => r.name).join(', ')}` : 'No resumes on file.'}
-        </p>
-      )}
-      <input 
-        type="file" 
-        id="resumeUpload" 
-        name="resume" 
-        onChange={handleResumeFileChange} // Ensure this handler can take multiple files
-        accept=".pdf,.doc,.docx" 
-        multiple
-      />
-      <small style={{ color: 'var(--subtitle-color)', marginTop: '5px' }}>
-        Uploading a new file will replace the current one upon saving.
-      </small>
-    </div>
-  ) : (
-    // VIEW-ONLY MODE
-    clientToEdit.resumes && clientToEdit.resumes.length > 0 ? (
-      clientToEdit.resumes.map((resume, index) => (
-        <div key={index} className="assign-form-group">
-          <label>File Name</label>
-          <div className="read-only-value" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>{resume.name || 'No resume uploaded.'}</span>
-            {resume.url && (
-              <a href={resume.url} download={resume.name} target="_blank" rel="noopener noreferrer" className="assign-form-button assign" style={{ textDecoration: 'none' }}>
-                Download
-              </a>
-            )}
-          </div>
-        </div>
-      ))
-    ) : (
-      <div className="read-only-value">No resumes uploaded.</div>
-    )
-  )}
-</div>
+                <h4 className="client-preview-section-title">Resume(s)</h4>
+                {isEditingClient ? (
+                  // --- EDIT MODE ---
+                  <>
+                    {clientToEdit?.resumes && clientToEdit.resumes.length > 0 ? (
+                      clientToEdit.resumes.map((resume, index) => (
+                        <div key={index} className="assign-form-group" style={{ paddingBottom: '1rem', borderBottom: '1px solid #e0e0e0' }}>
+                          <label htmlFor={`resume-update-${index}`}>
+                            Resume {index + 1}: <span style={{ fontWeight: 'normal', color: 'var(--subtitle-color)' }}>{resume.name}</span>
+                          </label>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '5px' }}>
+                            <input
+                              type="file"
+                              id={`resume-update-${index}`}
+                              onChange={(e) => handleIndividualResumeChange(e, index)}
+                              accept=".pdf,.doc,.docx"
+                              style={{ display: 'none' }} // The input is hidden
+                            />
+                            {/* This label acts as the visible button */}
+                            <label htmlFor={`resume-update-${index}`} className="assign-form-button assign" style={{ cursor: 'pointer', margin: 0 }}>
+                              Update File
+                            </label>
+                            {/* Show the name of the new file if one is selected */}
+                            {newResumeFiles[index] && (
+                              <span style={{ fontSize: '0.85rem', color: '#28a745' }}>
+                                New: {newResumeFiles[index].name}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p style={{ color: 'var(--subtitle-color)' }}>No resumes on file to update.</p>
+                    )}
+                  </>
+                ) : (
+                  // --- VIEW MODE ---
+                  <>
+                    {clientToEdit?.resumes && clientToEdit.resumes.length > 0 ? (
+                      clientToEdit.resumes.map((resume, index) => (
+                        <div key={index} className="assign-form-group">
+                          <div className="read-only-value" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span>{resume.name || 'No resume uploaded.'}</span>
+                            {resume.url && (
+                              <a href={resume.url} download={resume.name} target="_blank" rel="noopener noreferrer" className="assign-form-button assign" style={{ textDecoration: 'none' }}>
+                                Download
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="read-only-value">No resumes uploaded.</div>
+                    )}
+                  </>
+                )}
+              </div>
 
               {/* NEW: Cover Letter Section */}
                             <div className="client-preview-section">
@@ -5848,13 +5947,26 @@ const filteredBySearch = useMemo(() => {
             </> // FIX: Closing fragment tag was missing
             )}
 
-            <div className="assign-form-actions">
+             <div className="assign-form-actions">
               <button className="assign-form-button cancel" onClick={closeEditClientModal}>
                 Cancel
               </button>
               {isEditingClient ? (
-                <button className="assign-form-button assign" onClick={handleUpdateClient}>
-                  Save Changes
+                <button className="assign-form-button assign" onClick={handleUpdateClient} disabled={isSaving}>
+                  {isSaving ? (
+                    <>
+                      <Spinner
+                        as="span"
+                        animation="border"
+                        size="sm"
+                        role="status"
+                        aria-hidden="true"
+                      />
+                      <span style={{ marginLeft: '8px' }}>Saving...</span>
+                    </>
+                  ) : (
+                    'Save Changes'
+                  )}
                 </button>
               ) : (
                 <button className="assign-form-button assign" onClick={() => setIsEditingClient(true)}>
@@ -6475,15 +6587,16 @@ const filteredBySearch = useMemo(() => {
         </div>
       )}
       {/* NEW: Success Confirmation Modal */}
-      <Modal show={showSuccessModal} onHide={() => setShowSuccessModal(false)} centered>
+         <Modal show={showSuccessModal} onHide={handleSuccessModalClose} centered>
         <Modal.Header closeButton>
           <Modal.Title>Success!</Modal.Title>
         </Modal.Header>
         <Modal.Body style={{ textAlign: 'center', padding: '20px' }}>
-          <p style={{ fontSize: '1.1rem' }}>{successMessage}</p>
+          {/* This can now render complex JSX for the detailed message */}
+          <div style={{ fontSize: '1.1rem' }}>{successMessage}</div>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="primary" onClick={() => setShowSuccessModal(false)}>
+          <Button variant="primary" onClick={handleSuccessModalClose}>
             Close
           </Button>
         </Modal.Footer>

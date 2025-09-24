@@ -1323,14 +1323,21 @@ const convertDDMMYYYYtoYYYYMMDD = (dateString) => {
 
 
 // Generate 7-day date range for the ribbon
-const generateDateRange = (startDate) => {
-  const dates = [];
-  for (let i = 0; i < 7; i++) {
-    const date = new Date(startDate);
-    date.setDate(startDate.getDate() + i);
-    dates.push(formatDate(date));
-  }
-  return dates;
+// FIX: Rewritten generateDateRange function to center the current date
+const generateDateRange = (centerDate) => {
+    const dates = [];
+    const options = { weekday: 'short' }; // Option to get the day of the week like "Mon", "Tue"
+    
+    // Loop from 3 days before the center date to 3 days after to create a 7-day range
+    for (let i = -3; i <= 3; i++) {
+        const date = new Date(centerDate);
+        date.setDate(centerDate.getDate() + i);
+        dates.push({
+            date: formatDate(date),
+            dayOfWeek: date.toLocaleDateString('en-US', options) // Add the day of the week
+        });
+    }
+    return dates;
 };
 
 // --- SAMPLE APPLICATIONS DATA ---
@@ -1441,59 +1448,60 @@ const Applications = ({
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
         }}>
-          <div style={{ display: 'inline-flex', gap: '8px' }}>
-            {dateRange.map((date) => (
-              <div
-                key={date}
-                onClick={() => setSelectedDate(date)}
-                style={{
-                  display: 'inline-block',
-                  padding: '10px 15px',
-                  borderRadius: '5px',
-                  backgroundColor: selectedDate === date ? '#007bff' : '#e9ecef',
-                  color: selectedDate === date ? 'white' : '#333',
-                  cursor: 'pointer',
-                  minWidth: '100px',
-                  textAlign: 'center',
-                  transition: 'all 0.2s ease',
-                  boxShadow: selectedDate === date ? '0 2px 5px rgba(0,123,255,0.3)' : 'none',
-                  flexShrink: 0
-                }}
-              >
-                {date}
-                {applicationsData[date] && (
-                  <div style={{
-                    fontSize: '12px',
-                    marginTop: '5px',
-                    fontWeight: 'bold',
-                    color: selectedDate === date ? 'rgba(255,255,255,0.8)' : '#666'
-                  }}>
-                    {applicationsData[date].length} application(s)
-                  </div>
-                )}
-              </div>
+  <div style={{ display: 'inline-flex', gap: '8px' }}>
+            {dateRange.map((dateObj) => (
+                <div
+                    key={dateObj.date}
+                    onClick={() => setSelectedDate(dateObj.date)}
+                    style={{
+                        display: 'inline-block',
+                        padding: '10px 15px',
+                        borderRadius: '5px',
+                        backgroundColor: selectedDate === dateObj.date ? '#007bff' : '#e9ecef',
+                        color: selectedDate === dateObj.date ? 'white' : '#333',
+                        cursor: 'pointer',
+                        minWidth: '100px',
+                        textAlign: 'center',
+                        transition: 'all 0.2s ease',
+                        boxShadow: selectedDate === dateObj.date ? '0 2px 5px rgba(0,123,255,0.3)' : 'none',
+                        flexShrink: 0
+                    }}
+                >
+                    <div style={{ fontSize: '14px', fontWeight: 'bold' }}>{dateObj.date}</div>
+                    <div style={{ fontSize: '12px', marginTop: '2px', color: selectedDate === dateObj.date ? 'rgba(255,255,255,0.8)' : '#666' }}>
+                        {dateObj.dayOfWeek}
+                    </div>
+                    {applicationsData[dateObj.date] && (
+                        <div style={{
+                            fontSize: '12px',
+                            marginTop: '5px',
+                            fontWeight: 'bold',
+                            color: selectedDate === dateObj.date ? 'rgba(255,255,255,0.8)' : '#666'
+                        }}>
+                            {applicationsData[dateObj.date].length} application(s)
+                        </div>
+                    )}
+                </div>
             ))}
-          </div>
         </div>
+    </div>
 
-        <button
-          onClick={showNextWeek}
-          disabled={new Date(currentStartDate.getFullYear(), currentStartDate.getMonth(), currentStartDate.getDate() + 7).getTime() > new Date().getTime()}
-          style={{
-            background: '#007bff',
-            color: 'white',
-            border: 'none',
-            padding: '8px 12px',
-            borderRadius: '5px',
-            cursor: 'pointer',
-            marginLeft: '10px',
-            fontSize: '16px',
-            opacity: new Date(currentStartDate.getFullYear(), currentStartDate.getMonth(), currentStartDate.getDate() + 7).getTime() > new Date().getTime() ? 0.5 : 1,
-            flexShrink: 0
-          }}
-        >
-          ▶
-        </button>
+     <button
+  onClick={showNextWeek}
+  style={{
+    background: '#007bff',
+    color: 'white',
+    border: 'none',
+    padding: '8px 12px',
+    borderRadius: '5px',
+    cursor: 'pointer',
+    marginLeft: '10px',
+    fontSize: '16px',
+    flexShrink: 0
+  }}
+>
+  ▶
+</button>
       </div>
 
       {/* Applications section */}
@@ -1504,9 +1512,9 @@ const Applications = ({
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
       }}>
         {/* Centered Heading */}
-        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+         <div style={{ textAlign: 'center', marginBottom: '20px' }}>
           <h3 style={{ margin: '0 auto', color: '#333' }}>
-            {getApplicationsSectionTitle()}
+            {getApplicationsSectionTitle(filteredApplicationsForDisplay.length)}
           </h3>
         </div>
 
@@ -2925,13 +2933,11 @@ useEffect(() => {
   // --- Handlers for Applications tab ---
 
   // Effect to generate initial date range and select today's date for Applications tab
-  useEffect(() => {
+   useEffect(() => {
     const today = new Date();
-    const initialStartDate = new Date(today);
-    initialStartDate.setDate(today.getDate() - 6);
-    setCurrentStartDate(initialStartDate);
-    setDateRange(generateDateRange(initialStartDate));
-    setSelectedDate(formatDate(today));
+    setSelectedDate(formatDate(today)); // Highlight today's date in the ribbon
+    setCurrentStartDate(today); // Set today as the center date for the range
+    setDateRange(generateDateRange(today)); // Generate the initial 7-day range
   }, []);
 
   // Effect to populate unique filter options from all application data for Applications tab
@@ -3050,8 +3056,16 @@ useEffect(() => {
   };
 
   const handleClearDateRangeInModal = () => {
+    // 1. Clear the temporary date selections within the modal
     setTempStartDate(null);
     setTempEndDate(null);
+
+    // FIX: Clear the actual date filters being applied to the dashboard
+    setStartDateFilter('');
+    setEndDateFilter('');
+
+    // 3. Close the modal for a better user experience
+    setShowDateRangeModal(false);
   };
 
   // --- Handlers for Job Description Modal ---
@@ -3088,40 +3102,37 @@ useEffect(() => {
   };
 
   const showPreviousWeek = () => {
-    const newStartDate = new Date(currentStartDate);
-    newStartDate.setDate(newStartDate.getDate() - 7);
-    setCurrentStartDate(newStartDate);
-    setDateRange(generateDateRange(newStartDate));
+    const newCenterDate = new Date(currentStartDate);
+    newCenterDate.setDate(newCenterDate.getDate() - 1); // Move back by 1 day
+    setCurrentStartDate(newCenterDate);
+    setDateRange(generateDateRange(newCenterDate));
   };
 
   const showNextWeek = () => {
-    const newStartDate = new Date(currentStartDate);
-    newStartDate.setDate(newStartDate.getDate() + 7);
-
-    const today = new Date();
-    // Only allow navigating to future weeks if there's actual data in those weeks
-    // For simplicity here, we only check against today's date to prevent going too far into future
-    if (newStartDate.getTime() <= today.getTime() || Object.keys(applicationsData).some(date => new Date(convertDDMMYYYYtoYYYYMMDD(date)).getTime() >= newStartDate.getTime())) {
-      setCurrentStartDate(newStartDate);
-      setDateRange(generateDateRange(newStartDate));
-    }
+    const newCenterDate = new Date(currentStartDate);
+    newCenterDate.setDate(newCenterDate.getDate() + 1); // Move forward by 1 day
+    setCurrentStartDate(newCenterDate);
+    setDateRange(generateDateRange(newCenterDate));
   };
 
 
   // Update the title dynamically based on active filters
-  const getApplicationsSectionTitle = () => {
+  const getApplicationsSectionTitle = (count) => {
     const hasDateRangeFilter = startDateFilter && endDateFilter;
     const hasSearchTerm = searchTerm !== '';
     const hasCategoricalFilters = filterWebsites.length > 0 || filterPositions.length > 0 || filterCompanies.length > 0;
 
     if (hasDateRangeFilter) {
-      return `Filtered Applications (From ${startDateFilter} - To ${endDateFilter})`;
+      // This line is updated to include the count as you requested
+      return `Filtered Applications (From ${startDateFilter} - To ${endDateFilter}) Total Count: ${count}`;
     } else if (hasSearchTerm || hasCategoricalFilters) {
-      return 'Filtered Applications (by search and/or other criteria)';
+      // Added count for other filter scenarios for consistency
+      return `Filtered Applications (${count} found)`;
     } else if (selectedDate) {
-      return `Applications for ${selectedDate}`;
+      // Added count for the daily view as well
+      return `Applications for ${selectedDate} (${count} found)`;
     }
-    return 'Job Applications'; // Default title if nothing selected/filtered
+    return 'Job Applications'; // Default title
   };
 
   // In ClientDashboard.jsx, add this new handler function.
