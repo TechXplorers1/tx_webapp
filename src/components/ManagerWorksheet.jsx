@@ -1826,6 +1826,7 @@ const filteredBySearch = useMemo(() => {
                                                         <th>Job ID</th>
                                                         <th>Link</th>
                                                         <th>Applied Date</th>
+                                                        <th>Applied Time</th>
                                                         <th>Status</th>
                                                         <th>Actions</th>
                                                     </tr>
@@ -1838,6 +1839,7 @@ const filteredBySearch = useMemo(() => {
                                                             <td>{app.jobId}</td>
                                                             <td><a href={app.jobUrl} target="_blank" rel="noopener noreferrer">Link</a></td>
                                                             <td>{formatDateToDDMMYYYY(app.appliedDate)}</td>
+                                                            <td>{formatDateTime(app.timestamp).time}</td>
                                                             <td>
                                                                 <span className={`status-badge status-${app.status?.toLowerCase()}`}>
                                                                     {app.status}
@@ -5130,18 +5132,22 @@ const filteredBySearch = useMemo(() => {
             </div>
 
             {/* MODIFIED: Replaced the <select> with a clickable <div> */}
-           <div className="form-row" style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
-                    <label style={{ width: '200px', fontWeight: '500' }}>Select Employee :</label>
-                    <div style={{ flex: 1 }}>
-                        {/* The pseudo-input correctly opens the employee selection modal */}
-                        <div className="pseudo-input" onClick={() => setIsEmployeeSelectModalOpen(true)}>
-                            {selectedEmployeeDetails
-                                ? selectedEmployeeDetails.fullName
-                                : "Click to choose an employee..."
-                            }
-                        </div>
+            <div className="form-row" style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
+                <label style={{ width: '200px', fontWeight: '500' }}>Select Employee :</label>
+                <div style={{ flex: 1 }}>
+                    {/* FIX 1: Added inline style to ensure text is aligned to the left */}
+                    <div
+                        className="pseudo-input"
+                        onClick={() => setIsEmployeeSelectModalOpen(true)}
+                        style={{ textAlign: 'left' }}
+                    >
+                        {selectedEmployeeDetails
+                            ? selectedEmployeeDetails.fullName
+                            : "Click to choose an employee..."
+                        }
                     </div>
                 </div>
+            </div>
 
             {/* The confirmation box still works perfectly! */}
               {selectedEmployeeDetails && (
@@ -5155,15 +5161,32 @@ const filteredBySearch = useMemo(() => {
                 )}
 
             {/* --- The rest of the form remains the same --- */}
-            <div className="form-row" style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
+             <div className="form-row" style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
                     <label style={{ width: '200px', fontWeight: '500' }}>Priority Level :</label>
-                    <div style={{ flex: 1 }}>
-                        <select className="pseudo-input" id="priorityLevel" value={assignmentPriority} onChange={(e) => setAssignmentPriority(e.target.value)}>
-                            <option value="high">High Priority</option>
-                            <option value="medium">Medium Priority</option>
-                            <option value="low">Low Priority</option>
-                        </select>
-                    </div>
+                    <div style={{ position: 'relative', flex: 1 }}>
+                    <select
+                        className="pseudo-input"
+                        id="priorityLevel"
+                        value={assignmentPriority}
+                        onChange={(e) => setAssignmentPriority(e.target.value)}
+                        style={{ paddingRight: '30px' }} // Add space for the icon
+                    >
+                        <option value="high">High Priority</option>
+                        <option value="medium">Medium Priority</option>
+                        <option value="low">Low Priority</option>
+                    </select>
+                    <i
+                        className="fas fa-chevron-down"
+                        style={{
+                            position: 'absolute',
+                            right: '12px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            pointerEvents: 'none',
+                            color: 'var(--icon-color)'
+                        }}
+                    ></i>
+                </div>
                 </div>
             <div className="form-row" style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
                     <label style={{ width: '200px', fontWeight: '500' }}>Assignment Notes :</label>

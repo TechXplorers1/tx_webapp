@@ -398,8 +398,7 @@ const handleConfirmAndSubmit = async (e) => {
   const backButtonStyle = { position: 'absolute', top: '20px', left: '20px', backgroundColor: '#6c757d', borderColor: '#6c757d', color: 'white', padding: '8px 15px', borderRadius: '5px', cursor: 'pointer', zIndex: 10 };
   const previewModalContentStyle = { maxHeight: '70vh', overflowY: 'auto', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '8px' };
   const previewValueDisplay = { padding: '0.4rem 0.6rem', fontSize: '0.95rem', backgroundColor: '#e9ecef', borderRadius: '5px', border: '1px solid #ced4da', minHeight: '38px', display: 'flex', alignItems: 'center', wordBreak: 'break-word' };
-  const previewTextAreaDisplay = { ...previewValueDisplay, minHeight: '80px', alignItems: 'flex-start' };
-
+const previewTextAreaDisplay = { ...previewValueDisplay, minHeight: '80px', alignItems: 'flex-start', whiteSpace: 'pre-wrap' };
   const modernStyles = `
     .job-support-form-wrapper {
       background: #f8f9fa;
@@ -979,8 +978,84 @@ const keyframes = `
         </Container>
 
         {/* Preview Modal */}
-        <Modal show={showPreviewModal} onHide={handleClosePreviewModal} centered size="lg">
-          <Modal.Header closeButton><Modal.Title>Preview Your Details</Modal.Title></Modal.Header>
+               {/* Modern Preview Modal */}
+        <Modal show={showPreviewModal} onHide={handleClosePreviewModal} centered size="lg" dialogClassName="modern-preview-modal">
+          <style>{`
+            .modern-preview-modal .modal-content {
+              border-radius: 16px;
+              border: none;
+              box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            }
+            .modern-preview-modal .modal-header {
+              background-color: #0d6efd;
+              color: white;
+              border-top-left-radius: 16px;
+              border-top-right-radius: 16px;
+              border-bottom: none;
+              padding: 1.5rem;
+            }
+            .modern-preview-modal .modal-title {
+              font-weight: 600;
+              font-size: 1.5rem;
+            }
+            .modern-preview-modal .btn-close {
+              filter: invert(1) grayscale(100%) brightness(200%);
+            }
+            .modern-preview-modal .modal-body {
+              background-color: #f8f9fa;
+              padding: 2rem;
+            }
+            .preview-section {
+              background: #ffffff;
+              border-radius: 12px;
+              padding: 1.5rem;
+              margin-bottom: 1.5rem;
+              border: 1px solid #e9ecef;
+            }
+            .preview-section-title {
+              font-size: 1.25rem;
+              font-weight: 600;
+              color: #343a40;
+              margin-bottom: 1rem;
+              padding-bottom: 0.75rem;
+              border-bottom: 1px solid #e9ecef;
+            }
+            .preview-item {
+              margin-bottom: 1rem;
+            }
+            .preview-label {
+              font-size: 0.875rem;
+              font-weight: 500;
+              color: #6c757d;
+              margin-bottom: 0.25rem;
+              display: block;
+            }
+            .preview-value {
+              font-size: 1rem;
+              color: #212529;
+              background-color: #f8f9fa;
+              border: 1px solid #e9ecef;
+              border-radius: 8px;
+              padding: 0.75rem 1rem;
+              word-wrap: break-word;
+              min-height: 48px;
+              display: flex;
+              align-items: center;
+            }
+            .preview-value-textarea {
+              white-space: pre-wrap; /* This preserves formatting */
+              align-items: flex-start;
+            }
+            .modern-preview-modal .modal-footer {
+              padding: 1.5rem;
+              border-top: none;
+              background-color: #ffffff;
+              border-bottom-left-radius: 16px;
+              border-bottom-right-radius: 16px;
+            }
+          `}</style>
+          <Modal.Header closeButton>
+            <Modal.Title>Preview Your Details</Modal.Title></Modal.Header>
           <Modal.Body style={previewModalContentStyle}>
             <h4 className="border-bottom pb-2 mb-3" style={subHeaderStyle}>Personal Information</h4>
             <Row className="mb-3"><Col><Form.Label>First Name:</Form.Label><div style={previewValueDisplay}>{formData.firstName || 'N/A'}</div></Col><Col><Form.Label>Middle Name:</Form.Label><div style={previewValueDisplay}>{formData.middleName || 'N/A'}</div></Col><Col><Form.Label>Last Name:</Form.Label><div style={previewValueDisplay}>{formData.lastName || 'N/A'}</div></Col></Row>

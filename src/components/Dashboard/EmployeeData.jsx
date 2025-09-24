@@ -3082,7 +3082,7 @@ useEffect(() => {
             <p style={clientDataDetailStyle}><strong>Account Info:</strong> {selectedClient.jobPortalAccountNameandCredentials || '-'}</p>
           </div>
 <div style={clientDataSectionStyle}>
-  <h3 style={clientDataSectionTitleStyle}>Resume & Cover Letter</h3>
+  <h3 style={clientDataSectionTitleStyle}>Resume(s)</h3>
   <p style={clientDataDetailStyle}>
     <strong>Resume(s):</strong>
     {(selectedClient.resumes || []).length > 0 ? (
@@ -3095,6 +3095,9 @@ useEffect(() => {
       <span style={{ marginLeft: '8px', color: '#64748b' }}>No resumes on file.</span>
     )}
   </p>
+</div>
+<div style={clientDataSectionStyle}>
+  <h3 style={clientDataSectionTitleStyle}>Cover Letter</h3>
   <p style={clientDataDetailStyle}>
     <strong>Cover Letter:</strong>
     {selectedClient.coverLetterUrl ? (
