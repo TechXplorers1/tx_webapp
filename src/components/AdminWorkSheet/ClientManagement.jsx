@@ -423,7 +423,17 @@ const handleCoverLetterFileChange = (e) => {
     }
 };
 
-  const handleSaveClientDetails = async (e) => {
+  const handleNewResumeUpload = (e) => {
+    const files = Array.from(e.target.files || []);
+    const newFilesObject = {};
+    files.forEach((file, index) => {
+      // We use a special 'new_' prefix to distinguish these from updates
+      newFilesObject[`new_${index}`] = file;
+    });
+    setNewResumeFiles(prev => ({ ...prev, ...newFilesObject }));
+  };
+
+const handleSaveClientDetails = async (e) => {
     e.preventDefault();
     if (!currentClientToEdit || !currentClientToEdit.clientFirebaseKey) {
       alert("Error: No client selected or client is missing a key.");
@@ -433,42 +443,47 @@ const handleCoverLetterFileChange = (e) => {
 
     try {
       const storage = getStorage();
-      // Create a mutable copy of the existing resumes array to update
       const updatedResumes = [...(currentClientToEdit.resumes || [])];
 
-      // Process all selected file uploads concurrently
-      const uploadPromises = Object.entries(newResumeFiles).map(async ([indexStr, file]) => {
-        const index = parseInt(indexStr, 10);
-        const filePath = `resumes/${currentClientToEdit.clientFirebaseKey}/${currentClientToEdit.registrationKey}/${file.name}`;
-        const fileRef = storageRef(storage, filePath);
-
-        await uploadBytes(fileRef, file);
-        const downloadUrl = await getDownloadURL(fileRef);
-
-        // Return the new resume data object along with its original index
-        return {
-          index,
-          data: {
-            name: file.name,
-            url: downloadUrl,
-            size: file.size,
-          }
-        };
-      });
-      
-      const uploadResults = await Promise.all(uploadPromises);
-
-      // Update the resumes array with the new data at the correct positions
-      uploadResults.forEach(({ index, data }) => {
-        if (updatedResumes[index]) {
-          updatedResumes[index] = data;
+      // Separate files meant for updating vs. files that are newly added
+      const filesToUpdate = {};
+      const filesToAdd = [];
+      Object.entries(newResumeFiles).forEach(([key, file]) => {
+        if (String(key).startsWith('new_')) {
+          filesToAdd.push(file);
+        } else {
+          filesToUpdate[key] = file;
         }
       });
 
-      // Prepare the final object to be saved
+      // --- Process UPDATES on existing resumes ---
+      const updatePromises = Object.entries(filesToUpdate).map(async ([indexStr, file]) => {
+        const index = parseInt(indexStr, 10);
+        const filePath = `resumes/${currentClientToEdit.clientFirebaseKey}/${currentClientToEdit.registrationKey}/${file.name}`;
+        const fileRef = storageRef(storage, filePath);
+        await uploadBytes(fileRef, file);
+        const downloadUrl = await getDownloadURL(fileRef);
+        return { index, data: { name: file.name, url: downloadUrl, size: file.size } };
+      });
+      const updateResults = await Promise.all(updatePromises);
+      updateResults.forEach(({ index, data }) => {
+        if (updatedResumes[index]) updatedResumes[index] = data;
+      });
+
+      // --- Process NEWLY ADDED resumes ---
+      const addPromises = filesToAdd.map(async (file) => {
+        const filePath = `resumes/${currentClientToEdit.clientFirebaseKey}/${currentClientToEdit.registrationKey}/${Date.now()}-${file.name}`;
+        const fileRef = storageRef(storage, filePath);
+        await uploadBytes(fileRef, file);
+        const downloadUrl = await getDownloadURL(fileRef);
+        return { name: file.name, url: downloadUrl, size: file.size };
+      });
+      const addResults = await Promise.all(addPromises);
+      updatedResumes.push(...addResults); // Append new resumes to the array
+
+      // --- Continue with the rest of the save logic ---
       const updates = { ...currentClientToEdit, resumes: updatedResumes };
       
-      // Handle cover letter upload (existing logic)
       if (newCoverLetterFile) {
         const filePath = `coverletters/${currentClientToEdit.clientFirebaseKey}/${currentClientToEdit.registrationKey}/${newCoverLetterFile.name}`;
         const fileRef = storageRef(storage, filePath);
@@ -477,11 +492,7 @@ const handleCoverLetterFileChange = (e) => {
         updates.coverLetterFileName = newCoverLetterFile.name;
       }
 
-      const {
-        firstName, lastName, email, mobile,
-        ...registrationUpdates
-      } = updates;
-
+      const { firstName, lastName, email, mobile, ...registrationUpdates } = updates;
       const regRef = ref(database, `clients/${currentClientToEdit.clientFirebaseKey}/serviceRegistrations/${currentClientToEdit.registrationKey}`);
       const clientProfileRef = ref(database, `clients/${currentClientToEdit.clientFirebaseKey}`);
 
@@ -2210,14 +2221,14 @@ const handleCoverLetterFileChange = (e) => {
                     <h4 className="client-preview-section-title">Resume(s)</h4>
                     
                     {/* FIX: Use optional chaining (?.) to prevent crash if currentClientToEdit is null */}
-                    {currentClientToEdit?.resumes && currentClientToEdit.resumes.length > 0 ? (
+                      {currentClientToEdit?.resumes && currentClientToEdit.resumes.length > 0 ? (
+                      // This part for updating existing resumes remains the same
                       currentClientToEdit.resumes.map((resume, index) => (
                         <div key={index} className="assign-form-group" style={{ marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid #e0e0e0' }}>
                           <label htmlFor={`newResumeFile-${index}`}>
                             Resume {index + 1}: <span style={{ fontWeight: 'normal', color: '#6b7280' }}>{resume.name}</span>
                           </label>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '5px' }}>
-                            {/* Hidden file input, triggered by the label button */}
                             <input
                               type="file"
                               id={`newResumeFile-${index}`}
@@ -2226,17 +2237,28 @@ const handleCoverLetterFileChange = (e) => {
                               accept=".pdf,.doc,.docx"
                               style={{ display: 'none' }} 
                             />
-                            {/* This label acts as the visible "Choose File" button */}
                             <label htmlFor={`newResumeFile-${index}`} className="action-button assign" style={{ cursor: 'pointer', textDecoration: 'none', backgroundColor: '#007bff', color: 'white' }}>
                               Update File
                             </label>
-                            {/* Display the name of the newly selected file for feedback */}
                             {newResumeFiles[index] && <span style={{ fontSize: '0.85rem', color: '#28a745' }}>New: {newResumeFiles[index].name}</span>}
                           </div>
                         </div>
                       ))
                     ) : (
-                      <div className="read-only-value">No resumes available to update.</div>
+                      // ADDED: Input to add new resumes when none exist
+                      <div className="assign-form-group">
+                        <label htmlFor="add-new-resumes">Add New Resume(s)</label>
+                        <input 
+                          type="file" 
+                          id="add-new-resumes" 
+                          multiple 
+                          onChange={handleNewResumeUpload}
+                          accept=".pdf,.doc,.docx" 
+                        />
+                        {Object.entries(newResumeFiles).map(([key, file]) => 
+                            key.startsWith('new_') && <div key={key} style={{ fontSize: '0.85rem', color: '#28a745' }}>Selected: {file.name}</div>
+                        )}
+                      </div>
                     )}
                   </div>
                   <div className="client-preview-section">

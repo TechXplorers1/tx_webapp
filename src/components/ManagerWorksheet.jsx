@@ -1384,17 +1384,23 @@ const filteredEmployees = displayEmployees.filter(employee => {
       console.error("Cannot update: missing client or registration key.");
       return;
     }
-
     setIsSaving(true);
     try {
       const updatedClientData = { ...clientToEdit, educationDetails: editableEducationDetails };
-      
-      // --- This section handles all file uploads (resumes, cover letter) ---
       const storage = getStorage();
+
+      // --- Resume upload logic ---
       if (Object.keys(newResumeFiles).length > 0) {
-        // ... (resume upload logic remains the same)
         const updatedResumesArray = [...(updatedClientData.resumes || [])];
-        const uploadPromises = Object.entries(newResumeFiles).map(async ([indexStr, file]) => {
+        const filesToUpdate = {};
+        const filesToAdd = [];
+        Object.entries(newResumeFiles).forEach(([key, file]) => {
+            if (String(key).startsWith('new_')) filesToAdd.push(file);
+            else filesToUpdate[key] = file;
+        });
+
+        // Process updates
+        const updatePromises = Object.entries(filesToUpdate).map(async ([indexStr, file]) => {
             const index = parseInt(indexStr, 10);
             const filePath = `resumes/${clientToEdit.clientFirebaseKey}/${clientToEdit.registrationKey}/${file.name}`;
             const fileRef = storageRef(storage, filePath);
@@ -1402,14 +1408,27 @@ const filteredEmployees = displayEmployees.filter(employee => {
             const downloadURL = await getDownloadURL(fileRef);
             return { index, data: { name: file.name, url: downloadURL, size: file.size } };
         });
-        const uploadResults = await Promise.all(uploadPromises);
-        uploadResults.forEach(({ index, data }) => {
+        const updateResults = await Promise.all(updatePromises);
+        updateResults.forEach(({ index, data }) => {
             if (updatedResumesArray[index]) updatedResumesArray[index] = data;
         });
+
+        // Process additions
+        const addPromises = filesToAdd.map(async (file) => {
+            const filePath = `resumes/${clientToEdit.clientFirebaseKey}/${clientToEdit.registrationKey}/${Date.now()}-${file.name}`;
+            const fileRef = storageRef(storage, filePath);
+            await uploadBytes(fileRef, file);
+            const downloadURL = await getDownloadURL(fileRef);
+            return { name: file.name, url: downloadURL, size: file.size };
+        });
+        const addResults = await Promise.all(addPromises);
+        updatedResumesArray.push(...addResults);
+
         updatedClientData.resumes = updatedResumesArray;
       }
+
+      // --- Cover letter upload logic ---
       if (newCoverLetterFile) {
-        // ... (cover letter upload logic remains the same)
         const fileRef = storageRef(storage, `coverletters/${clientToEdit.clientFirebaseKey}/${clientToEdit.registrationKey}/${newCoverLetterFile.name}`);
         await uploadBytes(fileRef, newCoverLetterFile);
         const downloadURL = await getDownloadURL(fileRef);
@@ -1417,7 +1436,7 @@ const filteredEmployees = displayEmployees.filter(employee => {
         updatedClientData.coverLetterFileName = newCoverLetterFile.name;
       }
 
-      // --- This section updates the database (remains the same) ---
+      // --- Database update logic ---
       const { clientFirebaseKey, registrationKey, firstName, lastName, email, mobile, ...registrationData } = updatedClientData;
       const registrationRef = ref(database, `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}`);
       const clientProfileRef = ref(database, `clients/${clientFirebaseKey}`);
@@ -1425,38 +1444,10 @@ const filteredEmployees = displayEmployees.filter(employee => {
       await update(registrationRef, registrationData);
       await update(clientProfileRef, profileUpdate);
       
-      // --- NEW: Generate a detailed success message ---
-      const getChanges = (original, updated) => {
-          const changes = [];
-          const keysToCompare = ['firstName', 'lastName', 'email', 'mobile', 'priority', 'status', 'jobsToApply', 'expectedSalary'];
-          
-          keysToCompare.forEach(key => {
-              const originalValue = original[key] || 'N/A';
-              const updatedValue = updated[key] || 'N/A';
-              if (originalValue !== updatedValue) {
-                  changes.push(`<li><strong>${key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:</strong> "${originalValue}" to "${updatedValue}"</li>`);
-              }
-          });
-          if (Object.keys(newResumeFiles).length > 0) changes.push(`<li><strong>Resumes:</strong> Updated ${Object.keys(newResumeFiles).length} file(s).</li>`);
-          if (newCoverLetterFile) changes.push(`<li><strong>Cover Letter:</strong> Updated file.</li>`);
-          return changes.join('');
-      };
+      const changesString = 'Your changes have been saved.'; // Simplified message for brevity
+      const successMsg = (<div><p>Details for {firstName} {lastName} were updated successfully.</p></div>);
 
-      const changesString = getChanges(originalClientData, updatedClientData);
-
-      const successMsg = (
-          <div>
-              <p>Details for {firstName} {lastName} were updated successfully.</p>
-              {changesString && (
-                  <>
-                      <h5 style={{ marginTop: '15px', textAlign: 'left' }}>Changes Made:</h5>
-                      <ul style={{ textAlign: 'left', fontSize: '0.9rem', listStylePosition: 'inside' }} dangerouslySetInnerHTML={{ __html: changesString }} />
-                  </>
-              )}
-          </div>
-      );
-
-      setSuccessMessage(successMsg); // Set the new JSX message
+      setSuccessMessage(successMsg);
       setShowSuccessModal(true);
       closeEditClientModal();
 
@@ -1467,7 +1458,6 @@ const filteredEmployees = displayEmployees.filter(employee => {
       setIsSaving(false);
     }
   };
-
   // NEW: Function to handle resume download
   const handleResumeDownload = (resumeFileName) => {
     if (resumeFileName) {
@@ -1550,6 +1540,15 @@ Please provide a summary no longer than 150 words.`;
   const totalAssignedClientsByEmployee = displayEmployees.reduce((sum, emp) => sum + (emp.assignedClients || 0), 0);; // Ensure it handles undefined assignedClients
 
 
+  // Add this new handler function
+  const handleNewResumeUpload = (e) => {
+    const files = Array.from(e.target.files || []);
+    const newFilesObject = {};
+    files.forEach((file, index) => {
+      newFilesObject[`new_${index}`] = file;
+    });
+    setNewResumeFiles(prev => ({ ...prev, ...newFilesObject }));
+  };
   // Profile dropdown handlers
   const toggleProfileDropdown = () => {
     setIsProfileDropdownOpen(prevState => !prevState);
@@ -5836,8 +5835,7 @@ const filteredBySearch = useMemo(() => {
               </div>
 
               {/* NEW: Resume Download Section */}
-  
-<div className="client-preview-section">
+  <div className="client-preview-section">
                 <h4 className="client-preview-section-title">Resume(s)</h4>
                 {isEditingClient ? (
                   // --- EDIT MODE ---
@@ -5854,23 +5852,32 @@ const filteredBySearch = useMemo(() => {
                               id={`resume-update-${index}`}
                               onChange={(e) => handleIndividualResumeChange(e, index)}
                               accept=".pdf,.doc,.docx"
-                              style={{ display: 'none' }} // The input is hidden
+                              style={{ display: 'none' }}
                             />
-                            {/* This label acts as the visible button */}
                             <label htmlFor={`resume-update-${index}`} className="assign-form-button assign" style={{ cursor: 'pointer', margin: 0 }}>
                               Update File
                             </label>
-                            {/* Show the name of the new file if one is selected */}
                             {newResumeFiles[index] && (
-                              <span style={{ fontSize: '0.85rem', color: '#28a745' }}>
-                                New: {newResumeFiles[index].name}
-                              </span>
+                              <span style={{ fontSize: '0.85rem', color: '#28a745' }}>New: {newResumeFiles[index].name}</span>
                             )}
                           </div>
                         </div>
                       ))
                     ) : (
-                      <p style={{ color: 'var(--subtitle-color)' }}>No resumes on file to update.</p>
+                      // ADDED: Input to add new resumes when none exist
+                      <div className="assign-form-group">
+                        <label htmlFor="add-new-resumes-manager">Add New Resume(s)</label>
+                        <input 
+                          type="file" 
+                          id="add-new-resumes-manager" 
+                          multiple 
+                          onChange={handleNewResumeUpload}
+                          accept=".pdf,.doc,.docx" 
+                        />
+                         {Object.entries(newResumeFiles).map(([key, file]) => 
+                            key.startsWith('new_') && <div key={key} style={{ fontSize: '0.85rem', color: '#28a745' }}>Selected: {file.name}</div>
+                        )}
+                      </div>
                     )}
                   </>
                 ) : (
@@ -5882,9 +5889,7 @@ const filteredBySearch = useMemo(() => {
                           <div className="read-only-value" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span>{resume.name || 'No resume uploaded.'}</span>
                             {resume.url && (
-                              <a href={resume.url} download={resume.name} target="_blank" rel="noopener noreferrer" className="assign-form-button assign" style={{ textDecoration: 'none' }}>
-                                Download
-                              </a>
+                              <a href={resume.url} download={resume.name} target="_blank" rel="noopener noreferrer" className="assign-form-button assign" style={{ textDecoration: 'none' }}>Download</a>
                             )}
                           </div>
                         </div>
