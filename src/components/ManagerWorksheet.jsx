@@ -32,7 +32,6 @@ const [filteredApplicationCount, setFilteredApplicationCount] = useState(0);
 const [selectedEmployeeDailyCount, setSelectedEmployeeDailyCount] = useState(0);
 const [isSaving, setIsSaving] = useState(false);
 const [originalClientData, setOriginalClientData] = useState(null);
-const [expandedEmployeeKey, setExpandedEmployeeKey] = useState(null);
 
 
   // State to manage the active tab, now including 'Assigned', 'Interviews', 'Notes'
@@ -808,7 +807,11 @@ const FilterComponent = ({
         <div className="clear-filters-button-container-style">
           <label className="filter-label-style">Actions</label>
           <button onClick={handleClearFilters} className="clear-filters-button-style">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 4H8l-7 16 7 16h13a2 2 0 0 0 2-2V6a2 0 0 0-2-2z"></path><line x1="18" y1="9" x2="12" y2="15"></line><line x1="12" y1="9" x2="18" y2="15"></line></svg>
+            {/* This is the new, corrected SVG icon */}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
             Clear Filters
           </button>
         </div>
@@ -1640,8 +1643,6 @@ const handleLogout = () => {
 
   // --- NEW Component for the Applications Tab UI ---
 const ApplicationsTab = ({ 
-  expandedEmployeeKey,
-  setExpandedEmployeeKey, 
   applicationData,
   employees,
   uniqueClientNames,
@@ -1664,6 +1665,9 @@ const ApplicationsTab = ({
   }) => {
 
       const [localSearchQuery, setLocalSearchQuery] = useState('');
+
+        const [expandedRowKey, setExpandedRowKey] = useState(null);
+
   const handleLocalSearchChange = (e) => {
     setLocalSearchQuery(e.target.value);
   };
@@ -1673,7 +1677,7 @@ const ApplicationsTab = ({
     if (!name) return '';
     const parts = name.split(' ');
     if (parts.length > 1) return `${parts[0][0]}${parts[parts.length - 1][0]}`;
-    return name.substring(0, 2);
+    return name.substring(0, 2).toUpperCase();
   };
 
 const filteredBySearch = useMemo(() => {
@@ -1721,6 +1725,40 @@ const filteredBySearch = useMemo(() => {
 
   const sortedDates = Object.keys(groupedByDate).sort((a, b) => new Date(b) - new Date(a));
 
+ const groupedByEmployeeAndClient = useMemo(() => {
+    const employeeMap = new Map(employees.map(emp => [emp.firebaseKey, emp]));
+
+    // First, group all applications by a composite key: "employeeKey_clientName"
+    const applicationsByGroup = applicationData.reduce((acc, app) => {
+      const key = `${app.assignedTo}_${app.clientName}`;
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      acc[key].push(app);
+      return acc;
+    }, {});
+
+    // Now, transform the grouped object into an array with all the details we need
+    const finalGroupedData = Object.entries(applicationsByGroup).map(([key, apps]) => {
+      const [employeeKey, clientName] = key.split('_');
+      const employee = employeeMap.get(employeeKey) || {};
+      const mostRecentApp = apps.sort((a, b) => new Date(b.appliedDate) - new Date(a.appliedDate))[0];
+
+      return {
+        key: key,
+        employeeKey: employeeKey,
+        employeeName: `${employee.firstName || ''} ${employee.lastName || ''}`.trim(),
+        employeeInitials: getInitials(`${employee.firstName || ''} ${employee.lastName || ''}`),
+        clientName: clientName,
+        applications: apps,
+        applicationCount: apps.length,
+        mostRecentApp: mostRecentApp
+      };
+    });
+
+    return finalGroupedData.sort((a, b) => new Date(b.mostRecentApp.appliedDate) - new Date(a.mostRecentApp.appliedDate));
+
+  }, [applicationData, employees]);
 
 
    return (
@@ -1755,18 +1793,17 @@ const filteredBySearch = useMemo(() => {
         )}
       </div>
       
-      {/* Search and Filter Section */}
-      <div className="applications-filters">
+     <div className="applications-filters">
         <div className="search-input-wrapper">
           <i className="fas fa-search"></i>
           <input
             type="text"
             placeholder="Search by Employee, Client, Job Title..."
             value={localSearchQuery}
-            onChange={handleLocalSearchChange}
+            onChange={(e) => setLocalSearchQuery(e.target.value)}
           />
         </div>
-        <div className="filter-dropdown">
+       <div className="filter-dropdown">
          <select value={applicationFilterEmployee} onChange={handleApplicationFilterEmployeeChange}>
   <option value="">Filter by Employee</option>
   {uniqueAssignedEmployeeNames.map(employeeKey => {
@@ -1776,7 +1813,7 @@ const filteredBySearch = useMemo(() => {
 </select>
           <i className="fas fa-chevron-down"></i>
         </div>
-<div className="filter-dropdown">
+       <div className="filter-dropdown">
   <select value={applicationFilterClient} onChange={handleApplicationFilterClientChange}>
     <option value="">Filter by Client</option>
     {uniqueClientNames.map(name => ( // Now using the correct array
@@ -1794,115 +1831,82 @@ const filteredBySearch = useMemo(() => {
               <th>Employee</th>
               <th>Client</th>
               <th>Applied Date</th>
-              <th>Total Applications</th>
+              {/* MODIFIED: Header text changed */}
+              <th>Client Applications Count</th>
               <th>Details</th>
             </tr>
           </thead>
           <tbody>
-            {sortedDates.length > 0 ? (
-                sortedDates.map(dateKey => {
-                    const dateApplications = groupedByDate[dateKey];
-                    const isExpanded = expandedDate === dateKey;
-                    const firstApp = dateApplications[0];
-                    const employee = employees.find(e => e.firebaseKey === firstApp.assignedTo);
-                    const clientName = firstApp.clientName;
+            {groupedByEmployeeAndClient.length > 0 ? (
+              groupedByEmployeeAndClient.map(group => {
+                const isExpanded = expandedRowKey === group.key;
 
-                    return (
-                        <React.Fragment key={dateKey}>
-                            <tr onClick={() => setExpandedDate(isExpanded ? null : dateKey)} style={{ cursor: 'pointer' }}>
-                                <td className="employee-cell">
-                                    <div className="employee-avatar">{employee ? getInitials(`${employee.firstName} ${employee.lastName}`) : '??'}</div>
-                                    {employee ? `${employee.firstName} ${employee.lastName}` : 'Unknown Employee'}
-                                </td>
-                                <td>{clientName}</td>
-                                <td style={{ textAlign: 'center' }}>
-                                  {formatDateToDDMMYYYY(dateKey)}
-                                </td>
-                                <td style={{ textAlign: 'center' }}>{dateApplications.length}</td>
-                                <td style={{ textAlign: 'center' }}>
-                                    <span style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', display: 'inline-block', transition: 'transform 0.2s' }}>
-                                        <i className="fas fa-chevron-down"></i>
-                                    </span>
-                                </td>
-                            </tr>
-                            {isExpanded && (
+                return (
+                  <React.Fragment key={group.key}>
+                    <tr onClick={() => setExpandedRowKey(isExpanded ? null : group.key)} style={{ cursor: 'pointer' }}>
+                      <td className="employee-cell">
+                        <div className="employee-avatar">{group.employeeInitials}</div>
+                        {group.employeeName}
+                      </td>
+                      <td>{group.clientName}</td>
+                      <td style={{ textAlign: 'center' }}>{formatDateToDDMMYYYY(group.mostRecentApp.appliedDate)}</td>
+                      {/* MODIFIED: Value now shows the count for the specific client */}
+                      <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{group.applicationCount}</td>
+                      <td style={{ textAlign: 'center' }}>
+                        <span style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', display: 'inline-block', transition: 'transform 0.2s' }}>
+                          <i className="fas fa-chevron-down"></i>
+                        </span>
+                      </td>
+                    </tr>
+                    {isExpanded && (
+                      <tr>
+                        <td colSpan="6" style={{ padding: '0 15px', backgroundColor: 'var(--bg-color)' }}>
+                          <div style={{ padding: '15px', border: '1px solid var(--header-border-color)', borderRadius: '8px', margin: '10px 0' }}>
+                            <table className="applications-table" style={{ minWidth: 'auto' }}>
+                              <thead>
                                 <tr>
-                                    <td colSpan="5" style={{ padding: '0 15px', backgroundColor: 'var(--bg-color)' }}>
-                                        <div style={{ padding: '15px', border: '1px solid var(--header-border-color)', borderRadius: '8px', margin: '10px 0' }}>
-                                            <table className="applications-table" style={{ minWidth: 'auto' }}>
-                                                <thead>
-                                                    <tr>
-                                                        <th>Company</th>
-                                                         <th>Job Title</th>
-                                                        <th>Job Boards</th>
-                                                        <th>Job ID</th>
-                                                        <th>Link</th>
-                                                        <th>Applied Date</th>
-                                                        <th>Applied Time</th>
-                                                        <th>Status</th>
-                                                        <th>Actions</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {dateApplications.map(app => (
-                                                        <tr key={app.id}>
-                                                            <td>{app.company}</td>
-                                                            <td>{app.jobTitle}</td>
-                                                            <td>{app.jobBoards}</td>
-                                                            <td>{app.jobId}</td>
-                                                            <td><a href={app.jobUrl} target="_blank" rel="noopener noreferrer">Link</a></td>
-                                                            <td>{formatDateToDDMMYYYY(app.appliedDate)}</td>
-                                                            <td>{formatDateTime(app.timestamp).time}</td>
-                                                            <td>
-                                                                <span className={`status-badge status-${app.status?.toLowerCase()}`}>
-                                                                    {app.status}
-                                                                </span>
-                                                            </td>
-                                                            <td>
-                                                                <div className="action-buttons">
-                                                                    <button
-                                                                        className="action-button"
-                                                                        onClick={() => openApplicationDetailModal(app)}
-                                                                        title="View Details"
-                                                                    >
-                                                                        <i className="fas fa-eye"></i>
-                                                                    </button>
-                                                                    <button
-                                                                        className="action-button"
-                                                                        onClick={() => openEditApplicationModal(app)}
-                                                                        title="Edit Application"
-                                                                    >
-                                                                        <i className="fas fa-edit"></i>
-                                                                    </button>
-                                                                    <button
-                                                                        className="action-button"
-                                                                        onClick={() => {
-                                                                            setSelectedApplication(app);
-                                                                            handleDeleteApplication();
-                                                                        }}
-                                                                        title="Delete Application"
-                                                                    >
-                                                                        <i className="fas fa-trash"></i>
-                                                                    </button>
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </td>
+                                  <th>Company</th>
+                                  <th>Job Title</th>
+                                  <th>Link</th>
+                                  <th>Applied Date</th>
+                                  <th>Applied Time</th>
+                                  <th>Status</th>
+                                  <th>Actions</th>
                                 </tr>
-                            )}
-                        </React.Fragment>
-                    );
-                })
+                              </thead>
+                              <tbody>
+                                {group.applications.map(app => (
+                                  <tr key={app.id}>
+                                    <td>{app.company}</td>
+                                    <td>{app.jobTitle}</td>
+                                    <td><a href={app.jobUrl} target="_blank" rel="noopener noreferrer">Link</a></td>
+                                    <td>{formatDateToDDMMYYYY(app.appliedDate)}</td>
+                                    <td>{formatDateTime(app.timestamp).time}</td>
+                                    <td><span className={`status-badge status-${app.status?.toLowerCase()}`}>{app.status}</span></td>
+                                    <td>
+                                      <div className="action-buttons">
+                                        <button className="action-button" onClick={() => openApplicationDetailModal(app)} title="View Details"><i className="fas fa-eye"></i></button>
+                                        <button className="action-button" onClick={() => openEditApplicationModal(app)} title="Edit"><i className="fas fa-edit"></i></button>
+                                        <button className="action-button" onClick={() => { setSelectedApplication(app); handleDeleteApplication(); }} title="Delete"><i className="fas fa-trash"></i></button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })
             ) : (
-                <tr>
-                    <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-color)' }}>
-                        No applications found matching your criteria.
-                    </td>
-                </tr>
+              <tr>
+                <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-color)' }}>
+                  No applications found matching your criteria.
+                </td>
+              </tr>
             )}
           </tbody>
         </table>
@@ -4863,8 +4867,6 @@ const filteredBySearch = useMemo(() => {
     filteredApplicationCount={applicationCounts.filteredCount}
     selectedEmployeeDailyCount={applicationCounts.employeeTodayCount}
     applicationFilterDateRange={applicationFilterDateRange}
-    expandedEmployeeKey={expandedEmployeeKey}
-    setExpandedEmployeeKey={setExpandedEmployeeKey}
           />
 
         )}
