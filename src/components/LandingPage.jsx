@@ -317,11 +317,32 @@ useEffect(() => {
                 }
                 
                 .hero-carousel-image {
-                    width: 100%;
+                    width: 80%;
+                    height:70%;
                     border-radius: 1.5rem;
                     aspect-ratio: 1/1;
                     object-fit: cover;
                 }
+
+                .hero-carousel-section .carousel-indicators {
+            /* Move the indicators below the carousel frame */
+            bottom: -1.5rem; 
+        }
+
+        .hero-carousel-section .carousel-indicators [data-bs-target] {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #D1C4E9; /* Lighter purple for inactive dots */
+            border: none;
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+        }
+
+        .hero-carousel-section .carousel-indicators .active {
+            background-color: var(--primary-color); /* Use your primary purple for the active dot */
+            opacity: 1;
+        }
 
                 .code-snippet-overlay {
                     position: absolute;
@@ -702,14 +723,14 @@ useEffect(() => {
                           alt={item.alt}
                           className="hero-carousel-image"
                         />
-                        <div className="code-snippet-overlay">
+                        {/* <div className="code-snippet-overlay">
                           <code>
                             &lt;service name="{item.text}"&gt; <br />
                             &nbsp;&nbsp;&lt;status&gt;active&lt;/status&gt; <br />
                             &nbsp;&nbsp;&lt;clients&gt;450+ satisfied&lt;/clients&gt; <br />
                             &lt;/service&gt;
                           </code>
-                        </div>
+                        </div> */}
                       </Col>
                     </Row>
                   </div>
