@@ -32,6 +32,7 @@ const [filteredApplicationCount, setFilteredApplicationCount] = useState(0);
 const [selectedEmployeeDailyCount, setSelectedEmployeeDailyCount] = useState(0);
 const [isSaving, setIsSaving] = useState(false);
 const [originalClientData, setOriginalClientData] = useState(null);
+const [expandedEmployeeKey, setExpandedEmployeeKey] = useState(null);
 
 
   // State to manage the active tab, now including 'Assigned', 'Interviews', 'Notes'
@@ -1218,7 +1219,7 @@ const filteredInterviewData = useMemo(() => {
 
 
 const filteredApplicationData = useMemo(() => {
-    // Helper function to get employee name
+    // Helper to get employee name, as it's needed for searching
     const getEmployeeName = (employeeKey) => {
         const employee = allEmployees.find(emp => emp.firebaseKey === employeeKey);
         return employee ? `${employee.firstName} ${employee.lastName}`.trim() : '';
@@ -1226,29 +1227,40 @@ const filteredApplicationData = useMemo(() => {
 
     let filtered = applicationData.filter(app => {
         const lowerCaseSearchQuery = applicationSearchQuery.toLowerCase();
-        
-        // FIX: Added employee name to search logic
         const employeeName = getEmployeeName(app.assignedTo);
 
-        const matchesSearch = 
+        const matchesSearch =
             (employeeName || '').toLowerCase().includes(lowerCaseSearchQuery) ||
             (app.clientName || '').toLowerCase().includes(lowerCaseSearchQuery) ||
             (app.jobTitle || '').toLowerCase().includes(lowerCaseSearchQuery) ||
             (app.company || '').toLowerCase().includes(lowerCaseSearchQuery);
-        
+
         const matchesEmployee = applicationFilterEmployee === '' || app.assignedTo === applicationFilterEmployee;
         const matchesClient = applicationFilterClient === '' || app.clientName === applicationFilterClient;
 
-        const appDate = new Date(app.appliedDate);
-        const start = applicationFilterDateRange.startDate ? new Date(applicationFilterDateRange.startDate) : null;
-        const end = applicationFilterDateRange.endDate ? new Date(applicationFilterDateRange.endDate) : null;
-        if(start) start.setHours(0,0,0,0);
-        if(end) end.setHours(23,59,59,999);
-        const matchesDateRange = (!start || appDate >= start) && (!end || appDate <= end);
+        // --- THIS IS THE KEY LOGIC CHANGE ---
+        let matchesDateRange = false;
+        const start = applicationFilterDateRange.startDate;
+        const end = applicationFilterDateRange.endDate;
+        
+        if (start || end) {
+            // If the user has selected a date range, use that filter.
+            const appDate = new Date(app.appliedDate);
+            const startDate = start ? new Date(start) : null;
+            const endDate = end ? new Date(end) : null;
+            if (startDate) startDate.setHours(0, 0, 0, 0);
+            if (endDate) endDate.setHours(23, 59, 59, 999);
+            matchesDateRange = (!startDate || appDate >= startDate) && (!endDate || appDate <= endDate);
+        } else {
+            // If NO date range is selected, default to showing ONLY today's applications.
+            const todayStr = getLocalDateString(); // Gets today's date in YYYY-MM-DD format
+            matchesDateRange = (app.appliedDate === todayStr);
+        }
         
         return matchesSearch && matchesEmployee && matchesClient && matchesDateRange;
     });
 
+    // Sorting logic remains the same
     filtered.sort((a, b) => {
         const dateA = new Date(a.appliedDate);
         const dateB = new Date(b.appliedDate);
@@ -1628,6 +1640,8 @@ const handleLogout = () => {
 
   // --- NEW Component for the Applications Tab UI ---
 const ApplicationsTab = ({ 
+  expandedEmployeeKey,
+  setExpandedEmployeeKey, 
   applicationData,
   employees,
   uniqueClientNames,
@@ -4849,6 +4863,8 @@ const filteredBySearch = useMemo(() => {
     filteredApplicationCount={applicationCounts.filteredCount}
     selectedEmployeeDailyCount={applicationCounts.employeeTodayCount}
     applicationFilterDateRange={applicationFilterDateRange}
+    expandedEmployeeKey={expandedEmployeeKey}
+    setExpandedEmployeeKey={setExpandedEmployeeKey}
           />
 
         )}
