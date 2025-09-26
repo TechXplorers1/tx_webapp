@@ -3774,6 +3774,10 @@ useEffect(() => {
           overflow-x: hidden; /* Prevent horizontal scroll due to fixed sidebar */
         }
 
+        .dashboard-title {
+          margin-top :-55px;
+        }
+
         html.dark-mode .client-dashboard-container {
           background: #1a202c;
           color: #e2e8f0;
@@ -5060,9 +5064,10 @@ html.dark-mode .notify-success-message {
             color: var(--text-secondary);
         }
         .services-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
+           display: grid;
+          gap: 1.5rem;
+          /* Mobile-first: Default to a single column */
+          grid-template-columns: 1fr;
         }
         .service-card {
             background-color: var(--bg-card);
@@ -5136,7 +5141,19 @@ html.dark-mode .notify-success-message {
 
         /* In ClientDashboard.jsx, add these styles to one of your existing <style> blocks. */
 
+              /* Tablet view: 2 columns */
+        @media (min-width: 768px) {
+          .services-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
 
+        /* Desktop view: 3 columns */
+        @media (min-width: 1024px) {
+          .services-grid {
+            grid-template-columns: repeat(3, 1fr);
+          }
+        }
 
         `}
       </style>
@@ -5539,7 +5556,7 @@ html.dark-mode .notify-success-message {
         !isInWorksheetView ? (
           <>
             <h2 className="dashboard-title">
-              Client Module
+              {/* Client Module */}
             </h2>
 
             {/* Tabs for Dashboard, Applications, Documents */}
@@ -5574,7 +5591,7 @@ html.dark-mode .notify-success-message {
                 {/* In the return block, under the "Dashboard" tab, replace the entire services-browse section. */}
 
                 <section className="services-browse">
-                  <h2>Browse Our Services</h2>
+                  <h2>Our Services</h2>
                   <p>Find the right tools to accelerate your growth.</p>
                   <div className="services-grid">
                     {servicesData.map((service) => {
