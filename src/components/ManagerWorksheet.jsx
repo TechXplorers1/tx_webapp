@@ -1779,7 +1779,6 @@ const filteredBySearch = useMemo(() => {
             <tr>
               <th>Employee</th>
               <th>Client</th>
-              <th>Job Title</th>
               <th>Applied Date</th>
               <th>Total Applications</th>
               <th>Details</th>
@@ -1802,7 +1801,6 @@ const filteredBySearch = useMemo(() => {
                                     {employee ? `${employee.firstName} ${employee.lastName}` : 'Unknown Employee'}
                                 </td>
                                 <td>{clientName}</td>
-                                <td>{firstApp.jobTitle}</td>
                                 <td style={{ textAlign: 'center' }}>
                                   {formatDateToDDMMYYYY(dateKey)}
                                 </td>
@@ -1821,6 +1819,7 @@ const filteredBySearch = useMemo(() => {
                                                 <thead>
                                                     <tr>
                                                         <th>Company</th>
+                                                         <th>Job Title</th>
                                                         <th>Job Boards</th>
                                                         <th>Job ID</th>
                                                         <th>Link</th>
@@ -1834,6 +1833,7 @@ const filteredBySearch = useMemo(() => {
                                                     {dateApplications.map(app => (
                                                         <tr key={app.id}>
                                                             <td>{app.company}</td>
+                                                            <td>{app.jobTitle}</td>
                                                             <td>{app.jobBoards}</td>
                                                             <td>{app.jobId}</td>
                                                             <td><a href={app.jobUrl} target="_blank" rel="noopener noreferrer">Link</a></td>
