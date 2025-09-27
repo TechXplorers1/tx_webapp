@@ -1341,45 +1341,7 @@ const generateDateRange = (centerDate) => {
 };
 
 // --- SAMPLE APPLICATIONS DATA ---
-const applicationsData = {
-  [formatDate(new Date())]: [ // Today's date
-    { id: 1, jobId: 'Tx101', website: 'LinkedIn', position: 'Frontend Developer', company: 'Tech Corp', link: '#', dateAdded: formatDate(new Date()), jobDescription: 'Develop and maintain web applications using React.js, proficient in HTML, CSS, JavaScript, and modern front-end build tools.' },
-    { id: 10, jobId: 'Tx110', website: 'Company Site', position: 'Fullstack Engineer', company: 'Innovate Solutions', link: '#', dateAdded: formatDate(new Date()), jobDescription: 'Design, develop, and deploy full-stack applications with expertise in Node.js, Python, and database management (SQL/NoSQL).' },
-    { id: 11, jobId: 'Tx111', website: 'Indeed', position: 'DevOps Specialist', company: 'CloudWorks', link: '#', dateAdded: formatDate(new Date()), jobDescription: 'Implement and manage CI/CD pipelines, automate infrastructure using tools like Docker, Kubernetes, and Ansible. Cloud platform experience (AWS/Azure/GCP) is a plus.' },
-    { id: 12, jobId: 'Tx112', website: 'Glassdoor', position: 'QA Engineer', company: 'Quality First', link: '#', dateAdded: formatDate(new Date()), jobDescription: 'Execute test plans, identify and document software defects, and contribute to the overall quality assurance process for web and mobile applications.' },
-    { id: 13, jobId: 'Tx113', website: 'LinkedIn', position: 'Product Designer', company: 'Creative Minds', link: '#', dateAdded: formatDate(new Date()), jobDescription: 'Create intuitive and engaging user experiences through wireframes, prototypes, and user flows. Proficient in Figma, Sketch, or Adobe XD.' },
-  ],
-  [formatDate(new Date(new Date().setDate(new Date().getDate() - 1)))]: [ // Yesterday
-    { id: 2, jobId: 'Tx102', website: 'Indeed', position: 'Backend Engineer', company: 'Data Systems', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 1))), jobDescription: 'Develop robust server-side logic and APIs using Java Spring Boot. Experience with RESTful services and microservices architecture is required.' },
-    { id: 14, jobId: 'Tx114', website: 'Company Site', position: 'Data Scientist', company: 'Analytics Inc.', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 1))), jobDescription: 'Analyze large datasets to extract actionable insights. Build predictive models using machine learning techniques and Python/R.' },
-  ],
-  [formatDate(new Date(new Date().setDate(new Date().getDate() - 2)))]: [ // Two days ago
-    { id: 3, jobId: 'Tx103', website: 'Glassdoor', position: 'Product Manager', company: 'Innovate Inc', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 2))), jobDescription: 'Define product vision, strategy, and roadmap. Collaborate with engineering, design, and marketing teams to deliver successful products.' },
-    { id: 4, jobId: 'Tx104', website: 'AngelList', position: 'Startup Engineer', company: 'New Ventures', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 2))), jobDescription: 'Work across the stack in a fast-paced startup environment. Opportunity to contribute to all phases of product development.' },
-    { id: 15, jobId: 'Tx115', website: 'LinkedIn', position: 'Mobile Developer', company: 'AppGenius', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 2))), jobDescription: 'Develop native iOS or Android applications. Strong knowledge of Swift/Kotlin and mobile UI/UX principles.' },
-  ],
-  [formatDate(new Date(new Date().setDate(new Date().getDate() - 3)))]: [ // Three days ago
-    { id: 16, jobId: 'Tx116', website: 'Indeed', position: 'Network Administrator', company: 'SecureNet', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 3))), jobDescription: 'Manage and maintain network infrastructure, troubleshoot connectivity issues, and ensure network security and performance.' },
-  ],
-  [formatDate(new Date(new Date().setDate(new Date().getDate() - 4)))]: [ // Four days ago
-    { id: 17, jobId: 'Tx117', website: 'Company Site', position: 'Cybersecurity Analyst', company: 'Guardian Systems', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 4))), jobDescription: 'Monitor security systems, respond to incidents, and implement security measures to protect organizational data and systems.' },
-    { id: 18, jobId: 'Tx118', website: 'LinkedIn', position: 'Technical Writer', company: 'DocuWrite', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 4))), jobDescription: 'Produce clear, concise, and comprehensive technical documentation for software products, including user manuals and API documentation.' },
-  ],
-  [formatDate(new Date(new Date().setDate(new Date().getDate() - 5)))]: [ // Five days ago
-    { id: 19, jobId: 'Tx119', website: 'Glassdoor', position: 'Scrum Master', company: 'Agile Teams', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 5))), jobDescription: 'Facilitate agile ceremonies, remove impediments, and coach development teams in Scrum principles and practices to maximize delivery.' },
-  ],
-  [formatDate(new Date(new Date().setDate(new Date().getDate() - 6)))]: [ // Six days ago
-    { id: 20, jobId: 'Tx120', website: 'CloudComputing', position: 'Cloud Engineer', company: 'Sky Computing', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 6))), jobDescription: 'Design, deploy, and manage cloud-based solutions on AWS, Azure, or GCP. Experience with cloud automation and cost optimization.' },
-    { id: 21, jobId: 'Tx121', website: 'Other', position: 'Marketing Specialist', company: 'Brand Boost', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() - 6))), jobDescription: 'Develop and execute digital marketing campaigns, analyze market trends, and manage social media presence to enhance brand visibility.' },
-  ],
-  // Add more applications for dates in the future or past as needed for testing scrolling
-  [formatDate(new Date(new Date().setDate(new Date().getDate() + 1)))]: [ // Tomorrow
-    { id: 22, jobId: 'Tx122', website: 'LinkedIn', position: 'Senior Software Architect', company: 'Innovate Tomorrow', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() + 1))), jobDescription: 'Lead the architectural design and development of complex software systems, ensuring scalability, reliability, and performance.' }
-  ],
-  [formatDate(new Date(new Date().setDate(new Date().getDate() + 2)))]: [ // Day after tomorrow
-    { id: 23, jobId: 'Tx123', website: 'Indeed', position: 'Lead Data Scientist', company: 'Future AI', link: '#', dateAdded: formatDate(new Date(new Date().setDate(new Date().getDate() + 2))), jobDescription: 'Lead a team of data scientists to develop and deploy advanced analytical solutions and machine learning models.' }
-  ],
-};
+
 
 
 // --- Applications Tab Content ---
@@ -2650,49 +2612,54 @@ useEffect(() => {
                 .flatMap(app => app.attachments || []);
 
             // 3. Combine and deduplicate the file lists.
-            // Use a Map to ensure each file (identified by its downloadUrl) is only present once.
             const allFilesMap = new Map();
 
             [...generalFiles, ...applicationAttachments].forEach(file => {
-                // Use a unique property like downloadUrl as the key for deduplication
                 if (file.downloadUrl) {
                     allFilesMap.set(file.downloadUrl, file);
                 }
             });
 
-            // 4. Convert the Map values back to an array and set the state
             const combinedFiles = Array.from(allFilesMap.values());
             setAllFiles(combinedFiles);
 
-            // 5. This logic is correct and doesn't need to be changed
+            // 4. Extract and Group All Job Applications (REALTIME DATA FETCH)
             const allApplications = registrations.flatMap(reg => reg.jobApplications || []);
             const interviews = allApplications.filter(app => app.status === 'Interview');
             setScheduledInterviews(interviews);
 
             // This logic groups applications by date for the worksheet view
             const groupedApplications = allApplications.reduce((acc, app) => {
-                const dateKey = formatDate(app.appliedDate);
+                // Use the application's appliedDate, formatted to DD-MM-YYYY
+                const dateKey = formatDate(app.appliedDate); 
+                
+                // Ensure link points to jobDescriptionUrl as required by the table structure
+                // Use jobBoards for the website column, and jobTitle for the position column
+                const applicationEntry = {
+                    id: app.id,
+                    jobId: app.jobId,
+                    website: app.jobBoards, // Map jobBoards to website column
+                    position: app.jobTitle, // Map jobTitle to position column
+                    company: app.company,
+                    link: app.jobDescriptionUrl, // Use jobDescriptionUrl for the link
+                    jobType: app.jobType || 'N/A',
+                    dateAdded: dateKey,
+                    jobDescription: app.jobDesc || app.jobTitle, // Use jobDesc or jobTitle for the description modal
+                    status: app.status,
+                    role: app.role,
+                };
+                
                 if (!acc[dateKey]) {
                     acc[dateKey] = [];
                 }
-                acc[dateKey].push({
-                    id: app.id,
-                    jobId: app.jobId,
-                    website: app.jobBoards,
-                    position: app.jobTitle,
-                    company: app.company,
-                    link: app.jobDescriptionUrl,
-                    jobType: app.jobType || 'N/A',
-                    dateAdded: formatDate(app.appliedDate),
-                    jobDescription: app.notes,
-                    status: app.status,
-                    role: app.role,
-                });
+                acc[dateKey].push(applicationEntry);
                 return acc;
             }, {});
-            setApplicationsData(groupedApplications);
+            
+            // Set the state with the grouped Firebase data
+            setApplicationsData(groupedApplications); 
 
-            // Process service registrations to categorize them
+            // Process service registrations to categorize them (existing logic)
             const registeredServiceNames = registrations.map(reg => reg.service);
 
             const active = allServices.filter(service => registeredServiceNames.includes(service.title));
@@ -2705,7 +2672,6 @@ useEffect(() => {
 
     return () => unsubscribe();
 }, []);
-
 
   const handleActiveServiceClick = (service) => {
     if (clientData && clientData.serviceRegistrations) {
@@ -2963,7 +2929,7 @@ useEffect(() => {
   }, []);
 
   // Flatten all applications once and add their original date for Applications tab
-  const allApplicationsFlattened = useMemo(() => {
+const allApplicationsFlattened = useMemo(() => {
     const flattened = [];
     for (const dateKey in applicationsData) {
       if (Object.prototype.hasOwnProperty.call(applicationsData, dateKey)) {
@@ -2972,8 +2938,9 @@ useEffect(() => {
         });
       }
     }
+    console.log('DEBUG: allApplicationsFlattened recalculated. Total apps:', flattened.length);
     return flattened;
-  }, []);
+  }, [applicationsData]);
 
 
   // Helper to determine if any global filter (search, date range, or categorical) is active
@@ -3037,12 +3004,15 @@ useEffect(() => {
   };
 
   // Callback from DateRangeCalendar when a range is selected
-  const handleDateRangeChangeFromCalendar = useCallback((start, end) => {
+   const handleDateRangeChangeFromCalendar = useCallback((start, end) => {
+    console.log('DEBUG: handleDateRangeChangeFromCalendar triggered. Start (Date Object):', start, 'End (Date Object):', end); // DEBUG
     setTempStartDate(start);
     setTempEndDate(end);
   }, []);
 
-  const handleApplyDateRange = () => {
+  
+const handleApplyDateRange = () => {
+    console.log('DEBUG: handleApplyDateRange triggered. Applying range (Temp Dates):', tempStartDate, 'to', tempEndDate); // DEBUG
     // Validate dates before applying (optional, but good practice)
     if (tempStartDate && tempEndDate && tempStartDate > tempEndDate) {
       console.error('Start date cannot be after end date.');
@@ -3050,10 +3020,19 @@ useEffect(() => {
       return;
     }
     // Set the main filter states (converted back to DD-MM-YYYY strings for consistency)
-    setStartDateFilter(tempStartDate ? formatDate(tempStartDate) : '');
-    setEndDateFilter(tempEndDate ? formatDate(tempEndDate) : '');
+    const newStartFilter = tempStartDate ? formatDate(tempStartDate) : '';
+    const newEndFilter = tempEndDate ? formatDate(tempEndDate) : '';
+
+    console.log('DEBUG: Setting permanent filters (DD-MM-YYYY strings): StartFilter:', newStartFilter, 'EndFilter:', newEndFilter); // DEBUG
+    
+    setStartDateFilter(newStartFilter);
+    setEndDateFilter(newEndFilter);
     setShowDateRangeModal(false);
-  };
+
+    // NOTE: The asynchronous nature of set state means the console may show old state values 
+    // outside of the rendering cycle. The next render cycle will use the new values set above.
+};
+
 
   const handleClearDateRangeInModal = () => {
     // 1. Clear the temporary date selections within the modal
@@ -3253,20 +3232,23 @@ useEffect(() => {
 
   // Apply all filters to the relevant base set of applications
   const filteredApplicationsForDisplay = useMemo(() => {
+    
+    // DEBUG: Log the filter values used in this run
+    console.log('--- DEBUG: filteredApplicationsForDisplay Re-running ---');
+    console.log('Current Date Filter Range (DD-MM-YYYY):', startDateFilter, 'to', endDateFilter);
+    console.log('Current Search Term:', searchTerm);
+    console.log('Current Categorical Filters:', filterWebsites.length, 'websites,', filterPositions.length, 'positions,', filterCompanies.length, 'companies');
+    
     let baseApps = [];
 
-    const isDateRangeFilterSet = startDateFilter !== '' && endDateFilter !== '';
-    const isSearchActiveOnly = searchTerm !== '' && !isDateRangeFilterSet;
-    const isCategoricalFilterActiveOnly = (filterWebsites.length > 0 || filterPositions.length > 0 || filterCompanies.length > 0) && !isDateRangeFilterSet;
+    const isDateRangeFilterSet = startDateFilter !== '' || endDateFilter !== ''; // Check if ANY date filter is set
+    const isSearchActiveOnly = searchTerm !== '';
+    const isCategoricalFilterActiveOnly = filterWebsites.length > 0 || filterPositions.length > 0 || filterCompanies.length > 0;
 
-    if (isDateRangeFilterSet) {
-      // If date range is explicitly set, always filter from all data
+    // --- Core Fix: Determine which pool of data to filter from ---
+    if (isDateRangeFilterSet || isSearchActiveOnly || isCategoricalFilterActiveOnly) {
+      // If any filter *besides* the simple date ribbon selection is active, use the FULL flattened data pool.
       baseApps = allApplicationsFlattened;
-    } else if (isSearchActiveOnly || isCategoricalFilterActiveOnly) {
-      // If only search or categorical filters are active, filter only for the selected ribbon date
-      // If no ribbon date is selected, default to today
-      const targetDate = selectedDate || formatDate(new Date());
-      baseApps = applicationsData[targetDate] || [];
     } else if (selectedDate) {
       // If only a ribbon date is selected (and no other global filters active), use that date's data.
       baseApps = applicationsData[selectedDate] || [];
@@ -3274,9 +3256,10 @@ useEffect(() => {
       // Default case, if no filters active and no ribbon date selected, show data for today.
       baseApps = applicationsData[formatDate(new Date())] || [];
     }
+    // --- End Core Fix ---
 
 
-    return baseApps.filter(app => {
+    const result = baseApps.filter(app => {
       const matchesWebsite = filterWebsites.length === 0 || filterWebsites.includes(app.website);
       const matchesPosition = filterPositions.length === 0 || filterPositions.includes(app.position);
       const matchesCompany = filterCompanies.length === 0 || filterCompanies.includes(app.company);
@@ -3312,6 +3295,9 @@ useEffect(() => {
       // Combine all conditions
       return matchesWebsite && matchesPosition && matchesCompany && matchesSearchTerm && matchesDateRange;
     });
+    
+    console.log('DEBUG: Filter result count:', result.length); // DEBUG
+    return result;
   }, [selectedDate, applicationsData, filterWebsites, filterPositions, filterCompanies, searchTerm, startDateFilter, endDateFilter, allApplicationsFlattened, isGlobalFilterActive]);
 
 

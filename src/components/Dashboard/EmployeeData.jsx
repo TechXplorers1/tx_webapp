@@ -1123,12 +1123,13 @@ const handleConfirmDeleteFile = async () => {
     setCurrentModalStep(1);
   };
 
-  const handleNextStep = () => {
-    const mandatoryFieldsStep1 = ['jobTitle', 'company', 'jobId'];
+const handleNextStep = () => {
+    // Job ID is NOT mandatory. Mandatory fields are now just jobTitle and company.
+    const mandatoryFieldsStep1 = ['jobTitle', 'company'];
     const errors = {};
     let hasError = false;
 
-    // 1. Validation Check for Step 1 fields
+    // 1. Validation Check for mandatory Step 1 fields
     mandatoryFieldsStep1.forEach(field => {
         if (!newApplicationFormData[field] || newApplicationFormData[field].trim() === '') {
             errors[field] = 'This field is mandatory.';
@@ -1136,11 +1137,20 @@ const handleConfirmDeleteFile = async () => {
         }
     });
 
-    // 2. Re-run Job ID Validation against existing applications
-    if (newApplicationFormData.jobId && newApplicationFormData.jobId.trim() !== '' && selectedClient?.jobApplications) {
-        const existingApp = selectedClient.jobApplications.find(app => app.jobId && app.jobId.toLowerCase() === newApplicationFormData.jobId.trim().toLowerCase());
-        if (existingApp && existingApp.id !== newApplicationFormData.id) { // Ensure it's not the same application when editing (though this modal is for 'Add')
-            errors.jobId = `You have already used the same Job ID on ${existingApp.appliedDate}.`;
+    const { jobId, company } = newApplicationFormData;
+
+    // 2. Conflict Check: If Job ID is provided, check for a duplicate (Company + Job ID)
+    if (jobId && jobId.trim() !== '' && company && company.trim() !== '' && selectedClient?.jobApplications) {
+        const lowerCaseJobId = jobId.trim().toLowerCase();
+        const lowerCaseCompany = company.trim().toLowerCase();
+
+        const existingApp = selectedClient.jobApplications.find(app => 
+            app.jobId && app.jobId.toLowerCase() === lowerCaseJobId &&
+            app.company && app.company.toLowerCase() === lowerCaseCompany
+        );
+        
+        if (existingApp && existingApp.id !== newApplicationFormData.id) {
+            errors.jobId = `You have already applied for the same Job ID on ${existingApp.appliedDate}.`;
             hasError = true;
         }
     }
@@ -1148,7 +1158,7 @@ const handleConfirmDeleteFile = async () => {
     setNewApplicationErrors(errors);
 
     if (hasError) {
-        triggerNotification("Please fill in all mandatory fields and resolve the Job ID conflict.");
+        triggerNotification("Please fill in all mandatory fields and resolve any application conflicts.");
         return;
     }
 
@@ -1158,28 +1168,42 @@ const handleConfirmDeleteFile = async () => {
 
 const handleNewApplicationFormChange = (e) => {
     const { name, value } = e.target;
-    setNewApplicationFormData(prev => ({ ...prev, [name]: value }));
+    const newFormData = { ...newApplicationFormData, [name]: value };
+
+    setNewApplicationFormData(newFormData);
     // Clear the specific error when the user starts typing
     if (newApplicationErrors[name]) {
         setNewApplicationErrors(prev => ({ ...prev, [name]: '' }));
     }
 
-    // Special validation check for jobId on change (Step 1 requirement)
-    if (name === 'jobId' && value.trim() !== '' && selectedClient?.jobApplications) {
-        const existingApp = selectedClient.jobApplications.find(app => app.jobId && app.jobId.toLowerCase() === value.trim().toLowerCase());
-        if (existingApp) {
-            setNewApplicationErrors(prev => ({
-                ...prev,
-                jobId: `You have already used the same Job ID on ${existingApp.appliedDate}.`,
-            }));
+    // Special validation check for Job ID conflict (only runs if both fields are non-empty)
+    if (name === 'jobId' || name === 'company') {
+        const jobIdCheck = newFormData.jobId;
+        const companyCheck = newFormData.company;
+
+        if (jobIdCheck && jobIdCheck.trim() !== '' && companyCheck && companyCheck.trim() !== '' && selectedClient?.jobApplications) {
+            const lowerCaseJobId = jobIdCheck.trim().toLowerCase();
+            const lowerCaseCompany = companyCheck.trim().toLowerCase();
+            
+            const existingApp = selectedClient.jobApplications.find(app => 
+                app.jobId && app.jobId.toLowerCase() === lowerCaseJobId &&
+                app.company && app.company.toLowerCase() === lowerCaseCompany
+            );
+
+            if (existingApp) {
+                // Set error only on the Job ID field for visibility
+                setNewApplicationErrors(prev => ({
+                    ...prev,
+                    jobId: `You have already applied for the same Job ID on ${existingApp.appliedDate}.`,
+                }));
+            } else if (newApplicationErrors.jobId) {
+                // Clear the error if the conflict is resolved
+                setNewApplicationErrors(prev => ({ ...prev, jobId: '' }));
+            }
         } else if (newApplicationErrors.jobId) {
-            setNewApplicationErrors(prev => ({
-                ...prev,
-                jobId: '', // Clear the error if the ID is unique now
-            }));
+           // Clear the error if one of the required fields becomes empty
+           setNewApplicationErrors(prev => ({ ...prev, jobId: '' }));
         }
-    } else if (name === 'jobId' && newApplicationErrors.jobId) {
-        setNewApplicationErrors(prev => ({ ...prev, jobId: '' }));
     }
 };
 
@@ -4149,7 +4173,7 @@ useEffect(() => {
               </div>
 
               <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Job ID <span style={{ color: 'red' }}>*</span></label>
+                <label style={modalLabelStyle}>Job ID</label>
                 <input
                   type="text"
                   name="jobId"
