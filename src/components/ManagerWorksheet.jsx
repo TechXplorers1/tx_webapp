@@ -1867,7 +1867,8 @@ const filteredBySearch = useMemo(() => {
                                 <tr>
                                   <th>Company</th>
                                   <th>Job Title</th>
-                                  <th>Link</th>
+                                  <th>Job ID</th>
+                                  <th>Applied Link</th>
                                   <th>Applied Date</th>
                                   <th>Applied Time</th>
                                   <th>Status</th>
@@ -1879,7 +1880,8 @@ const filteredBySearch = useMemo(() => {
                                   <tr key={app.id}>
                                     <td>{app.company}</td>
                                     <td>{app.jobTitle}</td>
-                                    <td><a href={app.jobUrl} target="_blank" rel="noopener noreferrer">Link</a></td>
+                                    <td>{app.jobId}</td>
+                                    <td><a href={app.jobAppliedUrl} target="_blank" rel="noopener noreferrer">Applied Link</a></td>
                                     <td>{formatDateToDDMMYYYY(app.appliedDate)}</td>
                                     <td>{formatDateTime(app.timestamp).time}</td>
                                     <td><span className={`status-badge status-${app.status?.toLowerCase()}`}>{app.status}</span></td>
@@ -6449,7 +6451,7 @@ const filteredBySearch = useMemo(() => {
         <p className="modal-view-detail-item"><strong>Company:</strong> {selectedApplication.company}</p>
         <p className="modal-view-detail-item"><strong>Job ID:</strong> {selectedApplication.jobId}</p>
         <p className="modal-view-detail-item"><strong>Job Boards:</strong> {selectedApplication.jobBoards}</p>
-        <p className="modal-view-detail-item"><strong>Job URL:</strong> <a href={selectedApplication.jobUrl} target="_blank" rel="noopener noreferrer">{selectedApplication.jobUrl}</a></p>
+        <p className="modal-view-detail-item"><strong>Job Applied URL:</strong> <a href={selectedApplication.jobAppliedUrl} target="_blank" rel="noopener noreferrer">{selectedApplication.jobAppliedUrl}</a></p>
      <p className="modal-view-detail-item"><strong>Applied Date:</strong> {formatDateTime(selectedApplication.timestamp).date}</p>
     <p className="modal-view-detail-item"><strong>Applied Time:</strong> {formatDateTime(selectedApplication.timestamp).time}</p>
         <p className="modal-view-detail-item"><strong>Status:</strong> {selectedApplication.status}</p>
@@ -6490,8 +6492,8 @@ const filteredBySearch = useMemo(() => {
           <input type="text" name="jobBoards" value={editableApplication.jobBoards} onChange={handleApplicationChange} />
         </div>
         <div className="form-group">
-          <label>Job URL</label>
-          <input type="url" name="jobUrl" value={editableApplication.jobUrl} onChange={handleApplicationChange} />
+          <label>Job Applied URL</label>
+          <input type="jobAppliedUrl" name="" value={editableApplication.jobAppliedUrl} onChange={handleApplicationChange} />
         </div>
         <div className="form-group">
           <label>Status</label>

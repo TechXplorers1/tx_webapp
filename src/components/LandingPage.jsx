@@ -56,6 +56,7 @@ const LandingPage = () => {
   const { user, isLoggedIn } = useAuth(); // Get authentication status
   const navigate = useNavigate();
   const [serviceRegistrations, setServiceRegistrations] = useState(null);
+  const { isDarkMode } = useTheme(); // Use the theme context
 
 useEffect(() => {
     // Only run this if the user is logged in and we have their Firebase key
@@ -200,8 +201,7 @@ useEffect(() => {
   const [carouselRef, carouselInView] = useInView({ triggerOnce: false, threshold: 0.1 });
   const [servicesRef, servicesInView] = useInView({ triggerOnce: false, threshold: 0.1 });
   const [worldRef, worldInView] = useInView({ triggerOnce: true, threshold: 0.1 });
-  const { isDarkMode } = useTheme();
-
+  
   const handleBookServiceClick = (item) => {
     if (isLoggedIn) {
       // User is logged in, proceed to the form
@@ -233,6 +233,7 @@ useEffect(() => {
     <>
       <style>{`
                 :root {
+                    /* Light Mode */
                     --primary-color: #6D28D9;
                     --primary-light: #EDE9FE;
                     --secondary-color: #1F2937;
@@ -242,11 +243,22 @@ useEffect(() => {
                     --border-color: #E5E7EB;
                 }
 
+                .dark-mode-active {
+                    /* Dark Mode Overrides */
+                    --primary-light: #4c1d95; /* Darker primary light */
+                    --secondary-color: #F9FAFB; /* White text */
+                    --text-color: #D1D5DB; /* Light gray text */
+                    --light-gray: #1F2937; /* Dark background for sections */
+                    --white: #111827; /* Very dark background */
+                    --border-color: #374151; /* Darker border */
+                }
+
                 .landing-page-modern {
                     font-family: 'Inter', sans-serif;
                     background-color: var(--white);
                     color: var(--text-color);
                     overflow-x: hidden;
+                    transition: background-color 0.3s, color 0.3s; /* Smooth transition */
                 }
 
                 /* New Hero Carousel Section */
@@ -258,6 +270,13 @@ useEffect(() => {
                     align-items: center;
                     margin-top:70px;
                 }
+                
+                .dark-mode-active .hero-carousel-section {
+                     /* Dark Mode Hero Background */
+                    background: radial-gradient(circle at top left, rgba(76, 29, 149, 0.4), transparent 40%),
+                                radial-gradient(circle at bottom right, rgba(76, 29, 149, 0.4), transparent 50%);
+                }
+
 
                 .hero-carousel-section .carousel,
                 .hero-carousel-section .carousel-inner,
@@ -287,6 +306,7 @@ useEffect(() => {
                     line-height: 1.6;
                     margin-bottom: 1.5rem;
                     max-width: 500px;
+                    color: var(--text-color); /* Ensure paragraph text uses text color */
                 }
                 
                 .feature-pills {
@@ -303,6 +323,7 @@ useEffect(() => {
                     border-radius: 9999px;
                     font-size: 0.875rem;
                     font-weight: 500;
+                    color: var(--text-color); /* Ensure text in pills is readable */
                 }
                 
                 .hero-carousel-buttons {
@@ -372,6 +393,10 @@ useEffect(() => {
                     padding: 6rem 0;
                     background-color: var(--light-gray);
                 }
+                
+                .dark-mode-active .services-section-modern {
+                    background-color: var(--light-gray); /* Already defined as dark background in dark mode */
+                }
 
                 .section-header {
                     text-align: center;
@@ -389,6 +414,7 @@ useEffect(() => {
                     font-size: 1.125rem;
                     max-width: 600px;
                     margin: 0 auto;
+                    color: var(--text-color); /* Ensure paragraph text uses text color */
                 }
 
                 .service-card-modern {
@@ -405,6 +431,10 @@ useEffect(() => {
                     box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
                 }
 
+                .dark-mode-active .service-card-modern:hover {
+                    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3), 0 4px 6px -2px rgba(0,0,0,0.2);
+                }
+                
                 .service-card-img {
                     width: 100%;
                     height: 200px;
@@ -463,6 +493,11 @@ useEffect(() => {
                     background-image: radial-gradient(circle at 10% 20%, rgba(237, 233, 254, 0.5), transparent 40%),
                                       radial-gradient(circle at 80% 90%, rgba(237, 233, 254, 0.5), transparent 50%);
                 }
+                
+                .dark-mode-active .global-stats-section {
+                    background-image: radial-gradient(circle at 10% 20%, rgba(76, 29, 149, 0.5), transparent 40%),
+                                      radial-gradient(circle at 80% 90%, rgba(76, 29, 149, 0.5), transparent 50%);
+                }
 
                 .stat-card {
                     text-align: center;
@@ -477,6 +512,10 @@ useEffect(() => {
                 .stat-card:hover {
                     transform: translateY(-5px);
                     box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+                }
+
+                .dark-mode-active .stat-card:hover {
+                    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3), 0 4px 6px -2px rgba(0,0,0,0.2);
                 }
 
                 .stat-icon-wrapper {
@@ -528,15 +567,38 @@ useEffect(() => {
                     object-fit: cover;
                 }
 
-                .operate-overlay-modern {
+                .operate-overlay {
                     position: absolute;
-                    top: 20px;
+                    top: 120px;
                     left: 20px;
-                    background-color: rgba(255, 255, 255, 0.95);
-                    padding: 1.5rem;
-                    border-radius: 10px;
-                    z-index: 1000;
-                    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                    width: 200px;
+                    background: rgba(255, 255, 255, 0.95);
+                    padding: 20px;
+                    border-radius: 8px;
+                    z-index: 10;
+                    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+                }
+
+                .dark-mode-active .operate-overlay {
+                    background: rgba(30, 41, 59, 0.95); /* Dark background with transparency */
+                    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+                }
+                
+                .operate-overlay h3 {
+                     color: var(--secondary-color); /* Ensure title is visible */
+                }
+
+                .country-item {
+                    padding: 8px 12px;
+                    background-color: #f1f1f1;
+                    border-radius: 5px;
+                    text-align: center;
+                    font-weight: 500;
+                }
+                
+                .dark-mode-active .country-item {
+                    background-color: #4a5568; /* Darker background for items */
+                    color: #e2e8f0; /* Light text for items */
                 }
                 
                 .pill-badge {
@@ -604,25 +666,6 @@ useEffect(() => {
                     color: var(--text-color);
                 }
 
-                .operate-overlay-modern h3 {
-                    margin: 0 0 1rem 0;
-                    font-size: 1.2rem;
-                    font-weight: 600;
-                }
-
-                .country-list-modern {
-                    list-style: none;
-                    padding: 0;
-                    margin: 0;
-                }
-                .country-list-modern li {
-                    padding: 0.5rem;
-                    background-color: #f1f1f1;
-                    margin-bottom: 0.5rem;
-                    border-radius: 5px;
-                    font-weight: 500;
-                }
-
                 /* Footer */
                 .footer-modern {
                     text-align: center;
@@ -640,6 +683,78 @@ useEffect(() => {
                     color: var(--primary-light);
                 }
 
+                /* --- General Dark Mode Overrides (for existing small styles) --- */
+                .dark-mode-active body { background-color: var(--white); color: var(--text-color); }
+                .dark-mode-active .section-title, .dark-mode-active .section-header h2 { color: var(--secondary-color); }
+                .dark-mode-active .section-subtitle { color: var(--text-color); }
+
+                /* Map Overlay adjustment for Dark Mode */
+                .map-overlay.light {
+                    background-color: rgba(0, 0, 0, 0.4); 
+                }
+                .dark-mode-active .map-overlay.light {
+                    /* Change overlay to a lighter color for better contrast with dark map tiles (if using dark tiles) 
+                       Keeping it dark for now as the tile layer is OSM default (light) */
+                     background-color: rgba(0, 0, 0, 0.6);
+                }
+
+                /* Fallback for the old map overlay class if still in use */
+                .map-overlay.dark {
+                     background-color: rgba(255, 255, 255, 0.3); /* Light overlay for dark mode */
+                }
+                
+                @keyframes slideInUp {
+                    from {
+                        opacity: 0;
+                        transform: translateY(20px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+
+                @keyframes zoomIn {
+                    from {
+                        opacity: 0;
+                        transform: scale(0.9);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: scale(1);
+                    }
+                }
+
+                /* Animation for the Active Carousel Slide Content */
+                .carousel-item.active .hero-carousel-text > * {
+                    /* Apply slide-up animation to all direct children of hero-carousel-text */
+                    animation: slideInUp 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; /* Ease-in-out curve */
+                }
+
+                /* Stagger the animation timing for text elements */
+                .carousel-item.active .pill-badge {
+                    animation-delay: 0.1s;
+                }
+                .carousel-item.active h1 {
+                    animation-delay: 0.2s;
+                }
+                .carousel-item.active p {
+                    animation-delay: 0.3s;
+                }
+                .carousel-item.active .feature-pills {
+                    animation-delay: 0.4s;
+                }
+                .carousel-item.active .hero-carousel-buttons {
+                    animation-delay: 0.5s;
+                }
+                .carousel-item.active .hero-stats {
+                    animation-delay: 0.6s;
+                }
+
+                /* Animation for the Image Wrapper */
+                .carousel-item.active .hero-carousel-image-wrapper {
+                    animation: zoomIn 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.3s both;
+                }
 
                 /* Responsive Styles */
                 @media (max-width: 991px) {
@@ -663,7 +778,7 @@ useEffect(() => {
                     }
                 }
             `}</style>
-      <div className="landing-page-modern">
+      <div className={`landing-page-modern ${isDarkMode ? 'dark-mode-active' : ''}`}>
          <CustomNavbar />
         {/* Hero Section */}
         <section className="hero-carousel-section">
@@ -723,6 +838,10 @@ useEffect(() => {
                           alt={item.alt}
                           className="hero-carousel-image"
                         />
+                        {/* <div className="active-now-floater">
+                                            <span className="active-dot"></span> Active Now
+                                            <div className="floater-subtext">{servicesData.clientCount} satisfied clients</div>
+                                        </div> */}
                         {/* <div className="code-snippet-overlay">
                           <code>
                             &lt;service name="{item.text}"&gt; <br />

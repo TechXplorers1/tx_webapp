@@ -1478,7 +1478,7 @@ const Applications = ({
                             fontWeight: 'bold',
                             color: selectedDate === dateObj.date ? 'rgba(255,255,255,0.8)' : '#666'
                         }}>
-                            {applicationsData[dateObj.date].length} application(s)
+                            {/* {applicationsData[dateObj.date].length} application(s) */}
                         </div>
                     )}
                 </div>
@@ -1663,7 +1663,7 @@ const Applications = ({
                   <th style={{ padding: '12px', textAlign: 'center' }}>Applied Date</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Job Boards</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Job Title</th>
-                  <th style={{ padding: '12px', textAlign: 'center' }}>Job ID</th>
+                  {/* <th style={{ padding: '12px', textAlign: 'center' }}>Job ID</th> */}
                   <th style={{ padding: '12px', textAlign: 'center' }}>Company</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Job Type</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Link</th>
@@ -1685,7 +1685,7 @@ const Applications = ({
                     </td>
                     <td style={{ padding: '12px' }}>{app.website}</td>
                     <td style={{ padding: '12px' }}>{app.position}</td>
-                    <td style={{ padding: '12px' }}>{app.jobId}</td>
+                    {/* <td style={{ padding: '12px' }}>{app.jobId}</td> */}
                     <td style={{ padding: '12px' }}>{app.company}</td>
                     <td style={{ padding: '12px' }}>{app.jobType || 'N/A'}</td>
                     <td style={{ padding: '12px' }}>
@@ -1996,7 +1996,7 @@ const InterviewsScheduled = ({ interviews, onAttachmentClick, showAttachmentModa
               <tr>
                 <th className="modal-table-header">Date</th>
                 <th className="modal-table-header">Time</th>
-                <th className="modal-table-header">Job ID</th>
+                {/* <th className="modal-table-header">Job ID</th> */}
                 <th className="modal-table-header">Company</th>
                 <th className="modal-table-header">Job Type</th>
                 <th className="modal-table-header">Recruiter Mail ID</th>
@@ -2011,7 +2011,7 @@ const InterviewsScheduled = ({ interviews, onAttachmentClick, showAttachmentModa
                     <div style={{ fontWeight: '500' }}>{interview.appliedDate}</div>
                   </td>
                   <td className="modal-table-cell">{interview.interviewTime}</td>
-                  <td className="modal-table-cell">{interview.jobId}</td>
+                  {/* <td className="modal-table-cell">{interview.jobId}</td> */}
                   <td style={{ fontWeight: '600' }} className="modal-table-cell">{interview.company}</td>
                    <td style={{ fontWeight: '600' }} className="modal-table-cell">{interview.jobType}</td>
                   <td className="modal-table-cell">{interview.recruiterMail}</td>
@@ -2681,7 +2681,7 @@ useEffect(() => {
                     website: app.jobBoards,
                     position: app.jobTitle,
                     company: app.company,
-                    link: app.jobUrl,
+                    link: app.jobDescriptionUrl,
                     jobType: app.jobType || 'N/A',
                     dateAdded: formatDate(app.appliedDate),
                     jobDescription: app.notes,
@@ -3130,7 +3130,7 @@ useEffect(() => {
       return `Filtered Applications (${count} found)`;
     } else if (selectedDate) {
       // Added count for the daily view as well
-      return `Applications for ${selectedDate} (${count} found)`;
+      return `Applications for ${selectedDate} (Count : ${count} )`;
     }
     return 'Job Applications'; // Default title
   };
@@ -5222,7 +5222,7 @@ html.dark-mode .notify-success-message {
                   <tr>
                     <th className="modal-table-header">Date</th>
                     <th className="modal-table-header">Time</th>
-                    <th className="modal-table-header">Job ID</th>
+                    {/* <th className="modal-table-header">Job ID</th> */}
                     <th className="modal-table-header">Company</th>
                     <th className="modal-table-header">Job Type</th>
                     <th className="modal-table-header">Recruiter Mail ID</th>
@@ -5237,7 +5237,7 @@ html.dark-mode .notify-success-message {
                         <div style={{ fontWeight: '500' }}>{interview.appliedDate}</div>
                       </td>
                       <td className="modal-table-cell">{interview.interviewTime}</td>
-                      <td className="modal-table-cell">{interview.jobId}</td>
+                      {/* <td className="modal-table-cell">{interview.jobId}</td> */}
                       <td style={{ fontWeight: '600' }} className="modal-table-cell">{interview.company}</td>
                        <td style={{ fontWeight: '600' }} className="modal-table-cell">{interview.jobType}</td>
                       <td className="modal-table-cell">{interview.recruiterMail}</td>

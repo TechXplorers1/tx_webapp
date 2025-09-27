@@ -395,6 +395,9 @@ const EmployeeData = () => {
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const profileDropdownRef = useRef(null);
+    const [newApplicationErrors, setNewApplicationErrors] = useState({});
+    const [currentModalStep, setCurrentModalStep] = useState(1);
+
 
   // NEW: State for controlling the visibility of the Employee Profile Modal
   const [showEmployeeProfileModal, setShowEmployeeProfileModal] = useState(false);
@@ -684,7 +687,7 @@ const formatToIST = (utcString) => {
   // States for Modals (Applications Tab)
   const [showAddApplicationModal, setShowAddApplicationModal] = useState(false);
   const [newApplicationFormData, setNewApplicationFormData] = useState({
-    jobTitle: '', company: '', jobType: '', jobBoards: '', jobUrl: '', location: '', jobDesc: '', jobId: '', role: '' // Added jobId
+    jobTitle: '', company: '', jobType: '', jobBoards: '', jobDescriptionUrl: '',jobAppliedUrl: '', location: '', jobDesc: '', jobId: '', role: '' // Added jobId
   });
   const [selectedClientForApplication, setSelectedClientForApplication] = useState(null);
 
@@ -1112,43 +1115,127 @@ const handleConfirmDeleteFile = async () => {
   const handleOpenAddApplicationModal = (client) => {
     setSelectedClient(client);
     setShowAddApplicationModal(true);
+        // Reset form data and errors on open
+    setNewApplicationFormData({
+      jobTitle: '', company: '', jobType: '', jobBoards: '', jobDescriptionUrl: '', jobAppliedUrl: '', location: '', jobId: '', role: ''
+    });
+    setNewApplicationErrors({});
+    setCurrentModalStep(1);
   };
 
-  const handleNewApplicationFormChange = (e) => {
+  const handleNextStep = () => {
+    const mandatoryFieldsStep1 = ['jobTitle', 'company', 'jobId'];
+    const errors = {};
+    let hasError = false;
+
+    // 1. Validation Check for Step 1 fields
+    mandatoryFieldsStep1.forEach(field => {
+        if (!newApplicationFormData[field] || newApplicationFormData[field].trim() === '') {
+            errors[field] = 'This field is mandatory.';
+            hasError = true;
+        }
+    });
+
+    // 2. Re-run Job ID Validation against existing applications
+    if (newApplicationFormData.jobId && newApplicationFormData.jobId.trim() !== '' && selectedClient?.jobApplications) {
+        const existingApp = selectedClient.jobApplications.find(app => app.jobId && app.jobId.toLowerCase() === newApplicationFormData.jobId.trim().toLowerCase());
+        if (existingApp && existingApp.id !== newApplicationFormData.id) { // Ensure it's not the same application when editing (though this modal is for 'Add')
+            errors.jobId = `You have already used the same Job ID on ${existingApp.appliedDate}.`;
+            hasError = true;
+        }
+    }
+
+    setNewApplicationErrors(errors);
+
+    if (hasError) {
+        triggerNotification("Please fill in all mandatory fields and resolve the Job ID conflict.");
+        return;
+    }
+
+    // 3. If validation passes, move to the next step
+    setCurrentModalStep(2);
+};
+
+const handleNewApplicationFormChange = (e) => {
     const { name, value } = e.target;
     setNewApplicationFormData(prev => ({ ...prev, [name]: value }));
-  };
+    // Clear the specific error when the user starts typing
+    if (newApplicationErrors[name]) {
+        setNewApplicationErrors(prev => ({ ...prev, [name]: '' }));
+    }
+
+    // Special validation check for jobId on change (Step 1 requirement)
+    if (name === 'jobId' && value.trim() !== '' && selectedClient?.jobApplications) {
+        const existingApp = selectedClient.jobApplications.find(app => app.jobId && app.jobId.toLowerCase() === value.trim().toLowerCase());
+        if (existingApp) {
+            setNewApplicationErrors(prev => ({
+                ...prev,
+                jobId: `You have already used the same Job ID on ${existingApp.appliedDate}.`,
+            }));
+        } else if (newApplicationErrors.jobId) {
+            setNewApplicationErrors(prev => ({
+                ...prev,
+                jobId: '', // Clear the error if the ID is unique now
+            }));
+        }
+    } else if (name === 'jobId' && newApplicationErrors.jobId) {
+        setNewApplicationErrors(prev => ({ ...prev, jobId: '' }));
+    }
+};
 
 const handleSaveNewApplication = async () => {
     if (!selectedClient) return;
+
+    // Validation for Step 2 fields
+    const mandatoryFieldsStep2 = ['jobBoards', 'jobDescriptionUrl', 'jobAppliedUrl'];
+    const errors = {};
+    let hasError = false;
+
+    mandatoryFieldsStep2.forEach(field => {
+        if (!newApplicationFormData[field] || newApplicationFormData[field].trim() === '') {
+            errors[field] = 'This field is mandatory.';
+            hasError = true;
+        }
+    });
+
+    setNewApplicationErrors(errors);
+
+    // Stop submission if there are errors in Step 2
+    if (hasError) {
+        triggerNotification("Please fill in all mandatory fields for the final step.");
+        return;
+    }
+
     const newApp = {
-      id: Date.now(),
-      ...newApplicationFormData,
-      status: 'Applied',
-      appliedDate: getLocalDateString(), // FIX: Use local date string
-      timestamp: new Date().toISOString(),
-      attachments: []
+        id: Date.now(),
+        ...newApplicationFormData,
+        status: 'Applied',
+        appliedDate: getLocalDateString(),
+        timestamp: new Date().toISOString(),
+        attachments: []
     };
     const existingApplications = selectedClient.jobApplications || [];
     const updatedApplications = [newApp, ...existingApplications];
     const registrationRef = ref(database, `clients/${selectedClient.clientFirebaseKey}/serviceRegistrations/${selectedClient.registrationKey}/jobApplications`);
     try {
-      await set(registrationRef, updatedApplications);
-      const updatedClient = { ...selectedClient, jobApplications: updatedApplications };
-      setSelectedClient(updatedClient);
-      setActiveClients(prev => prev.map(c => c.registrationKey === updatedClient.registrationKey ? updatedClient : c));
-      setInactiveClients(prev => prev.map(c => c.registrationKey === updatedClient.registrationKey ? updatedClient : c));
-      setNewClients(prev => prev.map(c => c.registrationKey === updatedClient.registrationKey ? updatedClient : c));
-      setShowAddApplicationModal(false);
-      setNewApplicationFormData({
-        jobTitle: '', company: '', jobType: '', jobBoards: '', jobUrl: '', location: '', jobDesc: '', jobId: '', role: ''
-      });
-      triggerNotification("Application added successfully!");
+        await set(registrationRef, updatedApplications);
+        const updatedClient = { ...selectedClient, jobApplications: updatedApplications };
+        setSelectedClient(updatedClient);
+        const updateClientList = (prevClients) => prevClients.map(c => c.registrationKey === updatedClient.registrationKey ? updatedClient : c);
+        setActiveClients(updateClientList);
+        setInactiveClients(updateClientList);
+        setNewClients(updateClientList);
+        setShowAddApplicationModal(false);
+        setNewApplicationFormData({
+            jobTitle: '', company: '', jobType: '', jobBoards: '', jobDescriptionUrl: '', jobAppliedUrl: '', location: '', jobId: '', role: ''
+        });
+        setCurrentModalStep(1); // Reset step after successful save
+        triggerNotification("Application added successfully!");
     } catch (error) {
-      console.error("Failed to save new application:", error);
-      alert("Error saving application.");
+        console.error("Failed to save new application:", error);
+        alert("Error saving application.");
     }
-  };
+};
 
   const handleViewApplication = (application) => {
     setViewedApplication(application);
@@ -2579,7 +2666,8 @@ useEffect(() => {
                     <th style={applicationTableHeaderCellStyle}>Company</th>
                     <th style={applicationTableHeaderCellStyle}>Job Boards</th>
                     <th style={applicationTableHeaderCellStyle}>Job ID</th>
-                    <th style={applicationTableHeaderCellStyle}>Link</th>
+                    <th style={applicationTableHeaderCellStyle}>Job Description Link</th>
+                    <th style={applicationTableHeaderCellStyle}>Job Applied Link</th>
                     <th style={applicationTableHeaderCellStyle}>Applied Date</th>
                     <th style={applicationTableHeaderCellStyle}>Attachments</th>
                     <th style={applicationTableHeaderCellStyle}>Actions</th>
@@ -2601,8 +2689,13 @@ useEffect(() => {
                           <td style={applicationTableDataCellStyle}>{app.jobBoards}</td>
                           <td style={applicationTableDataCellStyle}>{app.jobId || '-'}</td>
                           <td style={applicationTableDataCellStyle}>
-                            {app.jobUrl && (
-                              <a href={app.jobUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>Link</a>
+                            {app.jobDescriptionUrl && (
+                              <a href={app.jobDescriptionUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>Description Link </a>
+                            )}
+                          </td>
+                          <td style={applicationTableDataCellStyle}>
+                            {app.jobAppliedUrl && (
+                              <a href={app.jobAppliedUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>Applied Link</a>
                             )}
                           </td>
                           <td style={applicationTableDataCellStyle}>{app.appliedDate}</td>
@@ -3465,7 +3558,8 @@ useEffect(() => {
                             <th style={applicationTableHeaderCellStyle}>Company</th>
                             <th style={applicationTableHeaderCellStyle}>Job Boards</th>
                             <th style={applicationTableHeaderCellStyle}>Job ID</th>
-                            <th style={applicationTableHeaderCellStyle}>Link</th>
+                            <th style={applicationTableHeaderCellStyle}>Job Description Link</th>
+                            <th style={applicationTableHeaderCellStyle}>Job Applied Link</th>
                             <th style={applicationTableHeaderCellStyle}>Applied Date</th>
                             <th style={applicationTableHeaderCellStyle}>Attachments</th>
                             <th style={applicationTableHeaderCellStyle}>Actions</th>
@@ -3489,9 +3583,16 @@ useEffect(() => {
                                 <td style={applicationTableDataCellStyle}>{app.jobBoards}</td>
                                 <td style={applicationTableDataCellStyle}>{app.jobId || '-'}</td>
                                 <td style={applicationTableDataCellStyle}>
-                                  {app.jobUrl && (
-                                    <a href={app.jobUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>
-                                      Link
+                                  {app.jobDescriptionUrl && (
+                                    <a href={app.jobDescriptionUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>
+                                      Description Link
+                                    </a>
+                                  )}
+                                </td>
+                                 <td style={applicationTableDataCellStyle}>
+                                  {app.jobAppliedUrl && (
+                                    <a href={app.jobAppliedUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>
+                                      Applied Link
                                     </a>
                                   )}
                                 </td>
@@ -4004,14 +4105,21 @@ useEffect(() => {
       )}
 
       {/* Add New Application Modal */}
+      {/* Add New Application Modal */}
       {selectedClient && (
         <Modal show={showAddApplicationModal} onHide={() => setShowAddApplicationModal(false)} size="lg" centered>
           <Modal.Header closeButton style={modalHeaderStyle}>
-            <Modal.Title style={modalTitleStyle}>Add Job Application for {selectedClient.name}</Modal.Title>
+            <Modal.Title style={modalTitleStyle}>
+              {currentModalStep === 1 ? 'Step 1 of 2: Essential Details' : 'Step 2 of 2: Links and Details'}
+              {` for ${selectedClient.name}`}
+            </Modal.Title>
           </Modal.Header>
           <Modal.Body style={modalBodyStyle}>
-            <p style={{ textAlign: 'center', color: '#64748b', marginBottom: '20px' }}>Apply for a job on behalf of {selectedClient.name}. The application will be automatically sent to the client.</p>
+            <p style={{ textAlign: 'center', color: '#64748b', marginBottom: '20px' }}>
+              Apply for a job on behalf of {selectedClient.name}.
+            </p>
             <div style={modalFormGridStyle}>
+              {/* --- STEP 1 FIELDS (Always visible on step 1) --- */}
               <div style={modalFormFieldGroupStyle}>
                 <label style={modalLabelStyle}>Job Title <span style={{ color: 'red' }}>*</span></label>
                 <input
@@ -4019,12 +4127,12 @@ useEffect(() => {
                   name="jobTitle"
                   value={newApplicationFormData.jobTitle}
                   onChange={handleNewApplicationFormChange}
-                  style={modalInputStyle}
+                  style={{ ...modalInputStyle, borderColor: newApplicationErrors.jobTitle ? 'red' : '#cbd5e1' }}
                   placeholder="e.g., Senior Frontend Developer"
                   required
                 />
+                {newApplicationErrors.jobTitle && <p style={errorTextStyle}>{newApplicationErrors.jobTitle}</p>}
               </div>
-
 
               <div style={modalFormFieldGroupStyle}>
                 <label style={modalLabelStyle}>Company <span style={{ color: 'red' }}>*</span></label>
@@ -4033,95 +4141,141 @@ useEffect(() => {
                   name="company"
                   value={newApplicationFormData.company}
                   onChange={handleNewApplicationFormChange}
-                  style={modalInputStyle}
+                  style={{ ...modalInputStyle, borderColor: newApplicationErrors.company ? 'red' : '#cbd5e1' }}
                   placeholder="e.g., TechCorp"
                   required
                 />
+                {newApplicationErrors.company && <p style={errorTextStyle}>{newApplicationErrors.company}</p>}
               </div>
+
               <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Job Boards</label>
-                <input
-                  type="text"
-                  name="jobBoards"
-                  value={newApplicationFormData.jobBoards}
-                  onChange={handleNewApplicationFormChange}
-                  style={modalInputStyle}
-                  placeholder="Select jobBoards"
-                />
-              </div>
-              <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Job URL <span style={{ color: 'red' }}>*</span></label>
-                <input
-                  type="url"
-                  name="jobUrl"
-                  value={newApplicationFormData.jobUrl}
-                  onChange={handleNewApplicationFormChange}
-                  style={modalInputStyle}
-                  placeholder="https://..."
-                  required
-                />
-              </div>
-              <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Job Type</label>
-                <select
-                  name="jobType"
-                  value={newApplicationFormData.jobType}
-                  onChange={handleNewApplicationFormChange}
-                  style={modalSelectStyle}
-                >
-                  <option value="">Select Job Type</option>
-                  <option value="Remote">Remote</option>
-                  <option value="On-site">On-site</option>
-                  <option value="Hybrid">Hybrid</option>
-                </select>
-              </div>
-              <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Job Location</label>
-                <input
-                  type="text"
-                  name="location"
-                  value={newApplicationFormData.location}
-                  onChange={handleNewApplicationFormChange}
-                  style={modalInputStyle}
-                  placeholder="e.g., San Francisco, CA"
-                />
-              </div>
-              <div style={modalFormFieldGroupStyle}> {/* New Job ID field */}
-                <label style={modalLabelStyle}>Job ID</label>
+                <label style={modalLabelStyle}>Job ID <span style={{ color: 'red' }}>*</span></label>
                 <input
                   type="text"
                   name="jobId"
                   value={newApplicationFormData.jobId}
                   onChange={handleNewApplicationFormChange}
-                  style={modalInputStyle}
+                  style={{ ...modalInputStyle, borderColor: newApplicationErrors.jobId ? 'red' : '#cbd5e1' }}
                   placeholder="e.g., ABC-12345"
+                  required
                 />
+                {newApplicationErrors.jobId && <p style={errorTextStyle}>{newApplicationErrors.jobId}</p>}
               </div>
-              {/* <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
-                <label style={modalLabelStyle}>Job Description</label>
-                <textarea
-                  name="jobDesc"
-                  value={newApplicationFormData.jobDesc}
-                  onChange={handleNewApplicationFormChange}
-                  style={modalTextareaStyle}
-                  placeholder="Any additional notes about this application..."
-                ></textarea>
-              </div> */}
+
+              {/* Empty slot for alignment in Step 1 */}
+              <div style={modalFormFieldGroupStyle}></div>
+
+
+              {/* --- STEP 2 FIELDS (Only visible on step 2) --- */}
+              {currentModalStep === 2 && (
+                <>
+                  <div style={modalFormFieldGroupStyle}>
+                    <label style={modalLabelStyle}>Job Boards <span style={{ color: 'red' }}>*</span></label>
+                    <input
+                      type="text"
+                      name="jobBoards"
+                      value={newApplicationFormData.jobBoards}
+                      onChange={handleNewApplicationFormChange}
+                      style={{ ...modalInputStyle, borderColor: newApplicationErrors.jobBoards ? 'red' : '#cbd5e1' }}
+                      placeholder="e.g., LinkedIn, Indeed"
+                      required
+                    />
+                    {newApplicationErrors.jobBoards && <p style={errorTextStyle}>{newApplicationErrors.jobBoards}</p>}
+                  </div>
+
+                  <div style={modalFormFieldGroupStyle}>
+                    <label style={modalLabelStyle}>Job Description URL <span style={{ color: 'red' }}>*</span></label>
+                    <input
+                      type="url"
+                      name="jobDescriptionUrl"
+                      value={newApplicationFormData.jobDescriptionUrl}
+                      onChange={handleNewApplicationFormChange}
+                      style={{ ...modalInputStyle, borderColor: newApplicationErrors.jobDescriptionUrl ? 'red' : '#cbd5e1' }}
+                      placeholder="https://job-description.com/..."
+                      required
+                    />
+                    {newApplicationErrors.jobDescriptionUrl && <p style={errorTextStyle}>{newApplicationErrors.jobDescriptionUrl}</p>}
+                  </div>
+
+                  <div style={modalFormFieldGroupStyle}>
+                    <label style={modalLabelStyle}>Job Applied URL <span style={{ color: 'red' }}>*</span></label>
+                    <input
+                      type="url"
+                      name="jobAppliedUrl"
+                      value={newApplicationFormData.jobAppliedUrl}
+                      onChange={handleNewApplicationFormChange}
+                      style={{ ...modalInputStyle, borderColor: newApplicationErrors.jobAppliedUrl ? 'red' : '#cbd5e1' }}
+                      placeholder="https://application-tracker.com/..."
+                      required
+                    />
+                    {newApplicationErrors.jobAppliedUrl && <p style={errorTextStyle}>{newApplicationErrors.jobAppliedUrl}</p>}
+                  </div>
+
+                  <div style={modalFormFieldGroupStyle}>
+                    <label style={modalLabelStyle}>Job Type</label>
+                    <select
+                      name="jobType"
+                      value={newApplicationFormData.jobType}
+                      onChange={handleNewApplicationFormChange}
+                      style={modalSelectStyle}
+                    >
+                      <option value="">Select Job Type</option>
+                      <option value="Remote">Remote</option>
+                      <option value="On-site">On-site</option>
+                      <option value="Hybrid">Hybrid</option>
+                    </select>
+                  </div>
+                  <div style={modalFormFieldGroupStyle}>
+                    <label style={modalLabelStyle}>Job Location</label>
+                    <input
+                      type="text"
+                      name="location"
+                      value={newApplicationFormData.location}
+                      onChange={handleNewApplicationFormChange}
+                      style={modalInputStyle}
+                      placeholder="e.g., San Francisco, CA"
+                    />
+                  </div>
+                  {/* Empty slot for alignment */}
+                  <div style={modalFormFieldGroupStyle}></div>
+                </>
+              )}
             </div>
           </Modal.Body>
           <Modal.Footer style={modalFooterStyle}>
-            <button
-              onClick={() => setShowAddApplicationModal(false)}
-              style={modalCancelButtonStyle}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSaveNewApplication}
-              style={modalAddButtonPrimaryStyle}
-            >
-              Add Application
-            </button>
+            {currentModalStep === 1 && (
+              <>
+                <button
+                  onClick={() => setShowAddApplicationModal(false)}
+                  style={modalCancelButtonStyle}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleNextStep}
+                  style={modalAddButtonPrimaryStyle}
+                >
+                  Next
+                </button>
+              </>
+            )}
+
+            {currentModalStep === 2 && (
+              <>
+                <button
+                  onClick={() => setCurrentModalStep(1)}
+                  style={modalCancelButtonStyle}
+                >
+                  Back
+                </button>
+                <button
+                  onClick={handleSaveNewApplication}
+                  style={modalAddButtonPrimaryStyle}
+                >
+                  Add Application
+                </button>
+              </>
+            )}
           </Modal.Footer>
         </Modal>
       )}
@@ -4138,7 +4292,8 @@ useEffect(() => {
               <p style={modalViewDetailItemStyle}><strong>Company:</strong> {viewedApplication.company}</p>
               <p style={modalViewDetailItemStyle}><strong>Job Boards:</strong> {viewedApplication.jobBoards}</p>
               <p style={modalViewDetailItemStyle}><strong>Job ID:</strong> {viewedApplication.jobId || '-'}</p> {/* Display Job ID */}
-              <p style={modalViewDetailItemStyle}><strong>Job URL:</strong> <a href={viewedApplication.jobUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6' }}>{viewedApplication.jobUrl}</a></p>
+              <p style={modalViewDetailItemStyle}><strong>Job Description URL:</strong> <a href={viewedApplication.jobDescriptionUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6' }}>{viewedApplication.jobDescriptionUrl}</a></p>
+              <p style={modalViewDetailItemStyle}><strong>Job Applied URL:</strong> <a href={viewedApplication.jobAppliedUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6' }}>{viewedApplication.jobAppliedUrl}</a></p>
               <p style={modalViewDetailItemStyle}><strong>Job Type:</strong> {viewedApplication.jobType || '-'}</p>
               <p style={modalViewDetailItemStyle}><strong>Job Location:</strong> {viewedApplication.location || '-'}</p>
               <p style={modalViewDetailItemStyle}><strong>Status:</strong> <span style={{ ...applicationStatusBadgeStyle, ...getApplicationStatusStyle(viewedApplication.status) }}>{viewedApplication.status}</span></p>
@@ -4230,7 +4385,7 @@ useEffect(() => {
                 />
               </div>
               <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Job Boards</label>
+                <label style={modalLabelStyle}>Job Boards<span style={{ color: 'red' }}>*</span></label>
                 <input
                   type="text"
                   name="jobBoards"
@@ -4240,11 +4395,22 @@ useEffect(() => {
                 />
               </div>
               <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Job URL <span style={{ color: 'red' }}>*</span></label>
+                <label style={modalLabelStyle}>Job Description URL <span style={{ color: 'red' }}>*</span></label>
                 <input
                   type="url"
-                  name="jobUrl"
-                  value={editedApplicationFormData.jobUrl}
+                  name="jobDescriptionUrl"
+                  value={editedApplicationFormData.jobDescriptionUrl}
+                  onChange={handleEditedApplicationFormChange}
+                  style={modalInputStyle}
+                  required
+                />
+              </div>
+               <div style={modalFormFieldGroupStyle}>
+                <label style={modalLabelStyle}>Job Applied URL <span style={{ color: 'red' }}>*</span></label>
+                <input
+                  type="url"
+                  name="jobAppliedUrl"
+                  value={editedApplicationFormData.jobAppliedUrl}
                   onChange={handleEditedApplicationFormChange}
                   style={modalInputStyle}
                   required
@@ -5130,6 +5296,12 @@ const headerContentStyle = { // New style for the content under AdminHeader
   gap: '20px',
   width: '100%',
   paddingTop: '32px', // Added padding-top here to move content down
+};
+const errorTextStyle = {
+  fontSize: '0.8rem',
+  color: 'red',
+  marginTop: '4px',
+  marginBottom: '0',
 };
 
 const headerTitleStyle = {
