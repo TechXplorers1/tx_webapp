@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { getDatabase, ref, onValue, query, orderByChild, equalTo, update, remove, set } from "firebase/database";
 import { database, storage } from '../../firebase'; // Import your Firebase config
 import { getStorage, ref as storageRef, getDownloadURL } from "firebase/storage";
+import { useTheme } from '../../context/ThemeContext';
 import {
   Chart as ChartJS,
   LineElement,
@@ -40,7 +41,7 @@ const documentTypes = {
 // --- Styled Components for Radio ---
 const StyledWrapper = styled.div`
   .glass-radio-group {
-    --bg: rgba(255, 255, 255, 0.06);
+    --bg: rgba(74, 85, 104, 0.4) !important;
     --text: #e5e5e5;
 
     display: flex;
@@ -252,6 +253,21 @@ const ClientHeader = ({
           --bg-nav-link-hover: #f9fafb; /* For dropdown items */
         }
 
+                .html-dark { 
+          --bg-header: #2d3748;
+          --text-primary: #e2e8f0;
+          --text-secondary: #a0aec0;
+          --border-color: #4a5568;
+          --shadow-color-1: rgba(0, 0, 0, 0.2);
+          --icon-color: #cbd5e0;
+          --client-avatar-bg: #4299e1;
+          --client-avatar-text: #ffffff;
+          --logo-x-color: #4299e1;
+          --client-tag-bg: #fbd38d;
+          --client-tag-text: #6b4617;
+          --bg-nav-link-hover: #4a5568; /* For dropdown items */
+        }
+
         html.dark-mode { /* Re-added dark mode styles */
           --bg-header: #2d3748;
           --text-primary: #e2e8f0;
@@ -330,7 +346,7 @@ const ClientHeader = ({
             color: var(--text-primary);
           }
 
-          .services-dropdown-menu {
+           .services-dropdown-menu {
             position: absolute;
             top: calc(100% + 0.5rem); /* Position below the button */
             right: 0;
@@ -536,7 +552,7 @@ const ClientHeader = ({
         /* Hamburger menu is removed, so no styles are needed for it */
         `}
       </style>
-      <header className="ad-header">
+       <header className={`ad-header ${isDarkMode ? 'html-dark' : ''}`}>
         <div className="ad-header-left">
           <div className="ad-logo" onClick={onLogoClick} style={{ cursor: 'pointer' }}>
             <span>Tech</span>
@@ -548,25 +564,25 @@ const ClientHeader = ({
         <div className="ad-header-right">
           <li className="profile-dropdown-item" onClick={onSubscriptionClick}>
             {/* Credit Card Icon */}
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1rem', height: '1rem' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1rem', height: '1rem', color: 'var(--text-primary)' }}>
               <path d="M22 9H2C1.44772 9 1 9.44772 1 10V19C1 19.5523 1.44772 20 2 20H22C22.5523 20 23 19.5523 23 19V10C23 9.44772 22.5523 9 22 9ZM3 11V18H21V11H3ZM22 4H2C1.44772 4 1 4.44772 1 5V7C1 7.55228 1.44772 8 2 8H22C22.5523 8 23 7.55228 23 7V5C23 4.44772 22.5523 4 22 4Z" />
             </svg>
             Subscription
           </li>
 
           <div className="header-button-item" onMouseEnter={() => setIsServicesDropdownOpen(true)} onMouseLeave={() => setIsServicesDropdownOpen(false)}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1rem', height: '1rem' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1rem', height: '1rem', color: 'var(--text-primary)' }}>
               <path d="M12 2L2 7L12 12L22 7L12 2Z" />
               <path d="M2 17L12 22L22 17" />
               <path d="M2 12L12 17L22 12" />
             </svg>
             Services
             {isServicesDropdownOpen && (
-              <ul className="services-dropdown-menu">
+              <ul className="services-dropdown-menu" ref={servicesMenuRef}>
                 <li className="services-dropdown-header">Active Services</li>
                 {activeServices.length > 0 ? (
                   activeServices.map(service => (
-                    <li key={service.path} className="services-dropdown-item" onClick={() => onActiveServiceClick(service)}>
+                    <li key={service.title} className="services-dropdown-item" onClick={() => onActiveServiceClick(service)}>
                       {service.title}
                     </li>
                   ))
@@ -576,7 +592,7 @@ const ClientHeader = ({
 
                 <li className="services-dropdown-header" style={{ marginTop: '0.5rem' }}>Inactive Services</li>
                 {inactiveServices.map(service => (
-                  <li key={service.path} className="services-dropdown-item" onClick={() => onInactiveServiceClick(service.path)}>
+                  <li key={service.title} className="services-dropdown-item" onClick={() => onInactiveServiceClick(service.path)}>
                     {service.title}
                   </li>
                 ))}
@@ -586,7 +602,7 @@ const ClientHeader = ({
 
           <div className="ad-notification-icon" onClick={onNotificationClick}>
             {/* Bell Icon */}
-            <svg className="ad-icon-btn" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1.125rem', height: '1.125rem' }}>
+            <svg className="ad-icon-btn" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1.125rem', height: '1.125rem', color: 'var(--text-primary)' }}>
               <path d="M224 0c-17.7 0-32 14.3-32 32V51.2C119 66 64 130.6 64 208v25.4c0 45.4-15.5 89.2-43.8 124.9L5.7 377.9c-2.7 4.4-3.4 9.7-1.7 14.6s4.6 8.5 9.8 10.1l39.5 12.8c10.6 3.4 21.8 3.9 32.7 1.4S120.3 400 128 392h192c7.7 8 17.5 13.6 28.3 16.3s22.1 1.9 32.7-1.4l39.5-12.8c5.2-1.7 8.2-6.1 9.8-10.1s1-10.2-1.7-14.6l-20.5-33.7C399.5 322.6 384 278.8 384 233.4V208c0-77.4-55-142-128-156.8V32c0-17.7-14.3-32-32-32zm0 96c61.9 0 112 50.1 112 112v25.4c0 47.9 13.9 94.6 39.7 134.6H184.3c25.8-40 39.7-86.7 39.7-134.6V208c0-61.9 50.1-112 112-112zm0 352a48 48 0 1 0 0-96 48 48 0 1 0 0 96z" />
             </svg>
             {unreadNotificationsCount > 0 && (
@@ -599,7 +615,7 @@ const ClientHeader = ({
                 <p className="ad-user-name">{clientUserName}</p>
                 <span className="ad-client-tag">
                   {/* User Icon */}
-                  <svg className="ad-icon-btn" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ fontSize: '0.65rem', width: '0.65rem', height: '0.65rem' }}>
+                  <svg className="ad-icon-btn" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ fontSize: '0.65rem', width: '0.65rem', height: '0.65rem', color: 'var(--text-primary)' }}>
                     <path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z" />
                   </svg>
                   Client
@@ -614,28 +630,27 @@ const ClientHeader = ({
                 <li className="profile-dropdown-item header">My Account</li>
                 <li className="profile-dropdown-item" onClick={onClientProfileClick}>
                   {/* User Icon */}
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1rem', height: '1rem' }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" style={{ width: '1rem', height: '1rem', color: 'var(--text-primary)' }}>
                     <path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z" />
                   </svg>
                   Your Profile
                 </li>
                 <li className="profile-dropdown-item" onClick={onLogoClick}>
                   {/* User Icon */}
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" fill="currentColor" style={{ width: '1rem', height: '1rem' }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" fill="currentColor" style={{ width: '1rem', height: '1rem', color: 'var(--text-primary)' }}>
   <path d="M541 229.16 310.6 25.5c-7.7-6.9-19.5-6.9-27.2 0L35 229.16c-10.2 9.2-11 25-1.8 35.2s25 11 35.2 1.8L96 247.1V464c0 26.5 
     21.5 48 48 48h112V336h64v176h112c26.5 0 48-21.5 48-48V247.1l27.6 19.1c4.5 3.1 9.6 4.6 14.6 4.6 
     7.1 0 14.2-3.1 19-9 9.2-10.2 8.4-26-1.8-35.2z"/>
 </svg>
-
                   Home Page
                 </li>
 
-                {/* <li className="profile-dropdown-item logout" onClick={onLogoutClick}>
+                <li className="profile-dropdown-item logout" onClick={onLogoutClick}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1rem', height: '1rem' }}>
                     <path d="M10 4H4C3.44772 4 3 4.44772 3 5V19C3 19.5523 3.44772 20 4 20H10C10.5523 20 11 19.5523 11 19V17H13V19C13 20.6569 11.6569 22 10 22H4C2.34315 22 1 20.6569 1 19V5C1 3.34315 2.34315 2 4 2H10C11.6569 2 13 3.34315 13 5V7H11V5C11 4.44772 10.5523 4 10 4ZM19.2929 10.2929L22.2929 13.2929C22.6834 13.6834 22.6834 14.3166 22.2929 14.7071L19.2929 17.7071C18.9024 18.0976 18.2692 18.0976 17.8787 17.7071C17.4882 17.3166 17.4882 16.6834 17.8787 16.2929L19.5858 14.5858H11C10.4477 14.5858 10 14.1381 10 13.5858C10 13.0335 10.4477 12.5858 11 12.5858H19.5858L17.8787 10.8787C17.4882 10.4882 17.4882 9.85497 17.8787 9.46447C18.2692 9.07395 18.9024 9.07395 19.2929 9.46447Z" />
                   </svg>
                   Log out
-                </li> */}
+                </li>
               </ul>
             )}
           </div>
@@ -694,9 +709,15 @@ const SubscriptionDetailsModal = ({
   onClose
 }) => {
   return (
-    <div className="modal-overlay">
-      <div className="modal-content-style" style={{ maxWidth: '500px', padding: '40px', background: '#ffffff', color: '#1e293b' }}>
-        <button onClick={onClose} className="modal-close-button" style={{ color: '#64748B' }}>
+        <div className="modal-overlay">
+      <div className="modal-content-style" style={{ 
+        maxWidth: '500px', 
+        padding: '40px', 
+        // Use CSS variables for background and text
+        background: 'var(--bg-card)', 
+        color: 'var(--text-primary)' 
+      }}>
+        <button onClick={onClose} className="modal-close-button" style={{ color: 'var(--text-secondary)' }}>
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M13 1L1 13M1 1L13 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
@@ -704,24 +725,29 @@ const SubscriptionDetailsModal = ({
         <h3 style={{
           marginBottom: '30px',
           textAlign: 'center',
-          color: '#1e293b',
+          color: 'var(--text-primary)',
           fontSize: '1.8rem',
           fontWeight: '700'
         }}>
           Your Subscription Details
         </h3>
-        <div className="subscription-details-card" style={{ background: '#f8fafc', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-          <div className="subscription-detail-item" style={{ borderBottom: '1px solid #e2e8f0' }}>
-            <p className="subscription-detail-label" style={{ color: '#64748b' }}>Current Plan</p>
-            <strong className="subscription-detail-value" style={{ color: '#1e293b' }}>1 Month Plan</strong>
+        <div className="subscription-details-card" 
+          // The CSS for this card is now managed through the global styles for consistency
+        >
+          {/* FIX: Removed hardcoded inline styles for color to rely on CSS variables */}
+          <div className="subscription-detail-item" style={{ borderBottom: '1px solid var(--border-color)' }}>
+            <p className="subscription-detail-label" style={{ color: 'var(--text-secondary)' }}>Current Plan</p>
+            <strong className="subscription-detail-value" style={{ color: 'var(--text-primary)' }}>1 Month Plan</strong>
           </div>
-          <div className="subscription-detail-item" style={{ borderBottom: '1px solid #e2e8f0' }}>
-            <p className="subscription-detail-label" style={{ color: '#64748b' }}>Price</p>
-            <strong className="subscription-detail-value" style={{ color: '#1e293b' }}>{currentPlanPrice}</strong>
+          {/* FIX: Removed hardcoded inline styles for color to rely on CSS variables */}
+          <div className="subscription-detail-item" style={{ borderBottom: '1px solid var(--border-color)' }}>
+            <p className="subscription-detail-label" style={{ color: 'var(--text-secondary)' }}>Price</p>
+            <strong className="subscription-detail-value" style={{ color: 'var(--text-primary)' }}>{currentPlanPrice}</strong>
           </div>
+          {/* FIX: Removed hardcoded inline styles for color to rely on CSS variables */}
           <div className="subscription-detail-item" style={{ borderBottom: 'none' }}>
-            <p className="subscription-detail-label" style={{ color: '#64748b' }}>Days Left</p>
-            <strong className="subscription-detail-value" style={{ color: '#1e293b' }}>{daysLeftInPlan}</strong>
+            <p className="subscription-detail-label" style={{ color: 'var(--text-secondary)' }}>Days Left</p>
+            <strong className="subscription-detail-value" style={{ color: 'var(--text-primary)' }}>{daysLeftInPlan}</strong>
           </div>
         </div>
         <button
@@ -2274,6 +2300,7 @@ const ClientDashboard = () => {
   const [clientData, setClientData] = useState(null);
   const [allFiles, setAllFiles] = useState([]);
 
+  const { isDarkMode, toggleTheme } = useTheme();
 
   // Initialize activeTab from localStorage, default to "Dashboard" if not found
   const [activeTab, setActiveTab] = useState(() => {
@@ -2395,7 +2422,7 @@ const ClientDashboard = () => {
   const [planToPayFor, setPlanToPayFor] = useState({ name: '', price: '' });
 
 
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  // const [isDarkMode, setIsDarkMode] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const profileDropdownRef = useRef(null);
   const [activeServices, setActiveServices] = useState([]);
@@ -2478,10 +2505,10 @@ const ClientDashboard = () => {
 
 
   // --- Handlers for ClientDashboard (main component) ---
-  const toggleTheme = () => {
-    setIsDarkMode(prevMode => !prevMode);
-    document.documentElement.classList.toggle('dark-mode');
-  };
+  // const toggleTheme = () => {
+  //   setIsDarkMode(prevMode => !prevMode);
+  //   document.documentElement.classList.toggle('dark-mode');
+  // };
 
   const toggleMenu = () => setMenuOpen(!menuOpen); // This function is now effectively unused for the UI
    const toggleInterviewsModal = () => setShowInterviewsModal(!showInterviewsModal);
@@ -3745,20 +3772,69 @@ const handleApplyDateRange = () => {
 `;
 
   return (
-    <div className="client-dashboard-container">
+    <div className={`client-dashboard-container ${isDarkMode ? 'dark-mode-active' : ''}`}>
       {/* Dynamic Styles injected here */}
       <style>
         {`
         /* Base styles for the dashboard container */
         .client-dashboard-container {
           font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
-          background: #f8fafc;
-          color: #1e293b;
+          background: var(--bg-body);
+            color: var(--text-primary);
           min-height: 100vh;
           display: flex;
           flex-direction: column; /* Changed to column to stack header and content */
           overflow-x: hidden; /* Prevent horizontal scroll due to fixed sidebar */
         }
+
+                /* --- CSS Variables for Theming (Ensure these are defined) --- */
+        :root {
+            --bg-body: #f8fafc;
+            --bg-card: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            --bg-nav-link-hover: #f1f5f9;
+        }
+        
+                .dark-mode-active {
+            --bg-body: #1a202c; /* Very Dark Blue */
+            --bg-card: #2d3748; /* Darker Grey Blue */
+            --text-primary: #e2e8f0; /* Light Text */
+            --text-secondary: #a0aec0; /* Lighter Secondary Text */
+            --border-color: #4a5568; /* Darker Border */
+            --bg-nav-link-hover: #4a5568; /* Darker hover state */
+        }
+
+                .client-dashboard-container h1, .client-dashboard-container h2, .client-dashboard-container h3, .client-dashboard-container h4 {
+            color: var(--text-primary);
+        }
+
+           /* Card Background */
+        .client-dashboard-container > div[style*="background: #ffffff"],
+        .client-dashboard-container .service-card {
+            background: var(--bg-card) !important;
+            border-color: var(--border-color);
+        }
+     
+              /* Table overrides (for the Applications table) */
+        .client-dashboard-container table {
+             color: var(--text-primary);
+        }
+        .client-dashboard-container table thead tr {
+            background-color: var(--bg-body) !important;
+            color: var(--text-secondary) !important;
+        }
+        .client-dashboard-container table tbody tr {
+             background-color: var(--bg-card);
+        }
+        .client-dashboard-container table tbody tr:nth-child(even) {
+            background-color: var(--bg-body); /* Slightly different background for alternating rows */
+        }
+        .client-dashboard-container table tbody tr:hover {
+            background-color: var(--bg-nav-link-hover) !important;
+        }
+
 
         .dashboard-title {
           margin-top :-55px;
@@ -3770,8 +3846,8 @@ const handleApplyDateRange = () => {
         }
 
         html.dark-mode .modal-content-style {
-          background: #2d3748;
-          border: 1px solid #4a5568;
+           background: var(--bg-card) !important;
+            border: 1px solid var(--border-color);
         }
 
         html.dark-mode .modal-close-button {
@@ -3880,8 +3956,8 @@ const handleApplyDateRange = () => {
   margin-bottom: 30px;
 }
 html.dark-mode .back-btn {
-  background-color: #4a5568;
-  color: #e2e8f0;
+    background-color: #4a5568 !important;
+            color: #e2e8f0 !important;
 }
 .back-btn:hover {
   background-color: #e0e0e0;
@@ -4198,7 +4274,7 @@ html.dark-mode .notify-success-message {
         .modal-table-header {
             padding: 12px 16px;
             text-align: left;
-            background-color: #f8fafc;
+            background-color: var(--bg-body) !important;
             color: #475569;
             font-size: 0.8125rem;
             font-weight: 600;
@@ -4219,10 +4295,10 @@ html.dark-mode .notify-success-message {
         .modal-table-cell {
             padding: 16px;
             text-align: left;
-            background-color: #ffffff;
+             background-color: var(--bg-card) !important;
+            color: var(--text-primary) !important;
             border: none;
             font-size: 0.875rem;
-            color: #334155;
             border-bottom: 1px solid #f1f5f9;
             white-space: nowrap; /* Prevent text wrapping in cells on smaller screens */
         }
@@ -4667,6 +4743,14 @@ html.dark-mode .notify-success-message {
         html.dark-mode .card-form label {
             color: #cbd5e1;
         }
+
+         .card-form input, .card-form textarea {
+            background: var(--bg-body) !important;
+            border-color: var(--border-color);
+            color: var(--text-primary) !important;
+        }
+
+
 
         .card-form input[type="email"],
         .card-form input[type="text"] {
@@ -5473,18 +5557,18 @@ html.dark-mode .notify-success-message {
           width: '100%',
           marginBottom: '24px',
           padding: '16px',
-          backgroundColor: '#f8fafc',
+           backgroundColor: 'var(--bg-body)',
           borderRadius: '12px'
         }}>
-          <div style={{ textAlign: 'center' }}>
-            <p style={{ margin: '0 0 4px 0', fontSize: '0.875rem', color: '#64748b' }}>1 Month Plan</p>
-            <p style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700', color: '#1e293b' }}>$199</p>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <p style={{ margin: '0 0 4px 0', fontSize: '0.875rem', color: '#64748b' }}>Days Left</p>
-            <p style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700', color: '#1e293b' }}>28</p>
-          </div>
-        </div>
+         <div style={{ textAlign: 'center' }}>
+    <p style={{ margin: '0 0 4px 0', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>1 Month Plan</p>
+    <p style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700', color: 'var(--text-primary)' }}>$199</p>
+  </div>
+  <div style={{ textAlign: 'center' }}>
+    <p style={{ margin: '0 0 4px 0', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Days Left</p>
+    <p style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700', color: 'var(--text-primary)' }}>28</p>
+  </div>
+</div>
 
         {/* Renew Plan Button in Sidebar */}
         <button

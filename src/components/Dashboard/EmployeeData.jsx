@@ -4200,11 +4200,20 @@ useEffect(() => {
                       name="jobBoards"
                       value={newApplicationFormData.jobBoards}
                       onChange={handleNewApplicationFormChange}
+                      list="jobBoards-options"
                       style={{ ...modalInputStyle, borderColor: newApplicationErrors.jobBoards ? 'red' : '#cbd5e1' }}
                       placeholder="e.g., LinkedIn, Indeed"
                       required
                     />
                     {newApplicationErrors.jobBoards && <p style={errorTextStyle}>{newApplicationErrors.jobBoards}</p>}
+                    <datalist id="jobBoards-options">
+                      <option value="Linkedin" />
+                      <option value="Indeed" />
+                      <option value="Glassdoor" />
+                      <option value="Simplyhired" />
+                      <option value="Ziprecruiter" />
+                       <option value="Jobright" />
+                    </datalist>
                   </div>
 
                   <div style={modalFormFieldGroupStyle}>
