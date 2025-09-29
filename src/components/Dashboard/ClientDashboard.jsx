@@ -1654,7 +1654,7 @@ const Applications = ({
                   {/* <th style={{ padding: '12px', textAlign: 'center' }}>Job ID</th> */}
                   <th style={{ padding: '12px', textAlign: 'center' }}>Company</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Job Type</th>
-                  <th style={{ padding: '12px', textAlign: 'center' }}>Link</th>
+                  <th style={{ padding: '12px', textAlign: 'center' }}>JD Link</th>
                   {/* <th style={{ padding: '12px', textAlign: 'center' }}>Job Description</th> */}
                 </tr>
               </thead>
@@ -1678,7 +1678,7 @@ const Applications = ({
                     <td style={{ padding: '12px' }}>{app.jobType || 'N/A'}</td>
                     <td style={{ padding: '12px' }}>
                       <a href={app.link} target="_blank" rel="noopener noreferrer" style={{ color: '#007bff', textDecoration: 'none' }}>
-                        Link
+                       Link
                       </a>
                     </td>
                     {/* <td style={{ padding: '12px' }}>
@@ -3096,7 +3096,7 @@ const handleApplyDateRange = () => {
       'Job ID': app.jobId,
       'Company': app.company,
       'Job Type': app.jobType || 'N/A',
-      'Link': app.link,
+      'Link': app.jobDescriptionUrl,
       // 'Job Description': app.jobDescription
     }));
 
