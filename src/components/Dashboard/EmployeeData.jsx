@@ -687,7 +687,7 @@ const formatToIST = (utcString) => {
   // States for Modals (Applications Tab)
   const [showAddApplicationModal, setShowAddApplicationModal] = useState(false);
   const [newApplicationFormData, setNewApplicationFormData] = useState({
-    jobTitle: '', company: '', jobType: '', jobBoards: '', jobDescriptionUrl: '',jobAppliedUrl: '', location: '', jobDesc: '', jobId: '', role: '' // Added jobId
+    jobTitle: '', company: '', jobType: '', jobBoards: '', jobDescriptionUrl: '', location: '', jobDesc: '', jobId: '', role: '' // Added jobId
   });
   const [selectedClientForApplication, setSelectedClientForApplication] = useState(null);
 
@@ -1117,7 +1117,7 @@ const handleConfirmDeleteFile = async () => {
     setShowAddApplicationModal(true);
         // Reset form data and errors on open
     setNewApplicationFormData({
-      jobTitle: '', company: '', jobType: '', jobBoards: '', jobDescriptionUrl: '', jobAppliedUrl: '', location: '', jobId: '', role: ''
+      jobTitle: '', company: '', jobType: '', jobBoards: '', jobDescriptionUrl: '', location: '', jobId: '', role: ''
     });
     setNewApplicationErrors({});
     setCurrentModalStep(1);
@@ -1211,7 +1211,7 @@ const handleSaveNewApplication = async () => {
     if (!selectedClient) return;
 
     // Validation for Step 2 fields
-    const mandatoryFieldsStep2 = ['jobBoards', 'jobDescriptionUrl', 'jobAppliedUrl'];
+    const mandatoryFieldsStep2 = ['jobBoards', 'jobDescriptionUrl'];
     const errors = {};
     let hasError = false;
 
@@ -1251,7 +1251,7 @@ const handleSaveNewApplication = async () => {
         setNewClients(updateClientList);
         setShowAddApplicationModal(false);
         setNewApplicationFormData({
-            jobTitle: '', company: '', jobType: '', jobBoards: '', jobDescriptionUrl: '', jobAppliedUrl: '', location: '', jobId: '', role: ''
+            jobTitle: '', company: '', jobType: '', jobBoards: '', jobDescriptionUrl: '', location: '', jobId: '', role: ''
         });
         setCurrentModalStep(1); // Reset step after successful save
         triggerNotification("Application added successfully!");
@@ -4166,7 +4166,7 @@ useEffect(() => {
                   onChange={handleNewApplicationFormChange}
                   style={{ ...modalInputStyle, borderColor: newApplicationErrors.jobId ? 'red' : '#cbd5e1' }}
                   placeholder="e.g., ABC-12345"
-                  required
+                  
                 />
                 {newApplicationErrors.jobId && <p style={errorTextStyle}>{newApplicationErrors.jobId}</p>}
               </div>
@@ -4277,7 +4277,7 @@ useEffect(() => {
                   onClick={handleSaveNewApplication}
                   style={modalAddButtonPrimaryStyle}
                 >
-                  Add Application
+                  Submit
                 </button>
               </>
             )}

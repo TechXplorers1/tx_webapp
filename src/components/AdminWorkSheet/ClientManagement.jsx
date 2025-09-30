@@ -269,24 +269,23 @@ const handleEducationChange = (e, index, field) => {
   };
 
 const handleAssignClient = async (registration) => {
-    if (!registration || !registration.managerFirebaseKey) {
-      alert('Please select a manager for this service first.');
+    // Check if the manager selection was made in the modal (the name should be on the registration object)
+    if (!registration || !registration.manager || !registration.managerFirebaseKey) {
+      alert('Please select a manager first using the "Select Manager" button.');
       return;
     }
     const registrationRef = ref(database, `clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}`);
     try {
       await update(registrationRef, {
-        // FIX: Use the existing 'registration.manager' property which holds the full name
-        manager: registration.manager,
-        assignedManager: registration.managerFirebaseKey,
-        assignmentStatus: 'pending_employee'
+        manager: registration.manager, // Name of the manager
+        assignedManager: registration.managerFirebaseKey, // Firebase key of the manager
+        assignmentStatus: 'pending_employee' // Change status from 'pending_manager' to 'pending_employee'
       });
-      // OPTIMISTIC UPDATE: Update local state immediately for a responsive UI
+      // OPTIMISTIC UPDATE: Update local state immediately
       setServiceRegistrations(prev => prev.map(reg => 
         reg.registrationKey === registration.registrationKey 
           ? { 
               ...reg, 
-              // FIX: Use the existing 'registration.manager' property for local state
               manager: registration.manager, 
               assignedManager: registration.managerFirebaseKey, 
               assignmentStatus: 'pending_employee' 
@@ -331,18 +330,49 @@ const handleAssignClient = async (registration) => {
     setManagerSearchTerm('');
   };
 
-  const handleSelectManager = (manager) => {
-    if (registrationForManager) {
-      const updatedRegistrations = serviceRegistrations.map(reg =>
-        reg.registrationKey === registrationForManager.registrationKey
-          ? { ...reg, manager: `${manager.firstName} ${manager.lastName}`, managerFirebaseKey: manager.firebaseKey }
-          : reg
-      );
-      setServiceRegistrations(updatedRegistrations);
+const handleSelectManager = async (manager) => {
+    if (!registrationForManager) return;
+    
+    // Create the updated manager info object
+    const updatedManagerInfo = {
+        manager: `${manager.firstName} ${manager.lastName}`,
+        assignedManager: manager.firebaseKey
+    };
+
+    const registrationRef = ref(database, 
+        `clients/${registrationForManager.clientFirebaseKey}/serviceRegistrations/${registrationForManager.registrationKey}`
+    );
+
+    try {
+        // 1. Update Firebase with the new manager and reset status to pending_employee
+        await update(registrationRef, {
+            assignedManager: manager.firebaseKey,
+            manager: updatedManagerInfo.manager,
+            assignmentStatus: 'pending_employee' // Change status to indicate reassignment needed
+        });
+
+        // 2. Optimistically update local state to reflect the change immediately
+        setServiceRegistrations(prev => prev.map(reg =>
+            reg.registrationKey === registrationForManager.registrationKey
+                ? { 
+                    ...reg, 
+                    ...updatedManagerInfo, 
+                    assignmentStatus: 'pending_employee' 
+                }
+                : reg
+        ));
+
+        // 3. Provide feedback
+        console.log(`Client ${registrationForManager.firstName} reassigned to ${updatedManagerInfo.manager}.`);
+
+    } catch (error) {
+        console.error("Failed to reassign manager:", error);
+        alert("Error reassigning manager. Please try again.");
+    } finally {
+        // Close the modal regardless of success
+        handleCloseManagerModal();
     }
-    setIsManagerModalOpen(false);
-    setRegistrationForManager(null);
-  };
+};
 
   const handleClientSearchChange = (event) => {
     setClientSearchTerm(event.target.value);
