@@ -1868,8 +1868,8 @@ const filteredBySearch = useMemo(() => {
                                   <th>Company</th>
                                   <th>Job Title</th>
                                   <th>Job ID</th>
+                                  <th>Job Boards</th>
                                   <th>Description Link</th>
-                                  <th>Applied Link</th>
                                   <th>Applied Date</th>
                                   <th>Applied Time</th>
                                   <th>Status</th>
@@ -1882,8 +1882,8 @@ const filteredBySearch = useMemo(() => {
                                     <td>{app.company}</td>
                                     <td>{app.jobTitle}</td>
                                     <td>{app.jobId}</td>
-                                    <td><a href={app.jobDescriptionUrl} target="_blank" rel="noopener noreferrer">Description Link</a></td>
-                                    <td><a href={app.jobAppliedUrl} target="_blank" rel="noopener noreferrer">Applied Link</a></td>
+                                    <td>{app.jobBoards}</td>
+                                    <td><a  href={app.jobDescriptionUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'Blue', textAlign:"center" }}>Link</a></td>
                                     <td>{formatDateToDDMMYYYY(app.appliedDate)}</td>
                                     <td>{formatDateTime(app.timestamp).time}</td>
                                     <td><span className={`status-badge status-${app.status?.toLowerCase()}`}>{app.status}</span></td>
@@ -6454,7 +6454,6 @@ const filteredBySearch = useMemo(() => {
         <p className="modal-view-detail-item"><strong>Job ID:</strong> {selectedApplication.jobId}</p>
         <p className="modal-view-detail-item"><strong>Job Boards:</strong> {selectedApplication.jobBoards}</p>
         <p className="modal-view-detail-item"><strong>Job Description URL:</strong> <a href={selectedApplication.jobDescriptionUrl} target="_blank" rel="noopener noreferrer">{selectedApplication.jobDescriptionUrl}</a></p>
-        <p className="modal-view-detail-item"><strong>Job Applied URL:</strong> <a href={selectedApplication.jobAppliedUrl} target="_blank" rel="noopener noreferrer">{selectedApplication.jobAppliedUrl}</a></p>
      <p className="modal-view-detail-item"><strong>Applied Date:</strong> {formatDateTime(selectedApplication.timestamp).date}</p>
     <p className="modal-view-detail-item"><strong>Applied Time:</strong> {formatDateTime(selectedApplication.timestamp).time}</p>
         <p className="modal-view-detail-item"><strong>Status:</strong> {selectedApplication.status}</p>
@@ -6497,10 +6496,6 @@ const filteredBySearch = useMemo(() => {
         <div className="form-group">
           <label>Job Description URL</label>
           <input type="jobDescriptionUrl" name="" value={editableApplication.jobDescriptionUrl} onChange={handleApplicationChange} />
-        </div>
-        <div className="form-group">
-          <label>Job Applied URL</label>
-          <input type="jobAppliedUrl" name="" value={editableApplication.jobAppliedUrl} onChange={handleApplicationChange} />
         </div>
         <div className="form-group">
           <label>Status</label>

@@ -2691,7 +2691,6 @@ useEffect(() => {
                     <th style={applicationTableHeaderCellStyle}>Job Boards</th>
                     <th style={applicationTableHeaderCellStyle}>Job ID</th>
                     <th style={applicationTableHeaderCellStyle}>Job Description Link</th>
-                    <th style={applicationTableHeaderCellStyle}>Job Applied Link</th>
                     <th style={applicationTableHeaderCellStyle}>Applied Date</th>
                     <th style={applicationTableHeaderCellStyle}>Attachments</th>
                     <th style={applicationTableHeaderCellStyle}>Actions</th>
@@ -2715,11 +2714,6 @@ useEffect(() => {
                           <td style={applicationTableDataCellStyle}>
                             {app.jobDescriptionUrl && (
                               <a href={app.jobDescriptionUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>Description Link </a>
-                            )}
-                          </td>
-                          <td style={applicationTableDataCellStyle}>
-                            {app.jobAppliedUrl && (
-                              <a href={app.jobAppliedUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>Applied Link</a>
                             )}
                           </td>
                           <td style={applicationTableDataCellStyle}>{app.appliedDate}</td>
@@ -3583,7 +3577,6 @@ useEffect(() => {
                             <th style={applicationTableHeaderCellStyle}>Job Boards</th>
                             <th style={applicationTableHeaderCellStyle}>Job ID</th>
                             <th style={applicationTableHeaderCellStyle}>Job Description Link</th>
-                            <th style={applicationTableHeaderCellStyle}>Job Applied Link</th>
                             <th style={applicationTableHeaderCellStyle}>Applied Date</th>
                             <th style={applicationTableHeaderCellStyle}>Attachments</th>
                             <th style={applicationTableHeaderCellStyle}>Actions</th>
@@ -3613,14 +3606,6 @@ useEffect(() => {
                                     </a>
                                   )}
                                 </td>
-                                 <td style={applicationTableDataCellStyle}>
-                                  {app.jobAppliedUrl && (
-                                    <a href={app.jobAppliedUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>
-                                      Applied Link
-                                    </a>
-                                  )}
-                                </td>
-
                                 <td style={applicationTableDataCellStyle}>{app.appliedDate}</td>
 
                                 <td style={applicationTableDataCellStyle}>
@@ -4230,19 +4215,6 @@ useEffect(() => {
                     {newApplicationErrors.jobDescriptionUrl && <p style={errorTextStyle}>{newApplicationErrors.jobDescriptionUrl}</p>}
                   </div>
 
-                  <div style={modalFormFieldGroupStyle}>
-                    <label style={modalLabelStyle}>Job Applied URL <span style={{ color: 'red' }}>*</span></label>
-                    <input
-                      type="url"
-                      name="jobAppliedUrl"
-                      value={newApplicationFormData.jobAppliedUrl}
-                      onChange={handleNewApplicationFormChange}
-                      style={{ ...modalInputStyle, borderColor: newApplicationErrors.jobAppliedUrl ? 'red' : '#cbd5e1' }}
-                      placeholder="https://application-tracker.com/..."
-                      required
-                    />
-                    {newApplicationErrors.jobAppliedUrl && <p style={errorTextStyle}>{newApplicationErrors.jobAppliedUrl}</p>}
-                  </div>
 
                   <div style={modalFormFieldGroupStyle}>
                     <label style={modalLabelStyle}>Job Type</label>
@@ -4326,7 +4298,6 @@ useEffect(() => {
               <p style={modalViewDetailItemStyle}><strong>Job Boards:</strong> {viewedApplication.jobBoards}</p>
               <p style={modalViewDetailItemStyle}><strong>Job ID:</strong> {viewedApplication.jobId || '-'}</p> {/* Display Job ID */}
               <p style={modalViewDetailItemStyle}><strong>Job Description URL:</strong> <a href={viewedApplication.jobDescriptionUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6' }}>{viewedApplication.jobDescriptionUrl}</a></p>
-              <p style={modalViewDetailItemStyle}><strong>Job Applied URL:</strong> <a href={viewedApplication.jobAppliedUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6' }}>{viewedApplication.jobAppliedUrl}</a></p>
               <p style={modalViewDetailItemStyle}><strong>Job Type:</strong> {viewedApplication.jobType || '-'}</p>
               <p style={modalViewDetailItemStyle}><strong>Job Location:</strong> {viewedApplication.location || '-'}</p>
               <p style={modalViewDetailItemStyle}><strong>Status:</strong> <span style={{ ...applicationStatusBadgeStyle, ...getApplicationStatusStyle(viewedApplication.status) }}>{viewedApplication.status}</span></p>
@@ -4433,17 +4404,6 @@ useEffect(() => {
                   type="url"
                   name="jobDescriptionUrl"
                   value={editedApplicationFormData.jobDescriptionUrl}
-                  onChange={handleEditedApplicationFormChange}
-                  style={modalInputStyle}
-                  required
-                />
-              </div>
-               <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Job Applied URL <span style={{ color: 'red' }}>*</span></label>
-                <input
-                  type="url"
-                  name="jobAppliedUrl"
-                  value={editedApplicationFormData.jobAppliedUrl}
                   onChange={handleEditedApplicationFormChange}
                   style={modalInputStyle}
                   required
