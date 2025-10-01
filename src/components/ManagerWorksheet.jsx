@@ -480,7 +480,7 @@ const ManagerWorkSheet = () => {
       );
 
       const unassignedForManager = clientsForManager.filter(reg => reg.assignmentStatus === 'pending_employee');
-      const assignedByManager = clientsForManager.filter(reg => ['pending_acceptance', 'active'].includes(reg.assignmentStatus));
+      const assignedByManager = clientsForManager.filter(reg => ['pending_acceptance', 'active', 'inactive'].includes(reg.assignmentStatus));
 
       setUnassignedClients(unassignedForManager);
       setAssignedClients(assignedByManager);
@@ -558,6 +558,9 @@ const ManagerWorkSheet = () => {
   // New state for the "Total Clients" modal visibility
   const [isTotalClientsModalOpen, setIsTotalClientsModalOpen] = useState(false);
 
+  const [isStatusConfirmModalOpen, setIsStatusConfirmModalOpen] = useState(false);
+const [clientToChangeStatus, setClientToChangeStatus] = useState(null);
+
   // NEW STATE: For the Employee's Assigned Clients Detail Modal
   const [isEmployeeClientsModalOpen, setIsEmployeeClientsModalOpen] = useState(false);
   const [selectedEmployeeForClients, setSelectedEmployeeForClients] = useState({
@@ -616,6 +619,44 @@ const ManagerWorkSheet = () => {
   const [filterDateRange, setFilterDateRange] = useState({ startDate: '', endDate: '' });
   const [sortOrder, setSortOrder] = useState('Newest First');
   const [quickFilter, setQuickFilter] = useState('');
+
+
+  const handleOpenStatusConfirmModal = (client) => {
+    setClientToChangeStatus(client);
+    setIsStatusConfirmModalOpen(true);
+};
+
+const handleCloseStatusConfirmModal = () => {
+    setIsStatusConfirmModalOpen(false);
+    setClientToChangeStatus(null);
+};
+
+const handleUpdateClientStatus = async () => {
+    if (!clientToChangeStatus) return;
+
+    const newStatus = clientToChangeStatus.assignmentStatus === 'active' ? 'inactive' : 'active';
+    const client = clientToChangeStatus;
+
+    const registrationRef = ref(
+        database,
+        `clients/${client.clientFirebaseKey}/serviceRegistrations/${client.registrationKey}`
+    );
+
+    try {
+        await update(registrationRef, {
+            assignmentStatus: newStatus,
+        });
+
+        setSuccessMessage(`Client ${client.name} successfully marked as ${newStatus}!`);
+        setShowSuccessModal(true);
+
+    } catch (error) {
+        console.error(`Failed to update client status to ${newStatus}:`, error);
+        alert(`Error updating client status.`);
+    } finally {
+        handleCloseStatusConfirmModal();
+    }
+};
 
 
   // ... (rest of the state declarations)
@@ -5390,6 +5431,7 @@ Please provide a summary no longer than 150 words.`;
                     {/* REMOVED: <th>STATUS</th> */}
                     <th>ASSIGNED DATE</th>
                     <th>DETAILS</th>
+                    <th>ACTIONS</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -5399,6 +5441,9 @@ Please provide a summary no longer than 150 words.`;
                     const assignedEmployeeName = assignedEmployee ? `${assignedEmployee.firstName} ${assignedEmployee.lastName}` : 'N/A';
                     const applicationCount = (client.jobApplications || []).length; // Get the count
 
+                    const clientStatus = (client.assignmentStatus || 'active').charAt(0).toUpperCase() + (client.assignmentStatus || 'active').slice(1);
+            const statusColor = client.assignmentStatus === 'active' ? '#10b981' : '#ef4444';
+            const statusBg = client.assignmentStatus === 'active' ? '#dcfce7' : '#fee2e2';
 
                     return (
                       <tr key={client.registrationKey}>
@@ -5449,6 +5494,21 @@ Please provide a summary no longer than 150 words.`;
                             <i className="fas fa-eye"></i> View Profile
                           </button>
                         </td>
+                          <td>
+                        <button
+                            onClick={() => handleOpenStatusConfirmModal(client)}
+                            className="modal-assign-button"
+                            style={{ 
+                                backgroundColor: client.assignmentStatus === 'active' ? '#10b981' : '#ef4444', // Red for Inactive, Green for Active
+                                padding: '6px 12px', 
+                                fontSize: '12px',     
+                                minWidth: 'unset',
+                                margin: '0'
+                            }}
+                        >
+                            {client.assignmentStatus === 'active' ? 'Active' : 'Inactive'}
+                        </button>
+                    </td>
                       </tr>
                     );
                   })}
@@ -6733,6 +6793,39 @@ Please provide a summary no longer than 150 words.`;
           </div>
         </div>
       )}
+
+      {isStatusConfirmModalOpen && clientToChangeStatus && (
+    <div className="modal-overlay open">
+        <div className="modal-content" style={{ maxWidth: '400px', textAlign: 'center' }}>
+            <div className="modal-header" style={{ paddingBottom: '0', borderBottom: 'none', justifyContent: 'center' }}>
+                <h3 className="modal-title" style={{ fontSize: '1.4rem' }}>
+                    Confirm Client Status Change
+                </h3>
+            </div>
+            <p className="modal-subtitle" style={{ color: 'var(--red-icon-color)', fontWeight: 600 }}>
+                Are you sure you want to change client "{clientToChangeStatus.name}" to:
+                <br />
+                <span style={{ color: clientToChangeStatus.assignmentStatus === 'active' ? '#ef4444' : '#10b981', fontSize: '1.2rem', display: 'inline-block', marginTop: '5px' }}>
+                    "{clientToChangeStatus.assignmentStatus === 'active' ? 'INACTIVE' : 'ACTIVE'}"?
+                </span>
+            </p>
+            <div className="confirm-modal-buttons">
+                <button type="button" className="confirm-cancel-btn" onClick={handleCloseStatusConfirmModal}>
+                    Cancel
+                </button>
+                <button 
+                    type="button" 
+                    className="confirm-delete-btn" 
+                    style={{ backgroundColor: clientToChangeStatus.assignmentStatus === 'active' ? '#dc3545' : '#28a745' }}
+                    onClick={handleUpdateClientStatus}
+                >
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+)}
+
       {/* NEW: Success Confirmation Modal */}
       <Modal show={showSuccessModal} onHide={handleSuccessModalClose} centered>
         <Modal.Header closeButton>

@@ -1420,6 +1420,7 @@ const handlePasteAttachment = useCallback((event) => {
 
   // Function to filter and sort job applications
   const getFilteredAndSortedApplications = (applications) => {
+    const todayFormatted = getLocalDateString();
     let filtered = applications || [];
 
     // Client filter (NEW) - This filter is now handled by passing the specific client's applications
@@ -1438,17 +1439,32 @@ const handlePasteAttachment = useCallback((event) => {
       // Status filter
       const matchesStatus = statusFilter === 'All Statuses' || app.status === statusFilter;
 
-      // Date range filter
-      const appDate = new Date(app.appliedDate);
-      const start = filterDateRange.startDate ? new Date(filterDateRange.startDate) : null;
-      const end = filterDateRange.endDate ? new Date(filterDateRange.endDate) : null;
+     let matchesDateRange = false;
+      const start = filterDateRange.startDate;
+      const end = filterDateRange.endDate;
 
-      const matchesDateRange = (!start || appDate >= start) && (!end || appDate <= end);
+      if (start || end) {
+        // CASE 1: Date range filter is active (show applications within the custom range)
+        const appDate = new Date(app.appliedDate);
+        const startDate = start ? new Date(start) : null;
+        const endDate = end ? new Date(end) : null;
+
+        if (startDate) startDate.setHours(0, 0, 0, 0);
+        if (endDate) endDate.setHours(23, 59, 59, 999);
+
+        matchesDateRange =
+          (!startDate || appDate >= startDate) &&
+          (!endDate || appDate <= endDate);
+
+      } else {
+        // CASE 2: No date range is set (DEFAULT to showing ONLY TODAY's applications)
+        matchesDateRange = app.appliedDate === todayFormatted;
+      }
 
       return matchesSearch && matchesStatus && matchesDateRange;
     });
 
-    // Sort order
+    // Sort order (remains the same)
     filtered.sort((a, b) => {
       const dateA = new Date(a.appliedDate);
       const dateB = new Date(b.appliedDate);
@@ -3247,14 +3263,15 @@ useEffect(() => {
               </svg>
             </button>
           </div>
-          {selectedClient && selectedClient.status === 'inactive' ? (
+    {selectedClient && selectedClient.assignmentStatus === 'inactive' ? (
             <>
+              {/* Status Display Banner for Inactive Client */}
               <div style={{ marginTop: '20px', padding: '15px', background: '#ffe4e6', borderRadius: '8px', border: '1px solid #fecaca' }}>
                 <p style={{ fontSize: '1.1rem', fontWeight: '600', color: '#ef4444', margin: '0 0 10px 0' }}>
                   Currently viewing data for: {selectedClient.name} (Inactive)
                 </p>
                 <p style={{ fontSize: '0.9rem', color: '#475569', margin: 0 }}>
-                  Role: {selectedClient.role} | Job Location: {selectedClient.location} | Salary: {selectedClient.jobType}
+                  Manager: {selectedClient.manager || 'N/A'} | Job Location: {selectedClient.location || 'N/A'} | Job Type: {selectedClient.jobType || 'N/A'}
                 </p>
               </div>
 
