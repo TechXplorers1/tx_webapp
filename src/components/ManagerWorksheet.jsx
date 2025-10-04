@@ -1735,7 +1735,9 @@ Please provide a summary no longer than 150 words.`;
     filteredApplicationCount,
     selectedEmployeeDailyCount,
     applicationFilterDateRange,
-    downloadApplicationsData
+    downloadApplicationsData,
+    applicationSearchQuery,
+    setApplicationSearchQuery
   }) => {
 
     const [localSearchQuery, setLocalSearchQuery] = useState('');
@@ -1890,8 +1892,8 @@ Please provide a summary no longer than 150 words.`;
             <input
               type="text"
               placeholder="Search by Employee, Client, Job Title..."
-              value={localSearchQuery}
-              onChange={(e) => setLocalSearchQuery(e.target.value)}
+              value={applicationSearchQuery} 
+              onChange={(e) => setApplicationSearchQuery(e.target.value)}
             />
           </div>
           <div className="filter-dropdown">
@@ -1907,9 +1909,15 @@ Please provide a summary no longer than 150 words.`;
           <div className="filter-dropdown">
             <select value={applicationFilterClient} onChange={handleApplicationFilterClientChange}>
               <option value="">Filter by Client</option>
-              {uniqueClientNames.map(name => ( // Now using the correct array
-                <option key={name} value={name}>{name}</option>
-              ))}
+              {uniqueClientNames.map(clientKey => {
+            const client = employees.find(emp => emp.clientFirebaseKey === clientKey);
+            
+            return client ? (
+                <option key={clientKey} value={clientKey}>
+                    {client.clientName} 
+                </option>
+            ) : null;
+        })}
             </select>
             <i className="fas fa-chevron-down"></i>
           </div>
@@ -5009,6 +5017,8 @@ Please provide a summary no longer than 150 words.`;
             selectedEmployeeDailyCount={applicationCounts.employeeTodayCount}
             applicationFilterDateRange={applicationFilterDateRange}
             downloadApplicationsData={downloadManagerApplicationsData}
+            applicationSearchQuery={applicationSearchQuery}
+            setApplicationSearchQuery={setApplicationSearchQuery}
           />
 
         )}
