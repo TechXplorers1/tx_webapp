@@ -1909,15 +1909,9 @@ Please provide a summary no longer than 150 words.`;
           <div className="filter-dropdown">
             <select value={applicationFilterClient} onChange={handleApplicationFilterClientChange}>
               <option value="">Filter by Client</option>
-              {uniqueClientNames.map(clientKey => {
-            const client = employees.find(emp => emp.clientFirebaseKey === clientKey);
-            
-            return client ? (
-                <option key={clientKey} value={clientKey}>
-                    {client.clientName} 
-                </option>
-            ) : null;
-        })}
+              {uniqueClientNames.map(name => ( // Now using the correct array
+                <option key={name} value={name}>{name}</option>
+              ))}
             </select>
             <i className="fas fa-chevron-down"></i>
           </div>
