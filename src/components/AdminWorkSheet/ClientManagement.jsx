@@ -14,6 +14,8 @@ const ClientManagement = () => {
   const [clientSearchTerm, setClientSearchTerm] = useState('');
   const [isDeleteClientConfirmModalOpen, setIsDeleteClientConfirmModalOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState(null);
+  const [isUnacceptClientConfirmModalOpen, setIsUnacceptClientConfirmModalOpen] = useState(false);
+  const [clientToUnaccept, setClientToUnaccept] = useState(null);
   const [isClientDetailsModalOpen, setIsClientDetailsModalOpen] = useState(false);
   const [selectedClientForDetails, setSelectedClientForDetails] = useState(null);
   const [isEditClientModalOpen, setIsEditClientModalOpen] = useState(false);
@@ -138,6 +140,38 @@ const ClientManagement = () => {
             console.error("Failed to decline client registration:", error);
         }
     };
+
+
+
+    const handleUnacceptClientClick = (registration) => {
+      setClientToUnaccept(registration);
+      setIsUnacceptClientConfirmModalOpen(true);
+  };
+
+  const handleCancelUnaccept = () => {
+      setIsUnacceptClientConfirmModalOpen(false);
+      setClientToUnaccept(null);
+  };
+
+  const handleConfirmUnaccept = async () => {
+      if (!clientToUnaccept) return;
+      const registrationRef = ref(database, `clients/${clientToUnaccept.clientFirebaseKey}/serviceRegistrations/${clientToUnaccept.registrationKey}`);
+      try {
+          await update(registrationRef, {
+              assignmentStatus: 'registered' // Status for the 'Registered Clients' tab
+          });
+          // OPTIMISTIC UPDATE: update local state immediately
+          setServiceRegistrations(prevRegistrations => prevRegistrations.map(reg =>
+              reg.registrationKey === clientToUnaccept.registrationKey ? { ...reg, assignmentStatus: 'registered' } : reg
+          ));
+          setIsUnacceptClientConfirmModalOpen(false);
+          setClientToUnaccept(null);
+          console.log(`Client ${clientToUnaccept.firstName} unaccepted and moved back to registered.`);
+      } catch (error) {
+          console.error("Failed to unaccept client registration:", error);
+          alert("Error unaccepting client.");
+      }
+  };
 
 
   const handleOpenPaymentModal = (client) => {
@@ -542,7 +576,7 @@ const handleSaveClientDetails = async (e) => {
   };
 
   // --- Rendering Functions ---
- const renderClientTable = (registrationsToRender, serviceType, currentClientFilter, title = '') => {
+  const renderClientTable = (registrationsToRender, serviceType, currentClientFilter, title = '') => {
         const headers = ['First Name', 'Last Name', 'Mobile', 'Email', serviceType === 'Job Supporting' ? 'Jobs Apply For' : 'Service', 'Registered Date', 'Country'];
         if (serviceType === 'Job Supporting') headers.push('Visa Status');
         if (['unassigned', 'active', 'restored'].includes(currentClientFilter)) headers.push('Manager');
@@ -585,10 +619,27 @@ const handleSaveClientDetails = async (e) => {
                                      <td><button onClick={() => handleViewClientDetails(registration)} className="action-button view">View</button></td>
                 <td style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-start' }}>
                   <div className="action-buttons">
-                    {currentClientFilter === 'registered' && (<><button onClick={() => handleAcceptClient(registration)} className="action-button accept">Accept</button><button onClick={() => handleDeclineClient(registration)} className="action-button decline">Decline</button></>)}
-                    {(currentClientFilter === 'unassigned' || currentClientFilter === 'restored') && <button onClick={() => handleAssignClient(registration)} className="action-button assign" disabled={!registration.manager}>Save</button>}
+                    {currentClientFilter === 'registered' && (
+                        <>
+                            <button onClick={() => handleAcceptClient(registration)} className="action-button accept">Accept</button>
+                            <button onClick={() => handleDeclineClient(registration)} className="action-button decline">Decline</button>
+                        </>
+                    )}
+                    {(currentClientFilter === 'unassigned' || currentClientFilter === 'restored') && (
+                        <>
+                            {/* Unaccept button added here for Unassigned Clients */}
+                            <button onClick={() => handleUnacceptClientClick(registration)} className="action-button cancel">Unaccept</button>
+                            <button onClick={() => handleAssignClient(registration)} className="action-button assign" disabled={!registration.manager}>Save</button>
+                        </>
+                    )}
                     {currentClientFilter === 'active' && (<button onClick={() => handleOpenManagerModal(registration)} className="action-button edit-manager">Edit Manager</button>)}
-                    {currentClientFilter === 'rejected' && (<><button onClick={() => handleRestoreClient(registration)} className="action-button restore">Restore</button><button onClick={() => handleDeleteRejectedClient(registration)} className="action-button delete-btn">Delete</button></>)}
+                    {currentClientFilter === 'rejected' && (
+                        <>
+                            <button onClick={() => handleRestoreClient(registration)} className="action-button restore">Restore</button>
+                            {/* Delete button confirmed here for Rejected Clients */}
+                            <button onClick={() => handleDeleteRejectedClient(registration)} className="action-button delete-btn">Delete</button>
+                        </>
+                    )}
                   </div>
                                         {/* Send Payment Link Button */}
                                         <button
@@ -1504,7 +1555,7 @@ const handleSaveClientDetails = async (e) => {
               {[
                 { label: 'Registered Clients', value: 'registered', count: serviceRegistrations.filter(c => c.assignmentStatus === 'registered' || !c.assignmentStatus).length, activeBg: 'var(--client-filter-tab-bg-active-registered)', activeColor: 'var(--client-filter-tab-text-active-registered)', badgeBg: 'var(--client-filter-tab-badge-registered)' },
                 { label: 'Unassigned Clients', value: 'unassigned', count: serviceRegistrations.filter(c => c.assignmentStatus === 'pending_manager').length, activeBg: 'var(--client-filter-tab-bg-active-unassigned)', activeColor: 'var(--client-filter-tab-text-active-unassigned)', badgeBg: 'var(--client-filter-tab-badge-unassigned)' },
-                { label: 'Active Clients', value: 'active', count: serviceRegistrations.filter(c => ['pending_employee', 'pending_acceptance', 'active'].includes(c.assignmentStatus)).length, activeBg: 'var(--client-filter-tab-bg-active-active)', activeColor: 'var(--client-filter-tab-text-active-active)', badgeBg: 'var(--client-filter-tab-badge-active)' },
+                { label: 'Active Clients', value: 'active', count: serviceRegistrations.filter(c => ['pending_employee', 'pending_acceptance', 'active','inactive' ].includes(c.assignmentStatus)).length, activeBg: 'var(--client-filter-tab-bg-active-active)', activeColor: 'var(--client-filter-tab-text-active-active)', badgeBg: 'var(--client-filter-tab-badge-active)' },
                 { label: 'Rejected Clients', value: 'rejected', count: serviceRegistrations.filter(c => c.assignmentStatus === 'rejected').length, activeBg: 'var(--client-filter-tab-bg-active-rejected)', activeColor: 'var(--client-filter-tab-text-active-rejected)', badgeBg: 'var(--client-filter-tab-badge-rejected)' },
                 // { label: 'Restore Clients', value: 'restored', count: clients.filter(c => c.displayStatuses.includes('restored')).length, activeBg: 'var(--client-filter-tab-bg-active-restored)', activeColor: 'var(--client-filter-tab-text-active-restored)', badgeBg: 'var(--client-filter-tab-badge-restored)' },
               ].map((option) => (
@@ -2331,6 +2382,31 @@ const handleSaveClientDetails = async (e) => {
           </div>
         </div>
       )}
+
+      {/* Unaccept Confirmation Modal (Unassigned -> Registered) */}
+    <div className={`modal-overlay ${isUnacceptClientConfirmModalOpen ? 'open' : ''}`}>
+        <div className="modal-content confirm-modal-content">
+            <h3 className="modal-title">Confirm Unaccept Client</h3>
+            <p className="modal-subtitle">Are you sure you want to unaccept **{clientToUnaccept?.firstName} {clientToUnaccept?.lastName}**? This will move the client back to the 'Registered Clients' tab.</p>
+            <div className="confirm-modal-buttons">
+                <button onClick={handleCancelUnaccept} className="confirm-cancel-btn">Cancel</button>
+                <button onClick={handleConfirmUnaccept} className="action-button decline">Unaccept</button>
+            </div>
+        </div>
+    </div>
+
+    {/* Delete Confirmation Modal (Rejected -> Permanent Delete) */}
+    <div className={`modal-overlay ${isDeleteClientConfirmModalOpen ? 'open' : ''}`}>
+        <div className="modal-content confirm-modal-content">
+            <h3 className="modal-title">Confirm Permanent Deletion</h3>
+            <p className="modal-subtitle">Are you sure you want to permanently delete **{clientToDelete?.firstName} {clientToDelete?.lastName}**? This action cannot be undone.</p>
+            <div className="confirm-modal-buttons">
+                <button onClick={handleCancelClientDelete} className="confirm-cancel-btn">Cancel</button>
+                <button onClick={handleConfirmClientDelete} className="confirm-delete-btn">Delete Permanently</button>
+            </div>
+        </div>
+    </div>
+
 
       {showSuccessModal && (
         <div className="modal-overlay open">

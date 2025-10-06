@@ -480,10 +480,15 @@ const ManagerWorkSheet = () => {
       );
 
       const unassignedForManager = clientsForManager.filter(reg => reg.assignmentStatus === 'pending_employee');
-      const assignedByManager = clientsForManager.filter(reg => ['pending_acceptance', 'active', 'inactive'].includes(reg.assignmentStatus));
+      const assignedByManager = clientsForManager.filter(reg => ['pending_acceptance', 'active'].includes(reg.assignmentStatus));
+      const inactiveAssigned = clientsForManager.filter(reg =>
+    reg.assignmentStatus === 'inactive'
+);
 
       setUnassignedClients(unassignedForManager);
       setAssignedClients(assignedByManager);
+      setInactiveAssignedClients(inactiveAssigned); 
+
 
       setApplicationData(assignedByManager.flatMap(clientReg =>
         (clientReg.jobApplications || []).map(app => ({
@@ -634,7 +639,8 @@ const handleCloseStatusConfirmModal = () => {
 const handleUpdateClientStatus = async () => {
     if (!clientToChangeStatus) return;
 
-    const newStatus = clientToChangeStatus.assignmentStatus === 'active' ? 'inactive' : 'active';
+    // Determine the target status
+    const targetStatus = clientToChangeStatus.assignmentStatus === 'active' ? 'inactive' : 'active';
     const client = clientToChangeStatus;
 
     const registrationRef = ref(
@@ -644,14 +650,18 @@ const handleUpdateClientStatus = async () => {
 
     try {
         await update(registrationRef, {
-            assignmentStatus: newStatus,
+            assignmentStatus: targetStatus,
         });
 
-        setSuccessMessage(`Client ${client.name} successfully marked as ${newStatus}!`);
+        // 2. OPTIMISTIC UI UPDATE
+        setClientToChangeStatus(null); // Clear the modal object
+
+        // The main useEffect will handle the list update via Firebase listener.
+        setSuccessMessage(`Client ${client.name} successfully moved to ${targetStatus === 'active' ? 'Assigned' : 'Inactive'} Clients.`);
         setShowSuccessModal(true);
 
     } catch (error) {
-        console.error(`Failed to update client status to ${newStatus}:`, error);
+        console.error(`Failed to update client status to ${targetStatus}:`, error);
         alert(`Error updating client status.`);
     } finally {
         handleCloseStatusConfirmModal();
@@ -890,7 +900,8 @@ const handleUpdateClientStatus = async () => {
   const [interviewData, setInterviewData] = useState([]);
   const [applicationData, setApplicationData] = useState([]); // Initialize as empty, will be populated by useEffect
   const [isInternalClick, setIsInternalClick] = useState(false);
-
+const [isInactiveClientsModalOpen, setIsInactiveClientsModalOpen] = useState(false);
+const [inactiveAssignedClients, setInactiveAssignedClients] = useState([]);
 
   // State to store application counts per client
   const [clientApplicationCounts, setClientApplicationCounts] = useState({});
@@ -1625,6 +1636,8 @@ Please provide a summary no longer than 150 words.`;
   const totalUnassignedCount = unassignedClients.length;
   // totalClientsCount now dynamically reflects current assigned clients ONLY
   const totalClientsCount = assignedClients.length;
+  const totalInactiveClientsCount = inactiveAssignedClients.length; // NEW Count
+
 
   // Calculate total assigned clients from employees data for the "Assigned" tab header
   const totalAssignedClientsByEmployee = displayEmployees.reduce((sum, emp) => sum + (emp.assignedClients || 0), 0);; // Ensure it handles undefined assignedClients
@@ -4930,6 +4943,13 @@ Please provide a summary no longer than 150 words.`;
                 <div className="assignment-card-title">Total assigned Clients</div>
                 <div className="assignment-card-description">View all assigned clients</div>
               </div>
+
+              {/* NEW: Total Inactive Clients Card */}
+              <div className="assignment-card inactive" onClick={() => setIsInactiveClientsModalOpen(true)}>
+                <div className="assignment-card-value">{totalInactiveClientsCount}</div>
+                <div className="assignment-card-title">Total Inactive Clients</div>
+                <div className="assignment-card-description">View all inactive clients</div>
+              </div>
             </div>
           </section>
         )}
@@ -5529,6 +5549,103 @@ Please provide a summary no longer than 150 words.`;
           </div>
         </div>
       )}
+
+      {/* Total Inactive Clients Modal */}
+{isInactiveClientsModalOpen && (
+    <div className="modal-overlay open">
+        <div className="modal-content modal-lg">
+            <div className="modal-header">
+                <h3 className="modal-title">Total Inactive Clients</h3>
+                <p className="modal-subtitle">Overview of clients currently marked as inactive ({inactiveAssignedClients.length} total)</p>
+                <button className="modal-close-btn" onClick={() => setIsInactiveClientsModalOpen(false)}>&times;</button>
+            </div>
+            
+            <div className="total-clients-table-container">
+                <table className="total-clients-table">
+                    <thead>
+                        <tr>
+                            <th>CLIENT</th>
+                            <th>POSITION</th>
+                            <th>SALARY</th>
+                            <th>ASSIGNED TO</th>
+                            <th>APPLICATION COUNT</th>
+                            <th>PRIORITY</th>
+                            <th>STATUS</th>
+                            <th>ASSIGNED DATE</th>
+                            <th>ACTIONS</th>
+                            <th>DETAILS</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {/* FIX: Use inactiveAssignedClients as the data source */}
+                        {inactiveAssignedClients.map((client) => {
+                            const assignedEmployee = allEmployees.find(emp => emp.firebaseKey === client.assignedTo);
+                            const assignedEmployeeName = assignedEmployee ? `${assignedEmployee.firstName} ${assignedEmployee.lastName}` : 'N/A';
+                            const applicationCount = client.jobApplications ? client.jobApplications.length : 0;
+                            
+                            const clientStatus = (client.assignmentStatus || 'active').charAt(0).toUpperCase() + (client.assignmentStatus || 'active').slice(1);
+                            const statusColor = client.assignmentStatus === 'active' ? '#10b981' : '#ef4444';
+                            const statusBg = client.assignmentStatus === 'active' ? '#dcfce7' : '#fee2e2';
+
+                            return (
+                                <tr key={client.registrationKey}>
+                                    <td>{client.name}</td>
+                                    <td>{client.jobsToApply || client.service}</td>
+                                    <td>{client.expectedSalary || 'N/A'}</td>
+                                    <td>
+                                        <div className="employee-info">
+                                            <div className="employee-avatar">{assignedEmployeeName.split(' ').map(n => n.charAt(0)).join('')}</div>
+                                            <span>{assignedEmployeeName}</span>
+                                        </div>
+                                    </td>
+                                    <td>{applicationCount}</td>
+                                    <td><span className={`priority-tag priority-${client.priority}`}>{client.priority}</span></td>
+                                    
+                                    {/* STATUS COLUMN */}
+                                    <td>
+                                        <span style={{ backgroundColor: statusBg, color: statusColor, padding: '4px 8px', borderRadius: '12px', fontSize: '12px', fontWeight: '600' }}>
+                                            {clientStatus}
+                                        </span>
+                                    </td>
+                                    
+                                    <td>{client.assignedDate}</td>
+                                    
+                                    {/* ACTIONS COLUMN (Status Toggle) */}
+                                    <td>
+                                        <button
+                                            onClick={() => handleOpenStatusConfirmModal(client)}
+                                            className="modal-assign-button"
+                                            style={{ 
+                                                // If inactive, button prompts to go ACTIVE (color: Green)
+                                                backgroundColor: '#10b981', 
+                                                padding: '6px 12px', 
+                                                fontSize: '12px', 
+                                                minWidth: 'unset',
+                                                margin: '0'
+                                            }}
+                                        >
+                                            Active
+                                        </button>
+                                    </td>
+                                    
+                                    {/* DETAILS COLUMN */}
+                                    <td>
+                                        <button className="modal-view-profile-button" onClick={() => openEditClientModal(client)}>
+                                            <i className="fas fa-eye"></i> View Profile
+                                        </button>
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
+            <div className="modal-footer">
+                <button className="modal-cancel-button" onClick={() => setIsInactiveClientsModalOpen(false)}>Close</button>
+            </div>
+        </div>
+    </div>
+)}
 
       {/* NEW: Employee Clients Detail Modal */}
       {isEmployeeClientsModalOpen && selectedEmployeeForClients && (
