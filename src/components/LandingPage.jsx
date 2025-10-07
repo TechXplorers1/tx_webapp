@@ -482,6 +482,14 @@ const LandingPage = () => {
                     flex-shrink: 0;
                 }
 
+                .leaflet-map {
+  filter: grayscale(20%) contrast(110%);
+  transition: transform 0.4s ease;
+}
+.leaflet-map:hover {
+  transform: scale(1.01);
+}
+
                 .learn-more-link {
                     color: var(--primary-color);
                     text-decoration: none;
@@ -967,48 +975,46 @@ const LandingPage = () => {
 
         {/* World Services Section - ANIMATED (using existing ref) */}
         <section
-          ref={worldRef}
-          className={`world-services ${worldInView ? 'slide-up-section' : ''}`}
-          id="world"
-          style={{ opacity: worldInView ? 1 : 0 }}
-        >
-          <Container fluid className="px-0">
-            <div className="map-wrapper">
-              <div className="map-container-custom">
-                <MapContainer
-                  center={[20.0, 0.0]}
-                  zoom={2}
-                  scrollWheelZoom={false}
-                  className="leaflet-map"
-                >
-                  <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>  contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  />
-                  {offices.map((office, index) => (
-                    <Marker key={index} position={office.position}>
-                      <Popup>{office.name}</Popup>
-                    </Marker>
-                  ))}
-                </MapContainer>
+  ref={worldRef}
+  className={`world-services-modern ${worldInView ? 'slide-up-section' : ''}`}
+  id="world"
+  style={{ opacity: worldInView ? 1 : 0 }}
+>
+  <Container fluid className="px-0">
+    <div className="map-container-modern">
+      <MapContainer
+        center={[20.0, 0.0]}
+        zoom={2}
+        scrollWheelZoom={false}
+        className="leaflet-map"
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
+          // You can switch to a modern dark/light style:
+          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        />
+        {offices.map((office, index) => (
+          <Marker key={index} position={office.position}>
+            <Popup>{office.name}</Popup>
+          </Marker>
+        ))}
+      </MapContainer>
 
-                <div className={`map-overlay ${isDarkMode ? 'light' : 'light'}`}></div>
+      <div className="operate-overlay">
+        <h3 className="operate-title">We operate in:</h3>
+        <div className="country-grid">
+          <div className="country-item">United States</div>
+          <div className="country-item">Canada</div>
+          <div className="country-item">United Kingdom</div>
+          <div className="country-item">Nigeria</div>
+          <div className="country-item">Australia</div>
+          <div className="country-item">India</div>
+        </div>
+      </div>
+    </div>
+  </Container>
+</section>
 
-                <div className="operate-overlay">
-                  <h3 className="operate-title">We operate in:</h3>
-                  <div className="country-grid">
-                    <div className="country-item">United States</div>
-                    <div className="country-item">Canada</div>
-                    <div className="country-item">United Kingdom</div>
-                    <div className="country-item">Nigeria</div>
-                    <div className="country-item">Australia</div>
-                    <div className="country-item">India</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Container>
-        </section>
         {/* Footer - ANIMATED */}
         <footer 
             ref={footerRef}
