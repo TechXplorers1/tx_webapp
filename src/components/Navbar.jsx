@@ -126,7 +126,7 @@ const CustomNavbar = () => {
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
 
           <Navbar.Collapse id="basic-navbar-nav">
-            <Nav className="mx-auto gap-lg-5 gap-3">
+            <Nav className="mx-auto gap-lg-1 gap-1">
               <NavLink to="/" className={({ isActive }) => `nav-link-custom ${isActive ? 'active' : ''}`}>
                 HOME
               </NavLink>
