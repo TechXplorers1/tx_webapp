@@ -4940,7 +4940,7 @@ Please provide a summary no longer than 150 words.`;
               {/* Total Clients Card (formerly Assigned) - now clickable to open new modal */}
               <div className="assignment-card assigned" onClick={openTotalClientsModal}>
                 <div className="assignment-card-value">{totalClientsCount}</div>
-                <div className="assignment-card-title">Total assigned Clients</div>
+                <div className="assignment-card-title">Total Assigned/Active Clients</div>
                 <div className="assignment-card-description">View all assigned clients</div>
               </div>
 

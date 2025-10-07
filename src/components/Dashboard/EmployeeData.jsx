@@ -4,6 +4,7 @@ import { Modal, Spinner } from 'react-bootstrap'; // Using react-bootstrap Modal
 import { getDatabase, ref, onValue, query, orderByChild, equalTo, update, remove, set } from "firebase/database";
 import { database } from '../../firebase'; // Import your Firebase config
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import { utils, writeFile } from 'xlsx';
 
 
 const simplifiedServices = ['Mobile Development', 'Web Development', 'Digital Marketing', 'IT Talent Supply', 'Cyber Security'];
@@ -1884,6 +1885,72 @@ useEffect(() => {
     setSelectedClient(null); // Explicitly clear the selected client
   };
 
+const normalizeDate = (dateString) => {
+    return dateString; 
+};
+
+const downloadApplicationsData = () => {
+    // *** Use the filters from the filterDateRange object ***
+    const startFilter = filterDateRange.startDate;
+    const endFilter = filterDateRange.endDate;
+    // *******************************************************
+    
+    if (!selectedClient || !selectedClient.jobApplications || selectedClient.jobApplications.length === 0) {
+        alert("No applications available to download for the selected client.");
+        return;
+    }
+
+    // 1. Filter applications by date range (using appliedDate)
+    const filteredApps = selectedClient.jobApplications.filter(app => {
+        const appDate = normalizeDate(app.appliedDate); 
+        
+        // If an app has no date but filters are active, skip it. If filters are empty, we keep it.
+        if (!appDate && (startFilter || endFilter)) return false;
+        
+        let isWithinDateRange = true;
+        
+        // If both filters are empty, isWithinDateRange remains true, including all apps.
+        if (startFilter && appDate < normalizeDate(startFilter)) {
+            isWithinDateRange = false;
+        }
+
+        if (endFilter && appDate > normalizeDate(endFilter)) {
+            isWithinDateRange = false;
+        }
+
+        return isWithinDateRange;
+    });
+
+    if (filteredApps.length === 0) {
+        alert("No applications found in the selected date range.");
+        return;
+    }
+
+    // 2. Prepare data for export with Serial Numbers (S.No.)
+    const dataForExport = filteredApps.map((app, index) => ({
+        'S.No.': index + 1, // Add Serial Number
+        'Client Name': `${selectedClient.firstName || ''} ${selectedClient.lastName || ''}`.trim(),
+        'Client Email': selectedClient.email || '-',
+        'Job Title': app.jobTitle || '-',
+        'Company': app.company || '-',
+        'Job Boards': app.jobBoards || '-',
+        'Applied Date': app.appliedDate || '-',
+        'Status': app.status || '-',
+        'Job ID': app.jobId || '-',
+        'Job Description URL': app.jobDescriptionUrl || '-',
+        'Attachments Count': app.attachments?.length || 0,
+    }));
+
+    // 3. Export using XLSX (Requires utils and writeFile from 'xlsx' import)
+    const ws = utils.json_to_sheet(dataForExport);
+    const wb = utils.book_new();
+    utils.book_append_sheet(wb, ws, "Applications");
+
+    const clientName = `${selectedClient.firstName || ''}_${selectedClient.lastName || ''}`.trim().replace(/\s/g, '_');
+    const fileName = `Applications_${clientName}_${startFilter || 'All'}_to_${endFilter || 'All'}.xlsx`;
+    
+    writeFile(wb, fileName);
+};
 
 
   return (
@@ -2669,6 +2736,16 @@ useEffect(() => {
           {/* <option value="Rejected">Rejected</option> */}
           <option value="Offered">Offered</option>
         </select>
+        {/* NEW DOWNLOAD BUTTON - Placed below the status filter */}
+    <button onClick={downloadApplicationsData} style={downloadButtonStyle}>
+        {/* Download Icon */}
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        Download
+    </button>
       </div>
 
       {/* Date-wise Application Table */}
@@ -3582,6 +3659,17 @@ useEffect(() => {
                         {/* <option value="Rejected">Rejected</option> */}
                         <option value="Offered">Offered</option>
                       </select>
+
+                      {/* NEW DOWNLOAD BUTTON - Placed below the status filter */}
+    <button onClick={downloadApplicationsData} style={downloadButtonStyle}>
+        {/* Download Icon */}
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        Download
+    </button>
                     </div>
 
                     <div style={applicationTableWrapperStyle}>
@@ -5499,6 +5587,22 @@ const clientCardFooterStyle = {
   marginTop: '16px',
   paddingTop: '16px',
   borderTop: '1px solid #f1f5f9',
+};
+
+const downloadButtonStyle = {
+  background: '#10b981', // A shade of green
+  color: '#ffffff',
+  border: 'none',
+  padding: '10px 15px',
+  borderRadius: '6px',
+  fontSize: '0.9rem',
+  fontWeight: '600',
+  cursor: 'pointer',
+  transition: 'background-color 0.2s ease-out',
+  marginLeft: '10px', // Spacing from the select filter
+  display: 'flex',
+  alignItems: 'center',
+  gap: '5px',
 };
 
 const footerItemStyle = {
