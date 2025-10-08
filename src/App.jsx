@@ -78,7 +78,7 @@ const App = () => {
            {/* DashBoards */}
      {/* --- Protected Routes with Role-Based Access --- */}
             <Route path="/clientdashboard" element={<ProtectedRoute allowedRoles={['client']}><ClientDashboard /></ProtectedRoute>} />
-            <Route path="/assetworksheet" element={<ProtectedRoute allowedRoles={['admin']}><AssetsWorksheet /></ProtectedRoute>} />
+            <Route path="/assetworksheet" element={<ProtectedRoute allowedRoles={['asset']}><AssetsWorksheet /></ProtectedRoute>} />
             <Route path="/reports" element={<ProtectedRoute allowedRoles={['admin', 'manager']}><Reports /></ProtectedRoute>} />
             <Route path="/employees" element={<ProtectedRoute allowedRoles={['employee']}><EmployeeData /></ProtectedRoute>} />
             <Route path="/workgroups" element={<ProtectedRoute allowedRoles={['admin', 'manager']}><WorkGroups /></ProtectedRoute>} />
