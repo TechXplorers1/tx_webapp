@@ -117,6 +117,10 @@ const EditAssetModal = ({ show, onClose, asset, onUpdate, users, branchLocations
                 <label className="form-label">Expected Return Date</label>
                 <input type="date" name="returnDate" className="form-input" value={formatDateForInput(formData.returnDate)} onChange={(e) => setFormData(prev => ({...prev, returnDate: formatDateForState(e.target.value)}))} />
             </div>
+            <div className="form-group">
+                <label className="form-label">Assignment Reason</label>
+                <input type="text" name="assignmentReason" className="form-input" value={formData.assignmentReason || ''} onChange={handleChange} />
+            </div>
         </div>
     );
 
@@ -269,29 +273,18 @@ const AssignAssetModal = ({ show, onClose, onAssign, availableAssets, users }) =
     const [assignmentReason, setAssignmentReason] = useState('');
     const [assignedDate, setAssignedDate] = useState('');
 
-    const groupedAssets = useMemo(() => {
-        const byName = availableAssets.reduce((acc, asset) => {
-            if (!acc[asset.name]) {
-                acc[asset.name] = {
-                    count: 0,
-                    ids: [],
-                    type: asset.type,
-                };
-            }
-            acc[asset.name].count++;
-            acc[asset.name].ids.push(asset.id);
-            return acc;
-        }, {});
-
-        return Object.entries(byName).reduce((acc, [name, data]) => {
-            const { type } = data;
-            if (!acc[type]) {
-                acc[type] = [];
-            }
-            acc[type].push({ name, ...data });
-            return acc;
-        }, {});
-    }, [availableAssets]);
+   const groupedAssets = useMemo(() => {
+  const byType = availableAssets.reduce((acc, asset) => {
+    if (!acc[asset.type]) acc[asset.type] = [];
+    acc[asset.type].push({
+      id: asset.id,
+      name: asset.name,
+      serialNumber: asset.serialNumber,
+    });
+    return acc;
+  }, {});
+  return byType;
+}, [availableAssets]);
 
     useEffect(() => {
       if (show) {
@@ -304,7 +297,7 @@ const AssignAssetModal = ({ show, onClose, onAssign, availableAssets, users }) =
     const handleSubmit = (e) => {
       e.preventDefault();
       if (selectedAssetName && assignedUser && assignmentReason && assignedDate) {
-        let assetIdToAssign = null;
+        let assetIdToAssign = selectedAssetName;
         for (const typeGroup of Object.values(groupedAssets)) {
             const foundAsset = typeGroup.find(asset => asset.name === selectedAssetName);
             if (foundAsset) {
@@ -335,14 +328,14 @@ const AssignAssetModal = ({ show, onClose, onAssign, availableAssets, users }) =
                 <select className="form-select" value={selectedAssetName} onChange={(e) => setSelectedAssetName(e.target.value)} required>
                     <option value="">Choose an available asset</option>
                     {Object.entries(groupedAssets).map(([type, assets]) => (
-                        <optgroup key={type} label={type}>
-                            {assets.map(asset => (
-                                <option key={asset.name} value={asset.name}>
-                                    {asset.name} ({asset.count} available)
-                                </option>
-                            ))}
-                        </optgroup>
-                    ))}
+  <optgroup key={type} label={type}>
+    {assets.map(asset => (
+      <option key={asset.id} value={asset.id}>
+        {asset.name} - {asset.serialNumber || 'No Serial'}
+      </option>
+    ))}
+  </optgroup>
+))}
                 </select>
             </div>
             <div className="form-group" style={{marginTop: '16px'}}><label className="form-label">Assign to Employee *</label><select className="form-select" value={assignedUser} onChange={(e) => setAssignedUser(e.target.value)} required><option value="">Choose an Employee</option>{users.map(user => (
@@ -573,12 +566,13 @@ const AssetWorksheet = () => {
   const handleUnassignAssetConfirm = async (firebaseKey, assetName) => {
     const assetRef = ref(database, `assets/${firebaseKey}`);
     try {
-        await update(assetRef, {
-            status: 'available',
-            assignedTo: 'Unassigned',
-            assignedDate: null,
-            returnDate: null
-        });
+       await update(assetRef, {
+    status: 'assigned',
+    assignedTo: assignedUserId,
+    assignedDate: assignedDate,
+    assignmentReason: assignmentReason,
+    returnDate: null
+});
         setNotifications(prev => [{ id: Date.now(), message: `Asset "${assetName}" has been unassigned.`, timestamp: new Date() }, ...prev]);
     } catch (error) {
         console.error("Failed to unassign asset:", error);
@@ -609,12 +603,13 @@ const AssetWorksheet = () => {
 
 
     try {
-        await update(assetRef, {
-            status: 'assigned',
-            assignedTo: assignedUserId,
-            assignedDate: assignedDate,
-            returnDate: null
-        });
+       await update(assetRef, {
+    status: 'assigned',
+    assignedTo: assignedUserId,
+    assignedDate: assignedDate,
+    assignmentReason: assignmentReason || '',
+    returnDate: null,
+});
         setShowAssignAssetModal(false);
         setNotifications(prev => [{ id: Date.now(), message: `Asset "${assetToAssign.name}" assigned to ${assignedUserName}.`, timestamp: new Date() }, ...prev]);
     } catch (error) {
