@@ -63,7 +63,10 @@ export default function LoginPage() {
         navigate('/managerworksheet');
     } else if (finalUserData.roles.includes('employee')) {
         navigate('/employees');
-    } else {
+    }else if (finalUserData.roles.includes('asset')) {
+        navigate('/assetworksheet');
+    } 
+    else {
         navigate('/');
     }
   };
