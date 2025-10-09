@@ -771,7 +771,6 @@ const PaymentOptionsModal = ({ onClose, selectedPlanName, selectedPlanPrice }) =
   };
 
   const handlePayClick = () => {
-    console.log(`Processing payment for ${selectedPlanName} plan (${selectedPlanPrice}) via ${selectedPaymentMethod}`);
     // In a real application, this would trigger a payment gateway integration
     // For now, just close the modal after a short delay
     setTimeout(() => {
@@ -2585,7 +2584,6 @@ const handleClientProfileClick = useCallback(() => {
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('activeClientDashboardTab'); // Clear persisted tab on logout
     navigate('/'); // Redirect to home/login page
-    console.log("User logged out successfully.");
     setIsProfileDropdownOpen(false); // Close dropdown
   }, [navigate]);
 
@@ -2920,7 +2918,6 @@ useEffect(() => {
 
   // Handler for downloading resume
   const handleDownloadResume = () => {
-    console.log('Downloading the latest resume... (This is a placeholder action)');
   };
 
   // --- Handlers for Applications tab ---
@@ -2965,7 +2962,6 @@ const allApplicationsFlattened = useMemo(() => {
         });
       }
     }
-    console.log('DEBUG: allApplicationsFlattened recalculated. Total apps:', flattened.length);
     return flattened;
   }, [applicationsData]);
 
@@ -3032,17 +3028,14 @@ const allApplicationsFlattened = useMemo(() => {
 
   // Callback from DateRangeCalendar when a range is selected
    const handleDateRangeChangeFromCalendar = useCallback((start, end) => {
-    console.log('DEBUG: handleDateRangeChangeFromCalendar triggered. Start (Date Object):', start, 'End (Date Object):', end); // DEBUG
     setTempStartDate(start);
     setTempEndDate(end);
   }, []);
 
   
 const handleApplyDateRange = () => {
-    console.log('DEBUG: handleApplyDateRange triggered. Applying range (Temp Dates):', tempStartDate, 'to', tempEndDate); // DEBUG
     // Validate dates before applying (optional, but good practice)
     if (tempStartDate && tempEndDate && tempStartDate > tempEndDate) {
-      console.error('Start date cannot be after end date.');
       // You might want to show a user-friendly error message here
       return;
     }
@@ -3050,7 +3043,6 @@ const handleApplyDateRange = () => {
     const newStartFilter = tempStartDate ? formatDate(tempStartDate) : '';
     const newEndFilter = tempEndDate ? formatDate(tempEndDate) : '';
 
-    console.log('DEBUG: Setting permanent filters (DD-MM-YYYY strings): StartFilter:', newStartFilter, 'EndFilter:', newEndFilter); // DEBUG
     
     setStartDateFilter(newStartFilter);
     setEndDateFilter(newEndFilter);
@@ -3260,11 +3252,6 @@ const handleApplyDateRange = () => {
   // Apply all filters to the relevant base set of applications
   const filteredApplicationsForDisplay = useMemo(() => {
     
-    // DEBUG: Log the filter values used in this run
-    console.log('--- DEBUG: filteredApplicationsForDisplay Re-running ---');
-    console.log('Current Date Filter Range (DD-MM-YYYY):', startDateFilter, 'to', endDateFilter);
-    console.log('Current Search Term:', searchTerm);
-    console.log('Current Categorical Filters:', filterWebsites.length, 'websites,', filterPositions.length, 'positions,', filterCompanies.length, 'companies');
     
     let baseApps = [];
 
@@ -3323,7 +3310,6 @@ const handleApplyDateRange = () => {
       return matchesWebsite && matchesPosition && matchesCompany && matchesSearchTerm && matchesDateRange;
     });
     
-    console.log('DEBUG: Filter result count:', result.length); // DEBUG
     return result;
   }, [selectedDate, applicationsData, filterWebsites, filterPositions, filterCompanies, searchTerm, startDateFilter, endDateFilter, allApplicationsFlattened, isGlobalFilterActive]);
 

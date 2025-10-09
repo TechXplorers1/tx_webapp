@@ -26,6 +26,17 @@ const CustomNavbar = () => {
     }
   };
 
+ const ROLE_REDIRECT_MAP = {
+  'admin': '/adminpage',
+  'manager': '/managerworksheet',
+  'employee': '/employees',
+  'asset': '/assetworksheet',
+  'client': '/clientdashboard',
+};
+
+  const dashboardPath = user?.roles ? ROLE_REDIRECT_MAP[user.roles] : '/';
+
+
   const handleServicesLeave = () => {
     servicesTimeoutRef.current = setTimeout(() => {
       setShowServicesPopup(false);
@@ -174,7 +185,10 @@ const CustomNavbar = () => {
               </label>
               
               {isLoggedIn ? (
-                <div className="position-relative">
+                <div 
+                className={`position-relative ${showProfileDropdown ? 'show' : ''}`}
+                ref={profileDropdownRef}
+              >
                   <img
                     src={user?.avatar || 'https://placehold.co/40x40/6c757d/white?text=P'}
                     alt="Profile"
@@ -188,7 +202,7 @@ const CustomNavbar = () => {
                       className="profile-dropdown-menu dropdown-menu show"
                       style={{ position: 'absolute', top: '100%', right: '0', zIndex: 1001 }}
                     >
-                      <Dropdown.Item as={Link} to="/clientdashboard" onClick={() => setShowProfileDropdown(false)}>
+                      <Dropdown.Item as={Link} to={dashboardPath}  onClick={() => setShowProfileDropdown(false)}>
                         Dashboard
                       </Dropdown.Item>
                       <Dropdown.Divider />
