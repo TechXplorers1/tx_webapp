@@ -1375,7 +1375,7 @@ const [inactiveAssignedClients, setInactiveAssignedClients] = useState([]);
         'Company': app.company,
         'Job Description Link': app.jobDescriptionUrl,
         'Status': app.status,
-        'Employee': employeeName,
+        'Employee Name (Creator)': app.employeeName || 'N/A', 
         'Client Name': clientName,
         'Interview Round': app.round || 'N/A',
         'Interview Date': app.interviewDate || 'N/A',
@@ -6727,6 +6727,7 @@ Please provide a summary no longer than 150 words.`;
             <div className="modal-view-details-grid">
               <p className="modal-view-detail-item"><strong>Client Name:</strong> {selectedApplication.clientName}</p>
               <p className="modal-view-detail-item"><strong>Employee:</strong> {selectedApplication.assignedTo}</p>
+              <p className="modal-view-detail-item"><strong>Created Employee:</strong> {selectedApplication?.employeeName || 'N/A'}</p>
               <p className="modal-view-detail-item"><strong>Job Title:</strong> {selectedApplication.jobTitle}</p>
               <p className="modal-view-detail-item"><strong>Company:</strong> {selectedApplication.company}</p>
               <p className="modal-view-detail-item"><strong>Job ID:</strong> {selectedApplication.jobId}</p>
@@ -6784,6 +6785,18 @@ Please provide a summary no longer than 150 words.`;
                   <option value="Offered">Offered</option>
                 </select>
               </div>
+
+              <div className="form-field">
+    <label >Created Employee</label>
+    {/* Display as a disabled input or text to prevent accidental editing */}
+    <input
+        type="text"
+        value={editableApplication.employeeName || 'N/A'}
+        style={{ backgroundColor: '#f5f5f5' }} // Read-only styling
+        disabled
+    />
+</div>
+
               {editableApplication.status === 'Interview' && (
                 <>
                   <div className="form-group">

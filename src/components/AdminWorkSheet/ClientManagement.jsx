@@ -41,6 +41,9 @@ const ClientManagement = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [coverLetterFile, setCoverLetterFile] = useState(null);
+  const [isConfirmManagerModalOpen, setIsConfirmManagerModalOpen] = useState(false);
+const [managerToConfirm, setManagerToConfirm] = useState(null);
+
 
 
   useEffect(() => {
@@ -364,48 +367,10 @@ const handleAssignClient = async (registration) => {
     setManagerSearchTerm('');
   };
 
-const handleSelectManager = async (manager) => {
-    if (!registrationForManager) return;
-    
-    // Create the updated manager info object
-    const updatedManagerInfo = {
-        manager: `${manager.firstName} ${manager.lastName}`,
-        assignedManager: manager.firebaseKey
-    };
-
-    const registrationRef = ref(database, 
-        `clients/${registrationForManager.clientFirebaseKey}/serviceRegistrations/${registrationForManager.registrationKey}`
-    );
-
-    try {
-        // 1. Update Firebase with the new manager and reset status to pending_employee
-        await update(registrationRef, {
-            assignedManager: manager.firebaseKey,
-            manager: updatedManagerInfo.manager,
-            assignmentStatus: 'pending_employee' // Change status to indicate reassignment needed
-        });
-
-        // 2. Optimistically update local state to reflect the change immediately
-        setServiceRegistrations(prev => prev.map(reg =>
-            reg.registrationKey === registrationForManager.registrationKey
-                ? { 
-                    ...reg, 
-                    ...updatedManagerInfo, 
-                    assignmentStatus: 'pending_employee' 
-                }
-                : reg
-        ));
-
-        // 3. Provide feedback
-        console.log(`Client ${registrationForManager.firstName} reassigned to ${updatedManagerInfo.manager}.`);
-
-    } catch (error) {
-        console.error("Failed to reassign manager:", error);
-        alert("Error reassigning manager. Please try again.");
-    } finally {
-        // Close the modal regardless of success
-        handleCloseManagerModal();
-    }
+const handleSelectManager = (manager) => {
+  if (!registrationForManager) return;
+  setManagerToConfirm(manager);
+  setIsConfirmManagerModalOpen(true);
 };
 
   const handleClientSearchChange = (event) => {
@@ -434,11 +399,49 @@ const handleSelectManager = async (manager) => {
       (client.lastName?.toLowerCase().includes(searchTermLower)) ||
       (client.email?.toLowerCase().includes(searchTermLower)) ||
       (client.mobile?.toLowerCase().includes(searchTermLower)) ||
-      (client.jobsApplyFor?.toLowerCase().includes(searchTermLower)) ||
+      (client.jobsToApply?.toLowerCase().includes(searchTermLower)) ||
       (client.country?.toLowerCase().includes(searchTermLower)) ||
       (client.service?.toLowerCase().includes(searchTermLower))
     );
   };
+
+
+  const handleConfirmSelectManager = async () => {
+  if (!managerToConfirm || !registrationForManager) return;
+
+  const updatedManagerInfo = {
+    manager: `${managerToConfirm.firstName} ${managerToConfirm.lastName}`,
+    assignedManager: managerToConfirm.firebaseKey,
+  };
+
+  const registrationRef = ref(
+    database,
+    `clients/${registrationForManager.clientFirebaseKey}/serviceRegistrations/${registrationForManager.registrationKey}`
+  );
+
+  try {
+    await update(registrationRef, {
+      ...updatedManagerInfo,
+      assignmentStatus: 'pending_employee',
+    });
+
+    setServiceRegistrations((prev) =>
+      prev.map((reg) =>
+        reg.registrationKey === registrationForManager.registrationKey
+          ? { ...reg, ...updatedManagerInfo, assignmentStatus: 'pending_employee' }
+          : reg
+      )
+    );
+  } catch (error) {
+    console.error('Failed to assign manager:', error);
+  } finally {
+    setIsConfirmManagerModalOpen(false);
+    setIsManagerModalOpen(false);
+    setManagerToConfirm(null);
+    setRegistrationForManager(null);
+  }
+};
+
 
   const filteredClients = getFilteredRegistrations();
 
@@ -591,16 +594,25 @@ const handleSaveClientDetails = async (e) => {
       <div className="client-table-container">
         {title && <h4 className="client-table-title">{title} ({registrationsToRender.length})</h4>}
                <table className="client-table">
-                    <thead><tr>{headers.map(h => <th key={h}>{h}</th>)}</tr></thead>
+                  <thead><tr><th>S.No.</th>{headers.map(h => <th key={h}>{h}</th>)}</tr></thead>
                     <tbody>
                         {registrationsToRender.length > 0 ? (
-                            registrationsToRender.map(registration => (
+                            registrationsToRender.map((registration, index) => (
                                 <tr key={registration.registrationKey}>
+                                    <td>{index + 1}</td>
                                     <td>{registration.firstName}</td>
                                     <td>{registration.lastName}</td>
                                     <td>{registration.mobile}</td>
                                     <td>{registration.email}</td>
-                                    <td>{registration.service === 'Job Supporting' ? registration.jobsToApply : registration.service}</td>
+                                    <td
+                                       style={{
+                // Essential styles for wrapping long, continuous text in a table cell:
+                wordBreak: 'break-word',
+                whiteSpace: 'normal',
+                minWidth: '200px', // Optional: Ensures the column has a minimum width before wrapping starts
+                maxWidth: '300px'  // Optional: Prevents the column from becoming excessively wide
+            }}
+                                    >{registration.service === 'Job Supporting' ? registration.jobsToApply : registration.service}</td>
                                     <td>{registration.registeredDate}</td>
                                     <td>{registration.country}</td>
                                     {registration.service === 'Job Supporting' && <td>{registration.visaStatus}</td>}
@@ -2418,6 +2430,44 @@ const handleSaveClientDetails = async (e) => {
           </div>
         </div>
       )}
+
+
+      {isConfirmManagerModalOpen && managerToConfirm && (
+  <div className="modal-overlay open">
+    <div className="modal-content">
+      <div className="modal-header">
+        <h3 className="modal-title">Confirm Manager Assignment</h3>
+        <button
+          className="modal-close-btn"
+          onClick={() => setIsConfirmManagerModalOpen(false)}
+        >
+          &times;
+        </button>
+      </div>
+      <p className="modal-subtitle">
+        Are you sure you want to assign manager: <strong>{managerToConfirm.firstName} {managerToConfirm.lastName}</strong> 
+        to client: <strong>{registrationForManager?.firstName} {registrationForManager?.lastName}</strong>?
+      </p>
+      <div className="confirm-modal-buttons">
+        <button
+          type="button"
+          className="confirm-cancel-btn"
+          onClick={() => setIsConfirmManagerModalOpen(false)}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="confirm-delete-btn"
+          onClick={handleConfirmSelectManager}
+        >
+          Confirm
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
 
       {isPaymentModalOpen && selectedClientForPayment && (
         <div className="modal-overlay open">

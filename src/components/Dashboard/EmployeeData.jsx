@@ -1237,6 +1237,7 @@ const handleSaveNewApplication = async () => {
         status: 'Applied',
         appliedDate: getLocalDateString(),
         timestamp: new Date().toISOString(),
+        employeeName: employeeName,
         attachments: []
     };
     const existingApplications = selectedClient.jobApplications || [];
