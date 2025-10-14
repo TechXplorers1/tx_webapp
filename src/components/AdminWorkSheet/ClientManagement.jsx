@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { getDatabase, ref, onValue, update, remove } from "firebase/database";
+import { getDatabase, ref, onValue, update, remove, set, get } from "firebase/database";
 import { database } from '../../firebase';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Spinner } from 'react-bootstrap';
@@ -42,7 +42,24 @@ const ClientManagement = () => {
   const [error, setError] = useState(null);
   const [coverLetterFile, setCoverLetterFile] = useState(null);
   const [isConfirmManagerModalOpen, setIsConfirmManagerModalOpen] = useState(false);
-const [managerToConfirm, setManagerToConfirm] = useState(null);
+  const [managerToConfirm, setManagerToConfirm] = useState(null);
+  // --- Client Details Tabs and Data ---
+  const [activeClientDetailsTab, setActiveClientDetailsTab] = useState('Profile');
+  const [clientApplications, setClientApplications] = useState([]);
+  const [clientInterviews, setClientInterviews] = useState([]);
+  const [clientDateRange, setClientDateRange] = useState({
+    startDate: '',
+    endDate: '',
+  });
+  const [todayClientAppCounts, setTodayClientAppCounts] = useState({});
+  // --- Application Modals & Editing ---
+const [isAppViewModalOpen, setIsAppViewModalOpen] = useState(false);
+const [isAppEditModalOpen, setIsAppEditModalOpen] = useState(false);
+const [isAppDeleteConfirmOpen, setIsAppDeleteConfirmOpen] = useState(false);
+const [selectedApplication, setSelectedApplication] = useState(null);
+
+
+
 
 
 
@@ -95,6 +112,36 @@ const [managerToConfirm, setManagerToConfirm] = useState(null);
     };
   }, []);
 
+  useEffect(() => {
+    if (!serviceRegistrations || serviceRegistrations.length === 0) return;
+
+    const today = new Date().toISOString().split('T')[0];
+    const counts = {};
+
+    serviceRegistrations.forEach((client) => {
+      const appsRef = ref(
+        database,
+        `clients/${client.clientFirebaseKey}/serviceRegistrations/${client.registrationKey}/jobApplications`
+      );
+
+      onValue(appsRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          const appsArray = Array.isArray(data) ? data : Object.values(data);
+          const todayCount = appsArray.filter(
+            (app) =>
+              app.appliedDate &&
+              new Date(app.appliedDate).toISOString().split('T')[0] === today
+          ).length;
+
+          counts[client.registrationKey] = todayCount;
+          setTodayClientAppCounts((prev) => ({ ...prev, ...counts }));
+        }
+      });
+    });
+  }, [serviceRegistrations]);
+
+
   const serviceOptions = [
     'All',
     'Mobile Development',
@@ -116,7 +163,7 @@ const [managerToConfirm, setManagerToConfirm] = useState(null);
     }
   };
 
-    const handleResumeFileChange = (e, index) => {
+  const handleResumeFileChange = (e, index) => {
     if (e.target.files[0]) {
       setNewResumeFiles(prev => ({
         ...prev,
@@ -124,56 +171,56 @@ const [managerToConfirm, setManagerToConfirm] = useState(null);
       }));
     }
   };
-    const handleDeclineClient = async (registration) => {
-        if (!registration || !registration.clientFirebaseKey || !registration.registrationKey) {
-            console.error("Missing registration details to decline client.");
-            return;
-        }
-        const registrationRef = ref(database, `clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}`);
-        try {
-            await update(registrationRef, {
-                assignmentStatus: 'rejected'
-            });
-            console.log(`Client ${registration.firstName} declined and moved to rejected.`);
-            // OPTIMISTIC UPDATE: update local state immediately
-            setServiceRegistrations(prevRegistrations => prevRegistrations.map(reg =>
-                reg.registrationKey === registration.registrationKey ? { ...reg, assignmentStatus: 'rejected' } : reg
-            ));
-        } catch (error) {
-            console.error("Failed to decline client registration:", error);
-        }
-    };
+  const handleDeclineClient = async (registration) => {
+    if (!registration || !registration.clientFirebaseKey || !registration.registrationKey) {
+      console.error("Missing registration details to decline client.");
+      return;
+    }
+    const registrationRef = ref(database, `clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}`);
+    try {
+      await update(registrationRef, {
+        assignmentStatus: 'rejected'
+      });
+      console.log(`Client ${registration.firstName} declined and moved to rejected.`);
+      // OPTIMISTIC UPDATE: update local state immediately
+      setServiceRegistrations(prevRegistrations => prevRegistrations.map(reg =>
+        reg.registrationKey === registration.registrationKey ? { ...reg, assignmentStatus: 'rejected' } : reg
+      ));
+    } catch (error) {
+      console.error("Failed to decline client registration:", error);
+    }
+  };
 
 
 
-    const handleUnacceptClientClick = (registration) => {
-      setClientToUnaccept(registration);
-      setIsUnacceptClientConfirmModalOpen(true);
+  const handleUnacceptClientClick = (registration) => {
+    setClientToUnaccept(registration);
+    setIsUnacceptClientConfirmModalOpen(true);
   };
 
   const handleCancelUnaccept = () => {
-      setIsUnacceptClientConfirmModalOpen(false);
-      setClientToUnaccept(null);
+    setIsUnacceptClientConfirmModalOpen(false);
+    setClientToUnaccept(null);
   };
 
   const handleConfirmUnaccept = async () => {
-      if (!clientToUnaccept) return;
-      const registrationRef = ref(database, `clients/${clientToUnaccept.clientFirebaseKey}/serviceRegistrations/${clientToUnaccept.registrationKey}`);
-      try {
-          await update(registrationRef, {
-              assignmentStatus: 'registered' // Status for the 'Registered Clients' tab
-          });
-          // OPTIMISTIC UPDATE: update local state immediately
-          setServiceRegistrations(prevRegistrations => prevRegistrations.map(reg =>
-              reg.registrationKey === clientToUnaccept.registrationKey ? { ...reg, assignmentStatus: 'registered' } : reg
-          ));
-          setIsUnacceptClientConfirmModalOpen(false);
-          setClientToUnaccept(null);
-          console.log(`Client ${clientToUnaccept.firstName} unaccepted and moved back to registered.`);
-      } catch (error) {
-          console.error("Failed to unaccept client registration:", error);
-          alert("Error unaccepting client.");
-      }
+    if (!clientToUnaccept) return;
+    const registrationRef = ref(database, `clients/${clientToUnaccept.clientFirebaseKey}/serviceRegistrations/${clientToUnaccept.registrationKey}`);
+    try {
+      await update(registrationRef, {
+        assignmentStatus: 'registered' // Status for the 'Registered Clients' tab
+      });
+      // OPTIMISTIC UPDATE: update local state immediately
+      setServiceRegistrations(prevRegistrations => prevRegistrations.map(reg =>
+        reg.registrationKey === clientToUnaccept.registrationKey ? { ...reg, assignmentStatus: 'registered' } : reg
+      ));
+      setIsUnacceptClientConfirmModalOpen(false);
+      setClientToUnaccept(null);
+      console.log(`Client ${clientToUnaccept.firstName} unaccepted and moved back to registered.`);
+    } catch (error) {
+      console.error("Failed to unaccept client registration:", error);
+      alert("Error unaccepting client.");
+    }
   };
 
 
@@ -209,35 +256,35 @@ const [managerToConfirm, setManagerToConfirm] = useState(null);
 
 
   // New helper functions to manage the educationDetails array in state
-const handleAddEducationEntry = () => {
-  setCurrentClientToEdit(prev => ({
-    ...prev,
-    educationDetails: [...(prev.educationDetails || []), {
-      universityName: '',
-      universityAddress: '',
-      courseOfStudy: '',
-      graduationFromDate: '',
-      graduationToDate: '',
-    }]
-  }));
-};
-
-const handleRemoveEducationEntry = (index) => {
-  const updatedEducation = [...(currentClientToEdit.educationDetails || [])];
-  updatedEducation.splice(index, 1);
-  setCurrentClientToEdit(prev => ({ ...prev, educationDetails: updatedEducation }));
-};
-
-// New handler for changes within the education details array
-const handleEducationChange = (e, index, field) => {
-  const { value } = e.target;
-  const updatedEducation = [...(currentClientToEdit.educationDetails || [])];
-  updatedEducation[index] = {
-    ...updatedEducation[index],
-    [field]: value
+  const handleAddEducationEntry = () => {
+    setCurrentClientToEdit(prev => ({
+      ...prev,
+      educationDetails: [...(prev.educationDetails || []), {
+        universityName: '',
+        universityAddress: '',
+        courseOfStudy: '',
+        graduationFromDate: '',
+        graduationToDate: '',
+      }]
+    }));
   };
-  setCurrentClientToEdit(prev => ({ ...prev, educationDetails: updatedEducation }));
-};
+
+  const handleRemoveEducationEntry = (index) => {
+    const updatedEducation = [...(currentClientToEdit.educationDetails || [])];
+    updatedEducation.splice(index, 1);
+    setCurrentClientToEdit(prev => ({ ...prev, educationDetails: updatedEducation }));
+  };
+
+  // New handler for changes within the education details array
+  const handleEducationChange = (e, index, field) => {
+    const { value } = e.target;
+    const updatedEducation = [...(currentClientToEdit.educationDetails || [])];
+    updatedEducation[index] = {
+      ...updatedEducation[index],
+      [field]: value
+    };
+    setCurrentClientToEdit(prev => ({ ...prev, educationDetails: updatedEducation }));
+  };
 
   const handleGeneratePaymentLink = () => {
 
@@ -305,7 +352,7 @@ const handleEducationChange = (e, index, field) => {
     setClientToDelete(null);
   };
 
-const handleAssignClient = async (registration) => {
+  const handleAssignClient = async (registration) => {
     // Check if the manager selection was made in the modal (the name should be on the registration object)
     if (!registration || !registration.manager || !registration.managerFirebaseKey) {
       alert('Please select a manager first using the "Select Manager" button.');
@@ -319,41 +366,41 @@ const handleAssignClient = async (registration) => {
         assignmentStatus: 'pending_employee' // Change status from 'pending_manager' to 'pending_employee'
       });
       // OPTIMISTIC UPDATE: Update local state immediately
-      setServiceRegistrations(prev => prev.map(reg => 
-        reg.registrationKey === registration.registrationKey 
-          ? { 
-              ...reg, 
-              manager: registration.manager, 
-              assignedManager: registration.managerFirebaseKey, 
-              assignmentStatus: 'pending_employee' 
-            }
+      setServiceRegistrations(prev => prev.map(reg =>
+        reg.registrationKey === registration.registrationKey
+          ? {
+            ...reg,
+            manager: registration.manager,
+            assignedManager: registration.managerFirebaseKey,
+            assignmentStatus: 'pending_employee'
+          }
           : reg
       ));
     } catch (error) {
       console.error("Failed to assign manager:", error);
     }
-};
+  };
 
 
-    const handleRestoreClient = async (registration) => {
-        if (!registration || !registration.clientFirebaseKey || !registration.registrationKey) {
-            console.error("Missing registration details to restore client.");
-            return;
-        }
-        const registrationRef = ref(database, `clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}`);
-        try {
-            await update(registrationRef, {
-                assignmentStatus: 'pending_manager'
-            });
-            console.log(`Client ${registration.firstName} restored and moved to unassigned.`);
-            // OPTIMISTIC UPDATE: update local state immediately
-            setServiceRegistrations(prevRegistrations => prevRegistrations.map(reg =>
-                reg.registrationKey === registration.registrationKey ? { ...reg, assignmentStatus: 'pending_manager' } : reg
-            ));
-        } catch (error) {
-            console.error("Failed to restore client registration:", error);
-        }
-    };
+  const handleRestoreClient = async (registration) => {
+    if (!registration || !registration.clientFirebaseKey || !registration.registrationKey) {
+      console.error("Missing registration details to restore client.");
+      return;
+    }
+    const registrationRef = ref(database, `clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}`);
+    try {
+      await update(registrationRef, {
+        assignmentStatus: 'pending_manager'
+      });
+      console.log(`Client ${registration.firstName} restored and moved to unassigned.`);
+      // OPTIMISTIC UPDATE: update local state immediately
+      setServiceRegistrations(prevRegistrations => prevRegistrations.map(reg =>
+        reg.registrationKey === registration.registrationKey ? { ...reg, assignmentStatus: 'pending_manager' } : reg
+      ));
+    } catch (error) {
+      console.error("Failed to restore client registration:", error);
+    }
+  };
 
 
   const handleOpenManagerModal = (registration) => {
@@ -367,11 +414,11 @@ const handleAssignClient = async (registration) => {
     setManagerSearchTerm('');
   };
 
-const handleSelectManager = (manager) => {
-  if (!registrationForManager) return;
-  setManagerToConfirm(manager);
-  setIsConfirmManagerModalOpen(true);
-};
+  const handleSelectManager = (manager) => {
+    if (!registrationForManager) return;
+    setManagerToConfirm(manager);
+    setIsConfirmManagerModalOpen(true);
+  };
 
   const handleClientSearchChange = (event) => {
     setClientSearchTerm(event.target.value);
@@ -407,40 +454,40 @@ const handleSelectManager = (manager) => {
 
 
   const handleConfirmSelectManager = async () => {
-  if (!managerToConfirm || !registrationForManager) return;
+    if (!managerToConfirm || !registrationForManager) return;
 
-  const updatedManagerInfo = {
-    manager: `${managerToConfirm.firstName} ${managerToConfirm.lastName}`,
-    assignedManager: managerToConfirm.firebaseKey,
-  };
+    const updatedManagerInfo = {
+      manager: `${managerToConfirm.firstName} ${managerToConfirm.lastName}`,
+      assignedManager: managerToConfirm.firebaseKey,
+    };
 
-  const registrationRef = ref(
-    database,
-    `clients/${registrationForManager.clientFirebaseKey}/serviceRegistrations/${registrationForManager.registrationKey}`
-  );
-
-  try {
-    await update(registrationRef, {
-      ...updatedManagerInfo,
-      assignmentStatus: 'pending_employee',
-    });
-
-    setServiceRegistrations((prev) =>
-      prev.map((reg) =>
-        reg.registrationKey === registrationForManager.registrationKey
-          ? { ...reg, ...updatedManagerInfo, assignmentStatus: 'pending_employee' }
-          : reg
-      )
+    const registrationRef = ref(
+      database,
+      `clients/${registrationForManager.clientFirebaseKey}/serviceRegistrations/${registrationForManager.registrationKey}`
     );
-  } catch (error) {
-    console.error('Failed to assign manager:', error);
-  } finally {
-    setIsConfirmManagerModalOpen(false);
-    setIsManagerModalOpen(false);
-    setManagerToConfirm(null);
-    setRegistrationForManager(null);
-  }
-};
+
+    try {
+      await update(registrationRef, {
+        ...updatedManagerInfo,
+        assignmentStatus: 'pending_employee',
+      });
+
+      setServiceRegistrations((prev) =>
+        prev.map((reg) =>
+          reg.registrationKey === registrationForManager.registrationKey
+            ? { ...reg, ...updatedManagerInfo, assignmentStatus: 'pending_employee' }
+            : reg
+        )
+      );
+    } catch (error) {
+      console.error('Failed to assign manager:', error);
+    } finally {
+      setIsConfirmManagerModalOpen(false);
+      setIsManagerModalOpen(false);
+      setManagerToConfirm(null);
+      setRegistrationForManager(null);
+    }
+  };
 
 
   const filteredClients = getFilteredRegistrations();
@@ -448,8 +495,36 @@ const handleSelectManager = (manager) => {
   // --- Client Details and Edit Client Modals Handlers ---
   const handleViewClientDetails = (client) => {
     setSelectedClientForDetails(client);
+    setActiveClientDetailsTab('Profile');
     setIsClientDetailsModalOpen(true);
+
+    // --- Fetch Applications & Interviews ---
+    const applicationsRef = ref(
+      database,
+      `clients/${client.clientFirebaseKey}/serviceRegistrations/${client.registrationKey}/jobApplications`
+    );
+
+    onValue(applicationsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+               const applications = Object.keys(data).map(appKey => ({
+            appFirebaseKey: appKey, // <--- NEW: Unique key for the application
+            clientFirebaseKey: client.clientFirebaseKey, // Key for parent client
+            registrationKey: client.registrationKey, // Key for parent registration
+            ...data[appKey]
+        }));
+        setClientApplications(applications);
+        const interviews = applications.filter((app) =>
+          (app.status || '').toLowerCase().includes('interview')
+        );
+        setClientInterviews(interviews);
+      } else {
+        setClientApplications([]);
+        setClientInterviews([]);
+      }
+    });
   };
+
 
   const handleCloseClientDetailsModal = () => {
     setIsClientDetailsModalOpen(false);
@@ -474,8 +549,8 @@ const handleSelectManager = (manager) => {
     // Handle new file selection separately
     if (name === "newResumeFile") {
       setNewResumeFile(files[0]);
-      } else if (name === "newCoverLetterFile") {
-        setNewCoverLetterFile(files[0]);
+    } else if (name === "newCoverLetterFile") {
+      setNewCoverLetterFile(files[0]);
     } else {
       setCurrentClientToEdit(prev => ({
         ...prev,
@@ -484,11 +559,11 @@ const handleSelectManager = (manager) => {
     }
   };
 
-const handleCoverLetterFileChange = (e) => {
+  const handleCoverLetterFileChange = (e) => {
     if (e.target.files[0]) {
-        setNewCoverLetterFile(e.target.files[0]);
+      setNewCoverLetterFile(e.target.files[0]);
     }
-};
+  };
 
   const handleNewResumeUpload = (e) => {
     const files = Array.from(e.target.files || []);
@@ -500,7 +575,7 @@ const handleCoverLetterFileChange = (e) => {
     setNewResumeFiles(prev => ({ ...prev, ...newFilesObject }));
   };
 
-const handleSaveClientDetails = async (e) => {
+  const handleSaveClientDetails = async (e) => {
     e.preventDefault();
     if (!currentClientToEdit || !currentClientToEdit.clientFirebaseKey) {
       alert("Error: No client selected or client is missing a key.");
@@ -550,7 +625,7 @@ const handleSaveClientDetails = async (e) => {
 
       // --- Continue with the rest of the save logic ---
       const updates = { ...currentClientToEdit, resumes: updatedResumes };
-      
+
       if (newCoverLetterFile) {
         const filePath = `coverletters/${currentClientToEdit.clientFirebaseKey}/${currentClientToEdit.registrationKey}/${newCoverLetterFile.name}`;
         const fileRef = storageRef(storage, filePath);
@@ -580,102 +655,123 @@ const handleSaveClientDetails = async (e) => {
 
   // --- Rendering Functions ---
   const renderClientTable = (registrationsToRender, serviceType, currentClientFilter, title = '') => {
-        const headers = ['First Name', 'Last Name', 'Mobile', 'Email', serviceType === 'Job Supporting' ? 'Jobs Apply For' : 'Service', 'Registered Date', 'Country'];
-        if (serviceType === 'Job Supporting') headers.push('Visa Status');
-        if (['unassigned', 'active', 'restored'].includes(currentClientFilter)) headers.push('Manager');
-        headers.push('Details', 'Actions');
+    const headers = ['First Name', 'Last Name', 'Mobile', 'Email', serviceType === 'Job Supporting' ? 'Jobs Apply For' : 'Service', 'Registered Date', 'Country'];
+    if (serviceType === 'Job Supporting') headers.push('Visa Status');
+    if (['unassigned', 'active', 'restored'].includes(currentClientFilter)) headers.push('Manager');
+    headers.push('Details', 'Actions');
 
-        const getManagerName = (managerFirebaseKey) => {
-            const manager = managerList.find(m => m.firebaseKey === managerFirebaseKey);
-            return manager ? `${manager.firstName} ${manager.lastName}` : 'N/A';
-        };
+    const getManagerName = (managerFirebaseKey) => {
+      const manager = managerList.find(m => m.firebaseKey === managerFirebaseKey);
+      return manager ? `${manager.firstName} ${manager.lastName}` : 'N/A';
+    };
 
     return (
       <div className="client-table-container">
         {title && <h4 className="client-table-title">{title} ({registrationsToRender.length})</h4>}
-               <table className="client-table">
-                  <thead><tr><th>S.No.</th>{headers.map(h => <th key={h}>{h}</th>)}</tr></thead>
-                    <tbody>
-                        {registrationsToRender.length > 0 ? (
-                            registrationsToRender.map((registration, index) => (
-                                <tr key={registration.registrationKey}>
-                                    <td>{index + 1}</td>
-                                    <td>{registration.firstName}</td>
-                                    <td>{registration.lastName}</td>
-                                    <td>{registration.mobile}</td>
-                                    <td>{registration.email}</td>
-                                    <td
-                                       style={{
-                // Essential styles for wrapping long, continuous text in a table cell:
-                wordBreak: 'break-word',
-                whiteSpace: 'normal',
-                minWidth: '200px', // Optional: Ensures the column has a minimum width before wrapping starts
-                maxWidth: '300px'  // Optional: Prevents the column from becoming excessively wide
-            }}
-                                    >{registration.service === 'Job Supporting' ? registration.jobsToApply : registration.service}</td>
-                                    <td>{registration.registeredDate}</td>
-                                    <td>{registration.country}</td>
-                                    {registration.service === 'Job Supporting' && <td>{registration.visaStatus}</td>}
-                                    {(currentClientFilter === 'unassigned' || currentClientFilter === 'restored') && (
-                                        <td>
-                                            <button onClick={() => handleOpenManagerModal(registration)} className="action-button select-manager">
-                                                {registration.manager ? registration.manager : 'Select Manager'}
-                                            </button>
-                                        </td>
-                                    )}
-                                    {currentClientFilter === 'active' && (
-                                        <td>
-                                            {getManagerName(registration.assignedManager)}
-                                        </td>
-                                    )}
-                                     <td><button onClick={() => handleViewClientDetails(registration)} className="action-button view">View</button></td>
-                <td style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-start' }}>
-                  <div className="action-buttons">
-                    {currentClientFilter === 'registered' && (
+        <table className="client-table">
+          <thead><tr><th>S.No.</th>{headers.map(h => <th key={h}>{h}</th>)}</tr></thead>
+          <tbody>
+            {registrationsToRender.length > 0 ? (
+              registrationsToRender.map((registration, index) => (
+                <tr key={registration.registrationKey}>
+                  <td>{index + 1}</td>
+                  <td>{registration.firstName}</td>
+                  <td>{registration.lastName}</td>
+                  <td>{registration.mobile}</td>
+                  <td>{registration.email}</td>
+                  <td
+                    style={{
+                      // Essential styles for wrapping long, continuous text in a table cell:
+                      wordBreak: 'break-word',
+                      whiteSpace: 'normal',
+                      minWidth: '200px', // Optional: Ensures the column has a minimum width before wrapping starts
+                      maxWidth: '300px'  // Optional: Prevents the column from becoming excessively wide
+                    }}
+                  >{registration.service === 'Job Supporting' ? registration.jobsToApply : registration.service}</td>
+                  <td>{registration.registeredDate}</td>
+                  <td>{registration.country}</td>
+                  {registration.service === 'Job Supporting' && <td>{registration.visaStatus}</td>}
+                  {(currentClientFilter === 'unassigned' || currentClientFilter === 'restored') && (
+                    <td>
+                      <button onClick={() => handleOpenManagerModal(registration)} className="action-button select-manager">
+                        {registration.manager ? registration.manager : 'Select Manager'}
+                      </button>
+                    </td>
+                  )}
+                  {currentClientFilter === 'active' && (
+                    <td>
+                      {getManagerName(registration.assignedManager)}
+                    </td>
+                  )}
+                  <td>
+                    <button
+                      onClick={() => handleViewClientDetails(registration)}
+                      className="action-button view"
+                    >
+                      View
+                      {todayClientAppCounts[registration.registrationKey] > 0 && (
+                        <span style={{
+                          marginLeft: '6px',
+                          backgroundColor: '#007bff',
+                          color: '#fff',
+                          borderRadius: '12px',
+                          padding: '2px 8px',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                        }}>
+                          {todayClientAppCounts[registration.registrationKey]}
+                        </span>
+                      )}
+                    </button>
+                  </td>
+
+                  <td style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-start' }}>
+                    <div className="action-buttons">
+                      {currentClientFilter === 'registered' && (
                         <>
-                            <button onClick={() => handleAcceptClient(registration)} className="action-button accept">Accept</button>
-                            <button onClick={() => handleDeclineClient(registration)} className="action-button decline">Decline</button>
+                          <button onClick={() => handleAcceptClient(registration)} className="action-button accept">Accept</button>
+                          <button onClick={() => handleDeclineClient(registration)} className="action-button decline">Decline</button>
                         </>
-                    )}
-                    {(currentClientFilter === 'unassigned' || currentClientFilter === 'restored') && (
+                      )}
+                      {(currentClientFilter === 'unassigned' || currentClientFilter === 'restored') && (
                         <>
-                            {/* Unaccept button added here for Unassigned Clients */}
-                            <button onClick={() => handleUnacceptClientClick(registration)} className="action-button cancel">Unaccept</button>
-                            <button onClick={() => handleAssignClient(registration)} className="action-button assign" disabled={!registration.manager}>Save</button>
+                          {/* Unaccept button added here for Unassigned Clients */}
+                          <button onClick={() => handleUnacceptClientClick(registration)} className="action-button cancel">Unaccept</button>
+                          <button onClick={() => handleAssignClient(registration)} className="action-button assign" disabled={!registration.manager}>Save</button>
                         </>
-                    )}
-                    {currentClientFilter === 'active' && (<button onClick={() => handleOpenManagerModal(registration)} className="action-button edit-manager">Edit Manager</button>)}
-                    {currentClientFilter === 'rejected' && (
+                      )}
+                      {currentClientFilter === 'active' && (<button onClick={() => handleOpenManagerModal(registration)} className="action-button edit-manager">Edit Manager</button>)}
+                      {currentClientFilter === 'rejected' && (
                         <>
-                            <button onClick={() => handleRestoreClient(registration)} className="action-button restore">Restore</button>
-                            {/* Delete button confirmed here for Rejected Clients */}
-                            <button onClick={() => handleDeleteRejectedClient(registration)} className="action-button delete-btn">Delete</button>
+                          <button onClick={() => handleRestoreClient(registration)} className="action-button restore">Restore</button>
+                          {/* Delete button confirmed here for Rejected Clients */}
+                          <button onClick={() => handleDeleteRejectedClient(registration)} className="action-button delete-btn">Delete</button>
                         </>
-                    )}
-                  </div>
-                                        {/* Send Payment Link Button */}
-                                        <button
-                                            onClick={() => handleOpenPaymentModal(registration)}
-                                            className="action-button send-payment-link"
-                                        >
-                                            {/* Credit Card Icon (from Screenshot 2025-07-02 at 7.33.16 PM.png) */}
-                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '0.9rem', height: '0.9rem' }}>
-                                                <path d="M20 4H4C3.44772 4 3 4.44772 3 5V19C3 19.5523 3.44772 20 4 20H20C20.5523 20 21 19.5523 21 19V5C21 4.44772 20.5523 4 20 4ZM5 7H19V9H5V7ZM5 11H17V13H5V11ZM5 15H13V17H5V15Z" />
-                                            </svg>
-                                            Send Payment Link
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))
-                        ) : (
-                            <tr>
-                                <td colSpan={headers.length} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
-                                    No {serviceType !== 'All' ? serviceType : ''} clients found for this filter.
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
+                      )}
+                    </div>
+                    {/* Send Payment Link Button */}
+                    <button
+                      onClick={() => handleOpenPaymentModal(registration)}
+                      className="action-button send-payment-link"
+                    >
+                      {/* Credit Card Icon (from Screenshot 2025-07-02 at 7.33.16 PM.png) */}
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '0.9rem', height: '0.9rem' }}>
+                        <path d="M20 4H4C3.44772 4 3 4.44772 3 5V19C3 19.5523 3.44772 20 4 20H20C20.5523 20 21 19.5523 21 19V5C21 4.44772 20.5523 4 20 4ZM5 7H19V9H5V7ZM5 11H17V13H5V11ZM5 15H13V17H5V15Z" />
+                      </svg>
+                      Send Payment Link
+                    </button>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={headers.length} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                  No {serviceType !== 'All' ? serviceType : ''} clients found for this filter.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     );
   };
@@ -791,6 +887,49 @@ const handleSaveClientDetails = async (e) => {
         }
 
         /* Client Management Styles */
+
+        .client-details-tabs {
+  display: flex;
+  justify-content: center;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 1rem;
+}
+
+.tab-button {
+  flex: 1;
+  padding: 0.75rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+}
+
+.tab-button:hover {
+  background-color: var(--bg-body);
+}
+
+.tab-button.active {
+  color: #007bff;
+  border-bottom: 3px solid #007bff;
+  font-weight: 600;
+}
+
+.action-icon {
+  font-size: 1.1rem;
+  transition: transform 0.2s ease;
+}
+
+.action-icon.view { color: #007bff; }
+.action-icon.edit { color: #28a745; }
+.action-icon.delete { color: #dc3545; }
+
+.action-icon:hover {
+  transform: scale(1.2);
+}
+
+
         .client-management-container {
            padding: 0 1.5rem 1.5rem;
         }
@@ -1568,7 +1707,7 @@ const handleSaveClientDetails = async (e) => {
               {[
                 { label: 'Registered Clients', value: 'registered', count: serviceRegistrations.filter(c => c.assignmentStatus === 'registered' || !c.assignmentStatus).length, activeBg: 'var(--client-filter-tab-bg-active-registered)', activeColor: 'var(--client-filter-tab-text-active-registered)', badgeBg: 'var(--client-filter-tab-badge-registered)' },
                 { label: 'Unassigned Clients', value: 'unassigned', count: serviceRegistrations.filter(c => c.assignmentStatus === 'pending_manager').length, activeBg: 'var(--client-filter-tab-bg-active-unassigned)', activeColor: 'var(--client-filter-tab-text-active-unassigned)', badgeBg: 'var(--client-filter-tab-badge-unassigned)' },
-                { label: 'Active Clients', value: 'active', count: serviceRegistrations.filter(c => ['pending_employee', 'pending_acceptance', 'active','inactive' ].includes(c.assignmentStatus)).length, activeBg: 'var(--client-filter-tab-bg-active-active)', activeColor: 'var(--client-filter-tab-text-active-active)', badgeBg: 'var(--client-filter-tab-badge-active)' },
+                { label: 'Active Clients', value: 'active', count: serviceRegistrations.filter(c => ['pending_employee', 'pending_acceptance', 'active', 'inactive'].includes(c.assignmentStatus)).length, activeBg: 'var(--client-filter-tab-bg-active-active)', activeColor: 'var(--client-filter-tab-text-active-active)', badgeBg: 'var(--client-filter-tab-badge-active)' },
                 { label: 'Rejected Clients', value: 'rejected', count: serviceRegistrations.filter(c => c.assignmentStatus === 'rejected').length, activeBg: 'var(--client-filter-tab-bg-active-rejected)', activeColor: 'var(--client-filter-tab-text-active-rejected)', badgeBg: 'var(--client-filter-tab-badge-rejected)' },
                 // { label: 'Restore Clients', value: 'restored', count: clients.filter(c => c.displayStatuses.includes('restored')).length, activeBg: 'var(--client-filter-tab-bg-active-restored)', activeColor: 'var(--client-filter-tab-text-active-restored)', badgeBg: 'var(--client-filter-tab-badge-restored)' },
               ].map((option) => (
@@ -1721,14 +1860,25 @@ const handleSaveClientDetails = async (e) => {
       {/* Client Details Modal */}
       {isClientDetailsModalOpen && selectedClientForDetails && (
         <div className="modal-overlay open">
-          <div className="assign-modal-content">
+          <div className="assign-modal-content" style={{ maxWidth: '900px' }}>
             <div className="assign-modal-header">
               <h3 className="assign-modal-title">Client Details: {selectedClientForDetails.firstName + ' ' + selectedClientForDetails.lastName}</h3>
               <button className="assign-modal-close-button" onClick={handleCloseClientDetailsModal}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1.2rem', height: '1.2rem' }}>
-                  <path d="M6.29289 6.29289C6.68342 5.90237 7.31658 5.90237 7.70711 6.29289L12 10.5858L16.2929 6.29289C16.6834 5.90237 17.3166 5.90237 17.7071 6.29289C18.0976 6.68342 18.0976 7.31658 17.7071 7.70711L13.4142 12L17.7071 16.2929C18.0976 16.6834 18.0976 17.3166 17.7071 17.7071C17.3166 18.0976 16.6834 18.0976 16.2929 17.7071L12 13.4142L7.70711 17.7071C5.90237 7.31658 5.90237 6.68342 6.29289 6.29289Z" />
-                </svg>
+                &times;
               </button>
+            </div>
+
+            {/* Tabs */}
+            <div className="client-details-tabs">
+              {['Profile', 'Applications', 'Interviews'].map((tab) => (
+                <button
+                  key={tab}
+                  className={`tab-button ${activeClientDetailsTab === tab ? 'active' : ''}`}
+                  onClick={() => setActiveClientDetailsTab(tab)}
+                >
+                  {tab}
+                </button>
+              ))}
             </div>
 
             {simplifiedServices.includes(selectedClientForDetails.service) ? (
@@ -1768,248 +1918,413 @@ const handleSaveClientDetails = async (e) => {
               </div>
             ) : (
               <>
-                <div className="client-preview-grid-container">
-                  <div className="client-preview-section">
-                    <h4 className="client-preview-section-title">Personal Information</h4>
-                    <div className="assign-form-group">
-                      <label>First Name</label>
-                      <div className="read-only-value">{selectedClientForDetails.firstName || '-'}</div>
-                    </div>
-                    <div className="assign-form-group">
-                      <label>Middle Name</label>
-                      <div className="read-only-value">{selectedClientForDetails.middleName || '-'}</div>
-                    </div>
-                    <div className="assign-form-group">
-                      <label>Last Name</label>
-                      <div className="read-only-value">{selectedClientForDetails.lastName || '-'}</div>
-                    </div>
-                    <div className="assign-form-group">
-                      <label>Date of Birth</label>
-                      <div className="read-only-value">{selectedClientForDetails.dob || '-'}</div>
-                    </div>
-                    <div className="assign-form-group">
-                      <label>Gender</label>
-                      <div className="read-only-value">{selectedClientForDetails.gender || '-'}</div>
-                    </div>
-                    <div className="assign-form-group">
-                      <label>Ethnicity</label>
-                      <div className="read-only-value">{selectedClientForDetails.ethnicity || '-'}</div>
-                    </div>
-                  </div>
-                  <div className="client-preview-section">
-                    <h4 className="client-preview-section-title">Contact Information</h4>
-                    <div className="assign-form-group">
-                      <label>Address</label>
-                      <div className="read-only-value" style={{ minHeight: '60px' }}>{selectedClientForDetails.address || '-'}</div>
-                    </div>
-                    <div className="assign-form-group">
-                      <label>County</label>
-                      <div className="read-only-value">{selectedClientForDetails.county || '-'}</div>
-                    </div>
-                    <div className="assign-form-group">
-                      <label>Zip Code</label>
-                      <div className="read-only-value">{selectedClientForDetails.zipCode || '-'}</div>
-                    </div>
-                    <div className="assign-form-group">
-                      <label>Mobile</label>
-                      <div className="read-only-value">{selectedClientForDetails.mobile || '-'}</div>
-                    </div>
-                    <div className="assign-form-group">
-                      <label>Email</label>
-                      <div className="read-only-value">{selectedClientForDetails.email || '-'}</div>
-                    </div>
-                    <div className="assign-form-group">
-                      <label>Country</label>
-                      <div className="read-only-value">{selectedClientForDetails.country || '-'}</div>
-                    </div>
-                  </div>
-                  <div className="client-preview-section">
-                    <h4 className="client-preview-section-title">Employment Information</h4>
-                    <div className="assign-form-group">
-                      <label>Security Clearance</label>
-                      <div className="read-only-value">{selectedClientForDetails.securityClearance || '-'}</div>
-                    </div>
-                    {selectedClientForDetails.securityClearance === 'yes' && (
+                {activeClientDetailsTab === 'Profile' && (
+                  <div className="client-preview-grid-container">
+                    <div className="client-preview-section">
+                      <h4 className="client-preview-section-title">Personal Information</h4>
                       <div className="assign-form-group">
-                        <label>Clearance Level</label>
-                        <div className="read-only-value">{selectedClientForDetails.clearanceLevel || '-'}</div>
+                        <label>First Name</label>
+                        <div className="read-only-value">{selectedClientForDetails.firstName || '-'}</div>
                       </div>
-                    )}
-                    <div className="assign-form-group">
-                      <label>Willing to Relocate</label>
-                      <div className="read-only-value">{selectedClientForDetails.willingToRelocate || '-'}</div>
-                    </div>
-                    <div className="assign-form-group">
-                      <label>Work Preference</label>
-                      <div className="read-only-value">{selectedClientForDetails.workPreference || '-'}</div>
-                    </div>
-                    <div className="assign-form-group">
-                      <label>Restricted Companies</label>
-                      <div className="read-only-value">{selectedClientForDetails.restrictedCompanies || '-'}</div>
-                    </div>
-                    <div className="assign-form-group">
-                      <label>Years of Experience</label>
-                      <div className="read-only-value">{selectedClientForDetails.yearsOfExperience || '-'}</div>
-                    </div>
-                  </div>
-                  <div className="client-preview-section">
-                    <h4 className="client-preview-section-title">Job Preferences & Status</h4>
-                    <div className="assign-form-group">
-                      <label>Jobs to Apply</label>
-                      <div className="read-only-value">{selectedClientForDetails.jobsToApply || '-'}</div>
-                    </div>
-                    <div className="assign-form-group">
-                      <label>Current Salary</label>
-                      <div className="read-only-value">{selectedClientForDetails.currentSalary || '-'}</div>
-                    </div>
-                    <div className="assign-form-group">
-                      <label>Expected Salary</label>
-                      <div className="read-only-value">{selectedClientForDetails.expectedSalary || '-'}</div>
-                    </div>
-                    <div className="assign-form-group">
-                      <label>Visa Status</label>
-                      <div className="read-only-value">{selectedClientForDetails.visaStatus || '-'}</div>
-                    </div>
-                    {selectedClientForDetails.visaStatus === 'other' && (
                       <div className="assign-form-group">
-                        <label>Other Visa Status</label>
-                        <div className="read-only-value">{selectedClientForDetails.otherVisaStatus || '-'}</div>
+                        <label>Middle Name</label>
+                        <div className="read-only-value">{selectedClientForDetails.middleName || '-'}</div>
                       </div>
-                    )}
-                  </div>
-                 <div className="client-preview-section">
-  <h4 className="client-preview-section-title">Education Details</h4>
-  {selectedClientForDetails.educationDetails && selectedClientForDetails.educationDetails.length > 0 ? (
-    selectedClientForDetails.educationDetails.map((edu, index) => (
-      <div key={index} style={{ marginBottom: '1rem', padding: '1rem', border: '1px solid #e0e0e0', borderRadius: '8px' }}>
-        <h5 style={{ fontSize: '1rem', marginBottom: '1rem' }}>Education Entry {index + 1}</h5>
-        <div className="assign-form-group">
-          <label>University Name:</label>
-          <div className="read-only-value">{edu.universityName || '-'}</div>
-        </div>
-        <div className="assign-form-group">
-          <label>University Address:</label>
-          <div className="read-only-value">{edu.universityAddress || '-'}</div>
-        </div>
-        <div className="assign-form-group">
-          <label>Course of Study:</label>
-          <div className="read-only-value">{edu.courseOfStudy || '-'}</div>
-        </div>
-        <div className="assign-form-group">
-          <label>Graduation From Date:</label>
-          <div className="read-only-value">{edu.graduationFromDate || '-'}</div>
-        </div>
-        <div className="assign-form-group">
-          <label>Graduation To Date:</label>
-          <div className="read-only-value">{edu.graduationToDate || '-'}</div>
-        </div>
-      </div>
-    ))
-  ) : (
-    <div className="read-only-value">No education details provided.</div>
-  )}
-</div>
-                  <div className="client-preview-section">
-                    <h4 className="client-preview-section-title">Employment Details</h4>
-                    <div className="assign-form-group">
-                      <label>Current Company</label>
-                      <div className="read-only-value">{selectedClientForDetails.currentCompany || '-'}</div>
-                    </div>
-                    <div className="assign-form-group">
-                      <label>Current Designation</label>
-                      <div className="read-only-value">{selectedClientForDetails.currentDesignation || '-'}</div>
-                    </div>
-                    <div className="assign-form-group">
-                      <label>Notice Period</label>
-                      <div className="read-only-value">{selectedClientForDetails.noticePeriod || '-'}</div>
-                    </div>
-                    <div className="assign-form-group">
-                      <label>Preferred Interview Time</label>
-                      <div className="read-only-value">{selectedClientForDetails.preferredInterviewTime || '-'}</div>
-                    </div>
-                    <div className="assign-form-group">
-                      <label>Earliest Joining Date</label>
-                      <div className="read-only-value">{selectedClientForDetails.earliestJoiningDate || '-'}</div>
-                    </div>
-                    <div className="assign-form-group">
-                      <label>Relieving Date</label>
-                      <div className="read-only-value">{selectedClientForDetails.relievingDate || '-'}</div>
-                    </div>
-                  </div>
-                  <div className="client-preview-section">
-                    <h4 className="client-preview-section-title">References</h4>
-                    <div className="assign-form-group">
-                      <label>Reference Name</label>
-                      <div className="read-only-value">{selectedClientForDetails.referenceName || '-'}</div>
-                    </div>
-                    <div className="assign-form-group">
-                      <label>Reference Phone</label>
-                      <div className="read-only-value">{selectedClientForDetails.referencePhone || '-'}</div>
-                    </div>
-                    <div className="assign-form-group">
-                      <label>Reference Address</label>
-                      <div className="read-only-value">{selectedClientForDetails.referenceAddress || '-'}</div>
-                    </div>
-                    <div className="assign-form-group">
-                      <label>Reference Email</label>
-                      <div className="read-only-value">{selectedClientForDetails.referenceEmail || '-'}</div>
-                    </div>
-                    <div className="assign-form-group">
-                      <label>Reference Role</label>
-                      <div className="read-only-value">{selectedClientForDetails.referenceRole || '-'}</div>
-                    </div>
-                  </div>
-                  <div className="client-preview-section">
-                    <h4 className="client-preview-section-title">Job Portal Accounts</h4>
-                    <div className="assign-form-group">
-                      <label>Account Name</label>
-                      <div className="read-only-value">{selectedClientForDetails.jobPortalAccountNameandCredentials || '-'}</div>
-                    </div>
-                  </div>
-                  <div className="client-preview-section">
-  <h4 className="client-preview-section-title">Resume(s)</h4>
-  {selectedClientForDetails.resumes && selectedClientForDetails.resumes.length > 0 ? (
-    selectedClientForDetails.resumes.map((resume, index) => (
-      <div key={index} className="assign-form-group">
-        <label>Resume {index + 1}</label>
-        <div className="read-only-value" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span>{resume.name}</span>
-          <a href={resume.url} download={resume.name} target="_blank" rel="noopener noreferrer" className="assign-form-button assign" style={{ textDecoration: 'none' }}>Download</a>
-        </div>
-      </div>
-    ))
-  ) : (
-    <div className="read-only-value">No resumes uploaded.</div>
-  )}
-</div>
-                  <div className="client-preview-section">
-                    <h4 className="client-preview-section-title">Cover Letter</h4>
-                    {selectedClientForDetails.coverLetterUrl ? (
                       <div className="assign-form-group">
-                        <label>File Name</label>
-                        <div className="read-only-value" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span>{selectedClientForDetails.coverLetterFileName || 'cover_letter.pdf'}</span>
-                          {selectedClientForDetails.coverLetterUrl && (<a href={selectedClientForDetails.coverLetterUrl} download={selectedClientForDetails.coverLetterFileName|| 'cover_letter.pdf'} target="_blank" rel="noopener noreferrer" className="assign-form-button assign" style={{ textDecoration: 'none' }}>Download</a>)}
+                        <label>Last Name</label>
+                        <div className="read-only-value">{selectedClientForDetails.lastName || '-'}</div>
+                      </div>
+                      <div className="assign-form-group">
+                        <label>Date of Birth</label>
+                        <div className="read-only-value">{selectedClientForDetails.dob || '-'}</div>
+                      </div>
+                      <div className="assign-form-group">
+                        <label>Gender</label>
+                        <div className="read-only-value">{selectedClientForDetails.gender || '-'}</div>
+                      </div>
+                      <div className="assign-form-group">
+                        <label>Ethnicity</label>
+                        <div className="read-only-value">{selectedClientForDetails.ethnicity || '-'}</div>
+                      </div>
+                    </div>
+                    <div className="client-preview-section">
+                      <h4 className="client-preview-section-title">Contact Information</h4>
+                      <div className="assign-form-group">
+                        <label>Address</label>
+                        <div className="read-only-value" style={{ minHeight: '60px' }}>{selectedClientForDetails.address || '-'}</div>
+                      </div>
+                      <div className="assign-form-group">
+                        <label>County</label>
+                        <div className="read-only-value">{selectedClientForDetails.county || '-'}</div>
+                      </div>
+                      <div className="assign-form-group">
+                        <label>Zip Code</label>
+                        <div className="read-only-value">{selectedClientForDetails.zipCode || '-'}</div>
+                      </div>
+                      <div className="assign-form-group">
+                        <label>Mobile</label>
+                        <div className="read-only-value">{selectedClientForDetails.mobile || '-'}</div>
+                      </div>
+                      <div className="assign-form-group">
+                        <label>Email</label>
+                        <div className="read-only-value">{selectedClientForDetails.email || '-'}</div>
+                      </div>
+                      <div className="assign-form-group">
+                        <label>Country</label>
+                        <div className="read-only-value">{selectedClientForDetails.country || '-'}</div>
+                      </div>
+                    </div>
+                    <div className="client-preview-section">
+                      <h4 className="client-preview-section-title">Employment Information</h4>
+                      <div className="assign-form-group">
+                        <label>Security Clearance</label>
+                        <div className="read-only-value">{selectedClientForDetails.securityClearance || '-'}</div>
+                      </div>
+                      {selectedClientForDetails.securityClearance === 'yes' && (
+                        <div className="assign-form-group">
+                          <label>Clearance Level</label>
+                          <div className="read-only-value">{selectedClientForDetails.clearanceLevel || '-'}</div>
                         </div>
+                      )}
+                      <div className="assign-form-group">
+                        <label>Willing to Relocate</label>
+                        <div className="read-only-value">{selectedClientForDetails.willingToRelocate || '-'}</div>
                       </div>
-                    ) : (
-                      <div className="read-only-value">No cover letter uploaded.</div>
-                    )}
+                      <div className="assign-form-group">
+                        <label>Work Preference</label>
+                        <div className="read-only-value">{selectedClientForDetails.workPreference || '-'}</div>
+                      </div>
+                      <div className="assign-form-group">
+                        <label>Restricted Companies</label>
+                        <div className="read-only-value">{selectedClientForDetails.restrictedCompanies || '-'}</div>
+                      </div>
+                      <div className="assign-form-group">
+                        <label>Years of Experience</label>
+                        <div className="read-only-value">{selectedClientForDetails.yearsOfExperience || '-'}</div>
+                      </div>
+                    </div>
+                    <div className="client-preview-section">
+                      <h4 className="client-preview-section-title">Job Preferences & Status</h4>
+                      <div className="assign-form-group">
+                        <label>Jobs to Apply</label>
+                        <div className="read-only-value">{selectedClientForDetails.jobsToApply || '-'}</div>
+                      </div>
+                      <div className="assign-form-group">
+                        <label>Current Salary</label>
+                        <div className="read-only-value">{selectedClientForDetails.currentSalary || '-'}</div>
+                      </div>
+                      <div className="assign-form-group">
+                        <label>Expected Salary</label>
+                        <div className="read-only-value">{selectedClientForDetails.expectedSalary || '-'}</div>
+                      </div>
+                      <div className="assign-form-group">
+                        <label>Visa Status</label>
+                        <div className="read-only-value">{selectedClientForDetails.visaStatus || '-'}</div>
+                      </div>
+                      {selectedClientForDetails.visaStatus === 'other' && (
+                        <div className="assign-form-group">
+                          <label>Other Visa Status</label>
+                          <div className="read-only-value">{selectedClientForDetails.otherVisaStatus || '-'}</div>
+                        </div>
+                      )}
+                    </div>
+                    <div className="client-preview-section">
+                      <h4 className="client-preview-section-title">Education Details</h4>
+                      {selectedClientForDetails.educationDetails && selectedClientForDetails.educationDetails.length > 0 ? (
+                        selectedClientForDetails.educationDetails.map((edu, index) => (
+                          <div key={index} style={{ marginBottom: '1rem', padding: '1rem', border: '1px solid #e0e0e0', borderRadius: '8px' }}>
+                            <h5 style={{ fontSize: '1rem', marginBottom: '1rem' }}>Education Entry {index + 1}</h5>
+                            <div className="assign-form-group">
+                              <label>University Name:</label>
+                              <div className="read-only-value">{edu.universityName || '-'}</div>
+                            </div>
+                            <div className="assign-form-group">
+                              <label>University Address:</label>
+                              <div className="read-only-value">{edu.universityAddress || '-'}</div>
+                            </div>
+                            <div className="assign-form-group">
+                              <label>Course of Study:</label>
+                              <div className="read-only-value">{edu.courseOfStudy || '-'}</div>
+                            </div>
+                            <div className="assign-form-group">
+                              <label>Graduation From Date:</label>
+                              <div className="read-only-value">{edu.graduationFromDate || '-'}</div>
+                            </div>
+                            <div className="assign-form-group">
+                              <label>Graduation To Date:</label>
+                              <div className="read-only-value">{edu.graduationToDate || '-'}</div>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="read-only-value">No education details provided.</div>
+                      )}
+                    </div>
+                    <div className="client-preview-section">
+                      <h4 className="client-preview-section-title">Employment Details</h4>
+                      <div className="assign-form-group">
+                        <label>Current Company</label>
+                        <div className="read-only-value">{selectedClientForDetails.currentCompany || '-'}</div>
+                      </div>
+                      <div className="assign-form-group">
+                        <label>Current Designation</label>
+                        <div className="read-only-value">{selectedClientForDetails.currentDesignation || '-'}</div>
+                      </div>
+                      <div className="assign-form-group">
+                        <label>Notice Period</label>
+                        <div className="read-only-value">{selectedClientForDetails.noticePeriod || '-'}</div>
+                      </div>
+                      <div className="assign-form-group">
+                        <label>Preferred Interview Time</label>
+                        <div className="read-only-value">{selectedClientForDetails.preferredInterviewTime || '-'}</div>
+                      </div>
+                      <div className="assign-form-group">
+                        <label>Earliest Joining Date</label>
+                        <div className="read-only-value">{selectedClientForDetails.earliestJoiningDate || '-'}</div>
+                      </div>
+                      <div className="assign-form-group">
+                        <label>Relieving Date</label>
+                        <div className="read-only-value">{selectedClientForDetails.relievingDate || '-'}</div>
+                      </div>
+                    </div>
+                    <div className="client-preview-section">
+                      <h4 className="client-preview-section-title">References</h4>
+                      <div className="assign-form-group">
+                        <label>Reference Name</label>
+                        <div className="read-only-value">{selectedClientForDetails.referenceName || '-'}</div>
+                      </div>
+                      <div className="assign-form-group">
+                        <label>Reference Phone</label>
+                        <div className="read-only-value">{selectedClientForDetails.referencePhone || '-'}</div>
+                      </div>
+                      <div className="assign-form-group">
+                        <label>Reference Address</label>
+                        <div className="read-only-value">{selectedClientForDetails.referenceAddress || '-'}</div>
+                      </div>
+                      <div className="assign-form-group">
+                        <label>Reference Email</label>
+                        <div className="read-only-value">{selectedClientForDetails.referenceEmail || '-'}</div>
+                      </div>
+                      <div className="assign-form-group">
+                        <label>Reference Role</label>
+                        <div className="read-only-value">{selectedClientForDetails.referenceRole || '-'}</div>
+                      </div>
+                    </div>
+                    <div className="client-preview-section">
+                      <h4 className="client-preview-section-title">Job Portal Accounts</h4>
+                      <div className="assign-form-group">
+                        <label>Account Name</label>
+                        <div className="read-only-value">{selectedClientForDetails.jobPortalAccountNameandCredentials || '-'}</div>
+                      </div>
+                    </div>
+                    <div className="client-preview-section">
+                      <h4 className="client-preview-section-title">Resume(s)</h4>
+                      {selectedClientForDetails.resumes && selectedClientForDetails.resumes.length > 0 ? (
+                        selectedClientForDetails.resumes.map((resume, index) => (
+                          <div key={index} className="assign-form-group">
+                            <label>Resume {index + 1}</label>
+                            <div className="read-only-value" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span>{resume.name}</span>
+                              <a href={resume.url} download={resume.name} target="_blank" rel="noopener noreferrer" className="assign-form-button assign" style={{ textDecoration: 'none' }}>Download</a>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="read-only-value">No resumes uploaded.</div>
+                      )}
+                    </div>
+                    <div className="client-preview-section">
+                      <h4 className="client-preview-section-title">Cover Letter</h4>
+                      {selectedClientForDetails.coverLetterUrl ? (
+                        <div className="assign-form-group">
+                          <label>File Name</label>
+                          <div className="read-only-value" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span>{selectedClientForDetails.coverLetterFileName || 'cover_letter.pdf'}</span>
+                            {selectedClientForDetails.coverLetterUrl && (<a href={selectedClientForDetails.coverLetterUrl} download={selectedClientForDetails.coverLetterFileName || 'cover_letter.pdf'} target="_blank" rel="noopener noreferrer" className="assign-form-button assign" style={{ textDecoration: 'none' }}>Download</a>)}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="read-only-value">No cover letter uploaded.</div>
+                      )}
+                    </div>
+                    <div className="assign-form-actions">
+                      <button className="assign-form-button assign" onClick={handleEditClientDetailsClick}>
+                        Edit Client Details
+                      </button>
+                    </div>
                   </div>
-                </div>
 
-               
+
+                )}
+
+                {/* --- Applications Tab --- */}
+               {activeClientDetailsTab === 'Applications' && (
+  <div className="applications-tab-content">
+    <div className="date-filter" style={{ marginBottom: '1rem' }}>
+      <label>From: </label>
+      <input
+        type="date"
+        value={clientDateRange.startDate}
+        onChange={(e) =>
+          setClientDateRange((prev) => ({ ...prev, startDate: e.target.value }))
+        }
+      />
+      <label style={{ marginLeft: '1rem' }}>To: </label>
+      <input
+        type="date"
+        value={clientDateRange.endDate}
+        onChange={(e) =>
+          setClientDateRange((prev) => ({ ...prev, endDate: e.target.value }))
+        }
+      />
+    </div>
+
+    <table className="client-table">
+      <thead>
+        <tr>
+          <th>Employee Name</th>
+          <th>Client Name</th>
+          <th>Applied Date</th>
+          <th>Company</th>
+          <th>Job Title</th>
+          <th>Job ID</th>
+          <th>Job Boards</th>
+          <th>Description Link</th>
+          <th>Applied Time</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {clientApplications
+          .filter((app) => {
+            if (!clientDateRange.startDate && !clientDateRange.endDate) return true;
+            const appDate = new Date(app.appliedDate);
+            const start = clientDateRange.startDate ? new Date(clientDateRange.startDate) : null;
+            const end = clientDateRange.endDate ? new Date(clientDateRange.endDate) : null;
+            return (!start || appDate >= start) && (!end || appDate <= end);
+          })
+          .map((app, idx) => (
+            <tr key={idx}>
+              <td>{app.employeeName || '-'}</td>
+              <td>{selectedClientForDetails?.firstName || '-'}</td>
+              <td>{app.appliedDate || '-'}</td>
+              <td>{app.company || '-'}</td>
+              <td>{app.jobTitle || '-'}</td>
+              <td>{app.jobId || '-'}</td>
+              <td>{app.jobBoards || '-'}</td>
+              <td>
+                {app.jobDescriptionUrl ? (
+                  <a href={app.jobDescriptionUrl} target="_blank" rel="noreferrer" style={{ color: 'Blue', textAlign: "center" }}>
+                    Link
+                  </a>
+                ) : (
+                  '-'
+                )}
+              </td>
+              <td>{app.timestamp || '-'}</td>
+              <td>{app.status || '-'}</td>
+              <td>
+                <i
+                  className="fa fa-eye action-icon view"
+                  title="View"
+                  onClick={() => {
+                    setSelectedApplication(app);
+                    setIsAppViewModalOpen(true);
+                  }}
+                  style={{ cursor: 'pointer', marginRight: '10px', color: '#007bff' }}
+                />
+                <i
+                  className="fa fa-edit action-icon edit"
+                  title="Edit"
+                  onClick={() => {
+                    setSelectedApplication(app);
+                    setIsAppEditModalOpen(true);
+                  }}
+                  style={{ cursor: 'pointer', marginRight: '10px', color: '#28a745' }}
+                />
+                <i
+                  className="fa fa-trash action-icon delete"
+                  title="Delete"
+                  onClick={() => {
+                    setSelectedApplication(app);
+                    setIsAppDeleteConfirmOpen(true);
+                  }}
+                  style={{ cursor: 'pointer', color: '#dc3545' }}
+                />
+              </td>
+            </tr>
+          ))}
+        {clientApplications.length === 0 && (
+          <tr>
+            <td colSpan="11" style={{ textAlign: 'center' }}>
+              No applications found
+            </td>
+          </tr>
+        )}
+      </tbody>
+    </table>
+  </div>
+)}
+
+                {/* --- Interviews Tab --- */}
+                {activeClientDetailsTab === 'Interviews' && (
+  <div className="interviews-tab-content">
+    <table className="client-table">
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Client</th>
+          <th>Job Title</th>
+          <th>Company</th>
+          <th>Round</th>
+          <th>Attachments</th>
+          <th>Time</th>
+          <th>Date</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {clientInterviews.length > 0 ? (
+          clientInterviews.map((interview, idx) => (
+            <tr key={idx}>
+              <td>{interview.employeeName || '-'}</td>
+              <td>{selectedClientForDetails?.firstName || '-'}</td>
+              <td>{interview.jobTitle || '-'}</td>
+              <td>{interview.company || '-'}</td>
+              <td>{interview.round || '-'}</td>
+              <td>
+                {interview.attachments ? (
+                  <a href={interview.attachments} target="_blank" rel="noreferrer">
+                    View
+                  </a>
+                ) : (
+                  '-'
+                )}
+              </td>
+              <td>{interview.time || '-'}</td>
+              <td>{interview.date || '-'}</td>
+              <td>{interview.status || '-'}</td>
+            </tr>
+          ))
+        ) : (
+          <tr>
+            <td colSpan="9" style={{ textAlign: 'center' }}>No interviews found</td>
+          </tr>
+        )}
+      </tbody>
+    </table>
+  </div>
+)}
               </>
             )}
 
-            <div className="assign-form-actions">
-              <button className="assign-form-button assign" onClick={handleEditClientDetailsClick}>
-                Edit Client Details
-              </button>
-            </div>
+
           </div>
         </div>
       )}
+
+
 
       {/* Edit Client Modal */}
       {isEditClientModalOpen && currentClientToEdit && (
@@ -2199,54 +2514,54 @@ const handleSaveClientDetails = async (e) => {
                       </div>
                     )}
                   </div>
-<div className="client-preview-section">
-  <h4 className="client-preview-section-title">Education Details</h4>
-  {currentClientToEdit.educationDetails && currentClientToEdit.educationDetails.length > 0 ? (
-    currentClientToEdit.educationDetails.map((edu, index) => (
-      <div key={index} style={{ marginBottom: '1rem', padding: '1rem', border: '1px solid #e0e0e0', borderRadius: '8px' }}>
-        <h5 style={{ fontSize: '1rem', marginBottom: '1rem' }}>
-          Education Entry {index + 1}
-          {currentClientToEdit.educationDetails.length > 1 && (
-            <button
-              type="button"
-              onClick={() => handleRemoveEducationEntry(index)}
-              style={{ float: 'right', background: '#dc3545', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '5px', cursor: 'pointer' }}
-            >
-              Remove
-            </button>
-          )}
-        </h5>
-        <div className="assign-form-group">
-          <label>University Name</label>
-          <input type="text" name="universityName" value={edu.universityName || ''} onChange={(e) => handleEducationChange(e, index, 'universityName')} />
-        </div>
-        <div className="assign-form-group">
-          <label>University Address</label>
-          <input type="text" name="universityAddress" value={edu.universityAddress || ''} onChange={(e) => handleEducationChange(e, index, 'universityAddress')} />
-        </div>
-        <div className="assign-form-group">
-          <label>Course of Study</label>
-          <input type="text" name="courseOfStudy" value={edu.courseOfStudy || ''} onChange={(e) => handleEducationChange(e, index, 'courseOfStudy')} />
-        </div>
-        <div className="assign-form-group">
-          <label>Graduation From Date</label>
-          <input type="date" name="graduationFromDate" value={edu.graduationFromDate || ''} onChange={(e) => handleEducationChange(e, index, 'graduationFromDate')} />
-        </div>
-        <div className="assign-form-group">
-          <label>Graduation To Date</label>
-          <input type="date" name="graduationToDate" value={edu.graduationToDate || ''} onChange={(e) => handleEducationChange(e, index, 'graduationToDate')} />
-        </div>
-      </div>
-    ))
-  ) : (
-    <div className="read-only-value">No education details provided.</div>
-  )}
-  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
-    <button type="button" onClick={handleAddEducationEntry} className="assign-form-button assign" style={{ padding: '8px 16px' }}>
-      + Add Education
-    </button>
-  </div>
-</div>
+                  <div className="client-preview-section">
+                    <h4 className="client-preview-section-title">Education Details</h4>
+                    {currentClientToEdit.educationDetails && currentClientToEdit.educationDetails.length > 0 ? (
+                      currentClientToEdit.educationDetails.map((edu, index) => (
+                        <div key={index} style={{ marginBottom: '1rem', padding: '1rem', border: '1px solid #e0e0e0', borderRadius: '8px' }}>
+                          <h5 style={{ fontSize: '1rem', marginBottom: '1rem' }}>
+                            Education Entry {index + 1}
+                            {currentClientToEdit.educationDetails.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveEducationEntry(index)}
+                                style={{ float: 'right', background: '#dc3545', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '5px', cursor: 'pointer' }}
+                              >
+                                Remove
+                              </button>
+                            )}
+                          </h5>
+                          <div className="assign-form-group">
+                            <label>University Name</label>
+                            <input type="text" name="universityName" value={edu.universityName || ''} onChange={(e) => handleEducationChange(e, index, 'universityName')} />
+                          </div>
+                          <div className="assign-form-group">
+                            <label>University Address</label>
+                            <input type="text" name="universityAddress" value={edu.universityAddress || ''} onChange={(e) => handleEducationChange(e, index, 'universityAddress')} />
+                          </div>
+                          <div className="assign-form-group">
+                            <label>Course of Study</label>
+                            <input type="text" name="courseOfStudy" value={edu.courseOfStudy || ''} onChange={(e) => handleEducationChange(e, index, 'courseOfStudy')} />
+                          </div>
+                          <div className="assign-form-group">
+                            <label>Graduation From Date</label>
+                            <input type="date" name="graduationFromDate" value={edu.graduationFromDate || ''} onChange={(e) => handleEducationChange(e, index, 'graduationFromDate')} />
+                          </div>
+                          <div className="assign-form-group">
+                            <label>Graduation To Date</label>
+                            <input type="date" name="graduationToDate" value={edu.graduationToDate || ''} onChange={(e) => handleEducationChange(e, index, 'graduationToDate')} />
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="read-only-value">No education details provided.</div>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                      <button type="button" onClick={handleAddEducationEntry} className="assign-form-button assign" style={{ padding: '8px 16px' }}>
+                        + Add Education
+                      </button>
+                    </div>
+                  </div>
                   <div className="client-preview-section">
                     <h4 className="client-preview-section-title">Employment Details</h4>
                     <div className="assign-form-group">
@@ -2257,7 +2572,7 @@ const handleSaveClientDetails = async (e) => {
                       <label htmlFor="currentDesignation">Current Designation</label>
                       <input type="text" id="currentDesignation" name="currentDesignation" value={currentClientToEdit.currentDesignation || ''} onChange={handleEditClientChange} />
                     </div>
-                     <div className="assign-form-group">
+                    <div className="assign-form-group">
                       <label htmlFor="noticePeriod">Notice Period</label>
                       <select id="noticePeriod" name="noticePeriod" value={currentClientToEdit.noticePeriod || ''} onChange={handleEditClientChange}>
                         <option value="">Select Notice Period</option>
@@ -2311,11 +2626,11 @@ const handleSaveClientDetails = async (e) => {
                       <textarea id="jobPortalAccountNameandCredentials" name="jobPortalAccountNameandCredentials" value={currentClientToEdit.jobPortalAccountNameandCredentials || ''} onChange={handleEditClientChange}></textarea>
                     </div>
                   </div>
-                 <div className="client-preview-section">
+                  <div className="client-preview-section">
                     <h4 className="client-preview-section-title">Resume(s)</h4>
-                    
+
                     {/* FIX: Use optional chaining (?.) to prevent crash if currentClientToEdit is null */}
-                      {currentClientToEdit?.resumes && currentClientToEdit.resumes.length > 0 ? (
+                    {currentClientToEdit?.resumes && currentClientToEdit.resumes.length > 0 ? (
                       // This part for updating existing resumes remains the same
                       currentClientToEdit.resumes.map((resume, index) => (
                         <div key={index} className="assign-form-group" style={{ marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid #e0e0e0' }}>
@@ -2329,7 +2644,7 @@ const handleSaveClientDetails = async (e) => {
                               name={`newResumeFile-${index}`}
                               onChange={(e) => handleResumeFileChange(e, index)}
                               accept=".pdf,.doc,.docx"
-                              style={{ display: 'none' }} 
+                              style={{ display: 'none' }}
                             />
                             <label htmlFor={`newResumeFile-${index}`} className="action-button assign" style={{ cursor: 'pointer', textDecoration: 'none', backgroundColor: '#007bff', color: 'white' }}>
                               Update File
@@ -2342,31 +2657,31 @@ const handleSaveClientDetails = async (e) => {
                       // ADDED: Input to add new resumes when none exist
                       <div className="assign-form-group">
                         <label htmlFor="add-new-resumes">Add New Resume(s)</label>
-                        <input 
-                          type="file" 
-                          id="add-new-resumes" 
-                          multiple 
+                        <input
+                          type="file"
+                          id="add-new-resumes"
+                          multiple
                           onChange={handleNewResumeUpload}
-                          accept=".pdf,.doc,.docx" 
+                          accept=".pdf,.doc,.docx"
                         />
-                        {Object.entries(newResumeFiles).map(([key, file]) => 
-                            key.startsWith('new_') && <div key={key} style={{ fontSize: '0.85rem', color: '#28a745' }}>Selected: {file.name}</div>
+                        {Object.entries(newResumeFiles).map(([key, file]) =>
+                          key.startsWith('new_') && <div key={key} style={{ fontSize: '0.85rem', color: '#28a745' }}>Selected: {file.name}</div>
                         )}
                       </div>
                     )}
                   </div>
                   <div className="client-preview-section">
-                        <h4 className="client-preview-section-title">Cover Letter</h4>
-                        <div className="assign-form-group">
-                            <label>Current File:</label>
-                            <div className="read-only-value">{currentClientToEdit.coverLetterFileName || 'No cover letter uploaded.'}</div>
-                        </div>
-                        <div className="assign-form-group">
-                            <label htmlFor="newCoverLetterFile">Upload New Cover Letter (replaces current)</label>
-                            <input type="file" id="newCoverLetterFile" name="newCoverLetterFile" onChange={handleCoverLetterFileChange} accept=".pdf,.doc,.docx" />
-                            {newCoverLetterFile && <p style={{ fontSize: '0.8rem', marginTop: '5px', color: '#28a745' }}>New file: {newCoverLetterFile.name}</p>}
-                        </div>
+                    <h4 className="client-preview-section-title">Cover Letter</h4>
+                    <div className="assign-form-group">
+                      <label>Current File:</label>
+                      <div className="read-only-value">{currentClientToEdit.coverLetterFileName || 'No cover letter uploaded.'}</div>
                     </div>
+                    <div className="assign-form-group">
+                      <label htmlFor="newCoverLetterFile">Upload New Cover Letter (replaces current)</label>
+                      <input type="file" id="newCoverLetterFile" name="newCoverLetterFile" onChange={handleCoverLetterFileChange} accept=".pdf,.doc,.docx" />
+                      {newCoverLetterFile && <p style={{ fontSize: '0.8rem', marginTop: '5px', color: '#28a745' }}>New file: {newCoverLetterFile.name}</p>}
+                    </div>
+                  </div>
                 </div>
               </>
             )}
@@ -2397,28 +2712,28 @@ const handleSaveClientDetails = async (e) => {
       )}
 
       {/* Unaccept Confirmation Modal (Unassigned -> Registered) */}
-    <div className={`modal-overlay ${isUnacceptClientConfirmModalOpen ? 'open' : ''}`}>
+      <div className={`modal-overlay ${isUnacceptClientConfirmModalOpen ? 'open' : ''}`}>
         <div className="modal-content confirm-modal-content">
-            <h3 className="modal-title">Confirm Unaccept Client</h3>
-            <p className="modal-subtitle">Are you sure you want to unaccept **{clientToUnaccept?.firstName} {clientToUnaccept?.lastName}**? This will move the client back to the 'Registered Clients' tab.</p>
-            <div className="confirm-modal-buttons">
-                <button onClick={handleCancelUnaccept} className="confirm-cancel-btn">Cancel</button>
-                <button onClick={handleConfirmUnaccept} className="action-button decline">Unaccept</button>
-            </div>
+          <h3 className="modal-title">Confirm Unaccept Client</h3>
+          <p className="modal-subtitle">Are you sure you want to unaccept **{clientToUnaccept?.firstName} {clientToUnaccept?.lastName}**? This will move the client back to the 'Registered Clients' tab.</p>
+          <div className="confirm-modal-buttons">
+            <button onClick={handleCancelUnaccept} className="confirm-cancel-btn">Cancel</button>
+            <button onClick={handleConfirmUnaccept} className="action-button decline">Unaccept</button>
+          </div>
         </div>
-    </div>
+      </div>
 
-    {/* Delete Confirmation Modal (Rejected -> Permanent Delete) */}
-    <div className={`modal-overlay ${isDeleteClientConfirmModalOpen ? 'open' : ''}`}>
+      {/* Delete Confirmation Modal (Rejected -> Permanent Delete) */}
+      <div className={`modal-overlay ${isDeleteClientConfirmModalOpen ? 'open' : ''}`}>
         <div className="modal-content confirm-modal-content">
-            <h3 className="modal-title">Confirm Permanent Deletion</h3>
-            <p className="modal-subtitle">Are you sure you want to permanently delete **{clientToDelete?.firstName} {clientToDelete?.lastName}**? This action cannot be undone.</p>
-            <div className="confirm-modal-buttons">
-                <button onClick={handleCancelClientDelete} className="confirm-cancel-btn">Cancel</button>
-                <button onClick={handleConfirmClientDelete} className="confirm-delete-btn">Delete Permanently</button>
-            </div>
+          <h3 className="modal-title">Confirm Permanent Deletion</h3>
+          <p className="modal-subtitle">Are you sure you want to permanently delete **{clientToDelete?.firstName} {clientToDelete?.lastName}**? This action cannot be undone.</p>
+          <div className="confirm-modal-buttons">
+            <button onClick={handleCancelClientDelete} className="confirm-cancel-btn">Cancel</button>
+            <button onClick={handleConfirmClientDelete} className="confirm-delete-btn">Delete Permanently</button>
+          </div>
         </div>
-    </div>
+      </div>
 
 
       {showSuccessModal && (
@@ -2433,40 +2748,210 @@ const handleSaveClientDetails = async (e) => {
 
 
       {isConfirmManagerModalOpen && managerToConfirm && (
+        <div className="modal-overlay open">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3 className="modal-title">Confirm Manager Assignment</h3>
+              <button
+                className="modal-close-btn"
+                onClick={() => setIsConfirmManagerModalOpen(false)}
+              >
+                &times;
+              </button>
+            </div>
+            <p className="modal-subtitle">
+              Are you sure you want to assign manager: <strong>{managerToConfirm.firstName} {managerToConfirm.lastName}</strong>
+              to client: <strong>{registrationForManager?.firstName} {registrationForManager?.lastName}</strong>?
+            </p>
+            <div className="confirm-modal-buttons">
+              <button
+                type="button"
+                className="confirm-cancel-btn"
+                onClick={() => setIsConfirmManagerModalOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="confirm-delete-btn"
+                onClick={handleConfirmSelectManager}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* --- View Application Modal --- */}
+{isAppViewModalOpen && selectedApplication && (
   <div className="modal-overlay open">
-    <div className="modal-content">
-      <div className="modal-header">
-        <h3 className="modal-title">Confirm Manager Assignment</h3>
-        <button
-          className="modal-close-btn"
-          onClick={() => setIsConfirmManagerModalOpen(false)}
-        >
+    <div className="assign-modal-content" style={{ maxWidth: '800px' }}>
+      <div className="assign-modal-header">
+        <h3>Application Details</h3>
+        <button className="assign-modal-close-button" onClick={() => setIsAppViewModalOpen(false)}>
           &times;
         </button>
       </div>
-      <p className="modal-subtitle">
-        Are you sure you want to assign manager: <strong>{managerToConfirm.firstName} {managerToConfirm.lastName}</strong> 
-        to client: <strong>{registrationForManager?.firstName} {registrationForManager?.lastName}</strong>?
-      </p>
-      <div className="confirm-modal-buttons">
-        <button
-          type="button"
-          className="confirm-cancel-btn"
-          onClick={() => setIsConfirmManagerModalOpen(false)}
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          className="confirm-delete-btn"
-          onClick={handleConfirmSelectManager}
-        >
-          Confirm
-        </button>
+      <div className="modal-body">
+        {Object.entries(selectedApplication).map(([key, value]) => (
+          <p key={key}>
+            <strong>{key}:</strong> {String(value) || '-'}
+          </p>
+        ))}
       </div>
     </div>
   </div>
 )}
+
+{/* --- Edit Application Modal --- */}
+{isAppEditModalOpen && selectedApplication && (
+  <div className="modal-overlay open">
+    <div className="assign-modal-content" style={{ maxWidth: '800px' }}>
+      <div className="assign-modal-header">
+        <h3>Edit Application</h3>
+        <button className="assign-modal-close-button" onClick={() => setIsAppEditModalOpen(false)}>
+          &times;
+        </button>
+      </div>
+      <div className="modal-body">
+        {Object.keys(selectedApplication).map((field) => (
+          <div className="assign-form-group" key={field}>
+            <label>{field}</label>
+            <input
+              type="text"
+              value={selectedApplication[field] || ''}
+              onChange={(e) =>
+                setSelectedApplication((prev) => ({ ...prev, [field]: e.target.value }))
+              }
+            />
+          </div>
+        ))}
+        <div style={{ textAlign: 'right' }}>
+     <button
+  className="save-btn"
+  onClick={async () => {
+    try {
+      const clientKey = selectedClientForDetails.clientFirebaseKey;
+      const regKey = selectedClientForDetails.registrationKey;
+
+      const jobApplicationsRef = ref(
+        database,
+        `clients/${clientKey}/serviceRegistrations/${regKey}/jobApplications`
+      );
+
+      const snapshot = await get(jobApplicationsRef);
+      const applicationsObj = snapshot.val();
+
+      if (!applicationsObj) {
+        console.error("❌ No applications found");
+        return;
+      }
+
+      // Convert object → array of { key, ...data }
+      const entries = Object.entries(applicationsObj); // [[key1, {...}], [key2, {...}]]
+      const updatedEntries = entries.map(([key, value]) => {
+        if (value.id === selectedApplication.id) {
+          return [key, selectedApplication]; // replace updated one
+        }
+        return [key, value];
+      });
+
+      // Convert back to object
+      const updatedObj = Object.fromEntries(updatedEntries);
+
+      // Push updated object back to Firebase
+      await set(jobApplicationsRef, updatedObj);
+
+      console.log("✅ Application updated successfully");
+      setIsAppEditModalOpen(false);
+    } catch (error) {
+      console.error("Error updating application:", error);
+    }
+  }}
+>
+  Save Changes
+</button>
+
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
+{/* --- Delete Confirmation Modal --- */}
+{isAppDeleteConfirmOpen && selectedApplication && (
+  <div className="modal-overlay open">
+    <div className="assign-modal-content" style={{ maxWidth: '400px' }}>
+      <div className="assign-modal-header">
+        <h3>Confirm Deletion</h3>
+        <button className="assign-modal-close-button" onClick={() => setIsAppDeleteConfirmOpen(false)}>
+          &times;
+        </button>
+      </div>
+      <div className="modal-body">
+        <p>Are you sure you want to delete this application?</p>
+        <div className="confirm-modal-buttons">
+          <button
+            className="confirm-cancel-btn"
+            onClick={() => setIsAppDeleteConfirmOpen(false)}
+          >
+            Cancel
+          </button>
+          <button
+              className="confirm-delete-btn"
+  onClick={async () => {
+    try {
+      const clientKey = selectedClientForDetails.clientFirebaseKey;
+      const regKey = selectedClientForDetails.registrationKey;
+
+      const jobApplicationsRef = ref(
+        database,
+        `clients/${clientKey}/serviceRegistrations/${regKey}/jobApplications`
+      );
+
+      const snapshot = await get(jobApplicationsRef);
+      const applicationsObj = snapshot.val();
+
+      if (!applicationsObj) {
+        console.error("❌ No applications found");
+        setIsAppDeleteConfirmOpen(false);
+        return;
+      }
+
+      // Find the Firebase key of the selected application using its id
+      const targetKey = Object.keys(applicationsObj).find(
+        (key) => applicationsObj[key].id === selectedApplication.id
+      );
+
+      if (targetKey) {
+        const targetRef = ref(
+          database,
+          `clients/${clientKey}/serviceRegistrations/${regKey}/jobApplications/${targetKey}`
+        );
+
+        await remove(targetRef);
+
+        console.log("✅ Application deleted successfully");
+      } else {
+        console.error("❌ Application not found for deletion");
+      }
+
+      setIsAppDeleteConfirmOpen(false);
+    } catch (error) {
+      console.error("Error deleting application:", error);
+    }
+  }}
+>
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
 
 
       {isPaymentModalOpen && selectedClientForPayment && (
