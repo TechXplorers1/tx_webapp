@@ -11,12 +11,12 @@ import { useAuth } from '../components/AuthContext'; // Import useAuth
 import { database } from '../firebase';
 import { ref, onValue } from "firebase/database";
 import { useInView } from 'react-intersection-observer'; // Ensure this is imported
-
 import L from 'leaflet';
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconRetina from 'leaflet/dist/images/marker-icon-2x.png';
 import shadow from 'leaflet/dist/images/marker-shadow.png';
 
+// === Leaflet Icon Fix (Kept from previous correction) ===
 delete L.Icon.Default.prototype._getIconUrl;
 
 L.Icon.Default.mergeOptions({
@@ -24,6 +24,7 @@ L.Icon.Default.mergeOptions({
     iconUrl: icon,
     shadowUrl: shadow,
 });
+// ========================================================
 
 // --- Icon Components (omitted for brevity) ---
 // ... (Icon Components remain the same) ...
@@ -272,13 +273,15 @@ const LandingPage = () => {
                 
                 :root {
                     /* Light Mode */
-                    --primary-color: #6D28D9;
-                    --primary-light: #EDE9FE;
-                    --secondary-color: #1F2937;
+                    --primary-color: #6D28D9; /* Purple */
+                    --primary-light: #EDE9FE; /* Light Purple */
+                    --secondary-color: #1F2937; /* Dark Gray/Black */
                     --text-color: #4B5563;
                     --light-gray: #F9FAFB;
                     --white: #FFFFFF;
                     --border-color: #E5E7EB;
+                    /* --- NEW: Grid Background Color --- */
+                    --grid-line-color: rgba(109, 40, 217, 0.1); /* 10% opacity of primary color */
                 }
 
                 .dark-mode-active {
@@ -289,6 +292,8 @@ const LandingPage = () => {
                     --light-gray: #1F2937; /* Dark background for sections */
                     --white: #111827; /* Very dark background */
                     --border-color: #374151; /* Darker border */
+                     /* --- NEW: Dark Mode Grid Background Color --- */
+                    --grid-line-color: rgba(249, 250, 251, 0.05); /* 5% opacity of light gray */
                 }
 
                 .landing-page-modern {
@@ -301,19 +306,50 @@ const LandingPage = () => {
 
                 /* New Hero Carousel Section */
                 .hero-carousel-section {
-                    background: radial-gradient(circle at top left, rgba(237, 233, 254, 0.4), transparent 40%),
-                                radial-gradient(circle at bottom right, rgba(237, 233, 254, 0.4), transparent 50%);
                     min-height: 90vh;
                     display: flex;
                     align-items: center;
                     margin-top:70px;
+                    
+                    /* --- NEW GRID AND GRADIENT BACKGROUND --- */
+                    background: 
+                        /* 1. Radial Gradients (The spots: Blue and Pink/Purple) */
+                        radial-gradient(circle at top left, rgba(76, 29, 149, 0.2), transparent 40%), /* Purple/Blue Spot */
+                        radial-gradient(circle at bottom right, rgba(197, 192, 194, 0.2), transparent 50%), /* Pink Spot */
+                        
+                        /* 2. Grid Pattern (repeating-conic-gradient for dots/grid) */
+                        repeating-conic-gradient(
+                            from 0deg, 
+                            var(--grid-line-color) 0deg 0.001deg, /* Tiny dot */
+                            transparent 0.001deg 90deg /* Transparent space */
+                        ),
+                        /* Set the size of the grid pattern and make it fixed */
+                        var(--white); /* Base color */
+                    background-size: 50px 50px; /* Size of each grid cell */
+                    background-position: 0 0, 0 0, 0 0, 0 0; 
+                    background-blend-mode: color-dodge, normal, normal, normal; /* Optional: adds subtle light effect */
                 }
                 
                 .dark-mode-active .hero-carousel-section {
                      /* Dark Mode Hero Background */
-                    background: radial-gradient(circle at top left, rgba(76, 29, 149, 0.4), transparent 40%),
-                                radial-gradient(circle at bottom right, rgba(76, 29, 149, 0.4), transparent 50%);
+                    background: 
+                        /* 1. Radial Gradients (The spots) */
+                        radial-gradient(circle at top left, rgba(76, 29, 149, 0.4), transparent 40%),
+                        radial-gradient(circle at bottom right, rgba(28, 11, 19, 0.4), transparent 50%),
+                        
+                        /* 2. Grid Pattern (Dark Mode) */
+                        repeating-conic-gradient(
+                            from 0deg, 
+                            var(--grid-line-color) 0deg 0.001deg,
+                            transparent 0.001deg 90deg
+                        ),
+                        /* Base color in dark mode */
+                        var(--white); 
+                    background-size: 50px 50px; 
+                    background-position: 0 0, 0 0, 0 0, 0 0; 
+                    background-blend-mode: color-dodge, normal, normal, normal;
                 }
+                /* --- END NEW BACKGROUND --- */
 
 
                 .hero-carousel-section .carousel,
@@ -365,7 +401,7 @@ const LandingPage = () => {
                 }
                 
                 .hero-carousel-buttons {
-                margin-left:190px;
+                margin-left:150px;
                     display: flex;
                     gap: 1rem;
                     margin-bottom: 3rem;
@@ -666,7 +702,7 @@ const LandingPage = () => {
 
                 .btn-modern {
                     padding: 0.75rem 1.5rem;
-                    border-radius: 0.5rem;
+                    border-radius: 1.5rem;
                     text-decoration: none;
                     font-weight: 500;
                     transition: all 0.3s;
@@ -809,8 +845,9 @@ const LandingPage = () => {
                 }
 
                 /* Global Section Animations (used by useInView hooks) */
+                /* The section itself fades in quickly */
                 .fade-up-section {
-                    animation: fadeUp 1s ease-out forwards;
+                    animation: fadeUp 0.8s ease-out forwards;
                 }
                 @keyframes fadeUp {
                     from { transform: translateY(40px); opacity: 0; }
@@ -826,6 +863,25 @@ const LandingPage = () => {
                 }
                 /* End Global Section Animations */
 
+                /* --- NEW: Staggered Animation for Child Elements --- */
+                .fade-in-item {
+                    opacity: 0; /* Start invisible */
+                    /* Note: The animation itself is applied by the parent section and inline style */
+                }
+
+                /* Apply staggered animation to children of Services Section */
+                .services-section-modern.fade-up-section .fade-in-item {
+                    animation: fadeUp 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; /* Smoother curve */
+                    opacity: 0; /* Ensures animation runs every time */
+                }
+
+                /* Apply staggered animation to children of Global Stats Section */
+                .global-stats-section.fade-up-section .fade-in-item {
+                    animation: fadeUp 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+                    opacity: 0;
+                }
+                /* --- END NEW CSS --- */
+
 
                 /* Responsive Styles */
                 @media (max-width: 991px) {
@@ -839,6 +895,9 @@ const LandingPage = () => {
                     .hero-carousel-buttons, .feature-pills, .hero-stats {
                         justify-content: center;
                     }
+                     .hero-carousel-buttons {
+                       margin-left:10px;
+                     }   
                     .hero-carousel-image-wrapper {
                         order: -1;
                     }
@@ -918,11 +977,12 @@ const LandingPage = () => {
           </Container>
         </section>
 
-        {/* Services Section - ANIMATED */}
+        {/* Services Section - ANIMATED with STAGGERED CARDS */}
         <section 
           ref={servicesRef} 
           className={`services-section-modern ${servicesInView ? 'fade-up-section' : ''}`}
-          style={{ opacity: servicesInView ? 1 : 0 }} // Added inline style to control initial opacity
+          // Initial opacity 0 prevents content from flashing before the animation starts
+          style={{ opacity: servicesInView ? 1 : 0 }} 
         >
           <Container>
             <div className="section-header">
@@ -933,7 +993,13 @@ const LandingPage = () => {
             <Row className="gy-4">
               {servicesData.map((service, index) => (
                 <Col lg={4} md={6} key={index}>
-                  <div className="service-card-modern">
+                  <div 
+                    className={`service-card-modern fade-in-item`} // Apply new class
+                    style={{ 
+                        // Stagger the cards based on their index
+                        animationDelay: servicesInView ? `${0.1 + index * 0.1}s` : '0s', 
+                    }}
+                  >
                     <img src={service.image} alt={service.title} className="service-card-img" />
                     <div className="service-card-body">
                       <h3>{service.title}</h3>
@@ -951,11 +1017,12 @@ const LandingPage = () => {
           </Container>
         </section>
 
-        {/* Global Stats Section - ANIMATED */}
+        {/* Global Stats Section - ANIMATED with STAGGERED CARDS */}
         <section 
           ref={globalStatsRef} 
           className={`global-stats-section ${globalStatsInView ? 'fade-up-section' : ''}`}
-          style={{ opacity: globalStatsInView ? 1 : 0, animationDelay: '0.1s' }} // Added inline style to control initial opacity and slight delay
+          // Initial opacity 0 prevents content from flashing before the animation starts
+          style={{ opacity: globalStatsInView ? 1 : 0 }}
         >
                     <Container>
                         <div className="section-header">
@@ -964,42 +1031,28 @@ const LandingPage = () => {
                             <p>With a worldwide presence and 24/7 support, we provide consistent, high-quality services to clients across all continents.</p>
                         </div>
                         <Row className="justify-content-center gy-4">
-                            <Col md={3} sm={6}>
-                                <div className="stat-card">
-                                    <div className="stat-icon-wrapper">
-                                        <UsersIcon />
+                            {[
+                                { value: '1,900+', text: 'Global Clients', icon: UsersIcon },
+                                { value: '50+', text: 'Countries', icon: CountriesIcon },
+                                { value: '24/7', text: 'Support', icon: ClockIcon },
+                                { value: '6', text: 'Continents', icon: ContinentsIcon },
+                            ].map((stat, index) => (
+                                <Col md={3} sm={6} key={index} 
+                                    className={`fade-in-item`} // Apply new class
+                                    style={{
+                                        // Stagger the stat cards based on their index
+                                        animationDelay: globalStatsInView ? `${0.2 + index * 0.15}s` : '0s',
+                                    }}
+                                >
+                                    <div className="stat-card">
+                                        <div className="stat-icon-wrapper">
+                                            <stat.icon />
+                                        </div>
+                                        <h3>{stat.value}</h3>
+                                        <p>{stat.text}</p>
                                     </div>
-                                    <h3>1,900+</h3>
-                                    <p>Global Clients</p>
-                                </div>
-                            </Col>
-                            <Col md={3} sm={6}>
-                                <div className="stat-card">
-                                    <div className="stat-icon-wrapper">
-                                        <CountriesIcon />
-                                    </div>
-                                    <h3>50+</h3>
-                                    <p>Countries</p>
-                                </div>
-                            </Col>
-                            <Col md={3} sm={6}>
-                                <div className="stat-card">
-                                    <div className="stat-icon-wrapper">
-                                        <ClockIcon />
-                                    </div>
-                                    <h3>24/7</h3>
-                                    <p>Support</p>
-                                </div>
-                            </Col>
-                            <Col md={3} sm={6}>
-                                <div className="stat-card">
-                                    <div className="stat-icon-wrapper">
-                                        <ContinentsIcon />
-                                    </div>
-                                    <h3>6</h3>
-                                    <p>Continents</p>
-                                </div>
-                            </Col>
+                                </Col>
+                            ))}
                         </Row>
                     </Container>
                 </section>
@@ -1019,15 +1072,14 @@ const LandingPage = () => {
                 scrollWheelZoom={false}
                 className="leaflet-map"
               >
-                {/* * NEW: Add the MapRefresher component inside MapContainer. 
-                  * It will watch the worldInView prop and call map.invalidateSize() 
-                  * when the section animates into view.
+                {/* * MapRefresher is essential for correctly rendering the map when the section
+                  * animates into view (since the container's size might change during animation).
                   */}
                 <MapRefresher worldInView={worldInView} />
 
                 <TileLayer
                   attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
-                  // You can switch to a modern dark/light style:
+                  // Using dark tiles as per your current setup
                   url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
                 />
                 {offices.map((office, index) => (

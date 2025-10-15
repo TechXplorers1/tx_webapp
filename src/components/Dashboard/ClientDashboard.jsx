@@ -17,8 +17,9 @@ import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { utils, writeFile } from 'xlsx'; // Corrected import: Using named exports
 import 'bootstrap-icons/font/bootstrap-icons.css'; // For icons in Applications tab
-import { Modal, Button, Form, Row, Col } from 'react-bootstrap'; // For modals in Applications tab and others
+import { Modal, Button, Form, Row, Col, Carousel } from 'react-bootstrap'; // For modals in Applications tab and others
 import { FaCalendarAlt } from 'react-icons/fa'; // For calendar icon in Applications tab
+
 
 ChartJS.register(
   LineElement,
@@ -5626,68 +5627,416 @@ html.dark-mode .notify-success-message {
             >
             </div>
 
-            {/* Content for main dashboard tabs */}
-            {activeTab === "Dashboard" && (
-              <>
-                <h1 style={{ textAlign: 'center', marginBottom: '32px' }}>Welcome, {clientUserName} </h1>
 
-                {/* <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                  <button
-                    onClick={() => {
-                      setIsInWorksheetView(true); // Switch to worksheet view
-                      setActiveWorksheetTab("Applications"); // Default to Applications tab within worksheet
-                    }}
-                    className="worksheet-button"
-                  >
-                    View Your Job Applications
-                  </button>
-                </div> */}
 
-                {/* --- NEW SECTION INSERTED HERE --- */}
-                {/* In the return block, under the "Dashboard" tab, replace the entire services-browse section. */}
+{/* Content for main dashboard tabs */}
+{activeTab === "Dashboard" && (
+    <>
+        <h1 style={{ textAlign: 'center', marginBottom: '32px' }}>Welcome, {clientUserName} </h1>
 
-                <section className="services-browse">
-                  <h2>Our Services</h2>
-                  <p>Find the right tools to accelerate your growth.</p>
-                  <div className="services-grid">
-                    {servicesData.map((service) => {
-                      // Check if the current service title exists in the list of active services
-                      const isActive = activeServices.some(active => active.title === service.title);
+        {/* <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+            <button
+                onClick={() => {
+                    setIsInWorksheetView(true); // Switch to worksheet view
+                    setActiveWorksheetTab("Applications"); // Default to Applications tab within worksheet
+                }}
+                className="worksheet-button"
+            >
+                View Your Job Applications
+            </button>
+        </div> */}
 
-                      return (
-                        <div key={service.key} className="service-card">
-                          <div className={`card-icon-container ${service.iconClass}`}>
-                            {service.icon}
-                          </div>
-                          <h3>{service.title}</h3>
-                          <p>{service.description}</p>
+        {/* --- NEW SECTION REPLACING services-browse --- */}
+        <div className="dashboard-content-wrapper">
+            
+            {/* Inject CSS Variables and New Carousel Styles */}
+            <style>
+                {`
+                    /* Define colors used for card accents (can be moved to global CSS) */
+                    :root {
+                        --color-blue: #3b82f6;     
+                        --color-green: #10b981;    
+                        --color-red: #ef4444;      
+                        --color-orange: #f97316;   
+                        --color-purple: #8b5cf6;   
+                        --color-cyan: #06b6d4;     
+                    }
 
-                          {isActive ? (
-                            // If the service is active, show the "View Dashboard" button
-                            <button
-                              className="dashboard-btn"
-                              onClick={() => handleViewDashboardClick(service.title)}
-                            >
-                              View Dashboard →
-                            </button>
-                          ) : (
-                            // If the service is inactive, show the "Book Now" button
-                            <button
-                              className="book-now-btn"
-                              onClick={() => handleViewDashboardClick(service.title)}
-                            >
-                              Book Now
-                            </button>
-                          )}
+                    /* Specific service card styling to match the video design */
+                    .services-grid-new {
+                        display: grid;
+                        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                        gap: 1.5rem;
+                        padding: 0 20px;
+                    }
+
+                    .service-card-new {
+                        background-color: var(--bg-card);
+                        border-radius: 12px;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+                        border: 1px solid var(--border-color);
+                        padding: 30px 25px;
+                        display: flex;
+                        flex-direction: column;
+                        position: relative;
+                        overflow: hidden;
+                        transition: transform 0.2s, box-shadow 0.2s;
+                    }
+
+                    .service-card-new:hover {
+                        transform: translateY(-5px);
+                        box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+                    }
+
+                    /* Top accent bar for color */
+                    .service-card-new::before {
+                        content: '';
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 5px; 
+                        background-color: var(--card-accent-color);
+                    }
+
+                    .card-icon-container-new {
+                        font-size: 2rem;
+                        color: var(--card-accent-color);
+                        margin-bottom: 10px;
+                    }
+                    
+                    /* Button styles */
+                    .book-now-btn-new {
+                        background-color: transparent !important;
+                        border: 1px solid var(--card-accent-color) !important;
+                        color: var(--card-accent-color) !important;
+                        transition: background-color 0.2s, color 0.2s;
+                    }
+
+                    .book-now-btn-new:hover {
+                        background-color: var(--card-accent-color) !important;
+                        color: white !important;
+                    }
+
+                    .dashboard-btn-new {
+                        background-color: var(--card-accent-color) !important;
+                        color: white !important;
+                        border: 1px solid var(--card-accent-color) !important;
+                    }
+                    
+                    /* Custom Pricing Banner responsive styles */
+                    @media (max-width: 992px) {
+                        .pricing-text-col, .pricing-table-col {
+                            flex: 1 1 100% !important;
+                        }
+                    }
+
+                    /* New Carousel Styles to match video/image */
+                    .client-dashboard-carousel .carousel-item {
+                        height: 250px; /* Adjust height as needed */
+                        border-radius: 12px;
+                        overflow: hidden;
+                        position: relative;
+                        background-color: var(--bg-card);
+                        border: 1px solid var(--border-color);
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+                    }
+
+                    .carousel-content-overlay {
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: linear-gradient(90deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 100%);
+                        display: flex;
+                        align-items: center;
+                        padding: 0 50px;
+                        color: white;
+                    }
+
+                    .carousel-text-box {
+                        max-width: 60%;
+                    }
+
+                    .carousel-text-box h3 {
+                        font-size: 1.8rem;
+                        font-weight: 700;
+                        margin-bottom: 10px;
+                        color: white;
+                    }
+
+                    .carousel-text-box p {
+                        font-size: 1rem;
+                        margin-bottom: 20px;
+                        color: #e2e8f0;
+                    }
+
+                    .carousel-cta-button {
+                        background: #3b82f6;
+                        border: none;
+                        color: white;
+                        padding: 10px 25px;
+                        border-radius: 8px;
+                        font-weight: 600;
+                        transition: background 0.2s;
+                        cursor: pointer;
+                    }
+
+                    .carousel-cta-button:hover {
+                        background: #2563eb;
+                    }
+
+                    .carousel-background-image {
+                        width: 100%;
+                        height: 100%;
+                        object-fit: cover;
+                        opacity: 0.5; /* Fade out image for better text readability */
+                    }
+                    
+                    /* Adjust indicators */
+                    .client-dashboard-carousel .carousel-indicators button {
+                        width: 10px;
+                        height: 10px;
+                        border-radius: 50%;
+                        background-color: rgba(255, 255, 255, 0.5);
+                        border: none;
+                        margin: 0 5px;
+                    }
+
+                    .client-dashboard-carousel .carousel-indicators button.active {
+                        background-color: white;
+                    }
+                `}
+            </style>
+            
+            {/* --- START CAROUSEL SECTION --- */}
+            <div className="carousel-wrapper" style={{ maxWidth: '1200px', margin: '0 auto 40px auto', padding: '0 20px' }}>
+                <Carousel 
+                    className="client-dashboard-carousel"
+                    interval={5000} // Auto-advance every 5 seconds
+                    indicators={true}
+                    controls={false} // Hide Prev/Next controls as in the video
+                >
+                    <Carousel.Item>
+                        <img 
+                            className="carousel-background-image"
+                            src="image_644289.png-69158f77-feab-4e65-8daa-029e749c991b" // Placeholder: Replace with actual image URL
+                            alt="First slide: Job Applications"
+                        />
+                        <div className="carousel-content-overlay">
+                            <div className="carousel-text-box">
+                                <h3>Track Your Job Applications</h3>
+                                <p>Monitor the status of all your current applications in one centralized and easy-to-use worksheet. Never miss an update!</p>
+                                <button
+                                    className="carousel-cta-button"
+                                    onClick={() => { /* Add logic to navigate to Applications worksheet */ }}
+                                >
+                                    Go to Applications
+                                </button>
+                            </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                </section>
+                    </Carousel.Item>
+                    <Carousel.Item>
+                        <img 
+                            className="carousel-background-image"
+                            src="image_6442c7.png-148161c1-f9a2-4474-a18e-370c56fd6bf4" // Placeholder: Replace with actual image URL
+                            alt="Second slide: New Service Announcement"
+                        />
+                        <div className="carousel-content-overlay">
+                            <div className="carousel-text-box">
+                                <h3>New Service: Advanced AI Integration</h3>
+                                <p>Leverage cutting-edge AI to automate your workflow and gain deep market insights. Book a consultation today!</p>
+                                <button
+                                    className="carousel-cta-button"
+                                    onClick={() => { /* Add logic to book a consultation */ }}
+                                >
+                                    Learn More
+                                </button>
+                            </div>
+                        </div>
+                    </Carousel.Item>
+                    {/* Add more Carousel.Item components as needed */}
+                </Carousel>
+            </div>
+            {/* --- END CAROUSEL SECTION --- */}
 
-                
-              </>
-            )}
+
+            {/* 1. All Services Grid */}
+            <div className="all-services-section" style={{ maxWidth: '1200px', margin: '0 auto', padding: '50px 0' }}>
+                <h2 style={{ textAlign: 'center', fontSize: '2.5rem', fontWeight: '700', marginBottom: '10px', color: 'var(--text-primary)' }}>All Services</h2>
+                <p style={{ textAlign: 'center', fontSize: '1rem', marginBottom: '40px', color: 'var(--text-secondary)' }}>
+                    Explore our comprehensive suite of technology services designed to accelerate your business growth and transform your digital presence.
+                </p>
+
+                <div className="services-grid-new">
+                    {servicesData.map((service, index) => {
+                        const isActive = activeServices.some(active => active.title === service.title);
+                        // Map index to a CSS variable color for the top border/accent
+                        const colorMap = ['var(--color-cyan)', 'var(--color-green)', 'var(--color-red)', 'var(--color-orange)', 'var(--color-purple)', 'var(--color-blue)'];
+                        const cardColorVar = colorMap[index % colorMap.length];
+
+                        return (
+                            <div
+                                key={service.key}
+                                className={`service-card-new ${isActive ? 'active-service' : 'inactive-service'}`}
+                                style={{ '--card-accent-color': cardColorVar }}
+                            >
+                                <div className={`card-icon-container-new ${service.iconClass}`}>
+                                    {service.icon}
+                                </div>
+                                <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '8px', color: 'var(--text-primary)' }}>
+                                    {service.title}
+                                </h3>
+                                <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', minHeight: '60px', flexGrow: 1 }}>
+                                    {service.description}
+                                </p>
+
+                                {isActive ? (
+                                    <button
+                                        className="dashboard-btn-new"
+                                        onClick={() => handleViewDashboardClick(service.title)}
+                                        style={{
+                                            marginTop: '15px',
+                                            padding: '10px 15px',
+                                            borderRadius: '6px',
+                                            fontWeight: '600',
+                                            cursor: 'pointer',
+                                            transition: 'opacity 0.2s',
+                                            alignSelf: 'flex-start',
+                                        }}
+                                    >
+                                        View Dashboard →
+                                    </button>
+                                ) : (
+                                    <button
+                                        className="book-now-btn-new"
+                                        onClick={() => handleViewDashboardClick(service.title)}
+                                        style={{
+                                            marginTop: '15px',
+                                            padding: '10px 15px',
+                                            borderRadius: '6px',
+                                            fontWeight: '600',
+                                            cursor: 'pointer',
+                                            transition: 'background-color 0.2s, color 0.2s',
+                                            alignSelf: 'flex-start',
+                                        }}
+                                    >
+                                        Book Now
+                                    </button>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* 2. Custom Pricing Banner Section */}
+            <div className="custom-pricing-banner" style={{
+                background: 'var(--bg-body)', 
+                padding: '60px 0',
+                marginTop: '50px',
+            }}>
+                <div className="container" style={{
+                    maxWidth: '1200px',
+                    margin: '0 auto',
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                    boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
+                }}>
+                    {/* Left Side: Text and Button */}
+                    <div className="pricing-text-col" style={{
+                        flex: '1 1 55%',
+                        padding: '40px',
+                        background: '#1a202c', // Dark background for contrast
+                        color: 'white',
+                    }}>
+                        <h2 style={{ fontSize: '2rem', fontWeight: '700', marginBottom: '10px', color: 'white' }}>
+                            Get Custom Pricing For Your Business
+                        </h2>
+                        <p style={{ fontSize: '1rem', marginBottom: '30px', color: '#cbd5e1' }}>
+                            Access a full range of products and services that deliver exceptional results and comprehensive pricing for your specific needs.
+                        </p>
+                        <button
+                            className="contact-pricing-btn"
+                            onClick={() => console.log('Contact for Custom Pricing Clicked')} // Placeholder action
+                            style={{
+                                padding: '12px 25px',
+                                border: 'none',
+                                borderRadius: '8px',
+                                background: '#3b82f6', // Primary blue button
+                                color: 'white',
+                                fontWeight: '600',
+                                fontSize: '1rem',
+                                cursor: 'pointer',
+                                transition: 'background-color 0.2s',
+                            }}
+                        >
+                            Contact for Custom Pricing
+                        </button>
+                    </div>
+
+                    {/* Right Side: Pricing Table / Plan Comparison */}
+                    <div className="pricing-table-col" style={{
+                        flex: '1 1 45%',
+                        padding: '40px',
+                        background: '#4a5568', // Lighter dark shade for contrast
+                        color: 'white',
+                    }}>
+                        <h3 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '20px', color: 'white' }}>
+                            What's Included
+                        </h3>
+                        <div className="pricing-comparison" style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            textAlign: 'center',
+                        }}>
+                            <div style={{ flex: 1, padding: '0 10px' }}>
+                                <p style={{ fontWeight: '700', color: '#fcd34d', marginBottom: '5px' }}>Gold</p>
+                                <p style={{ fontSize: '0.8rem', color: '#e2e8f0' }}>Up to 5 Users</p>
+                            </div>
+                            <div style={{ flex: 1, padding: '0 10px' }}>
+                                <p style={{ fontWeight: '700', color: '#93c5fd', marginBottom: '5px' }}>Platinum</p>
+                                <p style={{ fontSize: '0.8rem', color: '#e2e8f0' }}>Unlimited Users</p>
+                            </div>
+                        </div>
+
+                        <ul style={{ listStyle: 'none', padding: 0, marginTop: '20px' }}>
+                            {/* Feature 1 */}
+                            <li style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #6b7280' }}>
+                                <span style={{ color: '#e2e8f0' }}>Job Application</span>
+                                <div style={{ display: 'flex', gap: '20px' }}>
+                                    <span style={{ color: '#fcd34d' }}>Yes</span>
+                                    <span style={{ color: '#93c5fd' }}>Yes</span>
+                                </div>
+                            </li>
+                            {/* Feature 2 */}
+                            <li style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #6b7280' }}>
+                                <span style={{ color: '#e2e8f0' }}>Mobile Dev</span>
+                                <div style={{ display: 'flex', gap: '20px' }}>
+                                    <span style={{ color: '#fcd34d' }}>No</span>
+                                    <span style={{ color: '#93c5fd' }}>Yes</span>
+                                </div>
+                            </li>
+                            {/* Feature 3 */}
+                            <li style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0' }}>
+                                <span style={{ color: '#e2e8f0' }}>Cybersecurity</span>
+                                <div style={{ display: 'flex', gap: '20px' }}>
+                                    <span style={{ color: '#fcd34d' }}>No</span>
+                                    <span style={{ color: '#93c5fd' }}>Yes</span>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {/* --- END NEW SECTION --- */}
+        
+    </>
+)}
 
             {/* If activeTab is 'Applications' or 'Documents' directly from the main tabs, render WorksheetView */}
             {activeTab === "Applications" && !isInWorksheetView && (

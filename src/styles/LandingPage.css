@@ -89,6 +89,46 @@
   color: white;
 }
 
+.hero-carousel-section .carousel-control-prev,
+.hero-carousel-section .carousel-control-next {
+  position: absolute;
+  top: 50%;                    /* vertically center */
+  transform: translateY(-50%); /* fix vertical alignment */
+  z-index: 5;                  /* keep above images/text */
+  width: 60px;                 /* clickable area width */
+  height: 60px;                /* clickable area height */
+  opacity: 0.9;
+  background: rgba(81, 81, 81, 0.1); /* subtle dark background for visibility */
+  border-radius: 50%;
+  transition: all 0.2s ease-in-out;
+}
+
+/* Hover effect for a nice feel */
+.hero-carousel-section .carousel-control-prev:hover,
+.hero-carousel-section .carousel-control-next:hover {
+  opacity: 1;
+  background: rgba(83, 83, 83, 0.7);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.carousel-control-prev-icon,
+.carousel-control-next-icon {
+ width: 2.5rem;            /* increase arrow icon width */
+  height: 2.5rem;           /* increase arrow icon height */
+  background-size: 10% 10%;
+  filter: invert(100%) drop-shadow(0 0 3px rgba(0, 0, 0, 0.3)); /* make visible on all backgrounds */
+}
+
+
+
+.hero-carousel-section .carousel-control-prev {
+  left: -50px;   /* move left arrow further out */
+}
+
+.hero-carousel-section .carousel-control-next {
+  right: -50px;  /* move right arrow further out */
+}
+
 /* Services Section */
 .services-section {
   padding: 20px 0;
@@ -330,3 +370,26 @@
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+@media (max-width: 768px) {
+  .hero-carousel-section .carousel-control-prev,
+  .hero-carousel-section .carousel-control-next {
+    width: 40px;
+    height: 40px;
+  }
+
+  .hero-carousel-section .carousel-control-prev-icon,
+  .hero-carousel-section .carousel-control-next-icon {
+    width: 1.8rem;
+    height: 1.8rem;
+  }
+
+  .hero-carousel-section .carousel-control-prev {
+    left: 15px;
+  }
+
+  .hero-carousel-section .carousel-control-next {
+    right: 15px;
+  }
+}
+
