@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Container, Row, Col, Carousel } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+// Import useMap from react-leaflet
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'; 
 import 'leaflet/dist/leaflet.css';
 import CustomNavbar from './Navbar';
 import '../styles/LandingPage.css';
@@ -12,6 +13,7 @@ import { ref, onValue } from "firebase/database";
 import { useInView } from 'react-intersection-observer'; // Ensure this is imported
 
 // --- Icon Components (omitted for brevity) ---
+// ... (Icon Components remain the same) ...
 const StarIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="feather feather-star"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
 );
@@ -43,7 +45,23 @@ import Image4 from '../assets/JobApply.png';
 import Image5 from '../assets/ItTalentSupply.png';
 import Image6 from '../assets/CyberSecurity.png';
 
-// Scroll animation hook is already imported (useInView)
+// --- NEW COMPONENT FOR MAP REFRESH ---
+// This component must be a child of MapContainer to use useMap()
+const MapRefresher = ({ worldInView }) => {
+    const map = useMap();
+
+    useEffect(() => {
+        // If the section comes into view, the map container is visible.
+        if (worldInView) {
+            // Invalidate size forces Leaflet to re-check the container's dimensions
+            // and redraw all elements (tiles, markers) correctly.
+            map.invalidateSize();
+        }
+    }, [worldInView, map]);
+
+    return null; // This component doesn't render anything itself
+};
+// -------------------------------------
 
 
 const LandingPage = () => {
@@ -975,45 +993,51 @@ const LandingPage = () => {
 
         {/* World Services Section - ANIMATED (using existing ref) */}
         <section
-  ref={worldRef}
-  className={`world-services-modern ${worldInView ? 'slide-up-section' : ''}`}
-  id="world"
-  style={{ opacity: worldInView ? 1 : 0 }}
->
-  <Container fluid className="px-0">
-    <div className="map-container-modern">
-      <MapContainer
-        center={[20.0, 0.0]}
-        zoom={2}
-        scrollWheelZoom={false}
-        className="leaflet-map"
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
-          // You can switch to a modern dark/light style:
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        />
-        {offices.map((office, index) => (
-          <Marker key={index} position={office.position}>
-            <Popup>{office.name}</Popup>
-          </Marker>
-        ))}
-      </MapContainer>
+          ref={worldRef}
+          className={`world-services-modern ${worldInView ? 'slide-up-section' : ''}`}
+          id="world"
+          style={{ opacity: worldInView ? 1 : 0 }}
+        >
+          <Container fluid className="px-0">
+            <div className="map-container-modern">
+              <MapContainer
+                center={[20.0, 0.0]}
+                zoom={2}
+                scrollWheelZoom={false}
+                className="leaflet-map"
+              >
+                {/* * NEW: Add the MapRefresher component inside MapContainer. 
+                  * It will watch the worldInView prop and call map.invalidateSize() 
+                  * when the section animates into view.
+                  */}
+                <MapRefresher worldInView={worldInView} />
 
-      <div className="operate-overlay">
-        <h3 className="operate-title">We operate in:</h3>
-        <div className="country-grid">
-          <div className="country-item">United States</div>
-          <div className="country-item">Canada</div>
-          <div className="country-item">United Kingdom</div>
-          <div className="country-item">Nigeria</div>
-          <div className="country-item">Australia</div>
-          <div className="country-item">India</div>
-        </div>
-      </div>
-    </div>
-  </Container>
-</section>
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
+                  // You can switch to a modern dark/light style:
+                  url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                />
+                {offices.map((office, index) => (
+                  <Marker key={index} position={office.position}>
+                    <Popup>{office.name}</Popup>
+                  </Marker>
+                ))}
+              </MapContainer>
+
+              <div className="operate-overlay">
+                <h3 className="operate-title">We operate in:</h3>
+                <div className="country-grid">
+                  <div className="country-item">United States</div>
+                  <div className="country-item">Canada</div>
+                  <div className="country-item">United Kingdom</div>
+                  <div className="country-item">Nigeria</div>
+                  <div className="country-item">Australia</div>
+                  <div className="country-item">India</div>
+                </div>
+              </div>
+            </div>
+          </Container>
+        </section>
 
         {/* Footer - ANIMATED */}
         <footer 
