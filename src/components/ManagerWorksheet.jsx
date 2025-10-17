@@ -1988,6 +1988,7 @@ Please provide a summary no longer than 150 words.`;
                                     <th>Job Title</th>
                                     <th>Job ID</th>
                                     <th>Job Boards</th>
+                                    <th>Job Type</th>
                                     <th>Description Link</th>
                                     <th>Applied Date</th>
                                     <th>Applied Time</th>
@@ -2002,6 +2003,7 @@ Please provide a summary no longer than 150 words.`;
                                       <td>{app.jobTitle}</td>
                                       <td>{app.jobId}</td>
                                       <td>{app.jobBoards}</td>
+                                      <td>{app.jobType}</td>
                                       <td><a href={app.jobDescriptionUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'Blue', textAlign: "center" }}>Link</a></td>
                                       <td>{formatDateToDDMMYYYY(app.appliedDate)}</td>
                                       <td>{formatDateTime(app.timestamp).time}</td>
@@ -6732,6 +6734,7 @@ Please provide a summary no longer than 150 words.`;
               <p className="modal-view-detail-item"><strong>Company:</strong> {selectedApplication.company}</p>
               <p className="modal-view-detail-item"><strong>Job ID:</strong> {selectedApplication.jobId}</p>
               <p className="modal-view-detail-item"><strong>Job Boards:</strong> {selectedApplication.jobBoards}</p>
+              <p className="modal-view-detail-item"><strong>Job Type:</strong> {selectedApplication.jobType}</p>
               <p className="modal-view-detail-item"><strong>Job Description URL:</strong> <a href={selectedApplication.jobDescriptionUrl} target="_blank" rel="noopener noreferrer">{selectedApplication.jobDescriptionUrl}</a></p>
               <p className="modal-view-detail-item"><strong>Applied Date:</strong> {formatDateTime(selectedApplication.timestamp).date}</p>
               <p className="modal-view-detail-item"><strong>Applied Time:</strong> {formatDateTime(selectedApplication.timestamp).time}</p>
@@ -6813,10 +6816,10 @@ Please provide a summary no longer than 150 words.`;
                   </div>
                 </>
               )}
-              <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+              {/* <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                 <label>Notes</label>
                 <textarea name="notes" value={editableApplication.notes} onChange={handleApplicationChange}></textarea>
-              </div>
+              </div> */}
             </div>
           </Modal.Body>
           <Modal.Footer>

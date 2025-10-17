@@ -306,29 +306,45 @@ const LandingPage = () => {
 
                 /* New Hero Carousel Section */
                 .hero-carousel-section {
-                    min-height: 90vh;
-                    display: flex;
-                    align-items: center;
-                    margin-top:70px;
-                    
-                    /* --- NEW GRID AND GRADIENT BACKGROUND --- */
-                    background: 
-                        /* 1. Radial Gradients (The spots: Blue and Pink/Purple) */
-                        radial-gradient(circle at top left, rgba(76, 29, 149, 0.2), transparent 40%), /* Purple/Blue Spot */
-                        radial-gradient(circle at bottom right, rgba(197, 192, 194, 0.2), transparent 50%), /* Pink Spot */
-                        
-                        /* 2. Grid Pattern (repeating-conic-gradient for dots/grid) */
-                        repeating-conic-gradient(
-                            from 0deg, 
-                            var(--grid-line-color) 0deg 0.001deg, /* Tiny dot */
-                            transparent 0.001deg 90deg /* Transparent space */
-                        ),
-                        /* Set the size of the grid pattern and make it fixed */
-                        var(--white); /* Base color */
-                    background-size: 50px 50px; /* Size of each grid cell */
-                    background-position: 0 0, 0 0, 0 0, 0 0; 
-                    background-blend-mode: color-dodge, normal, normal, normal; /* Optional: adds subtle light effect */
+                    position: relative;
+  overflow: hidden;
+  padding: 60px 0;
+  background-color: #ffffff;
+
+  /* Subtle grid pattern */
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.08) 1px, transparent 1px);
+  background-size: 30px 30px; /* smaller = denser grid */
                 }
+
+                .hero-carousel-section::before,
+.hero-carousel-section::after {
+  content: '';
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  filter: blur(120px);
+  z-index: 0;
+}
+
+.hero-carousel-section::before {
+  top: -60px;
+  left: -60px;
+  background: radial-gradient(circle, rgba(120, 90, 255, 0.25), transparent 70%);
+}
+
+.hero-carousel-section::after {
+  bottom: -80px;
+  right: -80px;
+  background: radial-gradient(circle, rgba(0, 180, 255, 0.25), transparent 70%);
+}
+
+.hero-content-wrapper {
+  position: relative;
+  z-index: 1;
+}
                 
                 .dark-mode-active .hero-carousel-section {
                      /* Dark Mode Hero Background */
@@ -572,8 +588,8 @@ const LandingPage = () => {
                 .global-stats-section {
                     padding: 6rem 0;
                     background-color: var(--light-gray);
-                    background-image: radial-gradient(circle at 10% 20%, rgba(237, 233, 254, 0.5), transparent 40%),
-                                      radial-gradient(circle at 80% 90%, rgba(237, 233, 254, 0.5), transparent 50%);
+                    background-image: radial-gradient(circle at 10% 20%, rgba(190, 182, 224, 0.5), transparent 40%),
+                                      radial-gradient(circle at 80% 90%, rgba(184, 169, 250, 0.5), transparent 50%);
                 }
                 
                 .dark-mode-active .global-stats-section {
@@ -583,10 +599,10 @@ const LandingPage = () => {
 
                 .stat-card {
                     text-align: center;
-                    background-color: var(--white);
+                    // background-color: var(--light-gray);
+                    
                     padding: 2rem;
                     border-radius: 1rem;
-                    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
                     transition: transform 0.3s, box-shadow 0.3s;
                     height: 100%;
                 }
@@ -607,7 +623,7 @@ const LandingPage = () => {
                     width: 64px;
                     height: 64px;
                     border-radius: 50%;
-                    background-color: var(--primary-light);
+                    background-color: var(--white);
                     color: var(--primary-color);
                     margin-bottom: 1.5rem;
                 }
@@ -1004,6 +1020,7 @@ const LandingPage = () => {
                     <div className="service-card-body">
                       <h3>{service.title}</h3>
                       <ul className="service-features">
+                        <p>{service.description}</p>
                         {service.features.map((feature, fIndex) => (
                           <li key={fIndex}><CheckCircleIcon /> {feature}</li>
                         ))}

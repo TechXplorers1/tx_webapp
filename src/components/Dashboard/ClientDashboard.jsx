@@ -5663,31 +5663,33 @@ html.dark-mode .notify-success-message {
                     }
 
                     /* Specific service card styling to match the video design */
-                    .services-grid-new {
-                        display: grid;
-                        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-                        gap: 1.5rem;
-                        padding: 0 20px;
-                    }
+                      .services-grid-new {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 30px;
+        padding: 0 15px; /* Adds padding on small screens */
+    }
 
-                    .service-card-new {
-                        background-color: var(--bg-card);
-                        border-radius: 12px;
-                        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-                        border: 1px solid var(--border-color);
-                        padding: 30px 25px;
-                        display: flex;
-                        flex-direction: column;
-                        position: relative;
-                        overflow: hidden;
-                        transition: transform 0.2s, box-shadow 0.2s;
-                    }
+    /* Individual Service Card */
+    .service-card-new {
+        background-color: var(--card-bg); /* Use theme-based background */
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        padding: 30px;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border-top: 5px solid var(--card-accent-color); /* The colored border accent */
+        border: 1px solid var(--border-color); /* Subtle general border */
+        position: relative;
+    }
 
-                    .service-card-new:hover {
-                        transform: translateY(-5px);
-                        box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-                    }
-
+    .service-card-new:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        border-top: 5px solid var(--card-accent-color);
+    }
                     /* Top accent bar for color */
                     .service-card-new::before {
                         content: '';
@@ -5696,13 +5698,20 @@ html.dark-mode .notify-success-message {
                         left: 0;
                         width: 100%;
                         height: 5px; 
-                        background-color: var(--card-accent-color);
+                        // background-color: var(--card-accent-color);
                     }
 
                     .card-icon-container-new {
-                        font-size: 2rem;
-                        color: var(--card-accent-color);
-                        margin-bottom: 10px;
+                        width: 50px;
+        height: 50px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-radius: 50%;
+        margin-bottom: 15px;
+        background-color: var(--card-accent-color); /* Use accent color for background */
+        color: white; /* White icon inside the circle */
+        font-size: 1.5rem;
                     }
                     
                     /* Button styles */
@@ -5721,8 +5730,13 @@ html.dark-mode .notify-success-message {
                     .dashboard-btn-new {
                         background-color: var(--card-accent-color) !important;
                         color: white !important;
-                        border: 1px solid var(--card-accent-color) !important;
+                        border: none;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
                     }
+         .dashboard-btn-new:hover {
+        opacity: 0.9;
+        transform: translateY(-1px);
+    }
                     
                     /* Custom Pricing Banner responsive styles */
                     @media (max-width: 992px) {
@@ -5821,7 +5835,7 @@ html.dark-mode .notify-success-message {
                     <Carousel.Item>
                         <img 
                             className="carousel-background-image"
-                            src="image_644289.png-69158f77-feab-4e65-8daa-029e749c991b" // Placeholder: Replace with actual image URL
+                            src="https://picsum.photos/seed/picsum/200" // Placeholder: Replace with actual image URL
                             alt="First slide: Job Applications"
                         />
                         <div className="carousel-content-overlay">
@@ -5840,7 +5854,7 @@ html.dark-mode .notify-success-message {
                     <Carousel.Item>
                         <img 
                             className="carousel-background-image"
-                            src="image_6442c7.png-148161c1-f9a2-4474-a18e-370c56fd6bf4" // Placeholder: Replace with actual image URL
+                            src="https://picsum.photos/200?grayscale" // Placeholder: Replace with actual image URL
                             alt="Second slide: New Service Announcement"
                         />
                         <div className="carousel-content-overlay">
@@ -5863,176 +5877,296 @@ html.dark-mode .notify-success-message {
 
 
             {/* 1. All Services Grid */}
-            <div className="all-services-section" style={{ maxWidth: '1200px', margin: '0 auto', padding: '50px 0' }}>
-                <h2 style={{ textAlign: 'center', fontSize: '2.5rem', fontWeight: '700', marginBottom: '10px', color: 'var(--text-primary)' }}>All Services</h2>
-                <p style={{ textAlign: 'center', fontSize: '1rem', marginBottom: '40px', color: 'var(--text-secondary)' }}>
-                    Explore our comprehensive suite of technology services designed to accelerate your business growth and transform your digital presence.
-                </p>
+<div className="all-services-section" style={{ maxWidth: '1200px', margin: '0 auto', padding: '50px 0' }}>
+    <h2 style={{ textAlign: 'center', fontSize: '2.5rem', fontWeight: '700', marginBottom: '10px', color: 'var(--text-primary)' }}>All Services</h2>
+    <p style={{ textAlign: 'center', fontSize: '1rem', marginBottom: '40px', color: 'var(--text-secondary)' }}>
+        Explore our comprehensive suite of technology services designed to accelerate your business growth and transform your digital presence.
+    </p>
 
-                <div className="services-grid-new">
-                    {servicesData.map((service, index) => {
-                        const isActive = activeServices.some(active => active.title === service.title);
-                        // Map index to a CSS variable color for the top border/accent
-                        const colorMap = ['var(--color-cyan)', 'var(--color-green)', 'var(--color-red)', 'var(--color-orange)', 'var(--color-purple)', 'var(--color-blue)'];
-                        const cardColorVar = colorMap[index % colorMap.length];
+    <div className="services-grid-new">
+        {servicesData.map((service, index) => {
+            const isActive = activeServices.some(active => active.title === service.title);
+            // Map index to a CSS variable color for the top border/accent
+            // Note: Ensure var(--color-xxx) are defined in your global or theme CSS
+            const colorMap = ['var(--color-cyan)', 'var(--color-green)', 'var(--color-red)', 'var(--color-orange)', 'var(--color-purple)', 'var(--color-blue)'];
+            const cardColorVar = colorMap[index % colorMap.length];
 
-                        return (
-                            <div
-                                key={service.key}
-                                className={`service-card-new ${isActive ? 'active-service' : 'inactive-service'}`}
-                                style={{ '--card-accent-color': cardColorVar }}
-                            >
-                                <div className={`card-icon-container-new ${service.iconClass}`}>
-                                    {service.icon}
-                                </div>
-                                <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '8px', color: 'var(--text-primary)' }}>
-                                    {service.title}
-                                </h3>
-                                <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', minHeight: '60px', flexGrow: 1 }}>
-                                    {service.description}
-                                </p>
+            return (
+                <div
+                    key={service.key}
+                    className={`service-card-new ${isActive ? 'active-service' : 'inactive-service'}`}
+                    style={{ '--card-accent-color': cardColorVar }}
+                >
+                    <div className={`card-icon-container-new ${service.iconClass}`}>
+                        {/* Note: Ensure service.icon is a React component/element */}
+                        {service.icon} 
+                    </div>
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '8px', color: 'var(--text-primary)' }}>
+                        {service.title}
+                    </h3>
+                    <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', minHeight: '60px', flexGrow: 1 }}>
+                        {service.description}
+                    </p>
 
-                                {isActive ? (
-                                    <button
-                                        className="dashboard-btn-new"
-                                        onClick={() => handleViewDashboardClick(service.title)}
-                                        style={{
-                                            marginTop: '15px',
-                                            padding: '10px 15px',
-                                            borderRadius: '6px',
-                                            fontWeight: '600',
-                                            cursor: 'pointer',
-                                            transition: 'opacity 0.2s',
-                                            alignSelf: 'flex-start',
-                                        }}
-                                    >
-                                        View Dashboard →
-                                    </button>
-                                ) : (
-                                    <button
-                                        className="book-now-btn-new"
-                                        onClick={() => handleViewDashboardClick(service.title)}
-                                        style={{
-                                            marginTop: '15px',
-                                            padding: '10px 15px',
-                                            borderRadius: '6px',
-                                            fontWeight: '600',
-                                            cursor: 'pointer',
-                                            transition: 'background-color 0.2s, color 0.2s',
-                                            alignSelf: 'flex-start',
-                                        }}
-                                    >
-                                        Book Now
-                                    </button>
-                                )}
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
-
-            {/* 2. Custom Pricing Banner Section */}
-            <div className="custom-pricing-banner" style={{
-                background: 'var(--bg-body)', 
-                padding: '60px 0',
-                marginTop: '50px',
-            }}>
-                <div className="container" style={{
-                    maxWidth: '1200px',
-                    margin: '0 auto',
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    borderRadius: '12px',
-                    overflow: 'hidden',
-                    boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
-                }}>
-                    {/* Left Side: Text and Button */}
-                    <div className="pricing-text-col" style={{
-                        flex: '1 1 55%',
-                        padding: '40px',
-                        background: '#1a202c', // Dark background for contrast
-                        color: 'white',
-                    }}>
-                        <h2 style={{ fontSize: '2rem', fontWeight: '700', marginBottom: '10px', color: 'white' }}>
-                            Get Custom Pricing For Your Business
-                        </h2>
-                        <p style={{ fontSize: '1rem', marginBottom: '30px', color: '#cbd5e1' }}>
-                            Access a full range of products and services that deliver exceptional results and comprehensive pricing for your specific needs.
-                        </p>
+                    {isActive ? (
                         <button
-                            className="contact-pricing-btn"
-                            onClick={() => console.log('Contact for Custom Pricing Clicked')} // Placeholder action
+                            className="dashboard-btn-new"
+                            onClick={() => handleViewDashboardClick(service.title)}
                             style={{
-                                padding: '12px 25px',
-                                border: 'none',
-                                borderRadius: '8px',
-                                background: '#3b82f6', // Primary blue button
-                                color: 'white',
+                                marginTop: '15px',
+                                padding: '10px 15px',
+                                borderRadius: '6px',
                                 fontWeight: '600',
-                                fontSize: '1rem',
                                 cursor: 'pointer',
-                                transition: 'background-color 0.2s',
+                                transition: 'transform 0.2s',
+                                alignSelf: 'flex-start',
                             }}
                         >
-                            Contact for Custom Pricing
+                            View Dashboard →
                         </button>
-                    </div>
-
-                    {/* Right Side: Pricing Table / Plan Comparison */}
-                    <div className="pricing-table-col" style={{
-                        flex: '1 1 45%',
-                        padding: '40px',
-                        background: '#4a5568', // Lighter dark shade for contrast
-                        color: 'white',
-                    }}>
-                        <h3 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '20px', color: 'white' }}>
-                            What's Included
-                        </h3>
-                        <div className="pricing-comparison" style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            textAlign: 'center',
-                        }}>
-                            <div style={{ flex: 1, padding: '0 10px' }}>
-                                <p style={{ fontWeight: '700', color: '#fcd34d', marginBottom: '5px' }}>Gold</p>
-                                <p style={{ fontSize: '0.8rem', color: '#e2e8f0' }}>Up to 5 Users</p>
-                            </div>
-                            <div style={{ flex: 1, padding: '0 10px' }}>
-                                <p style={{ fontWeight: '700', color: '#93c5fd', marginBottom: '5px' }}>Platinum</p>
-                                <p style={{ fontSize: '0.8rem', color: '#e2e8f0' }}>Unlimited Users</p>
-                            </div>
-                        </div>
-
-                        <ul style={{ listStyle: 'none', padding: 0, marginTop: '20px' }}>
-                            {/* Feature 1 */}
-                            <li style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #6b7280' }}>
-                                <span style={{ color: '#e2e8f0' }}>Job Application</span>
-                                <div style={{ display: 'flex', gap: '20px' }}>
-                                    <span style={{ color: '#fcd34d' }}>Yes</span>
-                                    <span style={{ color: '#93c5fd' }}>Yes</span>
-                                </div>
-                            </li>
-                            {/* Feature 2 */}
-                            <li style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #6b7280' }}>
-                                <span style={{ color: '#e2e8f0' }}>Mobile Dev</span>
-                                <div style={{ display: 'flex', gap: '20px' }}>
-                                    <span style={{ color: '#fcd34d' }}>No</span>
-                                    <span style={{ color: '#93c5fd' }}>Yes</span>
-                                </div>
-                            </li>
-                            {/* Feature 3 */}
-                            <li style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0' }}>
-                                <span style={{ color: '#e2e8f0' }}>Cybersecurity</span>
-                                <div style={{ display: 'flex', gap: '20px' }}>
-                                    <span style={{ color: '#fcd34d' }}>No</span>
-                                    <span style={{ color: '#93c5fd' }}>Yes</span>
-                                </div>
-                            </li>
-                        </ul>
-                    </div>
+                    ) : (
+                        <button
+                            className="book-now-btn-new"
+                            onClick={() => handleViewDashboardClick(service.title)}
+                            style={{
+                                marginTop: '15px',
+                                padding: '10px 15px',
+                                borderRadius: '6px',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                transition: 'background-color 0.2s, color 0.2s',
+                                alignSelf: 'flex-start',
+                            }}
+                        >
+                            Book Now
+                        </button>
+                    )}
                 </div>
-            </div>
+            );
+        })}
+    </div>
+</div>
+{/* --- Custom Pricing Banner (Styled Like Provided Image) --- */}
+<div
+  className="custom-pricing-banner"
+  style={{
+    width: "100%",
+    maxWidth: "1100px",   // Match your carousel/services grid
+    margin: "60px auto 0 auto",
+    borderRadius: "20px",
+    boxShadow: "0 12px 40px 0 rgba(30,44,76,0.17)",
+    background: "linear-gradient(90deg, #1a2240 0%, #283366 100%)",
+    overflow: "hidden",
+    minHeight: "320px",          // Match your carousel/services grid height
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "stretch",
+  }}
+>
+  <div className="container" style={{
+    maxWidth: "1150px",
+    margin: "0 auto",
+    display: "flex",
+    flexWrap: "wrap",
+    alignItems: "stretch",
+    gap: "32px",
+    color: "#fff"
+  }}>
+    {/* Left column */}
+  <div
+    style={{
+      flex: 1,
+      // Equal width
+      background: "rgba(20,30,54,0.94)",
+      color: "#fff",
+      padding: "50px 36px 50px 44px",
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "center",
+      minHeight: "320px", // Ensure equal height
+      borderTopLeftRadius: "20px",
+      borderBottomLeftRadius: "20px"
+    }}
+  >
+    <div
+      style={{
+        background: "linear-gradient(90deg,#fbbf24 50%,#38bdf8 100%)",
+        borderRadius: "20px",
+        color: "#232142",
+        fontWeight: 700,
+        fontSize: "1rem",
+        width: "fit-content",
+        marginBottom: "18px",
+        padding: "5px 18px",
+        letterSpacing: "-0.5px"
+      }}
+    >
+      Limited Time Offer
+    </div>
+    <h2
+      style={{
+        fontSize: "2.1rem",
+        fontWeight: 700,
+        marginBottom: 0,
+        color: "#fff",
+        letterSpacing: "-1px",
+        lineHeight: 1.18
+      }}
+    >
+      Get <span style={{ color: "#fbbf24" }}>Custom Pricing</span> For Your Business
+    </h2>
+    <div
+      style={{
+        fontSize: "1.12rem",
+        color: "#dbeafe",
+        margin: "12px 0 34px 0",
+        lineHeight: 1.6,
+        maxWidth: 430
+      }}
+    >
+      Join thousands of professionals who trust TechXplorers.<br />
+      Connect with our team to discuss tailored solutions and competitive pricing for your specific needs.
+    </div>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "14px",
+        marginBottom: "18px"
+      }}
+    >
+      <button
+        onClick={() => { /* handle quote click */}}
+        style={{
+          padding: "13px 32px",
+          border: "none",
+          borderRadius: "8px",
+          background: "linear-gradient(90deg,#fbbf24 0,#3b82f6 100%)",
+          color: "#232142",
+          fontWeight: 700,
+          fontSize: "1.03rem",
+          cursor: "pointer",
+          boxShadow: "0 4px 14px rgba(59,130,246,0.08)",
+          transition: "opacity 0.17s"
+        }}
+      >
+        Get Quote
+      </button>
+      <span
+        style={{
+          color: "#10b981",
+          background: "rgba(16,185,129,0.06)",
+          padding: "9px 17px",
+          borderRadius: 8,
+          fontWeight: 600,
+          fontSize: "1.04rem"
+        }}
+      >
+        Free consultation available
+      </span>
+    </div>
+    <div
+      style={{
+        fontSize: "0.99rem",
+        color: "#93c5fd",
+        display: "flex",
+        flexWrap: "wrap",
+        gap: 18
+      }}
+    >
+      <span>• Free consultation included</span>
+      <span>• 24/7 expert support</span>
+      <span>• Scalable architecture</span>
+      <span>• Custom pricing available</span>
+    </div>
+  </div>
+  {/* Right column */}
+  <div
+    style={{
+      flex: 1,
+      background: "rgba(32,52,105,0.91)",
+      color: "#fff",
+      padding: "40px 36px 50px 40px",
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr",
+      gap: "25px 24px",
+      alignContent: "center",
+      minHeight: "320px",
+      borderTopRightRadius: "20px",
+      borderBottomRightRadius: "20px"
+    }}
+  >
+    {/* Service Card grid */}
+    {/* Repeat for each service box */}
+    {[
+      { label: "Mobile Dev", tags: ["iOS & Android"], bg: "linear-gradient(120deg, #f472b6 70%, #f472b65e)", text: "#fff" },
+      { label: "Web Dev", tags: ["Full Stack"], bg: "linear-gradient(120deg, #38bdf8 70%, #38bdf85e)", text: "#fff" },
+      { label: "Marketing", tags: ["Digital Campaigns"], bg: "linear-gradient(120deg, #fb923c 70%, #fb923c5e)", text: "#fff" },
+      { label: "Security", tags: ["Enterprise Level"], bg: "linear-gradient(120deg, #64748b 70%, #64748b5e)", text: "#fff" }
+    ].map(({ label, tags, bg, text }, idx) => (
+      <div
+        key={label}
+        style={{
+          background: bg,
+          color: text,
+          borderRadius: "13px",
+          padding: "28px 20px",
+          boxShadow: "0 3px 14px rgba(0,0,0,0.10)",
+          display: "flex",
+          flexDirection: "column",
+          gap: 9,
+          justifyContent: "flex-start",
+          alignItems: "flex-start",
+          minWidth: 0
+        }}
+      >
+        <div style={{
+          fontWeight: 700,
+          fontSize: "1.05rem",
+          letterSpacing: 0.2
+        }}>
+          {label}
+          <span
+            style={{
+              background: "rgba(255,255,255,0.14)",
+              fontWeight: 600,
+              fontSize: "0.97rem",
+              color: "#fff",
+              borderRadius: 8,
+              padding: "3px 10px",
+              marginLeft: 8,
+              marginRight: 2
+            }}
+          >
+            Available
+          </span>
         </div>
+        <div style={{ fontSize: "0.96rem" }}>{tags.join(", ")}</div>
+        <button
+          style={{
+            marginTop: "8px",
+            padding: "8px 18px",
+            borderRadius: "8px",
+            background: "rgba(255,255,255,0.13)",
+            color: "#fff",
+            border: "none",
+            fontWeight: 600,
+            fontSize: "0.98rem",
+            cursor: "pointer",
+            transition: "background 0.16s"
+          }}
+          onClick={() => { /* handle pricing click */ }}
+        >
+          Contact for pricing
+        </button>
+      </div>
+    ))}
+  </div>
+</div>
+</div>
+{/* --- END Custom Pricing Banner --- */}
+
+</div>
         {/* --- END NEW SECTION --- */}
         
     </>

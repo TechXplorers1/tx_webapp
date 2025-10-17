@@ -109,12 +109,12 @@ const CustomNavbar = () => {
           padding: 5px 20px;
           border: none;
           font-weight: bold;
-          color: white;
+          color: black;
           border-radius: 50px;
           cursor: pointer;
           transition: all 0.3s ease;
           outline: none;
-          background-image: linear-gradient(45deg, #113ccbff 0%, #2575fc 100%);
+          background-image: linear-gradient(45deg, #4a6bd6ff 0%, #76a3f0ff 100%);
           box-shadow: 0 4px 15px 0 rgba(116, 79, 168, 0.75);
           animation: heartbeat 1.5s ease-in-out infinite both;
         }
@@ -215,7 +215,7 @@ const CustomNavbar = () => {
               ) : (
                 // UPDATED: Replaced Button with a standard button using the new class
                 <button className="modern-login-btn ms-lg-3" onClick={() => navigate('/login')}>
-                  LOGIN
+                  LOGIN <span style={{ fontSize: '1.2rem' }}>→</span>
                 </button>
               )}
             </div>
