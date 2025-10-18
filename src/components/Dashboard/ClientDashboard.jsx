@@ -571,7 +571,7 @@ const ClientHeader = ({
             Subscription
           </li>
 
-          <div className="header-button-item" onMouseEnter={() => setIsServicesDropdownOpen(true)} onMouseLeave={() => setIsServicesDropdownOpen(false)}>
+          {/* <div className="header-button-item" onMouseEnter={() => setIsServicesDropdownOpen(true)} onMouseLeave={() => setIsServicesDropdownOpen(false)}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1rem', height: '1rem', color: 'var(--text-primary)' }}>
               <path d="M12 2L2 7L12 12L22 7L12 2Z" />
               <path d="M2 17L12 22L22 17" />
@@ -599,7 +599,7 @@ const ClientHeader = ({
                 ))}
               </ul>
             )}
-          </div>
+          </div> */}
 
           <div className="ad-notification-icon" onClick={onNotificationClick}>
             {/* Bell Icon */}
@@ -5878,7 +5878,7 @@ html.dark-mode .notify-success-message {
 
             {/* 1. All Services Grid */}
 <div className="all-services-section" style={{ maxWidth: '1200px', margin: '0 auto', padding: '50px 0' }}>
-    <h2 style={{ textAlign: 'center', fontSize: '2.5rem', fontWeight: '700', marginBottom: '10px', color: 'var(--text-primary)' }}>All Services</h2>
+    <h2 style={{ textAlign: 'center', fontSize: '2.5rem', fontWeight: '700', marginBottom: '10px', color: 'var(--text-secondary)' }}>All Services</h2>
     <p style={{ textAlign: 'center', fontSize: '1rem', marginBottom: '40px', color: 'var(--text-secondary)' }}>
         Explore our comprehensive suite of technology services designed to accelerate your business growth and transform your digital presence.
     </p>
