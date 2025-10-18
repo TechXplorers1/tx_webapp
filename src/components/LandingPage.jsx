@@ -309,13 +309,13 @@ const LandingPage = () => {
                     position: relative;
   overflow: hidden;
   padding: 60px 0;
-  background-color: #ffffff;
+  background-color: #f1f1f1ff;
 
   /* Subtle grid pattern */
   background-image:
     linear-gradient(rgba(0, 0, 0, 0.08) 1px, transparent 1px),
     linear-gradient(90deg, rgba(0, 0, 0, 0.08) 1px, transparent 1px);
-  background-size: 30px 30px; /* smaller = denser grid */
+  background-size: 23px 23px; /* smaller = denser grid */
                 }
 
                 .hero-carousel-section::before,

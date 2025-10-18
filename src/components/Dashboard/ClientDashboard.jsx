@@ -3466,6 +3466,77 @@ const handleApplyDateRange = () => {
   }, [clientData, allFiles]);
 
 
+ const [hoveredServiceKey, setHoveredServiceKey] = useState(null);
+
+// Function to calculate metrics for Job Supporting service
+const getServiceMetrics = (serviceKey) => {
+  // For "Job Application", use the real-time Firebase data
+  if (serviceKey === 'Job Application') {
+    if (!applicationsData || !scheduledInterviews) return { appliedToday: 0, totalApplications: 0, interviewsScheduled: 0, responseRate: '0%' };
+
+    const today = formatDate(new Date()); // Format today's date as DD-MM-YYYY
+
+    // Calculate Applied Today
+    const appliedToday = applicationsData[today] ? applicationsData[today].length : 0;
+
+    // Calculate Total Applications
+    let totalApplications = 0;
+    Object.values(applicationsData).forEach(dateApps => {
+      totalApplications += dateApps.length;
+    });
+
+    // Calculate Interviews Scheduled
+    const interviewsScheduled = scheduledInterviews.length;
+
+    // Calculate Response Rate (Simplified: Interviews Scheduled / Total Applications)
+    const responseRate = totalApplications > 0 ? ((interviewsScheduled / totalApplications) * 100).toFixed(0) + '%' : '0%';
+
+    return { appliedToday, totalApplications, interviewsScheduled, responseRate };
+  }
+
+  // For all other services, return the static dummy data
+  const metrics = {
+    'Mobile Development': {
+      activeProjects: 15,
+      appsDeployed: 47,
+      clientsSatisfied: 163,
+      avgRating: '4.9',
+      colors: ['#D946EF', '#EC4899', '#10B981', '#F59E0B']
+    },
+    'Web Development': {
+      sitesBuilt: 94,
+      domainsManaged: 71,
+      uptime: '99.9%',
+      performanceScore: 97,
+      colors: ['#3B82F6', '#38BDF8', '#10B981', '#60A5FA']
+    },
+    'Digital Marketing': {
+      activeCampaigns: 28,
+      leadsGenerated: 1389,
+      conversionRate: '13.8%',
+      roi: '365%',
+      colors: ['#F59E0B', '#EC4899', '#10B981', '#D946EF']
+    },
+    'IT Talent Supply': {
+      candidatesPlaced: 82,
+      interviewsToday: 18,
+      activePositions: 45,
+      placementRate: '96%',
+      colors: ['#10B981', '#38BDF8', '#3B82F6', '#10B981']
+    },
+    'Cyber Security': {
+      threatsBlocked: 2789,
+      securityScans: 178,
+      vulnerabilitiesFixed: 94,
+      systemsProtected: 267,
+      colors: ['#6B7280', '#9CA3AF', '#EF4444', '#10B981']
+    }
+  };
+  return metrics[serviceKey] || null;
+};
+
+
+
   // ... inside the ClientDashboard main component
 
   // In ClientDashboard.jsx, add this constant before the return statement.
@@ -4389,6 +4460,8 @@ html.dark-mode .notify-success-message {
             padding: 24px;
             max-width: 100%;
             padding-top: 60px; /* Added padding to account for fixed header */
+            background-color: #f1f1f1ff;
+
         }
         @media (max-width: 768px) {
             .main-content-area {
@@ -5665,31 +5738,42 @@ html.dark-mode .notify-success-message {
                     /* Specific service card styling to match the video design */
                       .services-grid-new {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 30px;
-        padding: 0 15px; /* Adds padding on small screens */
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 25px;
+        padding: 0 20px; /* Adds padding on small screens */
     }
 
     /* Individual Service Card */
     .service-card-new {
-        background-color: var(--card-bg); /* Use theme-based background */
+          background-color: var(--bg-card, #ffffff);
+          border: 1px solid var(--border-color, #e5e7eb);
+ /* Use theme-based background */
         border-radius: 12px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
         padding: 30px;
         display: flex;
         flex-direction: column;
         align-items: flex-start;
         transition: transform 0.3s ease, box-shadow 0.3s ease;
-        border-top: 5px solid var(--card-accent-color); /* The colored border accent */
+        border-top: 5px solid var(--card-accent-color, #2563eb);/* The colored border accent */
         border: 1px solid var(--border-color); /* Subtle general border */
         position: relative;
+        transform: translateY(0);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    cursor: pointer;
     }
 
     .service-card-new:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        transform: translateY(-8px);
+        background-color: var(--bg-hover, #f9fafb);
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
         border-top: 5px solid var(--card-accent-color);
+        border-color: transparent;
     }
+
+    .service-card-new:hover .card-icon-container-new {
+    transform: scale(1.1);
+}
                     /* Top accent bar for color */
                     .service-card-new::before {
                         content: '';
@@ -5707,11 +5791,12 @@ html.dark-mode .notify-success-message {
         display: flex;
         justify-content: center;
         align-items: center;
-        border-radius: 50%;
+        border-radius: 8px;
         margin-bottom: 15px;
         background-color: var(--card-accent-color); /* Use accent color for background */
         color: white; /* White icon inside the circle */
         font-size: 1.5rem;
+        transition: transform 0.3s ease;
                     }
                     
                     /* Button styles */
@@ -5719,23 +5804,28 @@ html.dark-mode .notify-success-message {
                         background-color: transparent !important;
                         border: 1px solid var(--card-accent-color) !important;
                         color: var(--card-accent-color) !important;
-                        transition: background-color 0.2s, color 0.2s;
+                        transition: background-color 0.2s, transform 0.2s;
                     }
 
                     .book-now-btn-new:hover {
                         background-color: var(--card-accent-color) !important;
                         color: white !important;
+                        
                     }
+   
 
                     .dashboard-btn-new {
                         background-color: var(--card-accent-color) !important;
                         color: white !important;
                         border: none;
+                        font-size: 0.95rem;
+    transition: background-color 0.2s, transform 0.2s;
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
                     }
          .dashboard-btn-new:hover {
         opacity: 0.9;
-        transform: translateY(-1px);
+        background-color: #059669;
+    transform: translateY(-2px);
     }
                     
                     /* Custom Pricing Banner responsive styles */
@@ -5840,14 +5930,7 @@ html.dark-mode .notify-success-message {
                         />
                         <div className="carousel-content-overlay">
                             <div className="carousel-text-box">
-                                <h3>Track Your Job Applications</h3>
-                                <p>Monitor the status of all your current applications in one centralized and easy-to-use worksheet. Never miss an update!</p>
-                                <button
-                                    className="carousel-cta-button"
-                                    onClick={() => { /* Add logic to navigate to Applications worksheet */ }}
-                                >
-                                    Go to Applications
-                                </button>
+                                
                             </div>
                         </div>
                     </Carousel.Item>
@@ -5859,14 +5942,7 @@ html.dark-mode .notify-success-message {
                         />
                         <div className="carousel-content-overlay">
                             <div className="carousel-text-box">
-                                <h3>New Service: Advanced AI Integration</h3>
-                                <p>Leverage cutting-edge AI to automate your workflow and gain deep market insights. Book a consultation today!</p>
-                                <button
-                                    className="carousel-cta-button"
-                                    onClick={() => { /* Add logic to book a consultation */ }}
-                                >
-                                    Learn More
-                                </button>
+                               
                             </div>
                         </div>
                     </Carousel.Item>
@@ -5878,291 +5954,598 @@ html.dark-mode .notify-success-message {
 
             {/* 1. All Services Grid */}
 <div className="all-services-section" style={{ maxWidth: '1200px', margin: '0 auto', padding: '50px 0' }}>
-    <h2 style={{ textAlign: 'center', fontSize: '2.5rem', fontWeight: '700', marginBottom: '10px', color: 'var(--text-secondary)' }}>All Services</h2>
-    <p style={{ textAlign: 'center', fontSize: '1rem', marginBottom: '40px', color: 'var(--text-secondary)' }}>
-        Explore our comprehensive suite of technology services designed to accelerate your business growth and transform your digital presence.
-    </p>
+  <h2 
+    style={{
+      textAlign: 'center',
+      fontSize: '2.5rem',
+      fontWeight: '700',
+      marginBottom: '10px',
+      // Apply the linear gradient to the text itself
+      background: 'linear-gradient(90deg, #1e293b 0%, #6d28d9 100%)', // Dark Blue to Purple
+      WebkitBackgroundClip: 'text', // Clip the background to the text (for Chrome, Safari)
+      WebkitTextFillColor: 'transparent', // Make the text color transparent to show the background
+      MozBackgroundClip: 'text', // For Firefox
+      MozTextFillColor: 'transparent', // For Firefox
+      backgroundClip: 'text', // Standard property
+      color: 'transparent', // Fallback for older browsers
+    }}
+  >
+    All Services
+  </h2>
+  <p style={{ textAlign: 'center', fontSize: '1rem', marginBottom: '40px', color: 'var(--text-secondary)' }}>
+    Explore our comprehensive suite of technology services designed to accelerate your business growth and transform your digital presence.
+  </p>
 
-    <div className="services-grid-new">
-        {servicesData.map((service, index) => {
-            const isActive = activeServices.some(active => active.title === service.title);
-            // Map index to a CSS variable color for the top border/accent
-            // Note: Ensure var(--color-xxx) are defined in your global or theme CSS
-            const colorMap = ['var(--color-cyan)', 'var(--color-green)', 'var(--color-red)', 'var(--color-orange)', 'var(--color-purple)', 'var(--color-blue)'];
-            const cardColorVar = colorMap[index % colorMap.length];
+  <div className="services-grid-new">
+    {servicesData.map((service, index) => {
+      const isActive = activeServices.some(active => active.title === service.title);
+      // Map index to a CSS variable color for the top border/accent
+      const colorMap = ['var(--color-cyan)', 'var(--color-green)', 'var(--color-red)', 'var(--color-orange)', 'var(--color-purple)', 'var(--color-blue)'];
+      const cardColorVar = colorMap[index % colorMap.length];
 
-            return (
-                <div
-                    key={service.key}
-                    className={`service-card-new ${isActive ? 'active-service' : 'inactive-service'}`}
-                    style={{ '--card-accent-color': cardColorVar }}
-                >
-                    <div className={`card-icon-container-new ${service.iconClass}`}>
-                        {/* Note: Ensure service.icon is a React component/element */}
-                        {service.icon} 
+      // Get metrics for this service
+      const serviceMetrics = getServiceMetrics(service.key);
+
+      // Determine if this card should show the hover state
+      const isHovered = hoveredServiceKey === service.key;
+
+      return (
+        <div
+          key={service.key}
+          className={`service-card-new ${isActive ? 'active-service' : 'inactive-service'}`}
+          style={{
+            '--card-accent-color': cardColorVar,
+            // Apply a subtle scale effect on hover for the entire card
+            transform: isHovered ? 'scale(1.02)' : 'scale(1)',
+            transition: 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)'
+          }}
+          onMouseEnter={() => setHoveredServiceKey(service.key)}
+          onMouseLeave={() => setHoveredServiceKey(null)}
+        >
+          {/* Icon Container */}
+          <div className={`card-icon-container-new ${service.iconClass}`} style={{
+            // Scale the icon up slightly on hover
+            transform: isHovered ? 'scale(1.1)' : 'scale(1)',
+            transition: 'transform 0.3s ease'
+          }}>
+            {service.icon}
+          </div>
+
+          {/* Service Title */}
+          <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '8px', color: 'var(--text-primary)' }}>
+            {service.title}
+          </h3>
+
+          {/* Conditional Content Based on Hover State */}
+          {isHovered ? (
+            // Hovered State for any service
+            <>
+              {/* Description */}
+              <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', minHeight: '60px', flexGrow: 1 }}>
+                {service.description}
+              </p>
+
+              {/* Metrics Grid */}
+              <div
+                className={`metrics-grid ${isHovered ? 'metrics-visible' : 'metrics-hidden'}`}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '15px',
+                  marginTop: '15px',
+                  width: '100%',
+                  opacity: isHovered ? 1 : 0,
+                  transform: isHovered ? 'translateY(0)' : 'translateY(10px)',
+                  transition: 'opacity 0.3s ease, transform 0.3s ease'
+                }}
+              >
+                {/* Render metrics based on the service type */}
+                {service.key === 'Job Application' && serviceMetrics && (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#60A5FA' }}></div>
+                      <div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.appliedToday}</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Applied Today</div>
+                      </div>
                     </div>
-                    <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '8px', color: 'var(--text-primary)' }}>
-                        {service.title}
-                    </h3>
-                    <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', minHeight: '60px', flexGrow: 1 }}>
-                        {service.description}
-                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#3B82F6' }}></div>
+                      <div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.totalApplications}</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Total Applications</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10B981' }}></div>
+                      <div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.interviewsScheduled}</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Interviews Scheduled</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#93C5FD' }}></div>
+                      <div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.responseRate}</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Response Rate</div>
+                      </div>
+                    </div>
+                  </>
+                )}
 
-                    {isActive ? (
-                        <button
-                            className="dashboard-btn-new"
-                            onClick={() => handleViewDashboardClick(service.title)}
-                            style={{
-                                marginTop: '15px',
-                                padding: '10px 15px',
-                                borderRadius: '6px',
-                                fontWeight: '600',
-                                cursor: 'pointer',
-                                transition: 'transform 0.2s',
-                                alignSelf: 'flex-start',
-                            }}
-                        >
-                            View Dashboard →
-                        </button>
-                    ) : (
-                        <button
-                            className="book-now-btn-new"
-                            onClick={() => handleViewDashboardClick(service.title)}
-                            style={{
-                                marginTop: '15px',
-                                padding: '10px 15px',
-                                borderRadius: '6px',
-                                fontWeight: '600',
-                                cursor: 'pointer',
-                                transition: 'background-color 0.2s, color 0.2s',
-                                alignSelf: 'flex-start',
-                            }}
-                        >
-                            Book Now
-                        </button>
-                    )}
-                </div>
-            );
-        })}
-    </div>
+                {service.key === 'Mobile Development' && serviceMetrics && (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[0] }}></div>
+                      <div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.activeProjects}</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Active Projects</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[1] }}></div>
+                      <div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.appsDeployed}</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Apps Deployed</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[2] }}></div>
+                      <div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.clientsSatisfied}</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Clients Satisfied</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[3] }}></div>
+                      <div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.avgRating}</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Avg Rating</div>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {service.key === 'Web Development' && serviceMetrics && (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[0] }}></div>
+                      <div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.sitesBuilt}</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Sites Built</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[1] }}></div>
+                      <div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.domainsManaged}</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Domains Managed</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[2] }}></div>
+                      <div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.uptime}</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Uptime</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[3] }}></div>
+                      <div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.performanceScore}</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Performance Score</div>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {service.key === 'Digital Marketing' && serviceMetrics && (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[0] }}></div>
+                      <div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.activeCampaigns}</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Active Campaigns</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[1] }}></div>
+                      <div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.leadsGenerated}</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Leads Generated</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[2] }}></div>
+                      <div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.conversionRate}</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Conversion Rate</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[3] }}></div>
+                      <div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.roi}</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>ROI</div>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {service.key === 'IT Talent Supply' && serviceMetrics && (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[0] }}></div>
+                      <div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.candidatesPlaced}</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Candidates Placed</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[1] }}></div>
+                      <div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.interviewsToday}</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Interviews Today</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[2] }}></div>
+                      <div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.activePositions}</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Active Positions</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[3] }}></div>
+                      <div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.placementRate}</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Placement Rate</div>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {service.key === 'Cyber Security' && serviceMetrics && (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[0] }}></div>
+                      <div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.threatsBlocked}</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Threats Blocked</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[1] }}></div>
+                      <div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.securityScans}</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Security Scans</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[2] }}></div>
+                      <div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.vulnerabilitiesFixed}</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Vulnerabilities Fixed</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[3] }}></div>
+                      <div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.systemsProtected}</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Systems Protected</div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Keep the button visible on hover */}
+              {isActive ? (
+                <button
+                  className="dashboard-btn-new"
+                  onClick={() => handleViewDashboardClick(service.title)}
+                  style={{
+                    marginTop: '15px',
+                    padding: '10px 15px',
+                    borderRadius: '6px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'transform 0.2s',
+                    alignSelf: 'flex-start',
+                  }}
+                >
+                  View Dashboard →
+                </button>
+              ) : (
+                <button
+                  className="book-now-btn-new"
+                  onClick={() => handleViewDashboardClick(service.title)}
+                  style={{
+                    marginTop: '15px',
+                    padding: '10px 15px',
+                    borderRadius: '6px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s, color 0.2s',
+                    alignSelf: 'flex-start',
+                  }}
+                >
+                  Book Now
+                </button>
+              )}
+
+              {/* Add "Featured" Badge (visible only on hover) */}
+              <div
+                className={`featured-badge ${isHovered ? 'badge-visible' : 'badge-hidden'}`}
+                style={{
+                  position: 'absolute',
+                  top: '10px',
+                  right: '10px',
+                  background: 'rgba(255, 255, 255, 0.8)',
+                  color: '#3b82f6',
+                  padding: '4px 8px',
+                  borderRadius: '12px',
+                  fontSize: '0.75rem',
+                  fontWeight: '600',
+                  zIndex: 1,
+                  opacity: isHovered ? 1 : 0,
+                  transform: isHovered ? 'translateY(0)' : 'translateY(-10px)',
+                  transition: 'opacity 0.3s ease, transform 0.3s ease'
+                }}
+              >
+                Featured
+              </div>
+            </>
+          ) : (
+            // Default State (Not Hovered)
+            <>
+              <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', minHeight: '60px', flexGrow: 1 }}>
+                {service.description}
+              </p>
+              {isActive ? (
+                <button
+                  className="dashboard-btn-new"
+                  onClick={() => handleViewDashboardClick(service.title)}
+                  style={{
+                    marginTop: '15px',
+                    padding: '10px 15px',
+                    borderRadius: '6px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'transform 0.2s',
+                    alignSelf: 'flex-start',
+                  }}
+                >
+                  View Dashboard →
+                </button>
+              ) : (
+                <button
+                  className="book-now-btn-new"
+                  onClick={() => handleViewDashboardClick(service.title)}
+                  style={{
+                    marginTop: '15px',
+                    padding: '10px 15px',
+                    borderRadius: '6px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s, color 0.2s',
+                    alignSelf: 'flex-start',
+                  }}
+                >
+                  Book Now
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      );
+    })}
+  </div>
 </div>
-{/* --- Custom Pricing Banner (Styled Like Provided Image) --- */}
+{/* --- Responsive Custom Pricing Banner --- */}
 <div
   className="custom-pricing-banner"
   style={{
     width: "100%",
-    maxWidth: "1100px",   // Match your carousel/services grid
+    maxWidth: "1200px",
     margin: "60px auto 0 auto",
     borderRadius: "20px",
     boxShadow: "0 12px 40px 0 rgba(30,44,76,0.17)",
     background: "linear-gradient(90deg, #1a2240 0%, #283366 100%)",
     overflow: "hidden",
-    minHeight: "320px",          // Match your carousel/services grid height
-    display: "flex",
-    flexDirection: "row",
-    alignItems: "stretch",
+    color: "#fff",
+    fontSize: "1rem",
   }}
 >
-  <div className="container" style={{
-    maxWidth: "1150px",
-    margin: "0 auto",
-    display: "flex",
-    flexWrap: "wrap",
-    alignItems: "stretch",
-    gap: "32px",
-    color: "#fff"
-  }}>
-    {/* Left column */}
   <div
     style={{
-      flex: 1,
-      // Equal width
-      background: "rgba(20,30,54,0.94)",
-      color: "#fff",
-      padding: "50px 36px 50px 44px",
       display: "flex",
-      flexDirection: "column",
-      justifyContent: "center",
-      minHeight: "320px", // Ensure equal height
-      borderTopLeftRadius: "20px",
-      borderBottomLeftRadius: "20px"
+      flexDirection: "row",
+      flexWrap: "wrap",
+      minHeight: "300px",
     }}
   >
+    {/* Left Column - Text Content */}
     <div
       style={{
-        background: "linear-gradient(90deg,#fbbf24 50%,#38bdf8 100%)",
-        borderRadius: "20px",
-        color: "#232142",
-        fontWeight: 700,
-        fontSize: "1rem",
-        width: "fit-content",
-        marginBottom: "18px",
-        padding: "5px 18px",
-        letterSpacing: "-0.5px"
-      }}
-    >
-      Limited Time Offer
-    </div>
-    <h2
-      style={{
-        fontSize: "2.1rem",
-        fontWeight: 700,
-        marginBottom: 0,
-        color: "#fff",
-        letterSpacing: "-1px",
-        lineHeight: 1.18
-      }}
-    >
-      Get <span style={{ color: "#fbbf24" }}>Custom Pricing</span> For Your Business
-    </h2>
-    <div
-      style={{
-        fontSize: "1.12rem",
-        color: "#dbeafe",
-        margin: "12px 0 34px 0",
-        lineHeight: 1.6,
-        maxWidth: 430
-      }}
-    >
-      Join thousands of professionals who trust TechXplorers.<br />
-      Connect with our team to discuss tailored solutions and competitive pricing for your specific needs.
-    </div>
-    <div
-      style={{
+        flex: "1 1 500px", // Minimum 500px, grows if space allows
+        background: "rgba(20,30,54,0.94)",
+        padding: "40px",
         display: "flex",
-        alignItems: "center",
-        gap: "14px",
-        marginBottom: "18px"
+        flexDirection: "column",
+        justifyContent: "center",
+        borderTopLeftRadius: "20px",
+        borderBottomLeftRadius: "20px",
       }}
     >
-      <button
-        onClick={() => { /* handle quote click */}}
+      <div
         style={{
-          padding: "13px 32px",
-          border: "none",
-          borderRadius: "8px",
-          background: "linear-gradient(90deg,#fbbf24 0,#3b82f6 100%)",
+          background: "linear-gradient(90deg,#fbbf24 50%,#38bdf8 100%)",
+          borderRadius: "20px",
           color: "#232142",
           fontWeight: 700,
-          fontSize: "1.03rem",
-          cursor: "pointer",
-          boxShadow: "0 4px 14px rgba(59,130,246,0.08)",
-          transition: "opacity 0.17s"
+          fontSize: "0.95rem",
+          width: "fit-content",
+          marginBottom: "16px",
+          padding: "5px 16px",
+          letterSpacing: "-0.5px",
         }}
       >
-        Get Quote
-      </button>
-      <span
+        Limited Time Offer
+      </div>
+      <h2
         style={{
-          color: "#10b981",
-          background: "rgba(16,185,129,0.06)",
-          padding: "9px 17px",
-          borderRadius: 8,
-          fontWeight: 600,
-          fontSize: "1.04rem"
+          fontSize: "1.8rem",
+          fontWeight: 700,
+          marginBottom: "12px",
+          color: "#fff",
+          lineHeight: 1.3,
         }}
       >
-        Free consultation available
-      </span>
+        Get <span style={{ color: "#fbbf24" }}>Custom Pricing</span> For Your Business
+      </h2>
+      <p
+        style={{
+          fontSize: "1rem",
+          color: "#dbeafe",
+          lineHeight: 1.6,
+          marginBottom: "24px",
+          maxWidth: "500px",
+        }}
+      >
+        Join thousands of professionals who trust TechXplorers.<br />
+        Connect with our team to discuss tailored solutions and competitive pricing for your specific needs.
+      </p>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          flexWrap: "wrap",
+          marginBottom: "20px",
+        }}
+      >
+        <button
+          onClick={() => { /* handle quote click */ }}
+          style={{
+            padding: "12px 28px",
+            border: "none",
+            borderRadius: "8px",
+            background: "linear-gradient(90deg,#fbbf24 0,#3b82f6 100%)",
+            color: "#232142",
+            fontWeight: 700,
+            fontSize: "1rem",
+            cursor: "pointer",
+            boxShadow: "0 4px 10px rgba(59,130,246,0.2)",
+            transition: "opacity 0.2s",
+          }}
+        >
+          Get Quote
+        </button>
+        <span
+          style={{
+            color: "#10b981",
+            background: "rgba(16,185,129,0.08)",
+            padding: "8px 16px",
+            borderRadius: "8px",
+            fontWeight: 600,
+            fontSize: "0.95rem",
+          }}
+        >
+          Free consultation available
+        </span>
+      </div>
+      <div
+        style={{
+          fontSize: "0.95rem",
+          color: "#93c5fd",
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "12px",
+        }}
+      >
+        {[
+          "• Free consultation included",
+          "• 24/7 expert support",
+          "• Scalable architecture",
+          "• Custom pricing available"
+        ].map((item, i) => (
+          <span key={i}>{item}</span>
+        ))}
+      </div>
     </div>
+
+    {/* Right Column - Service Grid */}
     <div
       style={{
-        fontSize: "0.99rem",
-        color: "#93c5fd",
-        display: "flex",
-        flexWrap: "wrap",
-        gap: 18
+        flex: "1 1 500px",
+        background: "rgba(32,52,105,0.91)",
+        padding: "30px",
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+        gap: "20px",
+        alignContent: "center",
+        borderTopRightRadius: "20px",
+        borderBottomRightRadius: "20px",
       }}
     >
-      <span>• Free consultation included</span>
-      <span>• 24/7 expert support</span>
-      <span>• Scalable architecture</span>
-      <span>• Custom pricing available</span>
+      {[
+        { label: "Mobile Dev", tags: ["iOS & Android"], badgeColor: "#fbbf24" },
+        { label: "Web Dev", tags: ["Full Stack"], badgeColor: "#38bdf8" },
+        { label: "Marketing", tags: ["Digital Campaigns"], badgeColor: "#fb923c" },
+        { label: "Security", tags: ["Enterprise Level"], badgeColor: "#64748b" }
+      ].map(({ label, tags, badgeColor }, idx) => (
+        <div
+          key={label}
+          style={{
+            background: "rgba(255,255,255,0.08)",
+            color: "#fff",
+            borderRadius: "12px",
+            padding: "20px",
+            boxShadow: "0 3px 10px rgba(0,0,0,0.1)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px",
+          }}
+        >
+          <div style={{ fontWeight: 700, fontSize: "1rem" }}>
+            {label}
+            <span
+              style={{
+                background: `${badgeColor}`,
+                fontWeight: 600,
+                fontSize: "0.9rem",
+                color: "#fff",
+                borderRadius: "6px",
+                padding: "3px 8px",
+                marginLeft: "8px",
+              }}
+            >
+              Available
+            </span>
+          </div>
+          <div style={{ fontSize: "0.9rem", opacity: 0.9 }}>{tags.join(", ")}</div>
+          <button
+            style={{
+              marginTop: "auto",
+              padding: "8px 16px",
+              borderRadius: "6px",
+              background: "rgba(255,255,255,0.12)",
+              color: "#fff",
+              border: "none",
+              fontWeight: 600,
+              fontSize: "0.95rem",
+              cursor: "pointer",
+              transition: "background 0.2s",
+            }}
+            onClick={() => { /* handle pricing click */ }}
+          >
+            Contact for pricing
+          </button>
+        </div>
+      ))}
     </div>
   </div>
-  {/* Right column */}
-  <div
-    style={{
-      flex: 1,
-      background: "rgba(32,52,105,0.91)",
-      color: "#fff",
-      padding: "40px 36px 50px 40px",
-      display: "grid",
-      gridTemplateColumns: "1fr 1fr",
-      gap: "25px 24px",
-      alignContent: "center",
-      minHeight: "320px",
-      borderTopRightRadius: "20px",
-      borderBottomRightRadius: "20px"
-    }}
-  >
-    {/* Service Card grid */}
-    {/* Repeat for each service box */}
-    {[
-      { label: "Mobile Dev", tags: ["iOS & Android"], bg: "linear-gradient(120deg, #f472b6 70%, #f472b65e)", text: "#fff" },
-      { label: "Web Dev", tags: ["Full Stack"], bg: "linear-gradient(120deg, #38bdf8 70%, #38bdf85e)", text: "#fff" },
-      { label: "Marketing", tags: ["Digital Campaigns"], bg: "linear-gradient(120deg, #fb923c 70%, #fb923c5e)", text: "#fff" },
-      { label: "Security", tags: ["Enterprise Level"], bg: "linear-gradient(120deg, #64748b 70%, #64748b5e)", text: "#fff" }
-    ].map(({ label, tags, bg, text }, idx) => (
-      <div
-        key={label}
-        style={{
-          background: bg,
-          color: text,
-          borderRadius: "13px",
-          padding: "28px 20px",
-          boxShadow: "0 3px 14px rgba(0,0,0,0.10)",
-          display: "flex",
-          flexDirection: "column",
-          gap: 9,
-          justifyContent: "flex-start",
-          alignItems: "flex-start",
-          minWidth: 0
-        }}
-      >
-        <div style={{
-          fontWeight: 700,
-          fontSize: "1.05rem",
-          letterSpacing: 0.2
-        }}>
-          {label}
-          <span
-            style={{
-              background: "rgba(255,255,255,0.14)",
-              fontWeight: 600,
-              fontSize: "0.97rem",
-              color: "#fff",
-              borderRadius: 8,
-              padding: "3px 10px",
-              marginLeft: 8,
-              marginRight: 2
-            }}
-          >
-            Available
-          </span>
-        </div>
-        <div style={{ fontSize: "0.96rem" }}>{tags.join(", ")}</div>
-        <button
-          style={{
-            marginTop: "8px",
-            padding: "8px 18px",
-            borderRadius: "8px",
-            background: "rgba(255,255,255,0.13)",
-            color: "#fff",
-            border: "none",
-            fontWeight: 600,
-            fontSize: "0.98rem",
-            cursor: "pointer",
-            transition: "background 0.16s"
-          }}
-          onClick={() => { /* handle pricing click */ }}
-        >
-          Contact for pricing
-        </button>
-      </div>
-    ))}
-  </div>
-</div>
 </div>
 {/* --- END Custom Pricing Banner --- */}
 
