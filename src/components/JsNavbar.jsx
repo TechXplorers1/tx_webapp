@@ -12,11 +12,9 @@ const JsNavbar = () => {
     <Navbar bg="light" expand="lg" className="fixed-top shadow-sm">
       <Container fluid>
         {/* Brand Logo */}
-        <Navbar.Brand onClick={() => navigate('/')} className="fw-bold navbar-brand">
-          <span className="brand-small">TECH</span>
-          <span className="brand-x">X</span>
-          <span className="brand-small">PLORERS</span>
-        </Navbar.Brand>
+        <Navbar.Brand as={Link} to="/" className="fw-bold navbar-brand">
+  <span className="brand-full">TechXplorers</span>
+</Navbar.Brand>
 
         {/* Toggle Button for Mobile View */}
         <Navbar.Toggle aria-controls="basic-navbar-nav" />

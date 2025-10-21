@@ -549,6 +549,16 @@ const ClientHeader = ({
             align-items: center;
             gap: 0.25rem;
         }
+            .brand-full {
+  font-size: 1.7rem; /* Adjust size as needed */
+  font-weight: 700;
+  background: linear-gradient(90deg, #4F46E5 0%, #8B5CF6 100%); /* Purple to Violet gradient */
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
+  letter-spacing: -0.5px; /* Optional: adjust spacing */
+}
 
         /* Hamburger menu is removed, so no styles are needed for it */
         `}
@@ -556,9 +566,7 @@ const ClientHeader = ({
        <header className={`ad-header ${isDarkMode ? 'html-dark' : ''}`}>
         <div className="ad-header-left">
           <div className="ad-logo" onClick={onLogoClick} style={{ cursor: 'pointer' }}>
-            <span>Tech</span>
-            <span className="ad-logo-x">X</span>
-            <span>plorers</span>
+           <span className="brand-full">TechXplorers</span>
           </div>
         </div>
 

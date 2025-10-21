@@ -483,6 +483,18 @@ const LandingPage = () => {
                     padding: 6rem 0;
                     background-color: var(--light-gray);
                 }
+
+                  .services-section-modern .service-card-modern.flip-in-item {
+    animation: flipIn 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+    /* Set the initial state for the animation */
+    opacity: 0;
+    transform: rotateY(-90deg) scale(0.8);
+    transform-origin: left center;
+  }
+      .services-section-modern .service-card-modern.flip-in-item.active {
+    opacity: 1;
+    transform: rotateY(0deg) scale(1);
+  }
                 
                 .dark-mode-active .services-section-modern {
                     background-color: var(--light-gray); /* Already defined as dark background in dark mode */
@@ -506,20 +518,44 @@ const LandingPage = () => {
                     margin: 0 auto;
                     color: var(--text-color); /* Ensure paragraph text uses text color */
                 }
+                    .icon-container {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background-color: #e0f2fe; /* Light blue background */
+  color: #0ea5e9; /* Blue text */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
 
                 .service-card-modern {
-                    background-color: var(--white);
-                    border: 1px solid var(--border-color);
-                    border-radius: 1rem;
-                    transition: transform 0.3s, box-shadow 0.3s;
-                    height: 100%;
-                    display: flex;
-                    flex-direction: column;
+  background-color: var(--white);
+  border: 1px solid var(--border-color);
+  border-radius: 1rem;
+  transition: transform 0.3s, box-shadow 0.3s;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
                 }
                 .service-card-modern:hover {
-                    transform: translateY(-5px);
-                    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+                      transform: translateY(-5px) scale(1.01); /* Zoom in slightly */
+  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
                 }
+  .service-card-modern:hover .service-card-body h3 {
+  color: #3b82f6; /* Sky Blue */
+}
+
+.service-card-body {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1; /* Take up remaining space */
+}
 
                 .dark-mode-active .service-card-modern:hover {
                     box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3), 0 4px 6px -2px rgba(0,0,0,0.2);
@@ -574,14 +610,21 @@ const LandingPage = () => {
 }
 
                 .learn-more-link {
-                    color: var(--primary-color);
-                    text-decoration: none;
-                    font-weight: 500;
-                    transition: color 0.3s;
-                    margin-top: auto;
+                    color: #3b82f6; /* Blue color */
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s, background-color 0.3s;
+  margin-top: auto;
+  padding: 8px 16px;
+  border: 2px solid #3b82f6; /* Blue border */
+  border-radius: 8px;
+  display: inline-block;
+  text-align: center;
+  width: 100%;
                 }
                 .learn-more-link:hover {
-                    color: #5B21B6;
+                   background-color: #3b82f6;
+  color: #ffffff;
                 }
 
                   /* Global Stats Section */
@@ -923,6 +966,18 @@ const LandingPage = () => {
                         top: -1rem;
                     }
                 }
+                      @keyframes flipIn {
+    from {
+      opacity: 0;
+      transform: rotateY(-90deg) scale(0.8);
+      transform-origin: left center;
+    }
+    to {
+      opacity: 1;
+      transform: rotateY(0deg) scale(1);
+      transform-origin: left center;
+    }
+  }
             `}</style>
       <div className={`landing-page-modern ${isDarkMode ? 'dark-mode-active' : ''}`}>
          <CustomNavbar />
@@ -995,44 +1050,55 @@ const LandingPage = () => {
 
         {/* Services Section - ANIMATED with STAGGERED CARDS */}
         <section 
-          ref={servicesRef} 
-          className={`services-section-modern ${servicesInView ? 'fade-up-section' : ''}`}
-          // Initial opacity 0 prevents content from flashing before the animation starts
-          style={{ opacity: servicesInView ? 1 : 0 }} 
-        >
-          <Container>
-            <div className="section-header">
-              <span className="pill-badge">Our Services</span>
-              <h2>Comprehensive Tech Solutions</h2>
-              <p>From idea to execution, we provide end-to-end technology services that fuel your growth and help you stay ahead of the curve.</p>
+  ref={servicesRef} 
+  className={`services-section-modern ${servicesInView ? 'fade-up-section' : ''}`}
+  // Initial opacity 0 prevents content from flashing before the animation starts
+  style={{ opacity: servicesInView ? 1 : 0 }} 
+>
+  <Container>
+    <div className="section-header">
+      <span className="pill-badge">Our Services</span>
+      <h2>Comprehensive Tech Solutions</h2>
+      <p>From idea to execution, we provide end-to-end technology services that fuel your growth and help you stay ahead of the curve.</p>
+    </div>
+    <Row className="gy-4">
+      {servicesData.map((service, index) => (
+        <Col lg={4} md={6} key={index}>
+          <div 
+            className={`service-card-modern fade-in-item`} // Apply new class
+            style={{ 
+                // Stagger the cards based on their index
+                animationDelay: servicesInView ? `${0.1 + index * 0.1}s` : '0s', 
+            }}
+          >
+            {/* Image */}
+            <img src={service.image} alt={service.title} className="service-card-img" />
+            {/* Icon Container (Top Left Corner) */}
+            <div className="icon-container">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
             </div>
-            <Row className="gy-4">
-              {servicesData.map((service, index) => (
-                <Col lg={4} md={6} key={index}>
-                  <div 
-                    className={`service-card-modern fade-in-item`} // Apply new class
-                    style={{ 
-                        // Stagger the cards based on their index
-                        animationDelay: servicesInView ? `${0.1 + index * 0.1}s` : '0s', 
-                    }}
-                  >
-                    <img src={service.image} alt={service.title} className="service-card-img" />
-                    <div className="service-card-body">
-                      <h3>{service.title}</h3>
-                      <ul className="service-features">
-                        <p>{service.description}</p>
-                        {service.features.map((feature, fIndex) => (
-                          <li key={fIndex}><CheckCircleIcon /> {feature}</li>
-                        ))}
-                      </ul>
-                      <Link to={service.path} className="learn-more-link">Learn More →</Link>
-                    </div>
-                  </div>
-                </Col>
-              ))}
-            </Row>
-          </Container>
-        </section>
+            {/* Card Body */}
+            <div className="service-card-body">
+              <h3>{service.title}</h3>
+              <ul className="service-features">
+                <p>{service.description}</p>
+                {service.features.map((feature, fIndex) => (
+                  <li key={fIndex}><CheckCircleIcon /> {feature}</li>
+                ))}
+              </ul>
+              <Link to={service.path} className="learn-more-link">Learn More →</Link>
+            </div>
+          </div>
+        </Col>
+      ))}
+    </Row>
+  </Container>
+</section>
 
         {/* Global Stats Section - ANIMATED with STAGGERED CARDS */}
         <section 

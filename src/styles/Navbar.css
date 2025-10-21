@@ -296,6 +296,17 @@ input:checked + .slider:before {
   color: rgb(255, 255, 255);
 }
 
+.brand-full {
+  font-size: 1.7rem; /* Adjust size as needed */
+  font-weight: 700;
+  background: linear-gradient(90deg, #4F46E5 0%, #8B5CF6 100%); /* Purple to Violet gradient */
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
+  letter-spacing: -0.5px; /* Optional: adjust spacing */
+}
+
 /* From Uiverse.io by Galahhad */ 
 .theme-switch {
   --toggle-size: 10px;

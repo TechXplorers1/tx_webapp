@@ -488,9 +488,10 @@ const ManagerWorkSheet = () => {
       setUnassignedClients(unassignedForManager);
       setAssignedClients(assignedByManager);
       setInactiveAssignedClients(inactiveAssigned); 
+ 
+      const allAssignedClients = [...assignedByManager, ...inactiveAssigned];
 
-
-      setApplicationData(assignedByManager.flatMap(clientReg =>
+      setApplicationData(allAssignedClients.flatMap(clientReg =>
         (clientReg.jobApplications || []).map(app => ({
           ...app,
           clientFirebaseKey: clientReg.clientFirebaseKey,
@@ -499,7 +500,7 @@ const ManagerWorkSheet = () => {
           assignedTo: clientReg.assignedTo
         }))
       ));
-      setInterviewData(assignedByManager.flatMap(clientReg =>
+      setInterviewData(allAssignedClients.flatMap(clientReg =>
         (clientReg.jobApplications || [])
           .filter(app => app.status === 'Interview')
           .map(app => ({
@@ -625,6 +626,8 @@ const [clientToChangeStatus, setClientToChangeStatus] = useState(null);
   const [sortOrder, setSortOrder] = useState('Newest First');
   const [quickFilter, setQuickFilter] = useState('');
 
+  const [clientStatusFilter, setClientStatusFilter] = useState('active');
+
 
   const handleOpenStatusConfirmModal = (client) => {
     setClientToChangeStatus(client);
@@ -736,7 +739,13 @@ const handleUpdateClientStatus = async () => {
     setApplicationSearchQuery('');
     setApplicationFilterEmployee('');
     setApplicationFilterClient('');
+    setClientStatusFilter('active');
   };
+
+  const handleClientStatusFilterChange = (e) => {
+    setClientStatusFilter(e.target.value);
+    setApplicationFilterClient(''); // IMPORTANT: Reset the client name filter when the status filter changes
+};
 
   const areApplicationsFiltersActive = () => {
     // Check all filter states specific to the Applications tab
@@ -1397,8 +1406,13 @@ const [inactiveAssignedClients, setInactiveAssignedClients] = useState([]);
 
   // Get unique client names for the filter dropdown - NOW ONLY FROM ASSIGNED CLIENTS
   const uniqueAssignedClientNames = useMemo(() => {
-    return [...new Set(assignedClients.map(client => `${client.firstName} ${client.lastName}`.trim()))];
-  }, [assignedClients]);
+    const clientsToFilter = clientStatusFilter === 'active'
+        ? assignedClients // Includes 'pending_acceptance' and 'active'
+        : inactiveAssignedClients; // Includes 'inactive'
+
+    const names = clientsToFilter.map(clientReg => clientReg.name);
+    return [...new Set(names)].sort();
+}, [clientStatusFilter, assignedClients, inactiveAssignedClients]);
 
   const uniqueAssignedEmployeeNames = [...new Set(assignedClients.map(client => client.assignedTo))];
 
@@ -1736,6 +1750,8 @@ Please provide a summary no longer than 150 words.`;
     handleApplicationFilterEmployeeChange,
     applicationFilterClient,
     handleApplicationFilterClientChange,
+    clientStatusFilter,
+    handleClientStatusFilterChange,
     filterDateRange,
     handleDateRangeChange,
     sortOrder,
@@ -1765,8 +1781,8 @@ Please provide a summary no longer than 150 words.`;
     const getInitials = (name) => {
       if (!name) return '';
       const parts = name.split(' ');
-      if (parts.length > 1) return `${parts[0][0]}${parts[parts.length - 1][0]}`;
-      return name.substring(0, 2).toUpperCase();
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+        return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
     };
 
     const filteredBySearch = useMemo(() => {
@@ -1909,6 +1925,18 @@ Please provide a summary no longer than 150 words.`;
               onChange={(e) => setApplicationSearchQuery(e.target.value)}
             />
           </div>
+          {/* NEW: Filter by Client Status */}
+                <div className="filter-dropdown" style={{ minWidth: '160px' }}>
+                    <select
+                        value={clientStatusFilter}
+                        onChange={handleClientStatusFilterChange}
+                        title="Filter clients by status"
+                    >
+                        <option value="active">Active Clients</option>
+                        <option value="inactive">Inactive Clients</option>
+                    </select>
+                    <i className="fas fa-chevron-down"></i>
+                </div>
           <div className="filter-dropdown">
             <select value={applicationFilterEmployee} onChange={handleApplicationFilterEmployeeChange}>
               <option value="">Filter by Employee</option>
@@ -5020,6 +5048,8 @@ Please provide a summary no longer than 150 words.`;
             handleApplicationFilterEmployeeChange={handleApplicationFilterEmployeeChange}
             applicationFilterClient={applicationFilterClient}
             handleApplicationFilterClientChange={handleApplicationFilterClientChange}
+            clientStatusFilter={clientStatusFilter}
+        handleClientStatusFilterChange={handleClientStatusFilterChange}
             filterDateRange={filterDateRange}
             handleDateRangeChange={handleDateRangeChange}
             sortOrder={sortOrder}

@@ -306,7 +306,7 @@ const AdminPage = () => {
       </style>
       <header className="ad-header">
         <div className="ad-header-left">
-          <div className="ad-logo" onClick={() => navigate('/')}>
+          <div className="ad-logo" style={{cursor:'pointer'}} onClick={() => navigate('/')}>
             <span>Tech</span><span className="ad-logo-x">X</span><span>plorers</span>
           </div>
         </div>

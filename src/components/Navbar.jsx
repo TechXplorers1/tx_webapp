@@ -104,6 +104,17 @@ const CustomNavbar = () => {
           }
         }
 
+        .brand-full {
+  font-size: 1.7rem; /* Adjust size as needed */
+  font-weight: 700;
+  background: linear-gradient(90deg, #4F46E5 0%, #8B5CF6 100%); /* Purple to Violet gradient */
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
+  letter-spacing: -0.5px; /* Optional: adjust spacing */
+}
+
         /* Modern Login Button Styles */
         .modern-login-btn {
           padding: 5px 20px;
@@ -127,15 +138,13 @@ const CustomNavbar = () => {
       `}</style>
 
       <Navbar bg="light" expand="lg" className={`fixed-top shadow-sm border-bottom ${isDarkMode ? 'dark-navbar' : ''}`}>
-        <Container fluid>
+               <Container fluid>
+          {/* Updated Logo Section */}
           <Navbar.Brand as={Link} to="/" className="fw-bold navbar-brand">
-            <span className="brand-small">TECH</span>
-            <span className="brand-x">X</span>
-            <span className="brand-small">PLORERS</span>
-          </Navbar.Brand>
+  <span className="brand-full">TechXplorers</span>
+</Navbar.Brand>
 
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
-
           <Navbar.Collapse id="basic-navbar-nav">
             <Nav className="mx-auto gap-lg-1 gap-1">
               <NavLink to="/" className={({ isActive }) => `nav-link-custom ${isActive ? 'active' : ''}`}>
