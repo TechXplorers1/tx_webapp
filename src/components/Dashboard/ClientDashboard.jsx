@@ -5713,7 +5713,7 @@ html.dark-mode .notify-success-message {
 {/* Content for main dashboard tabs */}
 {activeTab === "Dashboard" && (
     <>
-        <h1 style={{ textAlign: 'center', marginBottom: '32px' }}>Welcome, {clientUserName} </h1>
+        <h1 style={{ textAlign: 'center', marginBottom: '32px' }} className="brand-full">Welcome, {clientUserName} </h1>
 
         {/* <div style={{ textAlign: 'center', marginBottom: '32px' }}>
             <button

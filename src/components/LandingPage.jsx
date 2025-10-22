@@ -15,8 +15,6 @@ import L from 'leaflet';
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconRetina from 'leaflet/dist/images/marker-icon-2x.png';
 import shadow from 'leaflet/dist/images/marker-shadow.png';
-import { motion } from "framer-motion";
-import { Star, Users, Clock, ArrowRight, Smartphone, Code, TrendingUp, HeadphonesIcon, Shield } from "lucide-react";
 
 // === Leaflet Icon Fix (Kept from previous correction) ===
 delete L.Icon.Default.prototype._getIconUrl;
@@ -93,9 +91,6 @@ const LandingPage = () => {
   const [footerRef, footerInView] = useInView({ triggerOnce: true, threshold: 0.1 });
   // Note: carouselRef removed as carousel animation is handled by CSS on active slide
 
-  const [sectionRef, sectionInView] = useInView({ triggerOnce: true, threshold: 0.1 });
-
-
   useEffect(() => {
     // Only run this if the user is logged in and we have their Firebase key
     if (isLoggedIn && user?.firebaseKey) {
@@ -131,42 +126,42 @@ const LandingPage = () => {
     {
       title: "Mobile Application Development",
       description: "Build responsive, scalable mobile applications with modern frameworks and best practices for optimal performance.",
-      image: Image1,
+      image: "https://images.unsplash.com/photo-1624298696100-a6aae4884881?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2JpbGUlMjBhcHAlMjBkZXZlbG9wbWVudCUyMGNvZGluZ3xlbnwxfHx8fDE3NTgwOTE5NTd8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
       features: ["iOS & Android Apps", "Cross-Platform Development", "UI/UX Design"],
       path: "/services/mobile-app-development",
     },
     {
       title: "Web Application Development",
       description: "Build responsive, scalable web applications with modern frameworks and best practices for optimal performance.",
-      image: Image2,
+      image: "https://images.unsplash.com/photo-1593720213681-e9a8778330a7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx3ZWIlMjBkZXZlbG9wbWVudCUyMHByb2dyYW1taW5nfGVufDF8fHx8MTc1ODA5MTk2Mnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
       features: ["Front-end Development", "Back-end Development", "Database Management"],
       path: "/services/web-app-development",
     },
     {
       title: "Digital Marketing",
       description: "Build responsive, scalable digital marketing strategies with modern frameworks and best practices for optimal performance.",
-      image: Image3,
+      image: "https://images.unsplash.com/photo-1599658880436-c61792e70672?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkaWdpdGFsJTIwbWFya2V0aW5nJTIwYW5hbHl0aWNzfGVufDF8fHx8MTc1ODA2NzMzOXww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
       features: ["SEO Optimization", "Social Media Marketing", "Content Strategy"],
       path: "/services/digital-marketing",
     },
     {
       title: "IT Talent Supply",
       description: "Find the right IT professionals to augment your team and drive projects forward with our comprehensive talent supply services.",
-      image: Image4,
+      image: "https://images.unsplash.com/photo-1563986768609-322da13575f3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxJVCUyMHRlYW0lMjBuZXR3b3JrfGVufDF8fHx8MTc1ODA5MTk2OXww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
       features: ["Temporary Staffing", "Permanent Placement", "Skill-based Hiring"],
       path: "/services/it-talent-supply",
     },
     {
       title: "Job Support & IT Consulting",
       description: "Get expert guidance and on-demand support to overcome technical challenges and ensure project success.",
-      image: Image5,
+      image: "https://images.unsplash.com/photo-1653212883731-4d5bc66e0181?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxidXNpbmVzcyUyMGNvbnN1bHRpbmclMjBzdXBwb3J0fGVufDF8fHx8MTc1ODA5MTk3M3ww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
       features: ["On-demand Support", "Project Guidance", "Technical Consulting"],
       path: "/services/job-support",
     },
     {
       title: "Cyber Security",
       description: "Protect your digital assets with our advanced cyber security solutions and proactive threat analysis.",
-      image: Image6,
+      image: "https://images.unsplash.com/photo-1606606767399-01e271823a2e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjeWJlciUyMHNlY3VyaXR5JTIwdGVjaG5vbG9neXxlbnwxfHx8fDE3NTgwNzAzNzB8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
       features: ["Threat Analysis", "Data Protection", "Security Audits"],
       path: "/services/cyber-security",
     },
@@ -175,8 +170,8 @@ const LandingPage = () => {
   const carouselItems = [
     {
       id: 1,
-      image: Image1,
-      alt: "TechXplorers Service 1",
+      image: "https://images.unsplash.com/photo-1624298696100-a6aae4884881?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2JpbGUlMjBhcHAlMjBkZXZlbG9wbWVudCUyMGNvZGluZ3xlbnwxfHx8fDE3NTgwOTE5NTd8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
+      alt: "Mobile Application Development",
       text: "Mobile Application Development",
       path: "/services/mobile-app-development",
       service: "Mobile Development",
@@ -186,19 +181,19 @@ const LandingPage = () => {
     },
     {
       id: 2,
-      image: Image2,
-      alt: "TechXplorers Service 2",
+      image: "https://images.unsplash.com/photo-1593720213681-e9a8778330a7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx3ZWIlMjBkZXZlbG9wbWVudCUyMHByb2dyYW1taW5nfGVufDF8fHx8MTc1ODA5MTk2Mnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
+      alt: "Web Application Development",
       text: "Web Application Development",
       path: "/services/web-app-development",
       service: "Web Development",
-      description: "Build responsive and scalable web applications for optimal performance.",
+      description: "Build responsive, scalable web applications with modern frameworks and best practices for optimal performance.",
       features: ["Full-Stack Development", "Modern Frameworks", "Cloud Integration"],
       stats: { rating: "4.8", projects: "450+", timeline: "4-10 weeks" }
     },
     {
       id: 3,
-      image: Image3,
-      alt: "TechXplorers Service 3",
+      image: "https://images.unsplash.com/photo-1599658880436-c61792e70672?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkaWdpdGFsJTIwbWFya2V0aW5nJTIwYW5hbHl0aWNzfGVufDF8fHx8MTc1ODA2NzMzOXww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
+      alt: "Digital Marketing",
       text: "Digital Marketing",
       path: "/services/digital-marketing",
       service: "Digital Marketing",
@@ -208,8 +203,19 @@ const LandingPage = () => {
     },
     {
       id: 4,
-      image: Image4,
-      alt: "Job Support Profile",
+      image: "https://images.unsplash.com/photo-1563986768609-322da13575f3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxJVCUyMHRlYW0lMjBuZXR3b3JrfGVufDF8fHx8MTc1ODA5MTk2OXww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
+      alt: "IT Talent Supply",
+      text: "IT Talent Supply",
+      path: "/services/it-talent-supply",
+      service: "IT Talent Supply",
+      description: "Connect with top-tier IT professionals and build exceptional teams to drive your technology initiatives forward.",
+      features: ["Skilled Professionals", "Flexible Staffing", "Team Augmentation"],
+      stats: { rating: "4.9", projects: "200+", timeline: "1-3 weeks" }
+    },
+    {
+      id: 5,
+      image: "https://images.unsplash.com/photo-1653212883731-4d5bc66e0181?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxidXNpbmVzcyUyMGNvbnN1bHRpbmclMjBzdXBwb3J0fGVufDF8fHx8MTc1ODA5MTk3M3ww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
+      alt: "Job Support & IT Consulting",
       text: "Job Support & IT Consulting",
       path: "/services/job-support",
       isJobSupport: true,
@@ -219,28 +225,18 @@ const LandingPage = () => {
       stats: { rating: "4.8", projects: "800+", timeline: "Ongoing" }
     },
     {
-      id: 5,
-      image: Image5,
-      alt: "TechXplorers Service 5",
-      text: "IT Talent Supply",
-      path: "/services/it-talent-supply",
-      service: "IT Talent Supply",
-      description: "Connect with top-tier IT professionals and build exceptional teams to drive your technology initiatives forward.",
-      features: ["Skilled Professionals", "Flexible Staffing", "Team Augmentation"],
-      stats: { rating: "4.9", projects: "200+", timeline: "1-3 weeks" }
-    },
-    {
       id: 6,
-      image: Image6,
-      alt: "TechXplorers Service 6",
+      image: "https://images.unsplash.com/photo-1606606767399-01e271823a2e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjeWJlciUyMHNlY3VyaXR5JTIwdGVjaG5vbG9neXxlbnwxfHx8fDE3NTgwNzAzNzB8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
+      alt: "Cyber Security",
       text: "Cyber Security",
       path: "/services/cyber-security",
       service: "Cyber Security",
       description: "Comprehensive security solutions to protect your digital assets and ensure data integrity across all platforms.",
       features: ["Threat Assessment", "Security Audits", "Compliance Management"],
       stats: { rating: "4.9", projects: "150+", timeline: "3-8 weeks" }
-    }
+    },
   ];
+
 
   
   const handleBookServiceClick = (item) => {
@@ -403,12 +399,16 @@ const LandingPage = () => {
                     max-width: 500px;
                     color: var(--text-color); /* Ensure paragraph text uses text color */
                 }
+                      .description {
+                   margin-left:70px;
+                }
                 
                 .feature-pills {
                     display: flex;
                     gap: 0.75rem;
                     flex-wrap: wrap;
                     margin-bottom: 2rem;
+                    margin-left:70px;
                 }
 
                 .feature-pills span {
@@ -795,6 +795,7 @@ const LandingPage = () => {
                     display: flex;
                     gap: 2rem;
                     align-items: center;
+                    margin-left:80px;
                 }
 
                 .stat-item {
@@ -956,11 +957,12 @@ const LandingPage = () => {
                     .hero-carousel-text {
                         margin-bottom: 3rem;
                     }
-                    .hero-carousel-buttons, .feature-pills, .hero-stats {
+                    .hero-carousel-buttons, .feature-pills, .hero-stats, .description, .hero-stats {
                         justify-content: center;
+                        margin-right:60px;
                     }
                      .hero-carousel-buttons {
-                       margin-left:10px;
+                       margin-left:60px;
                      }   
                     .hero-carousel-image-wrapper {
                         order: -1;
@@ -987,272 +989,71 @@ const LandingPage = () => {
       <div className={`landing-page-modern ${isDarkMode ? 'dark-mode-active' : ''}`}>
          <CustomNavbar />
         {/* Hero Section */}
-        <section 
-      ref={sectionRef}
-      className="hero-carousel-section"
-      style={{
-        position: 'relative',
-        overflow: 'hidden',
-        padding: '60px 0',
-        background: 'linear-gradient(90deg, #f1f1f1ff 0%, #ffffff 100%)', // Light gradient background
-        minHeight: '80vh',
-      }}
-    >
-      {/* Background Decorative Circles */}
-      <div 
-        style={{
-          position: 'absolute',
-          width: '300px',
-          height: '300px',
-          borderRadius: '50%',
-          filter: 'blur(120px)',
-          zIndex: 0,
-          top: '-60px',
-          left: '-60px',
-          background: 'radial-gradient(circle, rgba(120, 90, 255, 0.25), transparent 70%)'
-        }}
-      />
-      <div 
-        style={{
-          position: 'absolute',
-          width: '300px',
-          height: '300px',
-          borderRadius: '50%',
-          filter: 'blur(120px)',
-          zIndex: 0,
-          bottom: '-80px',
-          right: '-80px',
-          background: 'radial-gradient(circle, rgba(0, 180, 255, 0.25), transparent 70%)'
-        }}
-      />
-
-      <Container>
-        <Carousel indicators={true} interval={3000}>
-          {carouselItems.map((item) => (
-            <Carousel.Item key={item.id}>
-              <div className="carousel-slide-content">
-                <Row className="align-items-center w-100">
-                  <Col lg={6} className="hero-carousel-text">
-                    {/* Service Badge */}
-                    <div 
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        background: 'linear-gradient(90deg, #e0f2fe 0%, #f3e8ff 100%)',
-                        color: '#4f46e5',
-                        padding: '8px 16px',
-                        borderRadius: '20px',
-                        fontSize: '0.85rem',
-                        fontWeight: '600',
-                        marginBottom: '16px'
-                      }}
-                    >
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#3b82f6' }}></div>
-                      TechXplorers Services
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#8b5cf6' }}></div>
-                    </div>
-
-                    {/* Title */}
-                    <motion.h1
-                      initial={{ opacity: 0, y: 30 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.2, duration: 0.6 }}
-                      style={{
-                        fontSize: '3.2rem',
-                        fontWeight: 800,
-                        lineHeight: 1.2,
-                        marginBottom: '1.5rem',
-                        color: 'var(--secondary-color)'
-                      }}
-                    >
-                      {item.text.split(' ').slice(0, -1).join(' ')} <span style={{ color: 'var(--primary-color)' }}>{item.text.split(' ').slice(-1).join(' ')}</span>
-                    </motion.h1>
-
-                    {/* Description */}
-                    <motion.p
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.3, duration: 0.6 }}
-                      style={{
-                        fontSize: '1.125rem',
-                        marginLeft:'5rem',
-                        lineHeight: 1.6,
-                        marginBottom: '1.5rem',
-                        maxWidth: '500px',
-                        color: 'var(--text-color)'
-                      }}
-                    >
-                      {item.description}
-                    </motion.p>
-
-                    {/* Features Pills */}
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.4, duration: 0.6 }}
-                      style={{
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        gap: '8px',
-                        marginLeft:'5rem',
-                        marginBottom: '1.5rem'
-                      }}
-                    >
-                      {item.features.map((feature, fIndex) => (
-                        <span 
-                          key={fIndex}
-                          style={{
-                            background: 'rgba(255, 255, 255, 0.8)',
-                            color: '#1e293b',
-                            padding: '6px 12px',
-                            borderRadius: '8px',
-                            fontSize: '0.85rem',
-                            fontWeight: '500'
-                          }}
-                        >
-                          {feature}
-                        </span>
-                      ))}
-                    </motion.div>
-
-                    {/* Buttons */}
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.5, duration: 0.6 }}
-                      style={{
-                        display: 'flex',
-                        gap: '12px',
-                        marginLeft:'11rem',
-                        flexWrap: 'wrap',
-                        justifyContent: 'flex-start'
-                      }}
-                    >
-                      {(() => {
-                        // Standardize the service name for comparison
-                        const serviceToCheck = item.isJobSupport 
-                          ? 'job supporting' 
-                          : (item.service || '').trim().toLowerCase();
-
-                        // Check if the service is active
-                        const isServiceActive = activeServices.includes(serviceToCheck);
-
-                        if (isServiceActive) {
-                          // If active, show "Your Dashboard"
-                          return (
-                            <Link to="/clientdashboard" className="btn-modern btn-primary-modern">
-                              Your Dashboard →
-                            </Link>
-                          );
-                        } else {
-                          // Otherwise, show "Book a Service"
-                          return (
-                            <div onClick={() => handleBookServiceClick(item)} className="btn-modern btn-primary-modern" style={{ cursor: 'pointer' }}>
-                              Book a Service
-                            </div>
-                          );
-                        }
-                      })()}
-                      <Link to={item.path} className="btn-modern btn-secondary-modern">Learn More</Link>
-                    </motion.div>
-
-                    {/* Stats */}
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.6, duration: 0.6 }}
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        marginTop: '2rem',
-                        gap: '5rem'
-                      }}
-                    >
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--secondary-color)' }}>{item.stats.rating}</div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-color)' }}>Client Rating</div>
-                      </div>
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--secondary-color)' }}>{item.stats.projects}</div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-color)' }}>Projects Done</div>
-                      </div>
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--secondary-color)' }}>{item.stats.timeline}</div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-color)' }}>Avg Timeline</div>
-                      </div>
-                    </motion.div>
-                  </Col>
-                  <Col lg={6} className="hero-carousel-image-wrapper d-none d-lg-block">
-                    <div style={{
-                      position: 'relative',
-                      borderRadius: '12px',
-                      overflow: 'hidden',
-                      boxShadow: '0 10px 20px rgba(0,0,0,0.1)',
-                      background: 'white'
-                    }}>
-                      <img
-                        src={item.image}
-                        alt={item.alt}
-                        className="hero-carousel-image"
-                        style={{
-                          width: '100%',
-                          height: 'auto',
-                          objectFit: 'cover',
-                          borderRadius: '12px'
-                        }}
-                      />
-                      {/* Active Now Badge */}
-                      <div 
-                        style={{
-                          position: 'absolute',
-                          bottom: '10px',
-                          right: '10px',
-                          background: 'rgba(255, 255, 255, 0.95)',
-                          color: '#1e293b',
-                          padding: '12px',
-                          borderRadius: '8px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          boxShadow: '0 4px 10px rgba(0,0,0,0.08)',
-                          backdropFilter: 'blur(4px)',
-                          zIndex: 1
-                        }}
-                      >
-                        <div 
-                          style={{
-                            width: '32px',
-                            height: '32px',
-                            borderRadius: '50%',
-                            background: 'linear-gradient(135deg, #6D28D9 0%, #3B82F6 100%)',
-                            display: 'flex',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            color: 'white'
-                          }}
-                        >
-                          {item.service === 'Mobile Development' && <Smartphone size={16} />}
-                          {item.service === 'Web Development' && <Code size={16} />}
-                          {item.service === 'Digital Marketing' && <TrendingUp size={16} />}
-                          {item.service === 'IT Talent Supply' && <Users size={16} />}
-                          {item.service === 'Job Supporting' && <HeadphonesIcon size={16} />}
-                          {item.service === 'Cyber Security' && <Shield size={16} />}
+        <section className="hero-carousel-section">
+          <Container>
+            <Carousel indicators={true} interval={3000}>
+              {carouselItems.map((item) => (
+                <Carousel.Item key={item.id}>
+                  <div className="carousel-slide-content">
+                    <Row className="align-items-center w-100">
+                      <Col lg={6} className="hero-carousel-text">
+                        <div className="pill-badge">TechXplorers Services</div>
+                        <h1>{item.text.split(' ').slice(0, -1).join(' ')} <span>{item.text.split(' ').slice(-1).join(' ')}</span></h1>
+                        <p className="description">{item.description}</p>
+                        <div className="feature-pills">
+                          {item.features.map((feature, fIndex) => (
+                            <span key={fIndex}>{feature}</span>
+                          ))}
                         </div>
-                        <div>
-                          <div style={{ fontWeight: '600', fontSize: '0.85rem' }}>Active Now</div>
-                          <div style={{ fontSize: '0.75rem' }}>{item.stats.projects} satisfied clients</div>
+                    <div className="hero-carousel-buttons">
+                          {(() => {
+                            // Standardize the service name from the carousel item for a reliable comparison
+                            const serviceToCheck = item.isJobSupport 
+                              ? 'job supporting' 
+                              : (item.service || '').trim().toLowerCase();
+
+                            // DEBUG: Check what service name is being compared on each slide
+
+                            const isServiceActive = activeServices.includes(serviceToCheck);
+
+                            if (isServiceActive) {
+                              // If the service is active, show "Your Dashboard"
+                              return (
+                                <Link to="/clientdashboard" className="btn-modern btn-primary-modern">
+                                  Your Dashboard
+                                </Link>
+                              );
+                            } else {
+                              // Otherwise, show "Book a Service"
+                              return (
+                                <div onClick={() => handleBookServiceClick(item)} className="btn-modern btn-primary-modern" style={{ cursor: 'pointer' }}>
+                                  Book a Service
+                                </div>
+                              );
+                            }
+                          })()}
+                          <Link to={item.path} className="btn-modern btn-secondary-modern">Learn More</Link>
                         </div>
-                      </div>
-                    </div>
-                  </Col>
-                </Row>
-              </div>
-            </Carousel.Item>
-          ))}
-        </Carousel>
-      </Container>
-    </section>
+                        <div className="hero-stats">
+                          <div className="stat-item"><div className="icon"><StarIcon /></div><div className="text"><strong>{item.stats.rating}</strong><span>Client Rating</span></div></div>
+                          <div className="stat-item"><div className="icon"><UsersIcon /></div><div className="text"><strong>{item.stats.projects}</strong><span>Projects Done</span></div></div>
+                          <div className="stat-item"><div className="icon"><ClockIcon /></div><div className="text"><strong>{item.stats.timeline}</strong><span>Avg Timeline</span></div></div>
+                        </div>
+                      </Col>
+                      <Col lg={6} className="hero-carousel-image-wrapper d-none d-lg-block">
+                        <img
+                          src={item.image}
+                          alt={item.alt}
+                          className="hero-carousel-image"
+                        />
+                      </Col>
+                    </Row>
+                  </div>
+                </Carousel.Item>
+              ))}
+            </Carousel>
+          </Container>
+        </section>
 
         {/* Services Section - ANIMATED with STAGGERED CARDS */}
         <section 
