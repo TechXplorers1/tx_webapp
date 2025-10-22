@@ -5962,28 +5962,98 @@ html.dark-mode .notify-success-message {
 
             {/* 1. All Services Grid */}
 <div className="all-services-section" style={{ maxWidth: '1200px', margin: '0 auto', padding: '50px 0' }}>
-  <h2 
-    style={{
-      textAlign: 'center',
-      fontSize: '2.5rem',
-      fontWeight: '700',
-      marginBottom: '10px',
-      // Apply the linear gradient to the text itself
-      background: 'linear-gradient(90deg, #1e293b 0%, #6d28d9 100%)', // Dark Blue to Purple
-      WebkitBackgroundClip: 'text', // Clip the background to the text (for Chrome, Safari)
-      WebkitTextFillColor: 'transparent', // Make the text color transparent to show the background
-      MozBackgroundClip: 'text', // For Firefox
-      MozTextFillColor: 'transparent', // For Firefox
-      backgroundClip: 'text', // Standard property
-      color: 'transparent', // Fallback for older browsers
-    }}
-  >
-    All Services
-  </h2>
-  <p style={{ textAlign: 'center', fontSize: '1rem', marginBottom: '40px', color: 'var(--text-secondary)' }}>
-    Explore our comprehensive suite of technology services designed to accelerate your business growth and transform your digital presence.
-  </p>
+  {/* New Header Design */}
+  <div style={{
+    textAlign: 'center',
+    marginBottom: '30px'
+  }}>
+    {/* Premium Services Badge */}
+    <div style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '8px',
+      background: 'linear-gradient(90deg, #e0f2fe 0%, #f3e8ff 100%)',
+      color: '#4f46e5',
+      padding: '8px 16px',
+      borderRadius: '20px',
+      fontSize: '0.85rem',
+      fontWeight: '600',
+      marginBottom: '16px'
+    }}>
+      <div style={{
+        width: '8px',
+        height: '8px',
+        borderRadius: '50%',
+        backgroundColor: '#3b82f6'
+      }}></div>
+      Premium Services
+      <div style={{
+        width: '8px',
+        height: '8px',
+        borderRadius: '50%',
+        backgroundColor: '#8b5cf6'
+      }}></div>
+    </div>
 
+    {/* Main Title with Gradient */}
+    <h2 
+      style={{
+        fontSize: '2.5rem',
+        fontWeight: '700',
+        marginBottom: '10px',
+        // Apply the linear gradient to the text itself
+        background: 'linear-gradient(90deg, #1e293b 0%, #6d28d9 100%)', // Dark Blue to Purple
+        WebkitBackgroundClip: 'text', // Clip the background to the text (for Chrome, Safari)
+        WebkitTextFillColor: 'transparent', // Make the text color transparent to show the background
+        MozBackgroundClip: 'text', // For Firefox
+        MozTextFillColor: 'transparent', // For Firefox
+        backgroundClip: 'text', // Standard property
+        color: 'transparent', // Fallback for older browsers
+      }}
+    >
+      All Services
+    </h2>
+
+    {/* Subtitle */}
+    <p style={{ 
+      fontSize: '1rem', 
+      color: 'var(--text-secondary)', 
+      marginBottom: '40px', 
+      lineHeight: 1.6,
+      maxWidth: '800px',
+      margin: '0 auto'
+    }}>
+      Explore our comprehensive suite of technology services designed to accelerate your business growth and transform your digital presence.
+    </p>
+
+    {/* Decorative Line */}
+    {/* <div style={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: '10px',
+      width: '100%'
+    }}>
+      <div style={{
+        flex: 1,
+        height: '2px',
+        background: 'linear-gradient(90deg, #3b82f6 0%, #6d28d9 100%)'
+      }}></div>
+      <div style={{
+        width: '10px',
+        height: '10px',
+        borderRadius: '50%',
+        background: 'linear-gradient(90deg, #3b82f6 0%, #6d28d9 100%)'
+      }}></div>
+      <div style={{
+        flex: 1,
+        height: '2px',
+        background: 'linear-gradient(90deg, #6d28d9 0%, #3b82f6 100%)'
+      }}></div>
+    </div> */}
+  </div>
+
+  {/* Rest of the service cards grid */}
   <div className="services-grid-new">
     {servicesData.map((service, index) => {
       const isActive = activeServices.some(active => active.title === service.title);
@@ -6282,26 +6352,45 @@ html.dark-mode .notify-success-message {
                 </button>
               )}
 
-              {/* Add "Featured" Badge (visible only on hover) */}
+              {/* Add "Active" and "Featured" Badges (visible only on hover) */}
               <div
-                className={`featured-badge ${isHovered ? 'badge-visible' : 'badge-hidden'}`}
+                className={`badge-container ${isHovered ? 'badges-visible' : 'badges-hidden'}`}
                 style={{
                   position: 'absolute',
                   top: '10px',
                   right: '10px',
-                  background: 'rgba(255, 255, 255, 0.8)',
-                  color: '#3b82f6',
-                  padding: '4px 8px',
-                  borderRadius: '12px',
-                  fontSize: '0.75rem',
-                  fontWeight: '600',
+                  display: 'flex',
+                  gap: '8px',
                   zIndex: 1,
                   opacity: isHovered ? 1 : 0,
                   transform: isHovered ? 'translateY(0)' : 'translateY(-10px)',
                   transition: 'opacity 0.3s ease, transform 0.3s ease'
                 }}
               >
-                Featured
+                <div
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.8)',
+                    color: '#3b82f6',
+                    padding: '4px 8px',
+                    borderRadius: '12px',
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                  }}
+                >
+                  Active
+                </div>
+                <div
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.8)',
+                    color: '#6d28d9',
+                    padding: '4px 8px',
+                    borderRadius: '12px',
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                  }}
+                >
+                  Featured
+                </div>
               </div>
             </>
           ) : (

@@ -1925,18 +1925,6 @@ Please provide a summary no longer than 150 words.`;
               onChange={(e) => setApplicationSearchQuery(e.target.value)}
             />
           </div>
-          {/* NEW: Filter by Client Status */}
-                <div className="filter-dropdown" style={{ minWidth: '160px' }}>
-                    <select
-                        value={clientStatusFilter}
-                        onChange={handleClientStatusFilterChange}
-                        title="Filter clients by status"
-                    >
-                        <option value="active">Active Clients</option>
-                        <option value="inactive">Inactive Clients</option>
-                    </select>
-                    <i className="fas fa-chevron-down"></i>
-                </div>
           <div className="filter-dropdown">
             <select value={applicationFilterEmployee} onChange={handleApplicationFilterEmployeeChange}>
               <option value="">Filter by Employee</option>
@@ -1956,6 +1944,18 @@ Please provide a summary no longer than 150 words.`;
             </select>
             <i className="fas fa-chevron-down"></i>
           </div>
+          {/* NEW: Filter by Client Status */}
+                <div className="filter-dropdown" style={{ minWidth: '160px' }}>
+                    <select
+                        value={clientStatusFilter}
+                        onChange={handleClientStatusFilterChange}
+                        title="Filter clients by status"
+                    >
+                        <option value="active">Active Clients</option>
+                        <option value="inactive">Inactive Clients</option>
+                    </select>
+                    <i className="fas fa-chevron-down"></i>
+                </div>
         </div>
 
 

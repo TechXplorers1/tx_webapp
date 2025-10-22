@@ -15,6 +15,8 @@ import L from 'leaflet';
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconRetina from 'leaflet/dist/images/marker-icon-2x.png';
 import shadow from 'leaflet/dist/images/marker-shadow.png';
+import { motion } from "framer-motion";
+import { Star, Users, Clock, ArrowRight, Smartphone, Code, TrendingUp, HeadphonesIcon, Shield } from "lucide-react";
 
 // === Leaflet Icon Fix (Kept from previous correction) ===
 delete L.Icon.Default.prototype._getIconUrl;
@@ -90,6 +92,9 @@ const LandingPage = () => {
   const [worldRef, worldInView] = useInView({ triggerOnce: true, threshold: 0.1 });
   const [footerRef, footerInView] = useInView({ triggerOnce: true, threshold: 0.1 });
   // Note: carouselRef removed as carousel animation is handled by CSS on active slide
+
+  const [sectionRef, sectionInView] = useInView({ triggerOnce: true, threshold: 0.1 });
+
 
   useEffect(() => {
     // Only run this if the user is logged in and we have their Firebase key
@@ -982,71 +987,272 @@ const LandingPage = () => {
       <div className={`landing-page-modern ${isDarkMode ? 'dark-mode-active' : ''}`}>
          <CustomNavbar />
         {/* Hero Section */}
-        <section className="hero-carousel-section">
-          <Container>
-            <Carousel indicators={true} interval={3000}>
-              {carouselItems.map((item) => (
-                <Carousel.Item key={item.id}>
-                  <div className="carousel-slide-content">
-                    <Row className="align-items-center w-100">
-                      <Col lg={6} className="hero-carousel-text">
-                        <div className="pill-badge">TechXplorers Services</div>
-                        <h1>{item.text.split(' ').slice(0, -1).join(' ')} <span>{item.text.split(' ').slice(-1).join(' ')}</span></h1>
-                        <p>{item.description}</p>
-                        <div className="feature-pills">
-                          {item.features.map((feature, fIndex) => (
-                            <span key={fIndex}>{feature}</span>
-                          ))}
-                        </div>
-                    <div className="hero-carousel-buttons">
-                          {(() => {
-                            // Standardize the service name from the carousel item for a reliable comparison
-                            const serviceToCheck = item.isJobSupport 
-                              ? 'job supporting' 
-                              : (item.service || '').trim().toLowerCase();
+        <section 
+      ref={sectionRef}
+      className="hero-carousel-section"
+      style={{
+        position: 'relative',
+        overflow: 'hidden',
+        padding: '60px 0',
+        background: 'linear-gradient(90deg, #f1f1f1ff 0%, #ffffff 100%)', // Light gradient background
+        minHeight: '80vh',
+      }}
+    >
+      {/* Background Decorative Circles */}
+      <div 
+        style={{
+          position: 'absolute',
+          width: '300px',
+          height: '300px',
+          borderRadius: '50%',
+          filter: 'blur(120px)',
+          zIndex: 0,
+          top: '-60px',
+          left: '-60px',
+          background: 'radial-gradient(circle, rgba(120, 90, 255, 0.25), transparent 70%)'
+        }}
+      />
+      <div 
+        style={{
+          position: 'absolute',
+          width: '300px',
+          height: '300px',
+          borderRadius: '50%',
+          filter: 'blur(120px)',
+          zIndex: 0,
+          bottom: '-80px',
+          right: '-80px',
+          background: 'radial-gradient(circle, rgba(0, 180, 255, 0.25), transparent 70%)'
+        }}
+      />
 
-                            // DEBUG: Check what service name is being compared on each slide
+      <Container>
+        <Carousel indicators={true} interval={3000}>
+          {carouselItems.map((item) => (
+            <Carousel.Item key={item.id}>
+              <div className="carousel-slide-content">
+                <Row className="align-items-center w-100">
+                  <Col lg={6} className="hero-carousel-text">
+                    {/* Service Badge */}
+                    <div 
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        background: 'linear-gradient(90deg, #e0f2fe 0%, #f3e8ff 100%)',
+                        color: '#4f46e5',
+                        padding: '8px 16px',
+                        borderRadius: '20px',
+                        fontSize: '0.85rem',
+                        fontWeight: '600',
+                        marginBottom: '16px'
+                      }}
+                    >
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#3b82f6' }}></div>
+                      TechXplorers Services
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#8b5cf6' }}></div>
+                    </div>
 
-                            const isServiceActive = activeServices.includes(serviceToCheck);
+                    {/* Title */}
+                    <motion.h1
+                      initial={{ opacity: 0, y: 30 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2, duration: 0.6 }}
+                      style={{
+                        fontSize: '3.2rem',
+                        fontWeight: 800,
+                        lineHeight: 1.2,
+                        marginBottom: '1.5rem',
+                        color: 'var(--secondary-color)'
+                      }}
+                    >
+                      {item.text.split(' ').slice(0, -1).join(' ')} <span style={{ color: 'var(--primary-color)' }}>{item.text.split(' ').slice(-1).join(' ')}</span>
+                    </motion.h1>
 
-                            if (isServiceActive) {
-                              // If the service is active, show "Your Dashboard"
-                              return (
-                                <Link to="/clientdashboard" className="btn-modern btn-primary-modern">
-                                  Your Dashboard
-                                </Link>
-                              );
-                            } else {
-                              // Otherwise, show "Book a Service"
-                              return (
-                                <div onClick={() => handleBookServiceClick(item)} className="btn-modern btn-primary-modern" style={{ cursor: 'pointer' }}>
-                                  Book a Service
-                                </div>
-                              );
-                            }
-                          })()}
-                          <Link to={item.path} className="btn-modern btn-secondary-modern">Learn More</Link>
+                    {/* Description */}
+                    <motion.p
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3, duration: 0.6 }}
+                      style={{
+                        fontSize: '1.125rem',
+                        marginLeft:'5rem',
+                        lineHeight: 1.6,
+                        marginBottom: '1.5rem',
+                        maxWidth: '500px',
+                        color: 'var(--text-color)'
+                      }}
+                    >
+                      {item.description}
+                    </motion.p>
+
+                    {/* Features Pills */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.4, duration: 0.6 }}
+                      style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '8px',
+                        marginLeft:'5rem',
+                        marginBottom: '1.5rem'
+                      }}
+                    >
+                      {item.features.map((feature, fIndex) => (
+                        <span 
+                          key={fIndex}
+                          style={{
+                            background: 'rgba(255, 255, 255, 0.8)',
+                            color: '#1e293b',
+                            padding: '6px 12px',
+                            borderRadius: '8px',
+                            fontSize: '0.85rem',
+                            fontWeight: '500'
+                          }}
+                        >
+                          {feature}
+                        </span>
+                      ))}
+                    </motion.div>
+
+                    {/* Buttons */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.5, duration: 0.6 }}
+                      style={{
+                        display: 'flex',
+                        gap: '12px',
+                        marginLeft:'11rem',
+                        flexWrap: 'wrap',
+                        justifyContent: 'flex-start'
+                      }}
+                    >
+                      {(() => {
+                        // Standardize the service name for comparison
+                        const serviceToCheck = item.isJobSupport 
+                          ? 'job supporting' 
+                          : (item.service || '').trim().toLowerCase();
+
+                        // Check if the service is active
+                        const isServiceActive = activeServices.includes(serviceToCheck);
+
+                        if (isServiceActive) {
+                          // If active, show "Your Dashboard"
+                          return (
+                            <Link to="/clientdashboard" className="btn-modern btn-primary-modern">
+                              Your Dashboard →
+                            </Link>
+                          );
+                        } else {
+                          // Otherwise, show "Book a Service"
+                          return (
+                            <div onClick={() => handleBookServiceClick(item)} className="btn-modern btn-primary-modern" style={{ cursor: 'pointer' }}>
+                              Book a Service
+                            </div>
+                          );
+                        }
+                      })()}
+                      <Link to={item.path} className="btn-modern btn-secondary-modern">Learn More</Link>
+                    </motion.div>
+
+                    {/* Stats */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.6, duration: 0.6 }}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        marginTop: '2rem',
+                        gap: '5rem'
+                      }}
+                    >
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--secondary-color)' }}>{item.stats.rating}</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-color)' }}>Client Rating</div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--secondary-color)' }}>{item.stats.projects}</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-color)' }}>Projects Done</div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--secondary-color)' }}>{item.stats.timeline}</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-color)' }}>Avg Timeline</div>
+                      </div>
+                    </motion.div>
+                  </Col>
+                  <Col lg={6} className="hero-carousel-image-wrapper d-none d-lg-block">
+                    <div style={{
+                      position: 'relative',
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                      boxShadow: '0 10px 20px rgba(0,0,0,0.1)',
+                      background: 'white'
+                    }}>
+                      <img
+                        src={item.image}
+                        alt={item.alt}
+                        className="hero-carousel-image"
+                        style={{
+                          width: '100%',
+                          height: 'auto',
+                          objectFit: 'cover',
+                          borderRadius: '12px'
+                        }}
+                      />
+                      {/* Active Now Badge */}
+                      <div 
+                        style={{
+                          position: 'absolute',
+                          bottom: '10px',
+                          right: '10px',
+                          background: 'rgba(255, 255, 255, 0.95)',
+                          color: '#1e293b',
+                          padding: '12px',
+                          borderRadius: '8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          boxShadow: '0 4px 10px rgba(0,0,0,0.08)',
+                          backdropFilter: 'blur(4px)',
+                          zIndex: 1
+                        }}
+                      >
+                        <div 
+                          style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            background: 'linear-gradient(135deg, #6D28D9 0%, #3B82F6 100%)',
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            color: 'white'
+                          }}
+                        >
+                          {item.service === 'Mobile Development' && <Smartphone size={16} />}
+                          {item.service === 'Web Development' && <Code size={16} />}
+                          {item.service === 'Digital Marketing' && <TrendingUp size={16} />}
+                          {item.service === 'IT Talent Supply' && <Users size={16} />}
+                          {item.service === 'Job Supporting' && <HeadphonesIcon size={16} />}
+                          {item.service === 'Cyber Security' && <Shield size={16} />}
                         </div>
-                        <div className="hero-stats">
-                          <div className="stat-item"><div className="icon"><StarIcon /></div><div className="text"><strong>{item.stats.rating}</strong><span>Client Rating</span></div></div>
-                          <div className="stat-item"><div className="icon"><UsersIcon /></div><div className="text"><strong>{item.stats.projects}</strong><span>Projects Done</span></div></div>
-                          <div className="stat-item"><div className="icon"><ClockIcon /></div><div className="text"><strong>{item.stats.timeline}</strong><span>Avg Timeline</span></div></div>
+                        <div>
+                          <div style={{ fontWeight: '600', fontSize: '0.85rem' }}>Active Now</div>
+                          <div style={{ fontSize: '0.75rem' }}>{item.stats.projects} satisfied clients</div>
                         </div>
-                      </Col>
-                      <Col lg={6} className="hero-carousel-image-wrapper d-none d-lg-block">
-                        <img
-                          src={item.image}
-                          alt={item.alt}
-                          className="hero-carousel-image"
-                        />
-                      </Col>
-                    </Row>
-                  </div>
-                </Carousel.Item>
-              ))}
-            </Carousel>
-          </Container>
-        </section>
+                      </div>
+                    </div>
+                  </Col>
+                </Row>
+              </div>
+            </Carousel.Item>
+          ))}
+        </Carousel>
+      </Container>
+    </section>
 
         {/* Services Section - ANIMATED with STAGGERED CARDS */}
         <section 
