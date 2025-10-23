@@ -5858,6 +5858,7 @@ html.dark-mode .notify-success-message {
                     .dashboard-btn-new {
                         background-color: var(--card-accent-color) !important;
                         color: white !important;
+                        width:100%;
                         border: none;
                         font-size: 0.95rem;
     transition: background-color 0.2s, transform 0.2s;

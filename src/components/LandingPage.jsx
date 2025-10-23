@@ -620,7 +620,7 @@ const LandingPage = () => {
   font-weight: 500;
   transition: color 0.3s, background-color 0.3s;
   margin-top: auto;
-  padding: 8px 16px;
+  padding: 5px 16px;
   border: 2px solid #3b82f6; /* Blue border */
   border-radius: 8px;
   display: inline-block;
