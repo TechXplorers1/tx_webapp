@@ -549,7 +549,7 @@ const LandingPage = () => {
                 }
                 .service-card-modern:hover {
                        transform: translateY(-2px);
-  box-shadow: 10px 10px 15px 3px rgba(0,0,0,0.1), 10px 4px 6px -2px rgba(0,0,0,0.05);
+  box-shadow: 1px 1px 5px 1px rgba(0,0,0,0.1), 10px 4px 6px 12px rgba(0, 0, 0, 0.23);
   transition: transform 0.2s ease;
                 }
   .service-card-modern:hover .service-card-body h3 {
