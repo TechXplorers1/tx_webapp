@@ -126,7 +126,7 @@ const LandingPage = () => {
     {
       title: "Mobile Application Development",
       description: "Build responsive, scalable mobile applications with modern frameworks and best practices for optimal performance.",
-      image: "https://images.unsplash.com/photo-1624298696100-a6aae4884881?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2JpbGUlMjBhcHAlMjBkZXZlbG9wbWVudCUyMGNvZGluZ3xlbnwxfHx8fDE3NTgwOTE5NTd8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
+      image: Image1,
       features: ["iOS & Android Apps", "Cross-Platform Development", "UI/UX Design"],
       path: "/services/mobile-app-development",
     },
@@ -170,7 +170,7 @@ const LandingPage = () => {
   const carouselItems = [
     {
       id: 1,
-      image: "https://images.unsplash.com/photo-1624298696100-a6aae4884881?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2JpbGUlMjBhcHAlMjBkZXZlbG9wbWVudCUyMGNvZGluZ3xlbnwxfHx8fDE3NTgwOTE5NTd8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
+      image: Image1,
       alt: "Mobile Application Development",
       text: "Mobile Application Development",
       path: "/services/mobile-app-development",
