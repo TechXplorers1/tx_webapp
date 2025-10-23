@@ -5208,20 +5208,38 @@ html.dark-mode .notify-success-message {
           grid-template-columns: 1fr;
         }
         .service-card {
-            background-color: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 30px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+         position: relative;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  border: 1px solid rgba(200, 200, 255, 0.2);
         }
         .service-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            transform: translateY(-8px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
         }
+
+        .service-card .icon-box {
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.service-card:nth-child(1) .icon-box { background: linear-gradient(135deg, #4b6bff, #5c5cff); }
+.service-card:nth-child(2) .icon-box { background: linear-gradient(135deg, #a14bff, #d94bff); }
+.service-card:nth-child(3) .icon-box { background: linear-gradient(135deg, #2b8cff, #4bc1ff); }
+.service-card:nth-child(4) .icon-box { background: linear-gradient(135deg, #ff6b6b, #ff8c4b); }
+.service-card:nth-child(5) .icon-box { background: linear-gradient(135deg, #22c55e, #16a34a); }
+.service-card:nth-child(6) .icon-box { background: linear-gradient(135deg, #1e293b, #334155); }
+
         .card-icon-container {
             width: 60px;
             height: 60px;
@@ -5243,19 +5261,32 @@ html.dark-mode .notify-success-message {
         .cybersecurity-icon { background-color: #fee2e2; color: #ef4444; }
 
         .service-card h3 {
-            font-size: 18px;
-            font-weight: 600;
-            margin: 15px 0 5px;
-            color: var(--text-primary);
+           font-weight: 700;
+  color: #111827;
+  margin-bottom: 0.5rem;
         }
         .service-card p {
-            font-size: 14px;
-            line-height: 1.5;
-            margin: 0;
-            color: var(--text-secondary);
-            flex-grow: 1; /* Makes sure the text takes available space */
+           color: #4b5563;
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
         }
-        .dashboard-btn, .book-now-btn {
+
+   .service-card .book-now-btn-new {
+  display: inline-block;
+  background: linear-gradient(90deg, #4b6bff, #6a5bff);
+  color: #fff;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.service-card .book-now-btn-new:hover {
+  opacity: 0.9;
+}
+
+        .dashboard-btn, .book-now-btn-new {
             color: #ffffff;
             padding: 12px 0;
             width: 100%;
@@ -5267,8 +5298,8 @@ html.dark-mode .notify-success-message {
             margin-top: 20px;
             transition: background-color 0.3s ease;
         }
-        .book-now-btn { background-color: #10b981; }
-        .book-now-btn:hover { background-color: #059669; }
+        .book-now-btn-new { background-color: #10b981; }
+        .book-now-btn-new:hover { background-color: #059669; }
         .dashboard-btn { background-color: #3b82f6; }
         .dashboard-btn:hover { background-color: #2563eb; }
         
@@ -5745,10 +5776,12 @@ html.dark-mode .notify-success-message {
 
                     /* Specific service card styling to match the video design */
                       .services-grid-new {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 25px;
-        padding: 0 20px; /* Adds padding on small screens */
+         display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  padding: 3rem 2rem;
+  background: linear-gradient(180deg, #f8faff 0%, #eef2ff 100%);
+        
     }
 
     /* Individual Service Card */
@@ -6058,7 +6091,7 @@ html.dark-mode .notify-success-message {
     {servicesData.map((service, index) => {
       const isActive = activeServices.some(active => active.title === service.title);
       // Map index to a CSS variable color for the top border/accent
-      const colorMap = ['var(--color-cyan)', 'var(--color-green)', 'var(--color-red)', 'var(--color-orange)', 'var(--color-purple)', 'var(--color-blue)'];
+      const colorMap = ['var(--color-blue)', 'var(--color-red)', 'var(--color-cyan)', 'var(--color-orange)', 'var(--color-green)', 'var(--color-purple)'];
       const cardColorVar = colorMap[index % colorMap.length];
 
       // Get metrics for this service

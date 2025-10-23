@@ -1212,7 +1212,7 @@ const handleSaveNewApplication = async () => {
     if (!selectedClient) return;
 
     // Validation for Step 2 fields
-    const mandatoryFieldsStep2 = ['jobBoards', 'jobDescriptionUrl'];
+    const mandatoryFieldsStep2 = ['jobBoards', 'jobDescriptionUrl', 'jobType'];
     const errors = {};
     let hasError = false;
 
@@ -4323,18 +4323,20 @@ const downloadApplicationsData = () => {
 
 
                   <div style={modalFormFieldGroupStyle}>
-                    <label style={modalLabelStyle}>Job Type</label>
+                    <label style={modalLabelStyle}>Job Type<span style={{ color: 'red' }}>*</span></label>
                     <select
                       name="jobType"
                       value={newApplicationFormData.jobType}
                       onChange={handleNewApplicationFormChange}
                       style={modalSelectStyle}
+                      required
                     >
                       <option value="">Select Job Type</option>
                       <option value="Remote">Remote</option>
                       <option value="On-site">On-site</option>
                       <option value="Hybrid">Hybrid</option>
                     </select>
+                    {newApplicationErrors.jobType && <p style={errorTextStyle}>{newApplicationErrors.jobType}</p>}
                   </div>
                   <div style={modalFormFieldGroupStyle}>
                     <label style={modalLabelStyle}>Job Location</label>

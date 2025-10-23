@@ -489,14 +489,14 @@ const LandingPage = () => {
                     background-color: var(--light-gray);
                 }
 
-                  .services-section-modern .service-card-modern.flip-in-item {
+                  .services-section-modern .service-card-modern .flip-in-item {
     animation: flipIn 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
     /* Set the initial state for the animation */
     opacity: 0;
     transform: rotateY(-90deg) scale(0.8);
     transform-origin: left center;
   }
-      .services-section-modern .service-card-modern.flip-in-item.active {
+      .services-section-modern .service-card-modern .flip-in-item.active {
     opacity: 1;
     transform: rotateY(0deg) scale(1);
   }
@@ -1234,8 +1234,8 @@ const LandingPage = () => {
               </Col>
               <Col md={4}>
                 <h5 className="text-white">Contact</h5>
-                <p className="text-secondary small">123 Tech Street, Innovation District<br />San Francisco, CA 94105</p>
-                <p className="text-secondary small">Email: contact@techxplorers.com<br />Phone: +1 (555) 123-4567</p>
+                <p className="text-secondary small">2034 Masaka close Wuse zone 7 FCT Abuja</p>
+                <p className="text-secondary small">Email: contact@techxplorers.com<br />Phone: +2348188560032 <br/><br/></p>
               </Col>
             </Row>
             <hr className="my-4" />
