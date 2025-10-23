@@ -108,7 +108,7 @@ function AboutUs() {
 
     .section-title {
       text-align: center;
-      font-size: 2rem;
+      font-size: 25px;
       font-weight: 600;
       margin-bottom: 3rem;
       color: var(--light-text-primary);

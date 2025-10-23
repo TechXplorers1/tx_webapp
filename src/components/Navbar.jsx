@@ -148,7 +148,7 @@ const CustomNavbar = () => {
           <Navbar.Collapse id="basic-navbar-nav">
             <Nav className="mx-auto gap-lg-1 gap-1">
               <NavLink to="/" className={({ isActive }) => `nav-link-custom ${isActive ? 'active' : ''}`}>
-                HOME
+                Home
               </NavLink>
               <Nav.Link
                 className="nav-link services-popup-wrapper nav-link-custom"
@@ -156,7 +156,7 @@ const CustomNavbar = () => {
                 onMouseEnter={handleServicesEnter}
                 onMouseLeave={handleServicesLeave}
               >
-                <span>SERVICES</span>
+                <span>Services</span>
                 {showServicesPopup && (
                   <div
                     ref={servicesRef}
@@ -169,13 +169,13 @@ const CustomNavbar = () => {
                 )}
               </Nav.Link>
               <NavLink to="/careers" className={({ isActive }) => `nav-link-custom ${isActive ? 'active' : ''}`}>
-                CAREER
+                Career
               </NavLink>
               <NavLink to="/aboutus" className={({ isActive }) => `nav-link-custom ${isActive ? 'active' : ''}`}>
-                ABOUT US
+                About Us
               </NavLink>
               <NavLink to="/contactus" className={({ isActive }) => `nav-link-custom ${isActive ? 'active' : ''}`}>
-                CONTACT
+                Contact
               </NavLink>
             </Nav>
 

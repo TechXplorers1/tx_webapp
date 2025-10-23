@@ -548,8 +548,9 @@ const LandingPage = () => {
   flex-direction: column;
                 }
                 .service-card-modern:hover {
-                      transform: translateY(-5px) scale(1.01); /* Zoom in slightly */
-  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+                       transform: translateY(-2px);
+  box-shadow: 10px 10px 15px 3px rgba(0,0,0,0.1), 10px 4px 6px -2px rgba(0,0,0,0.05);
+  transition: transform 0.2s ease;
                 }
   .service-card-modern:hover .service-card-body h3 {
   color: #3b82f6; /* Sky Blue */
@@ -1065,7 +1066,7 @@ const LandingPage = () => {
   <Container>
     <div className="section-header">
       <span className="pill-badge">Our Services</span>
-      <h2>Comprehensive Tech Solutions</h2>
+      <h2 style={{fontSize:'30px'}}>Comprehensive Tech Solutions</h2>
       <p>From idea to execution, we provide end-to-end technology services that fuel your growth and help you stay ahead of the curve.</p>
     </div>
     <Row className="gy-4">
@@ -1117,7 +1118,7 @@ const LandingPage = () => {
                     <Container>
                         <div className="section-header">
                             <span className="pill-badge">Global Reach</span>
-                            <h2>Delivering Services Across The Globe</h2>
+                            <h2 style={{fontSize:'30px'}}>Delivering Services Across The Globe</h2>
                             <p>With a worldwide presence and 24/7 support, we provide consistent, high-quality services to clients across all continents.</p>
                         </div>
                         <Row className="justify-content-center gy-4">
@@ -1209,7 +1210,7 @@ const LandingPage = () => {
                   <a href="#" className="text-secondary me-3"><i className="bi bi-twitter"></i></a>
                   <a href="#" className="text-secondary me-3"><i className="bi bi-linkedin"></i></a>
                   <a href="#" className="text-secondary me-3"><i className="bi bi-instagram"></i></a>
-                  <a href="#" className="text-secondary"><i className="bi bi-envelope"></i></a>
+                  <a href="#" className="text-secondary"><i className="bi bi-youtube"></i></a>
                 </div>
               </Col>
               <Col md={2}>

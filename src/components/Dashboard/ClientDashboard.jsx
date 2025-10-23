@@ -252,6 +252,12 @@ const ClientHeader = ({
           --client-tag-bg: #e0f2f7;
           --client-tag-text: #0891b2;
           --bg-nav-link-hover: #f9fafb; /* For dropdown items */
+            --color-blue-light: #e0f2fe;
+  --color-green-light: #dcfce7;
+  --color-red-light: #fee2e2;
+  --color-orange-light: #ffedd5;
+  --color-purple-light: #f3e8ff;
+  --color-cyan-light: #e0f2fe;
         }
 
                 .html-dark { 
@@ -5804,13 +5810,13 @@ html.dark-mode .notify-success-message {
     cursor: pointer;
     }
 
-    .service-card-new:hover {
-        transform: translateY(-8px);
-        background-color: var(--bg-hover, #f9fafb);
-        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
-        border-top: 5px solid var(--card-accent-color);
-        border-color: transparent;
-    }
+ .service-card-new:hover {
+  transform: translateY(-8px);
+background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 255, 0.9) 100%);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+  border-top: 5px solid var(--card-accent-color);
+  border-color: transparent;
+}
 
     .service-card-new:hover .card-icon-container-new {
     transform: scale(1.1);
