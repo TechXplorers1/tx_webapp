@@ -1,157 +1,121 @@
-import React, { useState } from 'react'; // Import useState
+// --- ServicesDropdown.jsx ---
+import React from 'react';
+import { Dropdown } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
-import { Modal, Button } from 'react-bootstrap'; // Import Modal and Button
-import mobileIcon from '../assets/mobileAppService.png';
-import webIcon from '../assets/webAppService.png';
-import marketingIcon from '../assets/digitalMarketingService.png';
-import talentIcon from '../assets/ItTalentSupplyService.png';
-import consultingIcon from '../assets/JobSupportingService.png';
-import CyberIcon from '../assets/CyberSecurityService.png';
-import '../styles/Services.css';
-import { database, auth } from '../firebase'; // Assuming firebase.js is in src folder
-import { ref, push } from "firebase/database";
-
-const services = [
-  { title: "Mobile Application Development",icon: mobileIcon, path: "/services/mobile-app-development" },
-  { title: "Web Application Development",icon: webIcon, path: "/services/web-app-development" },
-  { title: "Digital Marketing",icon: marketingIcon, path: "/services/digital-marketing" },
-  { title: "IT Talent Supply",icon: talentIcon, path: "/services/it-talent-supply" },
-  { title: "Job Support & IT Consulting", icon: consultingIcon, path: "/services/job-support" },
-  { title: "Cyber Security", icon: CyberIcon, path: "/services/cyber-security" },
-];
 
 const ServicesDropdown = () => {
-
-  const [message, setMessage] = useState('');
-  const [email, setEmail] = useState('');
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-
-  // NEW: Handler for form submission
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const currentUser = auth.currentUser;
-
-
-    // Create the submission object
-    const formData = new FormData(e.target);
-    const newSubmission = {
-      id: Date.now(),
-      email:  formData.get('email'),
-      message: formData.get('message'),
-      receivedDate: new Date().toISOString().split('T')[0],
-      status: "Pending", // Add a default status
-      userId: currentUser ? currentUser.uid : "guest"
-    };
-
-   try {
-      // Get a reference to the 'serviceRequests' node in your database
-      const serviceRequestsRef = ref(database, 'submissions/serviceRequests');
-      // Use push() to create a new unique entry in Firebase
-      await push(serviceRequestsRef, newSubmission);
-
-      // Reset form and show the success modal
-      setMessage('');
-      setEmail('');
-      setShowSuccessModal(true);
-
-    } catch (error) {
-      console.error("Failed to submit service request to Firebase", error);
-      alert("Submission failed. Please try again.");
+  // Define the services data
+  const services = [
+    {
+      id: 1,
+      title: "Mobile Application Development",
+      description: "Create powerful, user-friendly mobile applications for iOS and Android platforms with cutting-edge technology.",
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+          <path d="M12 18h.01"></path>
+        </svg>
+      ),
+      path: "/services/mobile-app-development"
+    },
+    {
+      id: 2,
+      title: "Web Application Development",
+      description: "Build responsive, scalable web applications with modern frameworks and best practices for optimal performance.",
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M2 12h20"></path>
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+        </svg>
+      ),
+      path: "/services/web-app-development"
+    },
+    {
+      id: 3,
+      title: "Digital Marketing",
+      description: "Comprehensive digital marketing strategies to boost your online presence and drive meaningful engagement.",
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M2 12a10 10 0 1 0 20 0 10 10 0 0 0-20 0z"></path>
+          <path d="M12 8l4 4-4 4V8z"></path>
+          <path d="M12 8l-4 4 4 4-4-4z"></path>
+        </svg>
+      ),
+      path: "/services/digital-marketing"
+    },
+    {
+      id: 4,
+      title: "IT Talent Supply",
+      description: "Connect with top-tier IT professionals and build exceptional teams to drive your technology initiatives forward.",
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+      ),
+      path: "/services/it-talent-supply"
+    },
+    {
+      id: 5,
+      title: "Job Support & IT Consulting",
+      description: "Expert consulting and job support services to help you navigate complex IT challenges and career growth.",
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+      ),
+      path: "/services/job-support"
+    },
+    {
+      id: 6,
+      title: "Cyber Security",
+      description: "Comprehensive security solutions to protect your digital assets and ensure data integrity across all platforms.",
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+          <polyline points="22 4 12 14.01 9 11.01"></polyline>
+        </svg>
+      ),
+      path: "/services/cyber-security"
     }
-  };
+  ];
+
   return (
-     <>
-    <div className="services-popup-content">
-      <div className="services-left">
-       <div className="services-dropdown">
-  <Link to="/services/mobile-app-development" className="service-card-link">
-    <div className="service-card1 custom-bg" style={{ backgroundImage: `url(${mobileIcon})` }}>
-      <span>Mobile Application Development</span>
-    </div>
-  </Link>
-
-  <Link to="/services/web-app-development" className="service-card-link">
-    <div className="service-card1 custom-bg" style={{ backgroundImage: `url(${webIcon})` }}>
-      <span>Web Application Development</span>
-    </div>
-  </Link>
-
-  <Link to="/services/digital-marketing" className="service-card-link">
-    <div className="service-card1 custom-bg" style={{ backgroundImage: `url(${marketingIcon})` }}>
-      <span>Digital Marketing</span>
-    </div>
-  </Link>
-
-  <Link to="/services/it-talent-supply" className="service-card-link">
-    <div className="service-card1 custom-bg" style={{ backgroundImage: `url(${talentIcon})` }}>
-      <span>IT Talent Supply</span>
-    </div>
-  </Link>
-
-  <Link to="/services/job-support" className="service-card-link">
-    <div className="service-card1 custom-bg" style={{ backgroundImage: `url(${consultingIcon})` }}>
-      <span>Job Support & IT Consulting</span>
-    </div>
-  </Link>
-  <Link to="/services/cyber-security" className="service-card-link">
-    <div className="service-card1 custom-bg" style={{ backgroundImage: `url(${CyberIcon})` }}>
-      <span>Cyber Security</span>
-    </div>
-  </Link>
-</div>
-
+    <div className="services-dropdown-menu">
+      <div className="services-dropdown-header">
+        Our Services
       </div>
-
-      <div className="services-right">
-        <h3>OTHER NEEDS</h3>
-        <p>CONNECT WITH TECHXPLORERS</p>
-        <form className="services-form" onSubmit={handleSubmit}>
-             <input 
-              type="text" 
-              name="message" 
-              placeholder="Message" 
-              className="services-input" 
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onClick={(e) => e.stopPropagation()} 
-              required
-            />          
-              <input 
-              type="email" 
-              name="email" 
-              placeholder="Mail ID" 
-              className="services-input" 
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onClick={(e) => e.stopPropagation()} 
-              required
-            /> 
-            <button 
-              type="submit" 
-              className="services-submit-btn" 
-              onClick={(e) => e.stopPropagation()}
-            >
-              Submit
-            </button>
-        </form>
+      <div className="services-dropdown-body">
+        {services.map((service) => (
+          <Link key={service.id} to={service.path} className="services-dropdown-item">
+            <div className="services-dropdown-item-icon">
+              {service.icon}
+            </div>
+            <div className="services-dropdown-item-content">
+              <div className="services-dropdown-item-title">
+                {service.title}
+              </div>
+              <div className="services-dropdown-item-description">
+                {service.description}
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
+      <div className="services-dropdown-footer">
+        <Link to="/" className="view-all-services-btn">
+          View All Services
+        </Link>
       </div>
     </div>
-     {/* NEW: Success Modal */}
-      <Modal show={showSuccessModal} onHide={() => setShowSuccessModal(false)} centered>
-        <Modal.Body className="text-center p-4">
-            <h5 className="mt-3">Your request has been submitted successfully.</h5>
-            <p className="text-muted mt-2">
-                For showing interest in our products and services. Our team will be in contact with you shortly.
-            </p>
-            <Button variant="primary" onClick={() => setShowSuccessModal(false)} className="mt-3">
-                Close
-            </Button>
-        </Modal.Body>
-      </Modal>
-      </>
   );
+
 };
 
 export default ServicesDropdown;

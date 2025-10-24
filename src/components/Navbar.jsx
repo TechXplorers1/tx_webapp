@@ -156,12 +156,12 @@ const CustomNavbar = () => {
                 onMouseEnter={handleServicesEnter}
                 onMouseLeave={handleServicesLeave}
               >
-                <span>Services</span>
+                <span style={{fontWeight:'500'}}>Services</span>
                 {showServicesPopup && (
                   <div
                     ref={servicesRef}
                     className="services-dropdown-container"
-                    onMouseEnter={() => clearTimeout(servicesTimeoutRef.current)}
+                    onMouseEnter={handleServicesEnter}
                     onMouseLeave={handleServicesLeave}
                   >
                     <ServicesDropdown />
