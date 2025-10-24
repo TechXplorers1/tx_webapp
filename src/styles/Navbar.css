@@ -521,7 +521,7 @@ input:checked + .slider:before {
   border-radius: 0.5rem;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   border: 1px solid var(--border-color);
-  min-width: 30rem;
+  min-width: 22rem;
   padding: 0.5rem 0;
   list-style: none;
   margin: 0;
@@ -538,7 +538,7 @@ input:checked + .slider:before {
 }
 
 .services-dropdown-body {
-  padding: 0.5rem 0;
+  padding: 0.9rem 0;
 }
 
 .services-dropdown-item {
@@ -565,7 +565,7 @@ input:checked + .slider:before {
   display: flex;
   justify-content: center;
   align-items: center;
-  color: var(--primary-color);
+  color: rgb(48, 140, 197);
 }
 
 .services-dropdown-item-content {
@@ -581,6 +581,7 @@ input:checked + .slider:before {
 .services-dropdown-item-description {
   font-size: 0.8rem;
   color: var(--text-secondary);
+  margin-left: 10px;
 }
 
 .services-dropdown-footer {

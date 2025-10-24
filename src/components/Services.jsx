@@ -9,7 +9,7 @@ const ServicesDropdown = () => {
     {
       id: 1,
       title: "Mobile Application Development",
-      description: "Create powerful, user-friendly mobile applications for iOS and Android platforms with cutting-edge technology.",
+      description: "Create powerful, mobile applications for iOS and Android.",
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
@@ -21,7 +21,7 @@ const ServicesDropdown = () => {
     {
       id: 2,
       title: "Web Application Development",
-      description: "Build responsive, scalable web applications with modern frameworks and best practices for optimal performance.",
+      description: "Build responsive, scalable web applications.",
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="10"></circle>
@@ -34,7 +34,7 @@ const ServicesDropdown = () => {
     {
       id: 3,
       title: "Digital Marketing",
-      description: "Comprehensive digital marketing strategies to boost your online presence and drive meaningful engagement.",
+      description: "Boost your online presence and engagement.",
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M2 12a10 10 0 1 0 20 0 10 10 0 0 0-20 0z"></path>
@@ -47,7 +47,7 @@ const ServicesDropdown = () => {
     {
       id: 4,
       title: "IT Talent Supply",
-      description: "Connect with top-tier IT professionals and build exceptional teams to drive your technology initiatives forward.",
+      description: "Connect with top-tier IT professionals.",
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -61,7 +61,7 @@ const ServicesDropdown = () => {
     {
       id: 5,
       title: "Job Support & IT Consulting",
-      description: "Expert consulting and job support services to help you navigate complex IT challenges and career growth.",
+      description: "Expert consulting and career support.",
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M20 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -75,7 +75,7 @@ const ServicesDropdown = () => {
     {
       id: 6,
       title: "Cyber Security",
-      description: "Comprehensive security solutions to protect your digital assets and ensure data integrity across all platforms.",
+      description: "Protect your digital assets and data.",
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
