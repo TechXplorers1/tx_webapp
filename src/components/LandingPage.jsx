@@ -314,8 +314,8 @@ const LandingPage = () => {
 
   /* Subtle grid pattern */
   background-image:
-    linear-gradient(rgba(0, 0, 0, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.08) 1px, transparent 1px);
+    linear-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
   background-size: 23px 23px; /* smaller = denser grid */
                 }
 
@@ -1020,20 +1020,62 @@ const LandingPage = () => {
                             if (isServiceActive) {
                               // If the service is active, show "Your Dashboard"
                               return (
-                                <Link to="/clientdashboard" className="btn-modern btn-primary-modern">
+                                <Link to="/clientdashboard" className="btn-modern btn-primary-modern" style={{
+      marginTop: '15px',
+      padding: '10px 15px',
+      borderRadius: '6px',
+      fontWeight: '600',
+      cursor: 'pointer',
+      transition: 'transform 0.2s',
+      alignSelf: 'flex-start',
+    }}>
                                   Your Dashboard
                                 </Link>
                               );
                             } else {
                               // Otherwise, show "Book a Service"
                               return (
-                                <div onClick={() => handleBookServiceClick(item)} className="btn-modern btn-primary-modern" style={{ cursor: 'pointer' }}>
+                                <div onClick={() => handleBookServiceClick(item)} className="btn-modern btn-primary-modern" style={{
+      marginTop: '15px',
+      padding: '10px 15px',
+      borderRadius: '6px',
+      fontWeight: '600',
+      cursor: 'pointer',
+      transition: 'background-color 0.2s, color 0.2s',
+      alignSelf: 'flex-start',
+      // New styles for "Book a Service" button
+      background: 'linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%)', // Blue to Purple gradient
+      color: '#ffffff', // White text
+      border: 'none',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+    }}  >
                                   Book a Service
                                 </div>
                               );
                             }
                           })()}
-                          <Link to={item.path} className="btn-modern btn-secondary-modern">Learn More</Link>
+                          <Link to={item.path} className="btn-modern btn-secondary-modern" style={{
+    marginTop: '15px',
+    padding: '10px 15px',
+    borderRadius: '6px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s, color 0.2s',
+    alignSelf: 'flex-start',
+    // New styles for "Learn More" button
+    background: 'white',
+    color: '#6b7280', // Gray text
+    border: '1px solid #d1d5db', // Light gray border
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+  }}>
+     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 12L12 6v12z"></path>
+  </svg>
+    Learn More</Link>
                         </div>
                         <div className="hero-stats">
                           <div className="stat-item"><div className="icon"><StarIcon /></div><div className="text"><strong>{item.stats.rating}</strong><span>Client Rating</span></div></div>

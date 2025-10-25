@@ -517,11 +517,11 @@ input:checked + .slider:before {
   top: calc(100% + 0.7rem);
   left: 0;
   background-color: white;
-  color:black;
+  color: black;
   border-radius: 0.5rem;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   border: 1px solid var(--border-color);
-  min-width: 22rem;
+  min-width: 28rem;
   padding: 0.5rem 0;
   list-style: none;
   margin: 0;
@@ -537,6 +537,14 @@ input:checked + .slider:before {
   margin-bottom: 0.5rem;
 }
 
+.services-dropdown-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  padding: 0 1rem;
+  margin-bottom: 0.5rem;
+  font-weight: 400;
+}
+
 .services-dropdown-body {
   padding: 0.9rem 0;
 }
@@ -547,7 +555,7 @@ input:checked + .slider:before {
   font-size: 0.9rem;
   font-weight: 500;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.75rem;
   transition: background-color 0.15s ease;
   cursor: pointer;
@@ -563,25 +571,31 @@ input:checked + .slider:before {
   width: 24px;
   height: 24px;
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
   color: rgb(48, 140, 197);
+  background-color: #e0f2fe; /* Light blue background */
+  border-radius: 8px;
 }
 
 .services-dropdown-item-content {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 0.25rem;
 }
 
 .services-dropdown-item-title {
   font-weight: 600;
+  color: #333; /* Darker text for title */
 }
 
 .services-dropdown-item-description {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  margin-left: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  font-size: 0.7rem;
+  color: #6b7280; /* Gray text for description */
 }
 
 .services-dropdown-footer {
@@ -594,7 +608,7 @@ input:checked + .slider:before {
   display: block;
   width: 100%;
   padding: 0.75rem 1rem;
-  background-color: var(--primary-color);
+  background-color: #1e293b; /* Dark background */
   color: white;
   text-align: center;
   border-radius: 0.5rem;
@@ -604,5 +618,5 @@ input:checked + .slider:before {
 }
 
 .view-all-services-btn:hover {
-  background-color: #2563eb;
+  background-color: #0f172a; /* Darker on hover */
 }
