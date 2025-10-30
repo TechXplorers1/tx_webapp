@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Modal, Spinner } from 'react-bootstrap'; // Using react-bootstrap Modal
-import { getDatabase, ref, onValue, query, orderByChild, equalTo, update, remove, set } from "firebase/database";
+import { getDatabase, ref, onValue, query, orderByChild, equalTo, update, remove, set, push, get } from "firebase/database";
 import { database } from '../../firebase'; // Import your Firebase config
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { utils, writeFile } from 'xlsx';
@@ -396,9 +396,23 @@ const EmployeeData = () => {
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const profileDropdownRef = useRef(null);
-    const [newApplicationErrors, setNewApplicationErrors] = useState({});
-    const [currentModalStep, setCurrentModalStep] = useState(1);
+  const [newApplicationErrors, setNewApplicationErrors] = useState({});
+  const [currentModalStep, setCurrentModalStep] = useState(1);
 
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [leaveFormData, setLeaveFormData] = useState({
+    applyTo: [], // Array of manager/admin IDs
+    fromDate: '',
+    toDate: '',
+    leaveType: '',
+    reason: '',
+  });
+  const [leaveRequests, setLeaveRequests] = useState([]);
+  const [managersAndAdmins, setManagersAndAdmins] = useState([]);
+  const [isSubmittingLeave, setIsSubmittingLeave] = useState(false);
+  const [leaveRequestToEdit, setLeaveRequestToEdit] = useState(null);
+  const [leaveRequestToDelete, setLeaveRequestToDelete] = useState(null);
+  const [showDeleteLeaveModal, setShowDeleteLeaveModal] = useState(false);
 
   // NEW: State for controlling the visibility of the Employee Profile Modal
   const [showEmployeeProfileModal, setShowEmployeeProfileModal] = useState(false);
@@ -417,26 +431,62 @@ const EmployeeData = () => {
   });
 
   const getLocalDateString = (date = new Date()) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   // NEW: useEffect to get logged-in user data from sessionStorage
   // Update useEffect to get the full employee object from sessionStorage
   // In EmployeeData.jsx, replace the useEffect hook that starts with "// NEW: useEffect to get logged-in user data..."
 
-useEffect(() => {
+  useEffect(() => {
     const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInEmployee'));
     if (!loggedInUserData || !loggedInUserData.firebaseKey) {
+      setLeaveRequests([]);
       navigate('/login');
       return;
     }
     const employeeFirebaseKey = loggedInUserData.firebaseKey;
     const employeeRef = ref(database, `users/${employeeFirebaseKey}`);
     const clientsRef = ref(database, 'clients');
-    
+
+    const usersRef = ref(database, 'users');
+    const unsubscribeUsers = onValue(usersRef, (snapshot) => {
+      const usersData = snapshot.val();
+      const managementList = [];
+      if (usersData) {
+        Object.keys(usersData).forEach(key => {
+          const user = usersData[key];
+          if (user.role && (user.role.toLowerCase() === 'manager' || user.role.toLowerCase() === 'admin')) {
+            managementList.push({
+              id: key,
+              name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
+              role: user.role,
+            });
+          }
+        });
+      }
+      setManagersAndAdmins(managementList);
+    });
+
+    // 2. Fetch Employee's Leave Requests
+    const leaveRef = ref(database, `users/${employeeFirebaseKey}/leaveRequests`);
+    const unsubscribeLeave = onValue(leaveRef, (snapshot) => {
+       if (snapshot.exists()) {
+      const requests = snapshot.val();
+      const requestsList = [];
+      for (let id in requests) {
+        // Ensure each item has an 'id' property matching its Firebase key
+        requestsList.push({ id, ...requests[id] });
+      }
+      // Sort leave requests by requested date (newest first) or any other criteria
+      requestsList.sort((a, b) => new Date(b.requestedDate) - new Date(a.requestedDate));
+      setLeaveRequests(requestsList); // Update the component's state
+    } 
+    });
+
     const unsubscribeEmployee = onValue(employeeRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
@@ -485,8 +535,10 @@ useEffect(() => {
     return () => {
       unsubscribeEmployee();
       unsubscribeClients();
+      unsubscribeUsers();
+      unsubscribeLeave();
     };
-}, [navigate]);
+  }, [database]);
 
 
 
@@ -530,7 +582,7 @@ useEffect(() => {
     return `${firstName ? firstName.charAt(0).toUpperCase() : ''}${lastName ? lastName.charAt(0).toUpperCase() : ''}`;
   };
 
-    const employeeName = `${employeeDetails.firstName || ''} ${employeeDetails.lastName || ''}`.trim();
+  const employeeName = `${employeeDetails.firstName || ''} ${employeeDetails.lastName || ''}`.trim();
   const employeeInitials = getInitials(employeeDetails.firstName, employeeDetails.lastName);
 
   // Dynamically calculate adminInitials
@@ -559,35 +611,35 @@ useEffect(() => {
   // FIX: This function now correctly copies the employeeDetails into the editedEmployeeDetails state
 
   const getLocalDateTimeString = (date = new Date()) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const seconds = String(date.getSeconds()).padStart(2, '0');
-  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-};
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+  };
 
-const formatToIST = (utcString) => {
-  if (!utcString) return 'N/A';
-  try {
-    const date = new Date(utcString);
-    const options = {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: true, // Use 12-hour clock
-      timeZone: 'Asia/Kolkata', // Set to Indian Standard Time
-    };
-    return new Intl.DateTimeFormat('en-IN', options).format(date);
-  } catch (e) {
-    console.error('Error formatting date to IST:', e);
-    return utcString;
-  }
-};
+  const formatToIST = (utcString) => {
+    if (!utcString) return 'N/A';
+    try {
+      const date = new Date(utcString);
+      const options = {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true, // Use 12-hour clock
+        timeZone: 'Asia/Kolkata', // Set to Indian Standard Time
+      };
+      return new Intl.DateTimeFormat('en-IN', options).format(date);
+    } catch (e) {
+      console.error('Error formatting date to IST:', e);
+      return utcString;
+    }
+  };
 
 
   const handleOpenProfileModal = async () => {
@@ -653,19 +705,19 @@ const formatToIST = (utcString) => {
     setEditedEmployeeDetails({ ...employeeDetails }); // Revert changes
   };
 
-    const handleLogout = () => {
+  const handleLogout = () => {
     sessionStorage.removeItem('loggedInEmployee');
     navigate('/login');
   };
 
-    const toggleProfileDropdown = () => {
+  const toggleProfileDropdown = () => {
     setIsProfileDropdownOpen(prevState => !prevState);
   };
-  
+
   const openNotificationsModal = () => {
     setShowNotificationModal(true);
   };
-  
+
   const closeNotificationsModal = () => {
     setShowNotificationModal(false);
   };
@@ -830,7 +882,7 @@ const formatToIST = (utcString) => {
   const [isClientSelectModalOpen, setIsClientSelectModalOpen] = useState(false);
   const [clientSearchTermInModal, setClientSearchTermInModal] = useState('');
   const [newResumeFile, setNewResumeFile] = useState(null);
-const [newFilesToUpload, setNewFilesToUpload] = useState([]);
+  const [newFilesToUpload, setNewFilesToUpload] = useState([]);
 
 
   useEffect(() => {
@@ -874,7 +926,7 @@ const [newFilesToUpload, setNewFilesToUpload] = useState([]);
     // Job application activities
     (client.jobApplications || []).forEach(app => {
       const timestamp = formatTimestamp(app.appliedDate);
-      
+
       clientActivities.push({
         clientId: client.id,
         initials: client.initials,
@@ -912,21 +964,21 @@ const [newFilesToUpload, setNewFilesToUpload] = useState([]);
       });
     });
 
-   // Resume update activities
-  (client.resumeUpdates || []).forEach(update => {
-    clientActivities.push({
-      clientId: client.id,
-      initials: client.initials,
-      name: client.name,
-      description: `Resume update: ${update.details}`,
-      type: 'resume update',
-      timestamp: update.timestamp || new Date(update.date).toISOString(), // FIX: Use new timestamp
-      status: update.status,
+    // Resume update activities
+    (client.resumeUpdates || []).forEach(update => {
+      clientActivities.push({
+        clientId: client.id,
+        initials: client.initials,
+        name: client.name,
+        description: `Resume update: ${update.details}`,
+        type: 'resume update',
+        timestamp: update.timestamp || new Date(update.date).toISOString(), // FIX: Use new timestamp
+        status: update.status,
+      });
     });
-  });
 
-  return clientActivities;
-}).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); // FIX: Sort by new timestamp property
+    return clientActivities;
+  }).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); // FIX: Sort by new timestamp property
 
 
   // Helper function to get the latest resume update date for a client
@@ -994,67 +1046,67 @@ const [newFilesToUpload, setNewFilesToUpload] = useState([]);
     setShowDeleteFileModal(true);
   };
 
-// Find and replace the existing handleConfirmDeleteFile function
-const handleConfirmDeleteFile = async () => {
+  // Find and replace the existing handleConfirmDeleteFile function
+  const handleConfirmDeleteFile = async () => {
     if (!fileToDelete) return;
 
     setIsDeleting(true);
     const { clientFirebaseKey, registrationKey, file } = fileToDelete;
 
     try {
-        // 1. Create a reference from the download URL and delete from Firebase Storage
-        const fileStorageRef = storageRef(getStorage(), file.downloadUrl);
-        await deleteObject(fileStorageRef);
+      // 1. Create a reference from the download URL and delete from Firebase Storage
+      const fileStorageRef = storageRef(getStorage(), file.downloadUrl);
+      await deleteObject(fileStorageRef);
 
-        // 2. Fetch the current list of files from the Realtime Database once
-        const snapshot = await new Promise(resolve => onValue(ref(database, `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}`), resolve, { onlyOnce: true }));
-        const registrationData = snapshot.val();
-        const currentFiles = registrationData.files || [];
+      // 2. Fetch the current list of files from the Realtime Database once
+      const snapshot = await new Promise(resolve => onValue(ref(database, `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}`), resolve, { onlyOnce: true }));
+      const registrationData = snapshot.val();
+      const currentFiles = registrationData.files || [];
 
-        // 3. Filter out the deleted file
-        const updatedFiles = currentFiles.filter(f => f.id !== file.id);
+      // 3. Filter out the deleted file
+      const updatedFiles = currentFiles.filter(f => f.id !== file.id);
 
-        // 4. Update the list in the Realtime Database
-        const filesRef = ref(database, `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}/files`);
-        await set(filesRef, updatedFiles);
+      // 4. Update the list in the Realtime Database
+      const filesRef = ref(database, `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}/files`);
+      await set(filesRef, updatedFiles);
 
-        // 5. Update the local state in a single, atomic operation to avoid race conditions
-        const updateClientList = (prevClients) => {
-            return prevClients.map(c => {
-                if (c.registrationKey === registrationKey) {
-                    const updatedClient = {
-                        ...c,
-                        files: updatedFiles,
-                    };
-                    // Ensure the selectedClient points to this new object
-                    setSelectedClient(updatedClient); 
-                    return updatedClient;
-                }
-                return c;
-            });
-        };
+      // 5. Update the local state in a single, atomic operation to avoid race conditions
+      const updateClientList = (prevClients) => {
+        return prevClients.map(c => {
+          if (c.registrationKey === registrationKey) {
+            const updatedClient = {
+              ...c,
+              files: updatedFiles,
+            };
+            // Ensure the selectedClient points to this new object
+            setSelectedClient(updatedClient);
+            return updatedClient;
+          }
+          return c;
+        });
+      };
 
-        // Update the correct client list (active, inactive, new)
-        setActiveClients(updateClientList);
-        setInactiveClients(updateClientList);
-        setNewClients(updateClientList);
+      // Update the correct client list (active, inactive, new)
+      setActiveClients(updateClientList);
+      setInactiveClients(updateClientList);
+      setNewClients(updateClientList);
 
-        triggerNotification("File deleted successfully from storage and database!");
+      triggerNotification("File deleted successfully from storage and database!");
 
     } catch (error) {
-        console.error("Error deleting file:", error);
-        if (error.code === 'storage/object-not-found') {
-            alert("File not found in storage, but removing from database.");
-        } else {
-            alert("Failed to delete file. Please check permissions or try again.");
-        }
+      console.error("Error deleting file:", error);
+      if (error.code === 'storage/object-not-found') {
+        alert("File not found in storage, but removing from database.");
+      } else {
+        alert("Failed to delete file. Please check permissions or try again.");
+      }
     } finally {
-        // 6. Close the modal and reset the state
-        setShowDeleteFileModal(false);
-        setFileToDelete(null);
-        setIsDeleting(false);
+      // 6. Close the modal and reset the state
+      setShowDeleteFileModal(false);
+      setFileToDelete(null);
+      setIsDeleting(false);
     }
-};
+  };
 
 
   const handleDownloadResume = (clientName) => {
@@ -1116,7 +1168,7 @@ const handleConfirmDeleteFile = async () => {
   const handleOpenAddApplicationModal = (client) => {
     setSelectedClient(client);
     setShowAddApplicationModal(true);
-        // Reset form data and errors on open
+    // Reset form data and errors on open
     setNewApplicationFormData({
       jobTitle: '', company: '', jobType: '', jobBoards: '', jobDescriptionUrl: '', location: '', jobId: '', role: ''
     });
@@ -1124,7 +1176,7 @@ const handleConfirmDeleteFile = async () => {
     setCurrentModalStep(1);
   };
 
-const handleNextStep = () => {
+  const handleNextStep = () => {
     // Job ID is NOT mandatory. Mandatory fields are now just jobTitle and company.
     const mandatoryFieldsStep1 = ['jobTitle', 'company'];
     const errors = {};
@@ -1132,83 +1184,83 @@ const handleNextStep = () => {
 
     // 1. Validation Check for mandatory Step 1 fields
     mandatoryFieldsStep1.forEach(field => {
-        if (!newApplicationFormData[field] || newApplicationFormData[field].trim() === '') {
-            errors[field] = 'This field is mandatory.';
-            hasError = true;
-        }
+      if (!newApplicationFormData[field] || newApplicationFormData[field].trim() === '') {
+        errors[field] = 'This field is mandatory.';
+        hasError = true;
+      }
     });
 
     const { jobId, company } = newApplicationFormData;
 
     // 2. Conflict Check: If Job ID is provided, check for a duplicate (Company + Job ID)
     if (jobId && jobId.trim() !== '' && company && company.trim() !== '' && selectedClient?.jobApplications) {
-        const lowerCaseJobId = jobId.trim().toLowerCase();
-        const lowerCaseCompany = company.trim().toLowerCase();
+      const lowerCaseJobId = jobId.trim().toLowerCase();
+      const lowerCaseCompany = company.trim().toLowerCase();
 
-        const existingApp = selectedClient.jobApplications.find(app => 
-            app.jobId && app.jobId.toLowerCase() === lowerCaseJobId &&
-            app.company && app.company.toLowerCase() === lowerCaseCompany
-        );
-        
-        if (existingApp && existingApp.id !== newApplicationFormData.id) {
-            errors.jobId = `You have already applied for the same Job ID on ${existingApp.appliedDate}.`;
-            hasError = true;
-        }
+      const existingApp = selectedClient.jobApplications.find(app =>
+        app.jobId && app.jobId.toLowerCase() === lowerCaseJobId &&
+        app.company && app.company.toLowerCase() === lowerCaseCompany
+      );
+
+      if (existingApp && existingApp.id !== newApplicationFormData.id) {
+        errors.jobId = `You have already applied for the same Job ID on ${existingApp.appliedDate}.`;
+        hasError = true;
+      }
     }
 
     setNewApplicationErrors(errors);
 
     if (hasError) {
-        triggerNotification("Please fill in all mandatory fields and resolve any application conflicts.");
-        return;
+      triggerNotification("Please fill in all mandatory fields and resolve any application conflicts.");
+      return;
     }
 
     // 3. If validation passes, move to the next step
     setCurrentModalStep(2);
-};
+  };
 
-const handleNewApplicationFormChange = (e) => {
+  const handleNewApplicationFormChange = (e) => {
     const { name, value } = e.target;
     const newFormData = { ...newApplicationFormData, [name]: value };
 
     setNewApplicationFormData(newFormData);
     // Clear the specific error when the user starts typing
     if (newApplicationErrors[name]) {
-        setNewApplicationErrors(prev => ({ ...prev, [name]: '' }));
+      setNewApplicationErrors(prev => ({ ...prev, [name]: '' }));
     }
 
     // Special validation check for Job ID conflict (only runs if both fields are non-empty)
     if (name === 'jobId' || name === 'company') {
-        const jobIdCheck = newFormData.jobId;
-        const companyCheck = newFormData.company;
+      const jobIdCheck = newFormData.jobId;
+      const companyCheck = newFormData.company;
 
-        if (jobIdCheck && jobIdCheck.trim() !== '' && companyCheck && companyCheck.trim() !== '' && selectedClient?.jobApplications) {
-            const lowerCaseJobId = jobIdCheck.trim().toLowerCase();
-            const lowerCaseCompany = companyCheck.trim().toLowerCase();
-            
-            const existingApp = selectedClient.jobApplications.find(app => 
-                app.jobId && app.jobId.toLowerCase() === lowerCaseJobId &&
-                app.company && app.company.toLowerCase() === lowerCaseCompany
-            );
+      if (jobIdCheck && jobIdCheck.trim() !== '' && companyCheck && companyCheck.trim() !== '' && selectedClient?.jobApplications) {
+        const lowerCaseJobId = jobIdCheck.trim().toLowerCase();
+        const lowerCaseCompany = companyCheck.trim().toLowerCase();
 
-            if (existingApp) {
-                // Set error only on the Job ID field for visibility
-                setNewApplicationErrors(prev => ({
-                    ...prev,
-                    jobId: `You have already applied for the same Job ID on ${existingApp.appliedDate}.`,
-                }));
-            } else if (newApplicationErrors.jobId) {
-                // Clear the error if the conflict is resolved
-                setNewApplicationErrors(prev => ({ ...prev, jobId: '' }));
-            }
+        const existingApp = selectedClient.jobApplications.find(app =>
+          app.jobId && app.jobId.toLowerCase() === lowerCaseJobId &&
+          app.company && app.company.toLowerCase() === lowerCaseCompany
+        );
+
+        if (existingApp) {
+          // Set error only on the Job ID field for visibility
+          setNewApplicationErrors(prev => ({
+            ...prev,
+            jobId: `You have already applied for the same Job ID on ${existingApp.appliedDate}.`,
+          }));
         } else if (newApplicationErrors.jobId) {
-           // Clear the error if one of the required fields becomes empty
-           setNewApplicationErrors(prev => ({ ...prev, jobId: '' }));
+          // Clear the error if the conflict is resolved
+          setNewApplicationErrors(prev => ({ ...prev, jobId: '' }));
         }
+      } else if (newApplicationErrors.jobId) {
+        // Clear the error if one of the required fields becomes empty
+        setNewApplicationErrors(prev => ({ ...prev, jobId: '' }));
+      }
     }
-};
+  };
 
-const handleSaveNewApplication = async () => {
+  const handleSaveNewApplication = async () => {
     if (!selectedClient) return;
 
     // Validation for Step 2 fields
@@ -1217,51 +1269,51 @@ const handleSaveNewApplication = async () => {
     let hasError = false;
 
     mandatoryFieldsStep2.forEach(field => {
-        if (!newApplicationFormData[field] || newApplicationFormData[field].trim() === '') {
-            errors[field] = 'This field is mandatory.';
-            hasError = true;
-        }
+      if (!newApplicationFormData[field] || newApplicationFormData[field].trim() === '') {
+        errors[field] = 'This field is mandatory.';
+        hasError = true;
+      }
     });
 
     setNewApplicationErrors(errors);
 
     // Stop submission if there are errors in Step 2
     if (hasError) {
-        triggerNotification("Please fill in all mandatory fields for the final step.");
-        return;
+      triggerNotification("Please fill in all mandatory fields for the final step.");
+      return;
     }
 
     const newApp = {
-        id: Date.now(),
-        ...newApplicationFormData,
-        status: 'Applied',
-        appliedDate: getLocalDateString(),
-        timestamp: new Date().toISOString(),
-        employeeName: employeeName,
-        attachments: []
+      id: Date.now(),
+      ...newApplicationFormData,
+      status: 'Applied',
+      appliedDate: getLocalDateString(),
+      timestamp: new Date().toISOString(),
+      employeeName: employeeName,
+      attachments: []
     };
     const existingApplications = selectedClient.jobApplications || [];
     const updatedApplications = [newApp, ...existingApplications];
     const registrationRef = ref(database, `clients/${selectedClient.clientFirebaseKey}/serviceRegistrations/${selectedClient.registrationKey}/jobApplications`);
     try {
-        await set(registrationRef, updatedApplications);
-        const updatedClient = { ...selectedClient, jobApplications: updatedApplications };
-        setSelectedClient(updatedClient);
-        const updateClientList = (prevClients) => prevClients.map(c => c.registrationKey === updatedClient.registrationKey ? updatedClient : c);
-        setActiveClients(updateClientList);
-        setInactiveClients(updateClientList);
-        setNewClients(updateClientList);
-        setShowAddApplicationModal(false);
-        setNewApplicationFormData({
-            jobTitle: '', company: '', jobType: '', jobBoards: '', jobDescriptionUrl: '', location: '', jobId: '', role: ''
-        });
-        setCurrentModalStep(1); // Reset step after successful save
-        triggerNotification("Application added successfully!");
+      await set(registrationRef, updatedApplications);
+      const updatedClient = { ...selectedClient, jobApplications: updatedApplications };
+      setSelectedClient(updatedClient);
+      const updateClientList = (prevClients) => prevClients.map(c => c.registrationKey === updatedClient.registrationKey ? updatedClient : c);
+      setActiveClients(updateClientList);
+      setInactiveClients(updateClientList);
+      setNewClients(updateClientList);
+      setShowAddApplicationModal(false);
+      setNewApplicationFormData({
+        jobTitle: '', company: '', jobType: '', jobBoards: '', jobDescriptionUrl: '', location: '', jobId: '', role: ''
+      });
+      setCurrentModalStep(1); // Reset step after successful save
+      triggerNotification("Application added successfully!");
     } catch (error) {
-        console.error("Failed to save new application:", error);
-        alert("Error saving application.");
+      console.error("Failed to save new application:", error);
+      alert("Error saving application.");
     }
-};
+  };
 
   const handleViewApplication = (application) => {
     setViewedApplication(application);
@@ -1278,71 +1330,71 @@ const handleSaveNewApplication = async () => {
     setEditedApplicationFormData(prev => ({ ...prev, [name]: value }));
   };
 
-// EmployeeData.jsx
+  // EmployeeData.jsx
 
-const handleSaveEditedApplication = async () => {
-  if (!editedApplicationFormData || !selectedClient) return;
-  setIsSavingChanges(true);
-  try {
-    const applicationDataToSave = { ...editedApplicationFormData };
-    const attachmentsToSave = [];
-    let hasNewUploads = false;
-    let filesToAddToClient = [];
+  const handleSaveEditedApplication = async () => {
+    if (!editedApplicationFormData || !selectedClient) return;
+    setIsSavingChanges(true);
+    try {
+      const applicationDataToSave = { ...editedApplicationFormData };
+      const attachmentsToSave = [];
+      let hasNewUploads = false;
+      let filesToAddToClient = [];
 
-    for (const attachment of applicationDataToSave.attachments || []) {
-      if (attachment.file && !attachment.downloadUrl) {
-        hasNewUploads = true;
-        const { clientFirebaseKey, registrationKey } = selectedClient;
-        const appId = applicationDataToSave.id;
-        const fileName = `${Date.now()}_${attachment.file.name}`;
-        const attachmentRef = storageRef(getStorage(), `application_attachments/${clientFirebaseKey}/${registrationKey}/${appId}/${fileName}`);
-        const uploadResult = await uploadBytes(attachmentRef, attachment.file);
-        const downloadURL = await getDownloadURL(uploadResult.ref);
-        const newFileMetadata = {
-          name: attachment.name,
-          size: attachment.size,
-          type: attachment.type,
-          uploadDate: getLocalDateString(), // FIX: Use local date string
-          timestamp: new Date().toISOString(),
-          downloadUrl: downloadURL,
-          id: Date.now() + Math.random(),
-        };
-        attachmentsToSave.push(newFileMetadata);
-        filesToAddToClient.push({ ...newFileMetadata, jobDesc: `Screenshot for application: ${applicationDataToSave.jobTitle} at ${applicationDataToSave.company}` });
-      } else {
-        attachmentsToSave.push(attachment);
+      for (const attachment of applicationDataToSave.attachments || []) {
+        if (attachment.file && !attachment.downloadUrl) {
+          hasNewUploads = true;
+          const { clientFirebaseKey, registrationKey } = selectedClient;
+          const appId = applicationDataToSave.id;
+          const fileName = `${Date.now()}_${attachment.file.name}`;
+          const attachmentRef = storageRef(getStorage(), `application_attachments/${clientFirebaseKey}/${registrationKey}/${appId}/${fileName}`);
+          const uploadResult = await uploadBytes(attachmentRef, attachment.file);
+          const downloadURL = await getDownloadURL(uploadResult.ref);
+          const newFileMetadata = {
+            name: attachment.name,
+            size: attachment.size,
+            type: attachment.type,
+            uploadDate: getLocalDateString(), // FIX: Use local date string
+            timestamp: new Date().toISOString(),
+            downloadUrl: downloadURL,
+            id: Date.now() + Math.random(),
+          };
+          attachmentsToSave.push(newFileMetadata);
+          filesToAddToClient.push({ ...newFileMetadata, jobDesc: `Screenshot for application: ${applicationDataToSave.jobTitle} at ${applicationDataToSave.company}` });
+        } else {
+          attachmentsToSave.push(attachment);
+        }
       }
+      if (hasNewUploads) {
+        triggerNotification("Uploading attachments...");
+      }
+      applicationDataToSave.attachments = attachmentsToSave;
+      const updatedApplications = (selectedClient.jobApplications || []).map(app => app.id === applicationDataToSave.id ? applicationDataToSave : app);
+      const registrationRef = ref(database, `clients/${selectedClient.clientFirebaseKey}/serviceRegistrations/${selectedClient.registrationKey}`);
+      const currentFiles = selectedClient.files || [];
+      const updatedFiles = [...filesToAddToClient, ...currentFiles];
+
+      await update(registrationRef, { jobApplications: updatedApplications, files: updatedFiles, });
+      const updatedClient = { ...selectedClient, jobApplications: updatedApplications, files: updatedFiles, };
+      setSelectedClient(updatedClient);
+      const updateClientLists = (prevClients) => { return prevClients.map(c => c.registrationKey === updatedClient.registrationKey ? updatedClient : c); };
+      setActiveClients(updateClientLists);
+      setInactiveClients(updateClientLists);
+      setNewClients(updateClientLists);
+      setShowEditApplicationModal(false);
+      triggerNotification("Application updated successfully!");
+    } catch (error) {
+      console.error("Failed to save edited application or upload file:", error);
+      alert("Error saving application. Please try again.");
+    } finally {
+      setIsSavingChanges(false);
     }
-    if (hasNewUploads) {
-      triggerNotification("Uploading attachments...");
-    }
-    applicationDataToSave.attachments = attachmentsToSave;
-    const updatedApplications = (selectedClient.jobApplications || []).map(app => app.id === applicationDataToSave.id ? applicationDataToSave : app);
-    const registrationRef = ref(database, `clients/${selectedClient.clientFirebaseKey}/serviceRegistrations/${selectedClient.registrationKey}`);
-    const currentFiles = selectedClient.files || [];
-    const updatedFiles = [...filesToAddToClient, ...currentFiles];
-
-    await update(registrationRef, { jobApplications: updatedApplications, files: updatedFiles, });
-    const updatedClient = { ...selectedClient, jobApplications: updatedApplications, files: updatedFiles, };
-    setSelectedClient(updatedClient);
-    const updateClientLists = (prevClients) => { return prevClients.map(c => c.registrationKey === updatedClient.registrationKey ? updatedClient : c); };
-    setActiveClients(updateClientLists);
-    setInactiveClients(updateClientLists);
-    setNewClients(updateClientLists);
-    setShowEditApplicationModal(false);
-    triggerNotification("Application updated successfully!");
-  } catch (error) {
-    console.error("Failed to save edited application or upload file:", error);
-    alert("Error saving application. Please try again.");
-  } finally {
-    setIsSavingChanges(false);
-  }
-};
+  };
 
 
 
-// In EmployeeData.jsx, find the handlePasteAttachment function and replace it with this:
-const handlePasteAttachment = useCallback((event) => {
+  // In EmployeeData.jsx, find the handlePasteAttachment function and replace it with this:
+  const handlePasteAttachment = useCallback((event) => {
     // Check if either the edit or upload modal is the active context
     if (!showEditApplicationModal && !showUploadFileModal) return;
 
@@ -1441,7 +1493,7 @@ const handlePasteAttachment = useCallback((event) => {
       // Status filter
       const matchesStatus = statusFilter === 'All Statuses' || app.status === statusFilter;
 
-     let matchesDateRange = false;
+      let matchesDateRange = false;
       const start = filterDateRange.startDate;
       const end = filterDateRange.endDate;
 
@@ -1518,8 +1570,8 @@ const handlePasteAttachment = useCallback((event) => {
 
   // In EmployeeData.jsx, replace the existing handleSaveNewFile function
 
-// In EmployeeData.jsx, find and replace the existing handleSaveNewFile function
-const handleSaveNewFile = async () => {
+  // In EmployeeData.jsx, find and replace the existing handleSaveNewFile function
+  const handleSaveNewFile = async () => {
     if (!selectedClientForFile || !newFileFormData.fileType || newFilesToUpload.length === 0) {
       alert('Please select a client, file type, and at least one file to upload.');
       return;
@@ -1796,21 +1848,21 @@ const handleSaveNewFile = async () => {
   };
 
   const formatDateTime = (timestamp) => {
-  if (!timestamp) return { date: 'N/A', time: 'N/A' };
-  try {
-    const date = new Date(timestamp);
-    const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
-    const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
+    if (!timestamp) return { date: 'N/A', time: 'N/A' };
+    try {
+      const date = new Date(timestamp);
+      const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+      const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
 
-    const formattedDate = date.toLocaleDateString('en-US', dateOptions);
-    const formattedTime = date.toLocaleTimeString('en-US', timeOptions);
+      const formattedDate = date.toLocaleDateString('en-US', dateOptions);
+      const formattedTime = date.toLocaleTimeString('en-US', timeOptions);
 
-    return { date: formattedDate, time: formattedTime };
-  } catch (e) {
-    console.error("Error formatting timestamp:", e);
-    return { date: 'Invalid Date', time: 'N/A' };
-  }
-};
+      return { date: formattedDate, time: formattedTime };
+    } catch (e) {
+      console.error("Error formatting timestamp:", e);
+      return { date: 'Invalid Date', time: 'N/A' };
+    }
+  };
 
   // ... inside the EmployeeData component, before the return statement ...
 
@@ -1858,7 +1910,7 @@ const handleSaveNewFile = async () => {
     });
   }, [selectedClient, filterWebsites, filterPositions, filterCompanies, searchTerm, startDateFilter, endDateFilter]);
 
-useEffect(() => {
+  useEffect(() => {
     const clientsForTab = activeTab === 'Active Clients' ? activeClients : inactiveClients;
     // Check if a client is already selected and if that client is still in the list
     const currentClientInList = clientsForTab.find(
@@ -1878,7 +1930,7 @@ useEffect(() => {
         setSelectedClient(null);
       }
     }
-}, [activeTab, newClients, activeClients, inactiveClients]);
+  }, [activeTab, newClients, activeClients, inactiveClients]);
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
@@ -1886,60 +1938,60 @@ useEffect(() => {
     setSelectedClient(null); // Explicitly clear the selected client
   };
 
-const normalizeDate = (dateString) => {
-    return dateString; 
-};
+  const normalizeDate = (dateString) => {
+    return dateString;
+  };
 
-const downloadApplicationsData = () => {
+  const downloadApplicationsData = () => {
     // *** Use the filters from the filterDateRange object ***
     const startFilter = filterDateRange.startDate;
     const endFilter = filterDateRange.endDate;
     // *******************************************************
-    
+
     if (!selectedClient || !selectedClient.jobApplications || selectedClient.jobApplications.length === 0) {
-        alert("No applications available to download for the selected client.");
-        return;
+      alert("No applications available to download for the selected client.");
+      return;
     }
 
     // 1. Filter applications by date range (using appliedDate)
     const filteredApps = selectedClient.jobApplications.filter(app => {
-        const appDate = normalizeDate(app.appliedDate); 
-        
-        // If an app has no date but filters are active, skip it. If filters are empty, we keep it.
-        if (!appDate && (startFilter || endFilter)) return false;
-        
-        let isWithinDateRange = true;
-        
-        // If both filters are empty, isWithinDateRange remains true, including all apps.
-        if (startFilter && appDate < normalizeDate(startFilter)) {
-            isWithinDateRange = false;
-        }
+      const appDate = normalizeDate(app.appliedDate);
 
-        if (endFilter && appDate > normalizeDate(endFilter)) {
-            isWithinDateRange = false;
-        }
+      // If an app has no date but filters are active, skip it. If filters are empty, we keep it.
+      if (!appDate && (startFilter || endFilter)) return false;
 
-        return isWithinDateRange;
+      let isWithinDateRange = true;
+
+      // If both filters are empty, isWithinDateRange remains true, including all apps.
+      if (startFilter && appDate < normalizeDate(startFilter)) {
+        isWithinDateRange = false;
+      }
+
+      if (endFilter && appDate > normalizeDate(endFilter)) {
+        isWithinDateRange = false;
+      }
+
+      return isWithinDateRange;
     });
 
     if (filteredApps.length === 0) {
-        alert("No applications found in the selected date range.");
-        return;
+      alert("No applications found in the selected date range.");
+      return;
     }
 
     // 2. Prepare data for export with Serial Numbers (S.No.)
     const dataForExport = filteredApps.map((app, index) => ({
-        'S.No.': index + 1, // Add Serial Number
-        'Client Name': `${selectedClient.firstName || ''} ${selectedClient.lastName || ''}`.trim(),
-        'Client Email': selectedClient.email || '-',
-        'Job Title': app.jobTitle || '-',
-        'Company': app.company || '-',
-        'Job Boards': app.jobBoards || '-',
-        'Applied Date': app.appliedDate || '-',
-        'Status': app.status || '-',
-        'Job ID': app.jobId || '-',
-        'Job Description URL': app.jobDescriptionUrl || '-',
-        'Attachments Count': app.attachments?.length || 0,
+      'S.No.': index + 1, // Add Serial Number
+      'Client Name': `${selectedClient.firstName || ''} ${selectedClient.lastName || ''}`.trim(),
+      'Client Email': selectedClient.email || '-',
+      'Job Title': app.jobTitle || '-',
+      'Company': app.company || '-',
+      'Job Boards': app.jobBoards || '-',
+      'Applied Date': app.appliedDate || '-',
+      'Status': app.status || '-',
+      'Job ID': app.jobId || '-',
+      'Job Description URL': app.jobDescriptionUrl || '-',
+      'Attachments Count': app.attachments?.length || 0,
     }));
 
     // 3. Export using XLSX (Requires utils and writeFile from 'xlsx' import)
@@ -1949,28 +2001,300 @@ const downloadApplicationsData = () => {
 
     const clientName = `${selectedClient.firstName || ''}_${selectedClient.lastName || ''}`.trim().replace(/\s/g, '_');
     const fileName = `Applications_${clientName}_${startFilter || 'All'}_to_${endFilter || 'All'}.xlsx`;
-    
+
     writeFile(wb, fileName);
+  };
+
+
+  // Inside EmployeeData component
+
+  const getManagerNames = useCallback((ids = []) => {
+    return ids.map(id => {
+      const manager = managersAndAdmins.find(m => m.id === id);
+      return manager ? `${manager.name} (${manager.role})` : 'Unknown User';
+    }).join(', ');
+  }, [managersAndAdmins]);
+
+  const handleLeaveFormChange = (e) => {
+    const { name, value, type, checked } = e.target;
+
+    if (name === 'applyTo') {
+      const targetId = value;
+      setLeaveFormData(prev => ({
+        ...prev,
+        applyTo: checked
+          ? [...prev.applyTo, targetId]
+          : prev.applyTo.filter(id => id !== targetId),
+      }));
+    } else {
+      setLeaveFormData(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleOpenLeaveModal = (request = null) => {
+    if (request) {
+      // Edit mode
+      setLeaveRequestToEdit(request);
+      setLeaveFormData({
+        applyTo: request.applyTo || [],
+        fromDate: request.fromDate || '',
+        toDate: request.toDate || '',
+        leaveType: request.leaveType || '',
+        reason: request.reason || '',
+      });
+    } else {
+      // New mode
+      setLeaveRequestToEdit(null);
+      setLeaveFormData({
+        applyTo: [],
+        fromDate: '',
+        toDate: '',
+        leaveType:'',
+        reason: '',
+      });
+    }
+    setShowLeaveModal(true);
+  };
+
+  const handleCloseLeaveModal = () => {
+    setShowLeaveModal(false);
+    setLeaveRequestToEdit(null);
+    // Reset form data on close
+    setLeaveFormData({
+      applyTo: [],
+      fromDate: '',
+      toDate: '',
+      reason: '',
+    });
+  };
+
+  const handleRequestDeleteLeave = (request) => {
+    setLeaveRequestToDelete(request);
+    setShowDeleteLeaveModal(true);
+  };
+
+// Inside EmployeeData.jsx, replace your existing handleConfirmDeleteLeave function with this:
+const handleConfirmDeleteLeave = async () => {
+  if (!leaveRequestToDelete) return;
+
+  const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInEmployee'));
+  if (!loggedInUserData || !loggedInUserData.firebaseKey) {
+    triggerNotification("Session expired. Please log in again.");
+    return;
+  }
+
+  const employeeFirebaseKey = loggedInUserData.firebaseKey;
+  setIsDeleting(true);
+  const leaveId = leaveRequestToDelete.id;
+
+  try {
+    // Corrected path: Include 'users/' prefix
+    const leaveRef = ref(database, `users/${employeeFirebaseKey}/leaveRequests/${leaveId}`);
+    await remove(leaveRef);
+
+    // NEW: Manually update the local state to remove the deleted request immediately
+    setLeaveRequests(prevRequests => prevRequests.filter(req => req.id !== leaveId));
+
+    triggerNotification("Leave request deleted successfully!");
+  } catch (error) {
+    console.error("Failed to delete leave request:", error);
+    alert("Error deleting leave request. Please try again.");
+  } finally {
+    setShowDeleteLeaveModal(false);
+    setLeaveRequestToDelete(null);
+    setIsDeleting(false);
+  }
 };
+
+
+ // Inside EmployeeData.jsx, replace your existing handleSubmiOrEditLeave function with this:
+const handleSubmiOrEditLeave = async (e) => {
+  e.preventDefault();
+  setIsSubmittingLeave(true);
+  const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInEmployee'));
+
+  if (!loggedInUserData || !loggedInUserData.firebaseKey) {
+    triggerNotification("Session expired. Please log in again.");
+    setIsSubmittingLeave(false); // Ensure loading stops
+    return;
+  }
+
+  const employeeFirebaseKey = loggedInUserData.firebaseKey;
+  const { fromDate, toDate, leaveType } = leaveFormData;
+  const employeeName = `${loggedInUserData.firstName || ''} ${loggedInUserData.lastName || ''}`.trim() || loggedInUserData.name || 'Unknown Employee';
+
+  // Calculate the number of leave days
+const leaveDays = calculateLeaveDays(fromDate, toDate);
+  if (leaveDays <= 0) {
+    triggerNotification("Please select a valid date range for your leave.");
+    setIsSubmittingLeave(false);
+    return;
+  }
+
+  // 🔒 Block multiple Casual Leaves in the same month
+  if (leaveType === 'Casual leave') {
+    const isDuplicate = hasExistingCasualLeaveInMonth(
+      fromDate,
+      toDate,
+      leaveRequestToEdit?.id // Pass current request ID to skip it during edit
+    );
+
+    if (isDuplicate) {
+      triggerNotification("You can only take one Casual Leave per month.");
+      setIsSubmittingLeave(false);
+      return;
+    }
+  }
+
+
+  // Prepare the leave request data object
+  const leaveRequestData = {
+    applyTo: leaveFormData.applyTo, // Array of manager IDs
+    fromDate: leaveFormData.fromDate,
+    toDate: leaveFormData.toDate,
+    reason: leaveFormData.reason,
+    leaveType: leaveFormData.leaveType, // Include the new field
+    status: 'Pending', // Default status
+    requestedDate: new Date().toISOString(), // Timestamp for sorting
+    employeeFirebaseKey: employeeFirebaseKey, // Include the employee ID
+    employeeName: employeeName, // Include the employee name
+    // NEW: Add the calculated leave days
+    leaveDays: leaveDays,
+  };
+
+  try {
+    let requestRef;
+    let newRequestId = null; // To store the ID of the new request if created
+
+    if (leaveRequestToEdit) {
+      // Editing an existing request
+      requestRef = ref(database, `users/${employeeFirebaseKey}/leaveRequests/${leaveRequestToEdit.id}`);
+      newRequestId = leaveRequestToEdit.id;
+      await update(requestRef, leaveRequestData);
+      triggerNotification("Leave request updated successfully!");
+    } else {
+      // Creating a new request
+      requestRef = ref(database, `users/${employeeFirebaseKey}/leaveRequests`); // Reference the collection
+      const newRequestRef = push(requestRef); // Create a new unique key
+      newRequestId = newRequestRef.key; // Get the new key
+      await set(newRequestRef, leaveRequestData); // Set the data at the new key
+      triggerNotification("Leave request submitted successfully!");
+    }
+
+    handleCloseLeaveModal(); // Close the modal
+
+        if (newRequestId) {
+      setLeaveRequests(prevRequests => {
+        // Find the index of the request being edited (if editing)
+        const existingIndex = prevRequests.findIndex(req => req.id === newRequestId);
+
+        if (existingIndex !== -1) {
+          // Update the existing request in the array
+          const updatedRequests = [...prevRequests];
+          updatedRequests[existingIndex] = { id: newRequestId, ...leaveRequestData };
+          // Re-sort after update
+          updatedRequests.sort((a, b) => new Date(b.requestedDate) - new Date(a.requestedDate));
+          return updatedRequests;
+        } else {
+          // Add the new request to the beginning of the array (as it's the newest)
+          const newRequestWithId = { id: newRequestId, ...leaveRequestData };
+          return [newRequestWithId, ...prevRequests]; // Prepend new request
+        }
+      });
+    }
+
+
+    // NEW: Manually refresh the leaveRequests state after successful write
+    // This ensures the table updates immediately, even if the listener is slightly delayed.
+    const leaveRequestsRef = ref(database, `users/${employeeFirebaseKey}/leaveRequests`);
+    const snapshot = await get(leaveRequestsRef); // Use get() for a one-time read
+
+    if (snapshot.exists()) {
+      const leaveData = snapshot.val();
+      const leaveArray = [];
+      for (let id in leaveData) {
+        leaveArray.push({ id, ...leaveData[id] });
+      }
+      // Sort leave requests by requested date (newest first)
+      leaveArray.sort((a, b) => new Date(b.requestedDate) - new Date(a.requestedDate));
+      setLeaveRequests(leaveArray); // Update the state with the fresh data
+    } else {
+      setLeaveRequests([]); // Set to empty array if no data
+    }
+
+  } catch (error) {
+    console.error("Failed to submit/edit leave request:", error);
+    alert("Error submitting leave request. Please try again.");
+  } finally {
+    setIsSubmittingLeave(false);
+  }
+};
+
+  // Helper function to calculate the number of days between two dates (inclusive)
+const calculateLeaveDays = (fromDate, toDate) => {
+  if (!fromDate || !toDate) return 0;
+  const start = new Date(fromDate);
+  const end = new Date(toDate);
+  // Calculate the time difference in milliseconds
+  const timeDiff = end.getTime() - start.getTime();
+  // Convert to days (including the start day)
+  // Adding 1 ensures both start and end dates are counted
+  const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1;
+  return Math.max(0, daysDiff); // Ensure it's not negative
+};
+
+const hasExistingCasualLeaveInMonth = (fromDate, toDate, currentRequestId = null) => {
+  const start = new Date(fromDate);
+  const end = new Date(toDate);
+
+  // Get year and month of the leave period
+  const startYear = start.getFullYear();
+  const startMonth = start.getMonth();
+  const endYear = end.getFullYear();
+  const endMonth = end.getMonth();
+
+  // If range spans multiple months, we need to check both
+  const monthsToCheck = new Set();
+  monthsToCheck.add(`${startYear}-${startMonth}`);
+  if (startYear !== endYear || startMonth !== endMonth) {
+    monthsToCheck.add(`${endYear}-${endMonth}`);
+  }
+
+  return leaveRequests.some(req => {
+    // Skip self when editing
+    if (req.id === currentRequestId) return false;
+
+    // Only check casual leaves
+    if (req.leaveType !== 'Casual leave') return false;
+
+    const reqStart = new Date(req.fromDate);
+    const reqYear = reqStart.getFullYear();
+    const reqMonth = reqStart.getMonth();
+
+    const reqMonthKey = `${reqYear}-${reqMonth}`;
+    return monthsToCheck.has(reqMonthKey);
+  });
+};
+
 
 
   return (
     <div style={containerStyle}>
-<AdminHeader
-  adminUserName={`${employeeDetails.firstName || ''} ${employeeDetails.lastName || ''}`.trim() || employeeDetails.name}
-  adminInitials={adminInitials}
-  isDarkMode={theme === 'dark'}
-  toggleTheme={toggleTheme}
-  toggleSidebar={toggleSidebar}
-  isProfileDropdownOpen={isProfileDropdownOpen}
-  setIsProfileDropdownOpen={setIsProfileDropdownOpen}
-  profileDropdownRef={profileDropdownRef}
-  showProfileModal={showEmployeeProfileModal}
-  setShowProfileModal={setShowEmployeeProfileModal}
-  onNotificationClick={handleNotificationIconClick}
-  onLogoClick={() => navigate('/')}
-  onLogoutClick={handleLogout}
-/>
+      <AdminHeader
+        adminUserName={`${employeeDetails.firstName || ''} ${employeeDetails.lastName || ''}`.trim() || employeeDetails.name}
+        adminInitials={adminInitials}
+        isDarkMode={theme === 'dark'}
+        toggleTheme={toggleTheme}
+        toggleSidebar={toggleSidebar}
+        isProfileDropdownOpen={isProfileDropdownOpen}
+        setIsProfileDropdownOpen={setIsProfileDropdownOpen}
+        profileDropdownRef={profileDropdownRef}
+        showProfileModal={showEmployeeProfileModal}
+        setShowProfileModal={setShowEmployeeProfileModal}
+        onNotificationClick={handleNotificationIconClick}
+        onLogoClick={() => navigate('/')}
+        onLogoutClick={handleLogout}
+      />
       {/* Centralized CSS styles for hover effects and animations */}
       <style>
         {`
@@ -2328,7 +2652,7 @@ const downloadApplicationsData = () => {
         </div>
         <div style={tabsContainerStyle}>
           {/* Only top-level tabs here */}
-          {['New Clients', 'Active Clients', 'Inactive Clients'].map(tab => (
+          {['New Clients', 'Active Clients', 'Inactive Clients', 'Apply Leave'].map(tab => (
             <button
               key={tab}
               style={{
@@ -2682,179 +3006,179 @@ const downloadApplicationsData = () => {
                   </div>
 
                   <h2 style={sectionTitleStyle}>Client Job Applications</h2>
-    <p style={subLabelStyle}>Manage job applications for each assigned client</p>
-    
-    <div key={selectedClient.id} style={clientApplicationsContainerStyle}>
-      <div style={clientApplicationsHeaderStyle}>
-        <div style={initialsCircleStyle}>{selectedClient.initials}</div>
-        <div style={{ flexGrow: 1 }}>
-          <p style={clientNameStyle}>
-            {selectedClient.name}
-            <span style={{
-              ...priorityBadgeStyle,
-              backgroundColor: selectedClient.priority === 'high' ? '#fee2e2' : selectedClient.priority === 'medium' ? '#fef3c7' : '#e0f2fe',
-              color: selectedClient.priority === 'high' ? '#dc2626' : selectedClient.priority === 'medium' ? '#d97706' : '#2563eb'
-            }}>
-              {selectedClient.priority}
-            </span>
-          </p>
-          <p style={clientCodeStyle}>{selectedClient.role || selectedClient.position} - {selectedClient.location}</p>
-        </div>
-        <div style={clientAppStatsStyle}>
-          <span>Total: <strong>{selectedClient?.jobApplications?.length ?? 0}</strong></span>
-          <span>Interviews: <strong>{selectedClient?.jobApplications?.filter(app => app.status === 'Interview').length ?? 0}</strong></span>
-          <span>Applied: <strong>{selectedClient?.jobApplications?.filter(app => app.status === 'Applied').length ?? 0}</strong></span>
-        </div>
-        <button
-          style={addApplicationButtonStyle}
-          onClick={() => handleOpenAddApplicationModal(selectedClient)}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
-          Add Application
-        </button>
-      </div>
-      
-      {/* Search and Filter Controls */}
-      <div style={applicationTableControlsStyle}>
-        <input
-          type="text"
-          placeholder="Search applications..."
-          style={searchInputStyle}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          style={statusFilterSelectStyle}
-        >
-          <option value="All Statuses">All Statuses</option>
-          <option value="Applied">Applied</option>
-          <option value="Interview">Interview</option>
-          {/* <option value="Rejected">Rejected</option> */}
-          <option value="Offered">Offered</option>
-        </select>
-        {/* NEW DOWNLOAD BUTTON - Placed below the status filter */}
-    <button onClick={downloadApplicationsData} style={downloadButtonStyle}>
-        {/* Download Icon */}
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="7 10 12 15 17 10"></polyline>
-            <line x1="12" y1="15" x2="12" y2="3"></line>
-        </svg>
-        Download
-    </button>
-      </div>
+                  <p style={subLabelStyle}>Manage job applications for each assigned client</p>
 
-      {/* Date-wise Application Table */}
-      <div style={applicationTableWrapperStyle}>
-        {/* Get filtered and sorted applications, then group by date */}
-        {Object.keys(getFilteredAndSortedApplications(selectedClient.jobApplications || [])
-          .reduce((acc, app) => {
-            const dateKey = app.appliedDate;
-            if (!acc[dateKey]) {
-              acc[dateKey] = [];
-            }
-            acc[dateKey].push(app);
-            return acc;
-          }, {})).sort((a, b) => new Date(b) - new Date(a)) // Sort dates newest first
-          .map(dateKey => (
-            <div key={dateKey} style={{ marginBottom: '20px' }}>
-              <div style={{
-                background: '#f1f5f9',
-                color: '#475569',
-                padding: '12px 16px',
-                borderRadius: '8px',
-                marginBottom: '10px',
-                fontWeight: '600'
-              }}>
-                {dateKey}
-                <span style={{ float: 'right' }}>
-                  {getFilteredAndSortedApplications(selectedClient.jobApplications || []).filter(app => app.appliedDate === dateKey).length} application(s)
-                </span>
-              </div>
+                  <div key={selectedClient.id} style={clientApplicationsContainerStyle}>
+                    <div style={clientApplicationsHeaderStyle}>
+                      <div style={initialsCircleStyle}>{selectedClient.initials}</div>
+                      <div style={{ flexGrow: 1 }}>
+                        <p style={clientNameStyle}>
+                          {selectedClient.name}
+                          <span style={{
+                            ...priorityBadgeStyle,
+                            backgroundColor: selectedClient.priority === 'high' ? '#fee2e2' : selectedClient.priority === 'medium' ? '#fef3c7' : '#e0f2fe',
+                            color: selectedClient.priority === 'high' ? '#dc2626' : selectedClient.priority === 'medium' ? '#d97706' : '#2563eb'
+                          }}>
+                            {selectedClient.priority}
+                          </span>
+                        </p>
+                        <p style={clientCodeStyle}>{selectedClient.role || selectedClient.position} - {selectedClient.location}</p>
+                      </div>
+                      <div style={clientAppStatsStyle}>
+                        <span>Total: <strong>{selectedClient?.jobApplications?.length ?? 0}</strong></span>
+                        <span>Interviews: <strong>{selectedClient?.jobApplications?.filter(app => app.status === 'Interview').length ?? 0}</strong></span>
+                        <span>Applied: <strong>{selectedClient?.jobApplications?.filter(app => app.status === 'Applied').length ?? 0}</strong></span>
+                      </div>
+                      <button
+                        style={addApplicationButtonStyle}
+                        onClick={() => handleOpenAddApplicationModal(selectedClient)}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="12" y1="5" x2="12" y2="19"></line>
+                          <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Add Application
+                      </button>
+                    </div>
 
-              <table style={applicationTableStyle}>
-                <thead>
-                  <tr>
-                    <th style={applicationTableHeaderCellStyle}>Job Title</th>
-                    <th style={applicationTableHeaderCellStyle}>Company</th>
-                    <th style={applicationTableHeaderCellStyle}>Job Boards</th>
-                    <th style={applicationTableHeaderCellStyle}>Job ID</th>
-                    <th style={applicationTableHeaderCellStyle}>Job Description Link</th>
-                    <th style={applicationTableHeaderCellStyle}>Applied Date</th>
-                    <th style={applicationTableHeaderCellStyle}>Attachments</th>
-                    <th style={applicationTableHeaderCellStyle}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {getFilteredAndSortedApplications(selectedClient.jobApplications || []).filter(app => app.appliedDate === dateKey).length === 0 ? (
-                    <tr>
-                      <td colSpan="8" style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>
-                        No applications found for this client on {dateKey}.
-                      </td>
-                    </tr>
-                  ) : (
-                    getFilteredAndSortedApplications(selectedClient.jobApplications || []).filter(app => app.appliedDate === dateKey)
-                      .map((app) => (
-                        <tr key={app.id}>
-                          <td style={applicationTableDataCellStyle}>{app.jobTitle}</td>
-                          <td style={applicationTableDataCellStyle}>{app.company}</td>
-                          <td style={applicationTableDataCellStyle}>{app.jobBoards}</td>
-                          <td style={applicationTableDataCellStyle}>{app.jobId || '-'}</td>
-                          <td style={applicationTableDataCellStyle}>
-                            {app.jobDescriptionUrl && (
-                              <a href={app.jobDescriptionUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>Description Link </a>
-                            )}
-                          </td>
-                          <td style={applicationTableDataCellStyle}>{app.appliedDate}</td>
-                          <td style={applicationTableDataCellStyle}>
-                            {app.attachments && app.attachments.length > 0 ? (
-                              <button
-                                onClick={() => {
-                                  setViewedApplication(app);
-                                  setShowViewApplicationModal(true);
-                                }}
-                                style={{
-                                  background: 'none', border: 'none', color: '#3b82f6', textDecoration: 'underline',
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                View ({app.attachments.length})
-                              </button>
-                            ) : 'N/A'}
-                          </td>
-                          <td style={applicationTableDataCellStyle}>
-                            <button onClick={() => handleViewApplication(app)} style={actionButtonAppStyle}>
-                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                            </button>
-                            <button onClick={() => handleEditApplication(app)} style={actionButtonAppStyle}>
-                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path></svg>
-                            </button>
-                            <button onClick={() => handleRequestDeleteApplication(selectedClient, app)} style={deleteButtonAppStyle}>
-                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                            </button>
-                          </td>
-                        </tr>
-                      ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          ))}
+                    {/* Search and Filter Controls */}
+                    <div style={applicationTableControlsStyle}>
+                      <input
+                        type="text"
+                        placeholder="Search applications..."
+                        style={searchInputStyle}
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                      <select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        style={statusFilterSelectStyle}
+                      >
+                        <option value="All Statuses">All Statuses</option>
+                        <option value="Applied">Applied</option>
+                        <option value="Interview">Interview</option>
+                        {/* <option value="Rejected">Rejected</option> */}
+                        <option value="Offered">Offered</option>
+                      </select>
+                      {/* NEW DOWNLOAD BUTTON - Placed below the status filter */}
+                      <button onClick={downloadApplicationsData} style={downloadButtonStyle}>
+                        {/* Download Icon */}
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                          <polyline points="7 10 12 15 17 10"></polyline>
+                          <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Download
+                      </button>
+                    </div>
 
-        {selectedClient.jobApplications && selectedClient.jobApplications.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>
-            No applications found for this client.
-          </div>
-        )}
-      </div>
-    </div>
-    </div>
-)}
+                    {/* Date-wise Application Table */}
+                    <div style={applicationTableWrapperStyle}>
+                      {/* Get filtered and sorted applications, then group by date */}
+                      {Object.keys(getFilteredAndSortedApplications(selectedClient.jobApplications || [])
+                        .reduce((acc, app) => {
+                          const dateKey = app.appliedDate;
+                          if (!acc[dateKey]) {
+                            acc[dateKey] = [];
+                          }
+                          acc[dateKey].push(app);
+                          return acc;
+                        }, {})).sort((a, b) => new Date(b) - new Date(a)) // Sort dates newest first
+                        .map(dateKey => (
+                          <div key={dateKey} style={{ marginBottom: '20px' }}>
+                            <div style={{
+                              background: '#f1f5f9',
+                              color: '#475569',
+                              padding: '12px 16px',
+                              borderRadius: '8px',
+                              marginBottom: '10px',
+                              fontWeight: '600'
+                            }}>
+                              {dateKey}
+                              <span style={{ float: 'right' }}>
+                                {getFilteredAndSortedApplications(selectedClient.jobApplications || []).filter(app => app.appliedDate === dateKey).length} application(s)
+                              </span>
+                            </div>
+
+                            <table style={applicationTableStyle}>
+                              <thead>
+                                <tr>
+                                  <th style={applicationTableHeaderCellStyle}>Job Title</th>
+                                  <th style={applicationTableHeaderCellStyle}>Company</th>
+                                  <th style={applicationTableHeaderCellStyle}>Job Boards</th>
+                                  <th style={applicationTableHeaderCellStyle}>Job ID</th>
+                                  <th style={applicationTableHeaderCellStyle}>Job Description Link</th>
+                                  <th style={applicationTableHeaderCellStyle}>Applied Date</th>
+                                  <th style={applicationTableHeaderCellStyle}>Attachments</th>
+                                  <th style={applicationTableHeaderCellStyle}>Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {getFilteredAndSortedApplications(selectedClient.jobApplications || []).filter(app => app.appliedDate === dateKey).length === 0 ? (
+                                  <tr>
+                                    <td colSpan="8" style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>
+                                      No applications found for this client on {dateKey}.
+                                    </td>
+                                  </tr>
+                                ) : (
+                                  getFilteredAndSortedApplications(selectedClient.jobApplications || []).filter(app => app.appliedDate === dateKey)
+                                    .map((app) => (
+                                      <tr key={app.id}>
+                                        <td style={applicationTableDataCellStyle}>{app.jobTitle}</td>
+                                        <td style={applicationTableDataCellStyle}>{app.company}</td>
+                                        <td style={applicationTableDataCellStyle}>{app.jobBoards}</td>
+                                        <td style={applicationTableDataCellStyle}>{app.jobId || '-'}</td>
+                                        <td style={applicationTableDataCellStyle}>
+                                          {app.jobDescriptionUrl && (
+                                            <a href={app.jobDescriptionUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>Description Link </a>
+                                          )}
+                                        </td>
+                                        <td style={applicationTableDataCellStyle}>{app.appliedDate}</td>
+                                        <td style={applicationTableDataCellStyle}>
+                                          {app.attachments && app.attachments.length > 0 ? (
+                                            <button
+                                              onClick={() => {
+                                                setViewedApplication(app);
+                                                setShowViewApplicationModal(true);
+                                              }}
+                                              style={{
+                                                background: 'none', border: 'none', color: '#3b82f6', textDecoration: 'underline',
+                                                cursor: 'pointer'
+                                              }}
+                                            >
+                                              View ({app.attachments.length})
+                                            </button>
+                                          ) : 'N/A'}
+                                        </td>
+                                        <td style={applicationTableDataCellStyle}>
+                                          <button onClick={() => handleViewApplication(app)} style={actionButtonAppStyle}>
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                          </button>
+                                          <button onClick={() => handleEditApplication(app)} style={actionButtonAppStyle}>
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path></svg>
+                                          </button>
+                                          <button onClick={() => handleRequestDeleteApplication(selectedClient, app)} style={deleteButtonAppStyle}>
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                          </button>
+                                        </td>
+                                      </tr>
+                                    ))
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        ))}
+
+                      {selectedClient.jobApplications && selectedClient.jobApplications.length === 0 && (
+                        <div style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>
+                          No applications found for this client.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Files Tab Content */}
               {activeSubTab === 'Files' && (
@@ -3202,120 +3526,120 @@ const downloadApplicationsData = () => {
                       Add Application
                     </button>
                   </div>
-                        {simplifiedServices.includes(selectedClient.service) ? (
-        // --- RENDER SIMPLIFIED VIEW for ServiceForm clients (View Only) ---
-        <div style={{ ...clientDataGridStyle, gridTemplateColumns: '1fr' }}>
-          <div style={clientDataSectionStyle}>
-            <h3 style={clientDataSectionTitleStyle}>Service Request Details</h3>
-            <p style={clientDataDetailStyle}><strong>First Name:</strong> {selectedClient.firstName || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Last Name:</strong> {selectedClient.lastName || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Mobile:</strong> {selectedClient.mobile || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Email:</strong> {selectedClient.email || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Service:</strong> {selectedClient.service || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Sub-Services:</strong> {(selectedClient.subServices || []).join(', ') || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>User Type:</strong> {selectedClient.userType || '-'}</p>
-          </div>
-        </div>
-      ) : (
-        <div style={clientDataGridStyle}>
-          <div style={clientDataSectionStyle}>
-            <h3 style={clientDataSectionTitleStyle}>Personal Information</h3>
-            <p style={clientDataDetailStyle}><strong>First Name:</strong> {selectedClient.firstName || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Middle Name:</strong> {selectedClient.middleName || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Last Name:</strong> {selectedClient.lastName || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Date of Birth:</strong> {selectedClient.dob || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Gender:</strong> {selectedClient.gender || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Ethnicity:</strong> {selectedClient.ethnicity || '-'}</p>
-          </div>
-          <div style={clientDataSectionStyle}>
-            <h3 style={clientDataSectionTitleStyle}>Contact Information</h3>
-            <p style={clientDataDetailStyle}><strong>Address:</strong> {selectedClient.address || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>County:</strong> {selectedClient.county || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Zip Code:</strong> {selectedClient.zipCode || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Mobile:</strong> {selectedClient.mobile || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Email:</strong> {selectedClient.email || '-'}</p>
-          </div>
-          <div style={clientDataSectionStyle}>
-            <h3 style={clientDataSectionTitleStyle}>Employment Details</h3>
-            <p style={clientDataDetailStyle}><strong>Current Company:</strong> {selectedClient.currentCompany || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Current Designation:</strong> {selectedClient.currentDesignation || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Preferred Interview Time:</strong> {selectedClient.preferredInterviewTime || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Earliest Joining Date:</strong> {selectedClient.earliestJoiningDate || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Relieving Date:</strong> {selectedClient.relievingDate || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Years of Experience:</strong> {selectedClient.yearsOfExperience || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Notice Period:</strong> {selectedClient.noticePeriod || '-'}</p>
-          </div>
-          <div style={clientDataSectionStyle}>
-            <h3 style={clientDataSectionTitleStyle}>Job Preferences & Status</h3>
-            <p style={clientDataDetailStyle}><strong>Jobs to Apply:</strong> {selectedClient.jobsToApply || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Work Preference:</strong> {selectedClient.workPreference || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Willing to Relocate:</strong> {selectedClient.willingToRelocate || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Current Salary:</strong> {selectedClient.currentSalary || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Expected Salary:</strong> {selectedClient.expectedSalary || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Visa Status:</strong> {selectedClient.visaStatus || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Security Clearance:</strong> {selectedClient.securityClearance || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Clearance Level:</strong> {selectedClient.clearanceLevel || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Restricted Companies:</strong> {selectedClient.restrictedCompanies || '-'}</p>
-          </div>
-         <div style={clientDataSectionStyle}>
-  <h3 style={clientDataSectionTitleStyle}>Education Details</h3>
-  {(selectedClient.educationDetails || []).length > 0 ? (
-    (selectedClient.educationDetails || []).map((edu, index) => (
-      <div key={index} style={{ marginBottom: '15px', padding: '15px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-        <h4 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '10px' }}>Entry {index + 1}</h4>
-        <p style={clientDataDetailStyle}><strong>University Name:</strong> {edu.universityName || '-'}</p>
-        <p style={clientDataDetailStyle}><strong>University Address:</strong> {edu.universityAddress || '-'}</p>
-        <p style={clientDataDetailStyle}><strong>Course of Study:</strong> {edu.courseOfStudy || '-'}</p>
-        <p style={clientDataDetailStyle}><strong>Graduation From Date:</strong> {edu.graduationFromDate || '-'}</p>
-        <p style={clientDataDetailStyle}><strong>Graduation To Date:</strong> {edu.graduationToDate || '-'}</p>
-      </div>
-    ))
-  ) : (
-    <p style={clientDataDetailStyle}>No education details provided.</p>
-  )}
-</div>
-          <div style={clientDataSectionStyle}>
-            <h3 style={clientDataSectionTitleStyle}>References</h3>
-            <p style={clientDataDetailStyle}><strong>Reference Name:</strong> {selectedClient.referenceName || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Reference Phone:</strong> {selectedClient.referencePhone || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Reference Address:</strong> {selectedClient.referenceAddress || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Reference Email:</strong> {selectedClient.referenceEmail || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Reference Role:</strong> {selectedClient.referenceRole || '-'}</p>
-          </div>
-          <div style={clientDataSectionStyle}>
-            <h3 style={clientDataSectionTitleStyle}>Job Portal Accounts</h3>
-            <p style={clientDataDetailStyle}><strong>Account Info:</strong> {selectedClient.jobPortalAccountNameandCredentials || '-'}</p>
-          </div>
-<div style={clientDataSectionStyle}>
-  <h3 style={clientDataSectionTitleStyle}>Resume(s)</h3>
-  <p style={clientDataDetailStyle}>
-    <strong>Resume(s):</strong>
-    {(selectedClient.resumes || []).length > 0 ? (
-      (selectedClient.resumes || []).map((resume, index) => (
-        <a key={index} href={resume.url} target="_blank" rel="noopener noreferrer" style={{ marginLeft: '8px', color: '#3b82f6', textDecoration: 'underline' }}>
-          {resume.name || `Resume ${index + 1}`}
-        </a>
-      ))
-    ) : (
-      <span style={{ marginLeft: '8px', color: '#64748b' }}>No resumes on file.</span>
-    )}
-  </p>
-</div>
-<div style={clientDataSectionStyle}>
-  <h3 style={clientDataSectionTitleStyle}>Cover Letter</h3>
-  <p style={clientDataDetailStyle}>
-    <strong>Cover Letter:</strong>
-    {selectedClient.coverLetterUrl ? (
-      <a href={selectedClient.coverLetterUrl} target="_blank" rel="noopener noreferrer" style={{ marginLeft: '8px', color: '#3b82f6', textDecoration: 'underline' }}>
-        {selectedClient.coverLetterFileName || 'Download Cover Letter'}
-      </a>
-    ) : (
-      <span style={{ marginLeft: '8px', color: '#64748b' }}>No cover letter on file.</span>
-    )}
-  </p>
-</div>
-        </div>
-      )}
+                  {simplifiedServices.includes(selectedClient.service) ? (
+                    // --- RENDER SIMPLIFIED VIEW for ServiceForm clients (View Only) ---
+                    <div style={{ ...clientDataGridStyle, gridTemplateColumns: '1fr' }}>
+                      <div style={clientDataSectionStyle}>
+                        <h3 style={clientDataSectionTitleStyle}>Service Request Details</h3>
+                        <p style={clientDataDetailStyle}><strong>First Name:</strong> {selectedClient.firstName || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Last Name:</strong> {selectedClient.lastName || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Mobile:</strong> {selectedClient.mobile || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Email:</strong> {selectedClient.email || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Service:</strong> {selectedClient.service || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Sub-Services:</strong> {(selectedClient.subServices || []).join(', ') || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>User Type:</strong> {selectedClient.userType || '-'}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={clientDataGridStyle}>
+                      <div style={clientDataSectionStyle}>
+                        <h3 style={clientDataSectionTitleStyle}>Personal Information</h3>
+                        <p style={clientDataDetailStyle}><strong>First Name:</strong> {selectedClient.firstName || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Middle Name:</strong> {selectedClient.middleName || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Last Name:</strong> {selectedClient.lastName || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Date of Birth:</strong> {selectedClient.dob || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Gender:</strong> {selectedClient.gender || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Ethnicity:</strong> {selectedClient.ethnicity || '-'}</p>
+                      </div>
+                      <div style={clientDataSectionStyle}>
+                        <h3 style={clientDataSectionTitleStyle}>Contact Information</h3>
+                        <p style={clientDataDetailStyle}><strong>Address:</strong> {selectedClient.address || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>County:</strong> {selectedClient.county || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Zip Code:</strong> {selectedClient.zipCode || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Mobile:</strong> {selectedClient.mobile || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Email:</strong> {selectedClient.email || '-'}</p>
+                      </div>
+                      <div style={clientDataSectionStyle}>
+                        <h3 style={clientDataSectionTitleStyle}>Employment Details</h3>
+                        <p style={clientDataDetailStyle}><strong>Current Company:</strong> {selectedClient.currentCompany || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Current Designation:</strong> {selectedClient.currentDesignation || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Preferred Interview Time:</strong> {selectedClient.preferredInterviewTime || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Earliest Joining Date:</strong> {selectedClient.earliestJoiningDate || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Relieving Date:</strong> {selectedClient.relievingDate || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Years of Experience:</strong> {selectedClient.yearsOfExperience || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Notice Period:</strong> {selectedClient.noticePeriod || '-'}</p>
+                      </div>
+                      <div style={clientDataSectionStyle}>
+                        <h3 style={clientDataSectionTitleStyle}>Job Preferences & Status</h3>
+                        <p style={clientDataDetailStyle}><strong>Jobs to Apply:</strong> {selectedClient.jobsToApply || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Work Preference:</strong> {selectedClient.workPreference || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Willing to Relocate:</strong> {selectedClient.willingToRelocate || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Current Salary:</strong> {selectedClient.currentSalary || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Expected Salary:</strong> {selectedClient.expectedSalary || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Visa Status:</strong> {selectedClient.visaStatus || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Security Clearance:</strong> {selectedClient.securityClearance || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Clearance Level:</strong> {selectedClient.clearanceLevel || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Restricted Companies:</strong> {selectedClient.restrictedCompanies || '-'}</p>
+                      </div>
+                      <div style={clientDataSectionStyle}>
+                        <h3 style={clientDataSectionTitleStyle}>Education Details</h3>
+                        {(selectedClient.educationDetails || []).length > 0 ? (
+                          (selectedClient.educationDetails || []).map((edu, index) => (
+                            <div key={index} style={{ marginBottom: '15px', padding: '15px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                              <h4 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '10px' }}>Entry {index + 1}</h4>
+                              <p style={clientDataDetailStyle}><strong>University Name:</strong> {edu.universityName || '-'}</p>
+                              <p style={clientDataDetailStyle}><strong>University Address:</strong> {edu.universityAddress || '-'}</p>
+                              <p style={clientDataDetailStyle}><strong>Course of Study:</strong> {edu.courseOfStudy || '-'}</p>
+                              <p style={clientDataDetailStyle}><strong>Graduation From Date:</strong> {edu.graduationFromDate || '-'}</p>
+                              <p style={clientDataDetailStyle}><strong>Graduation To Date:</strong> {edu.graduationToDate || '-'}</p>
+                            </div>
+                          ))
+                        ) : (
+                          <p style={clientDataDetailStyle}>No education details provided.</p>
+                        )}
+                      </div>
+                      <div style={clientDataSectionStyle}>
+                        <h3 style={clientDataSectionTitleStyle}>References</h3>
+                        <p style={clientDataDetailStyle}><strong>Reference Name:</strong> {selectedClient.referenceName || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Reference Phone:</strong> {selectedClient.referencePhone || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Reference Address:</strong> {selectedClient.referenceAddress || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Reference Email:</strong> {selectedClient.referenceEmail || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Reference Role:</strong> {selectedClient.referenceRole || '-'}</p>
+                      </div>
+                      <div style={clientDataSectionStyle}>
+                        <h3 style={clientDataSectionTitleStyle}>Job Portal Accounts</h3>
+                        <p style={clientDataDetailStyle}><strong>Account Info:</strong> {selectedClient.jobPortalAccountNameandCredentials || '-'}</p>
+                      </div>
+                      <div style={clientDataSectionStyle}>
+                        <h3 style={clientDataSectionTitleStyle}>Resume(s)</h3>
+                        <p style={clientDataDetailStyle}>
+                          <strong>Resume(s):</strong>
+                          {(selectedClient.resumes || []).length > 0 ? (
+                            (selectedClient.resumes || []).map((resume, index) => (
+                              <a key={index} href={resume.url} target="_blank" rel="noopener noreferrer" style={{ marginLeft: '8px', color: '#3b82f6', textDecoration: 'underline' }}>
+                                {resume.name || `Resume ${index + 1}`}
+                              </a>
+                            ))
+                          ) : (
+                            <span style={{ marginLeft: '8px', color: '#64748b' }}>No resumes on file.</span>
+                          )}
+                        </p>
+                      </div>
+                      <div style={clientDataSectionStyle}>
+                        <h3 style={clientDataSectionTitleStyle}>Cover Letter</h3>
+                        <p style={clientDataDetailStyle}>
+                          <strong>Cover Letter:</strong>
+                          {selectedClient.coverLetterUrl ? (
+                            <a href={selectedClient.coverLetterUrl} target="_blank" rel="noopener noreferrer" style={{ marginLeft: '8px', color: '#3b82f6', textDecoration: 'underline' }}>
+                              {selectedClient.coverLetterFileName || 'Download Cover Letter'}
+                            </a>
+                          ) : (
+                            <span style={{ marginLeft: '8px', color: '#64748b' }}>No cover letter on file.</span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </>
@@ -3341,7 +3665,7 @@ const downloadApplicationsData = () => {
               </svg>
             </button>
           </div>
-    {selectedClient && selectedClient.assignmentStatus === 'inactive' ? (
+          {selectedClient && selectedClient.assignmentStatus === 'inactive' ? (
             <>
               {/* Status Display Banner for Inactive Client */}
               <div style={{ marginTop: '20px', padding: '15px', background: '#ffe4e6', borderRadius: '8px', border: '1px solid #fecaca' }}>
@@ -3662,15 +3986,15 @@ const downloadApplicationsData = () => {
                       </select>
 
                       {/* NEW DOWNLOAD BUTTON - Placed below the status filter */}
-    <button onClick={downloadApplicationsData} style={downloadButtonStyle}>
-        {/* Download Icon */}
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="7 10 12 15 17 10"></polyline>
-            <line x1="12" y1="15" x2="12" y2="3"></line>
-        </svg>
-        Download
-    </button>
+                      <button onClick={downloadApplicationsData} style={downloadButtonStyle}>
+                        {/* Download Icon */}
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                          <polyline points="7 10 12 15 17 10"></polyline>
+                          <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Download
+                      </button>
                     </div>
 
                     <div style={applicationTableWrapperStyle}>
@@ -4116,98 +4440,98 @@ const downloadApplicationsData = () => {
                     </button>
                   </div>
 
- {simplifiedServices.includes(selectedClient.service) ? (
-        // --- RENDER SIMPLIFIED VIEW for ServiceForm clients ---
-        <div style={{ ...clientDataGridStyle, gridTemplateColumns: '1fr' }}>
-          <div style={clientDataSectionStyle}>
-            <h3 style={clientDataSectionTitleStyle}>Service Request Details</h3>
-            <p style={clientDataDetailStyle}><strong>First Name:</strong> {selectedClient.firstName || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Last Name:</strong> {selectedClient.lastName || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Mobile:</strong> {selectedClient.mobile || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Email:</strong> {selectedClient.email || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Service:</strong> {selectedClient.service || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Sub-Services:</strong> {(selectedClient.subServices || []).join(', ') || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>User Type:</strong> {selectedClient.userType || '-'}</p>
-          </div>
-        </div>
-      ) : (
+                  {simplifiedServices.includes(selectedClient.service) ? (
+                    // --- RENDER SIMPLIFIED VIEW for ServiceForm clients ---
+                    <div style={{ ...clientDataGridStyle, gridTemplateColumns: '1fr' }}>
+                      <div style={clientDataSectionStyle}>
+                        <h3 style={clientDataSectionTitleStyle}>Service Request Details</h3>
+                        <p style={clientDataDetailStyle}><strong>First Name:</strong> {selectedClient.firstName || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Last Name:</strong> {selectedClient.lastName || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Mobile:</strong> {selectedClient.mobile || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Email:</strong> {selectedClient.email || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Service:</strong> {selectedClient.service || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Sub-Services:</strong> {(selectedClient.subServices || []).join(', ') || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>User Type:</strong> {selectedClient.userType || '-'}</p>
+                      </div>
+                    </div>
+                  ) : (
 
-        <div style={clientDataGridStyle}>
-          <div style={clientDataSectionStyle}>
-            <h3 style={clientDataSectionTitleStyle}>Personal Information</h3>
-            <p style={clientDataDetailStyle}><strong>First Name:</strong> {selectedClient.firstName || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Middle Name:</strong> {selectedClient.middleName || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Last Name:</strong> {selectedClient.lastName || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Date of Birth:</strong> {selectedClient.dob || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Gender:</strong> {selectedClient.gender || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Ethnicity:</strong> {selectedClient.ethnicity || '-'}</p>
-          </div>
+                    <div style={clientDataGridStyle}>
+                      <div style={clientDataSectionStyle}>
+                        <h3 style={clientDataSectionTitleStyle}>Personal Information</h3>
+                        <p style={clientDataDetailStyle}><strong>First Name:</strong> {selectedClient.firstName || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Middle Name:</strong> {selectedClient.middleName || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Last Name:</strong> {selectedClient.lastName || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Date of Birth:</strong> {selectedClient.dob || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Gender:</strong> {selectedClient.gender || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Ethnicity:</strong> {selectedClient.ethnicity || '-'}</p>
+                      </div>
 
-          <div style={clientDataSectionStyle}>
-            <h3 style={clientDataSectionTitleStyle}>Contact Information</h3>
-            <p style={clientDataDetailStyle}><strong>Address:</strong> {selectedClient.address || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Zip Code:</strong> {selectedClient.zipCode || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Mobile:</strong> {selectedClient.mobile || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Email:</strong> {selectedClient.email || '-'}</p>
-          </div>
+                      <div style={clientDataSectionStyle}>
+                        <h3 style={clientDataSectionTitleStyle}>Contact Information</h3>
+                        <p style={clientDataDetailStyle}><strong>Address:</strong> {selectedClient.address || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Zip Code:</strong> {selectedClient.zipCode || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Mobile:</strong> {selectedClient.mobile || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Email:</strong> {selectedClient.email || '-'}</p>
+                      </div>
 
-          <div style={clientDataSectionStyle}>
-            <h3 style={clientDataSectionTitleStyle}>Job Preferences & Status</h3>
-            <p style={clientDataDetailStyle}><strong>Security Clearance:</strong> {selectedClient.securityClearance || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Clearance Level:</strong> {selectedClient.clearanceLevel || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Willing to Relocate:</strong> {selectedClient.willingToRelocate || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Work Preference:</strong> {selectedClient.workPreference || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Restricted Companies:</strong> {selectedClient.restrictedCompanies || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Jobs to Apply:</strong> {selectedClient.jobsToApply || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Technology Skills:</strong> {selectedClient.technologySkills || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Current Salary:</strong> {selectedClient.currentSalary || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Expected Salary:</strong> {selectedClient.expectedSalary || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Visa Status:</strong> {selectedClient.visaStatus || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Other Visa Status:</strong> {selectedClient.otherVisaStatus || '-'}</p>
-          </div>
+                      <div style={clientDataSectionStyle}>
+                        <h3 style={clientDataSectionTitleStyle}>Job Preferences & Status</h3>
+                        <p style={clientDataDetailStyle}><strong>Security Clearance:</strong> {selectedClient.securityClearance || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Clearance Level:</strong> {selectedClient.clearanceLevel || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Willing to Relocate:</strong> {selectedClient.willingToRelocate || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Work Preference:</strong> {selectedClient.workPreference || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Restricted Companies:</strong> {selectedClient.restrictedCompanies || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Jobs to Apply:</strong> {selectedClient.jobsToApply || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Technology Skills:</strong> {selectedClient.technologySkills || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Current Salary:</strong> {selectedClient.currentSalary || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Expected Salary:</strong> {selectedClient.expectedSalary || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Visa Status:</strong> {selectedClient.visaStatus || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Other Visa Status:</strong> {selectedClient.otherVisaStatus || '-'}</p>
+                      </div>
 
-         <div style={clientDataSectionStyle}>
-  <h3 style={clientDataSectionTitleStyle}>Education Details</h3>
-  {(selectedClient.educationDetails || []).length > 0 ? (
-    (selectedClient.educationDetails || []).map((edu, index) => (
-      <div key={index} style={{ marginBottom: '15px', padding: '15px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-        <h4 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '10px' }}>Entry {index + 1}</h4>
-        <p style={clientDataDetailStyle}><strong>University Name:</strong> {edu.universityName || '-'}</p>
-        <p style={clientDataDetailStyle}><strong>University Address:</strong> {edu.universityAddress || '-'}</p>
-        <p style={clientDataDetailStyle}><strong>Course of Study:</strong> {edu.courseOfStudy || '-'}</p>
-        <p style={clientDataDetailStyle}><strong>Graduation From Date:</strong> {edu.graduationFromDate || '-'}</p>
-        <p style={clientDataDetailStyle}><strong>Graduation To Date:</strong> {edu.graduationToDate || '-'}</p>
-      </div>
-    ))
-  ) : (
-    <p style={clientDataDetailStyle}>No education details provided.</p>
-  )}
-</div>
+                      <div style={clientDataSectionStyle}>
+                        <h3 style={clientDataSectionTitleStyle}>Education Details</h3>
+                        {(selectedClient.educationDetails || []).length > 0 ? (
+                          (selectedClient.educationDetails || []).map((edu, index) => (
+                            <div key={index} style={{ marginBottom: '15px', padding: '15px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                              <h4 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '10px' }}>Entry {index + 1}</h4>
+                              <p style={clientDataDetailStyle}><strong>University Name:</strong> {edu.universityName || '-'}</p>
+                              <p style={clientDataDetailStyle}><strong>University Address:</strong> {edu.universityAddress || '-'}</p>
+                              <p style={clientDataDetailStyle}><strong>Course of Study:</strong> {edu.courseOfStudy || '-'}</p>
+                              <p style={clientDataDetailStyle}><strong>Graduation From Date:</strong> {edu.graduationFromDate || '-'}</p>
+                              <p style={clientDataDetailStyle}><strong>Graduation To Date:</strong> {edu.graduationToDate || '-'}</p>
+                            </div>
+                          ))
+                        ) : (
+                          <p style={clientDataDetailStyle}>No education details provided.</p>
+                        )}
+                      </div>
 
-          <div style={clientDataSectionStyle}>
-            <h3 style={clientDataSectionTitleStyle}>Employment Details</h3>
-            <p style={clientDataDetailStyle}><strong>Current Company:</strong> {selectedClient.currentCompany || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Current Designation:</strong> {selectedClient.currentDesignation || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Preferred Interview Time:</strong> {selectedClient.preferredInterviewTime || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Earliest Joining Date:</strong> {selectedClient.earliestJoiningDate || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Relieving Date:</strong> {selectedClient.relievingDate || '-'}</p>
-          </div>
+                      <div style={clientDataSectionStyle}>
+                        <h3 style={clientDataSectionTitleStyle}>Employment Details</h3>
+                        <p style={clientDataDetailStyle}><strong>Current Company:</strong> {selectedClient.currentCompany || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Current Designation:</strong> {selectedClient.currentDesignation || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Preferred Interview Time:</strong> {selectedClient.preferredInterviewTime || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Earliest Joining Date:</strong> {selectedClient.earliestJoiningDate || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Relieving Date:</strong> {selectedClient.relievingDate || '-'}</p>
+                      </div>
 
-          <div style={clientDataSectionStyle}>
-            <h3 style={clientDataSectionTitleStyle}>References</h3>
-            <p style={clientDataDetailStyle}><strong>Reference Name:</strong> {selectedClient.referenceName || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Reference Phone:</strong> {selectedClient.referencePhone || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Reference Address:</strong> {selectedClient.referenceAddress || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Reference Email:</strong> {selectedClient.referenceEmail || '-'}</p>
-          </div>
+                      <div style={clientDataSectionStyle}>
+                        <h3 style={clientDataSectionTitleStyle}>References</h3>
+                        <p style={clientDataDetailStyle}><strong>Reference Name:</strong> {selectedClient.referenceName || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Reference Phone:</strong> {selectedClient.referencePhone || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Reference Address:</strong> {selectedClient.referenceAddress || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Reference Email:</strong> {selectedClient.referenceEmail || '-'}</p>
+                      </div>
 
-          <div style={clientDataSectionStyle}>
-            <h3 style={clientDataSectionTitleStyle}>Job Portal Accounts</h3>
-            <p style={clientDataDetailStyle}><strong>Account Name:</strong> {selectedClient.jobPortalAccountName || '-'}</p>
-            <p style={clientDataDetailStyle}><strong>Credentials:</strong> {selectedClient.jobPortalCredentials ? '********' : '-'}</p>
-          </div>
-        </div>
-      )}
+                      <div style={clientDataSectionStyle}>
+                        <h3 style={clientDataSectionTitleStyle}>Job Portal Accounts</h3>
+                        <p style={clientDataDetailStyle}><strong>Account Name:</strong> {selectedClient.jobPortalAccountName || '-'}</p>
+                        <p style={clientDataDetailStyle}><strong>Credentials:</strong> {selectedClient.jobPortalCredentials ? '********' : '-'}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </>
@@ -4272,7 +4596,7 @@ const downloadApplicationsData = () => {
                   onChange={handleNewApplicationFormChange}
                   style={{ ...modalInputStyle, borderColor: newApplicationErrors.jobId ? 'red' : '#cbd5e1' }}
                   placeholder="e.g., ABC-12345"
-                  
+
                 />
                 {newApplicationErrors.jobId && <p style={errorTextStyle}>{newApplicationErrors.jobId}</p>}
               </div>
@@ -4303,7 +4627,7 @@ const downloadApplicationsData = () => {
                       <option value="Glassdoor" />
                       <option value="Simplyhired" />
                       <option value="Ziprecruiter" />
-                       <option value="Jobright" />
+                      <option value="Jobright" />
                     </datalist>
                   </div>
 
@@ -4451,7 +4775,7 @@ const downloadApplicationsData = () => {
                 ) : 'N/A'}
               </div>
               <p style={modalViewDetailItemStyle}><strong>Applied Date:</strong> {formatDateTime(viewedApplication.timestamp).date}</p>
-    <p style={modalViewDetailItemStyle}><strong>Applied Time:</strong> {formatDateTime(viewedApplication.timestamp).time}</p>
+              <p style={modalViewDetailItemStyle}><strong>Applied Time:</strong> {formatDateTime(viewedApplication.timestamp).time}</p>
               {/* <p style={{ ...modalViewDetailItemStyle, gridColumn: '1 / -1' }}><strong>Job Description:</strong> {viewedApplication.jobDesc || '-'}</p> */}
             </div>
           </Modal.Body>
@@ -4752,128 +5076,128 @@ const downloadApplicationsData = () => {
             <Modal.Title style={modalTitleStyle}>Upload File</Modal.Title>
           </Modal.Header>
    // In EmployeeData.jsx, find the `showUploadFileModal` block and replace its Modal.Body with this:
-<Modal.Body style={modalBodyStyle}>
-  <p style={{ textAlign: 'center', color: '#64748b', marginBottom: '20px' }}>Upload resume, interview screenshot, or other documents for your clients. Files will be automatically sent to clients.</p>
-  <div style={modalFormGridStyle}>
-    <div style={modalFormFieldGroupStyle}>
-      <label style={modalLabelStyle}>Client <span style={{ color: 'red' }}>*</span></label>
-      <select
-        name="clientId"
-        value={selectedClientForFile.registrationKey}
-        onChange={(e) => {
-          const selected = [...activeClients, ...inactiveClients].find(
-            (c) => c.registrationKey === e.target.value
-          );
-          setSelectedClientForFile(selected);
-        }}
-        style={modalSelectStyle}
-        required
-        disabled
-      >
-        {[...activeClients, ...inactiveClients].map(client => (
-          <option key={client.registrationKey} value={client.registrationKey}>{client.name}</option>
-        ))}
-      </select>
-    </div>
-    <div style={modalFormFieldGroupStyle}>
-      <label style={modalLabelStyle}>File Type <span style={{ color: 'red' }}>*</span></label>
-      <select
-        name="fileType"
-        value={newFileFormData.fileType}
-        onChange={handleNewFileFormChange}
-        style={modalSelectStyle}
-        required
-      >
-        <option value="">Select file type</option>
-        <option value="resume">Resume</option>
-        <option value="cover letter">Cover Letter</option>
-        {/* <option value="interview screenshot">Interview Screenshot</option> */}
-        <option value="portfolio">Portfolio</option>
-        <option value="offers">Offers</option>
-        <option value="other">Others</option>
-      </select>
-    </div>
-    <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
-      <label style={modalLabelStyle}>File <span style={{ color: 'red' }}>*</span></label>
+          <Modal.Body style={modalBodyStyle}>
+            <p style={{ textAlign: 'center', color: '#64748b', marginBottom: '20px' }}>Upload resume, interview screenshot, or other documents for your clients. Files will be automatically sent to clients.</p>
+            <div style={modalFormGridStyle}>
+              <div style={modalFormFieldGroupStyle}>
+                <label style={modalLabelStyle}>Client <span style={{ color: 'red' }}>*</span></label>
+                <select
+                  name="clientId"
+                  value={selectedClientForFile.registrationKey}
+                  onChange={(e) => {
+                    const selected = [...activeClients, ...inactiveClients].find(
+                      (c) => c.registrationKey === e.target.value
+                    );
+                    setSelectedClientForFile(selected);
+                  }}
+                  style={modalSelectStyle}
+                  required
+                  disabled
+                >
+                  {[...activeClients, ...inactiveClients].map(client => (
+                    <option key={client.registrationKey} value={client.registrationKey}>{client.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div style={modalFormFieldGroupStyle}>
+                <label style={modalLabelStyle}>File Type <span style={{ color: 'red' }}>*</span></label>
+                <select
+                  name="fileType"
+                  value={newFileFormData.fileType}
+                  onChange={handleNewFileFormChange}
+                  style={modalSelectStyle}
+                  required
+                >
+                  <option value="">Select file type</option>
+                  <option value="resume">Resume</option>
+                  <option value="cover letter">Cover Letter</option>
+                  {/* <option value="interview screenshot">Interview Screenshot</option> */}
+                  <option value="portfolio">Portfolio</option>
+                  <option value="offers">Offers</option>
+                  <option value="other">Others</option>
+                </select>
+              </div>
+              <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
+                <label style={modalLabelStyle}>File <span style={{ color: 'red' }}>*</span></label>
 
-      {/* NEW: Attachment Preview */}
-      {newFilesToUpload.length > 0 && (
-        <div className="attachments-preview-container">
-          {newFilesToUpload.map((file, index) => (
-            <div key={file.id} className="attachment-item">
-              {file.type === 'interview screenshot' ? (
-                <img src={URL.createObjectURL(file.file)} alt={file.name} className="attachment-image-preview" />
-              ) : (
-                <div className="attachment-file-icon">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
-                    <polyline points="13 2 13 9 20 9"></polyline>
-                  </svg>
+                {/* NEW: Attachment Preview */}
+                {newFilesToUpload.length > 0 && (
+                  <div className="attachments-preview-container">
+                    {newFilesToUpload.map((file, index) => (
+                      <div key={file.id} className="attachment-item">
+                        {file.type === 'interview screenshot' ? (
+                          <img src={URL.createObjectURL(file.file)} alt={file.name} className="attachment-image-preview" />
+                        ) : (
+                          <div className="attachment-file-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                              <polyline points="13 2 13 9 20 9"></polyline>
+                            </svg>
+                          </div>
+                        )}
+                        <span className="attachment-name">{file.name}</span>
+                        <button
+                          onClick={() => {
+                            setNewFilesToUpload(prev => prev.filter(f => f.id !== file.id));
+                          }}
+                          className="attachment-remove-btn"
+                        >
+                          &times;
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* NEW: Custom file input for drag/drop and paste */}
+                <div className="custom-file-input-container">
+                  <button
+                    type="button"
+                    className="add-attachment-btn"
+                    onClick={() => {
+                      if (fileInputRef.current) {
+                        fileInputRef.current.click();
+                      }
+                    }}
+                  >
+                    +
+                  </button>
+                  <input
+                    type="file"
+                    multiple
+                    ref={fileInputRef}
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                      const newFiles = Array.from(e.target.files).map(file => ({
+                        id: Date.now() + Math.random(),
+                        name: file.name,
+                        size: `${(file.size / 1024).toFixed(1)} KB`,
+                        type: newFileFormData.fileType || 'other',
+                        uploadDate: new Date().toISOString().split('T')[0],
+                        file: file,
+                      }));
+                      setNewFilesToUpload(prev => [...prev, ...newFiles]);
+                    }}
+                  />
+                  <div className="file-input-facade">
+                    <span className="file-input-placeholder">
+                      Add file or paste a screenshot
+                    </span>
+                  </div>
                 </div>
-              )}
-              <span className="attachment-name">{file.name}</span>
-              <button
-                onClick={() => {
-                  setNewFilesToUpload(prev => prev.filter(f => f.id !== file.id));
-                }}
-                className="attachment-remove-btn"
-              >
-                &times;
-              </button>
+              </div>
+              <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
+                <label style={modalLabelStyle}>Details</label>
+                <textarea
+                  name="notes"
+                  value={newFileFormData.notes}
+                  onChange={(e) => setNewFileFormData(prev => ({ ...prev, notes: e.target.value }))}
+                  style={modalTextareaStyle}
+                  placeholder="Any additional notes about this file..."
+                ></textarea>
+              </div>
             </div>
-          ))}
-        </div>
-      )}
-
-      {/* NEW: Custom file input for drag/drop and paste */}
-      <div className="custom-file-input-container">
-        <button
-          type="button"
-          className="add-attachment-btn"
-          onClick={() => {
-            if (fileInputRef.current) {
-              fileInputRef.current.click();
-            }
-          }}
-        >
-          +
-        </button>
-        <input
-          type="file"
-          multiple
-          ref={fileInputRef}
-          style={{ display: 'none' }}
-          onChange={(e) => {
-            const newFiles = Array.from(e.target.files).map(file => ({
-              id: Date.now() + Math.random(),
-              name: file.name,
-              size: `${(file.size / 1024).toFixed(1)} KB`,
-              type: newFileFormData.fileType || 'other',
-              uploadDate: new Date().toISOString().split('T')[0],
-              file: file,
-            }));
-            setNewFilesToUpload(prev => [...prev, ...newFiles]);
-          }}
-        />
-        <div className="file-input-facade">
-          <span className="file-input-placeholder">
-            Add file or paste a screenshot
-          </span>
-        </div>
-      </div>
-    </div>
-    <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
-      <label style={modalLabelStyle}>Details</label>
-      <textarea
-        name="notes"
-        value={newFileFormData.notes}
-        onChange={(e) => setNewFileFormData(prev => ({ ...prev, notes: e.target.value }))}
-        style={modalTextareaStyle}
-        placeholder="Any additional notes about this file..."
-      ></textarea>
-    </div>
-  </div>
-</Modal.Body>
+          </Modal.Body>
           <Modal.Footer style={modalFooterStyle}>
             <button
               onClick={() => setShowUploadFileModal(false)}
@@ -5372,6 +5696,290 @@ const downloadApplicationsData = () => {
             ) : (
               'Confirm Delete'
             )}
+          </button>
+        </Modal.Footer>
+      </Modal>
+
+ {/* Apply Leave Tab Content */}
+      {activeTab === 'Apply Leave' && (
+        <div style={applicationsSectionStyle}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <div>
+              <h2 style={sectionTitleStyle}>Leave Request Management</h2>
+              <p style={subLabelStyle}>Submit new leave requests and track their status.</p>
+            </div>
+            {/* 'Apply Leave' button in the right-side top corner */}
+            <button style={addApplicationButtonStyle} onClick={() => handleOpenLeaveModal()} >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              Apply Leave
+            </button>
+          </div>
+
+ {/* Leave Summary Cards */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+            gap: '20px',
+            marginBottom: '30px'
+          }}>
+            {/* Total Leaves Card */}
+            <div style={{
+              background: 'linear-gradient(135deg, #f0f9ff, #e0f2fe)',
+              padding: '20px',
+              borderRadius: '12px',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
+              border: '1px solid #bae6fd'
+            }}>
+              <h3 style={{
+                fontSize: '1.1rem',
+                fontWeight: '600',
+                color: '#0369a1',
+                margin: '0 0 10px 0'
+              }}>Total Annual Leaves (Days)</h3>
+              <p style={{
+                fontSize: '2rem',
+                fontWeight: '700',
+                color: '#0284c7',
+                margin: '0'
+              }}>12</p>
+            </div>
+
+            {/* Used Leaves Card (Casual Leave Days) */}
+            <div style={{
+              background: 'linear-gradient(135deg, #fffbeb, #fef3c7)',
+              padding: '20px',
+              borderRadius: '12px',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
+              border: '1px solid #fbbf24'
+            }}>
+              <h3 style={{
+                fontSize: '1.1rem',
+                fontWeight: '600',
+                color: '#92400e',
+                margin: '0 0 10px 0'
+              }}>Used Leaves (Days)</h3>
+              <p style={{
+                fontSize: '2rem',
+                fontWeight: '700',
+                color: '#d97706',
+                margin: '0'
+              }}>
+                {leaveRequests
+                  .filter(req => req.leaveType === 'Casual leave' || req.leaveType === 'Sick leave')
+                  .reduce((total, req) => total + (req.leaveDays || 0), 0)}
+              </p>
+            </div>
+
+            {/* Planned Leaves Card (Planned Leave Days) */}
+            <div style={{
+              background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)',
+              padding: '20px',
+              borderRadius: '12px',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
+              border: '1px solid #86efac'
+            }}>
+              <h3 style={{
+                fontSize: '1.1rem',
+                fontWeight: '600',
+                color: '#14532d',
+                margin: '0 0 10px 0'
+              }}>Planned Leaves (Days)</h3>
+              <p style={{
+                fontSize: '2rem',
+                fontWeight: '700',
+                color: '#16a34a',
+                margin: '0'
+              }}>
+                {leaveRequests
+                  .filter(req => req.leaveType === 'Planned leave')
+                  .reduce((total, req) => total + (req.leaveDays || 0), 0)}
+              </p>
+            </div>
+          </div>
+
+          {/* Leave Request Table */}
+          <div style={{ overflowX: 'auto', background: 'var(--bg-header)', borderRadius: '10px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th style={{ ...applicationTableHeaderCellStyle, width: '5%' }}>S.No</th>
+                  <th style={{ ...applicationTableHeaderCellStyle, width: '15%' }}>Apply To</th>
+                  <th style={{ ...applicationTableHeaderCellStyle, width: '15%' }}>From Date - To Date</th>
+                  <th style={{ ...applicationTableHeaderCellStyle, width: '5%' }}>Days</th>
+                  <th style={{ ...applicationTableHeaderCellStyle, width: '12%'}}>Leave Type</th>
+                  <th style={{ ...applicationTableHeaderCellStyle, width: '5%' }}>Reason</th>
+                  <th style={{ ...applicationTableHeaderCellStyle, width: '15%', textAlign: 'center' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {leaveRequests.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" style={{ ...applicationTableDataCellStyle, textAlign: 'center', color: '#64748b' }}>
+                      No leave requests submitted yet.
+                    </td>
+                  </tr>
+                ) : (
+                  leaveRequests.map((request, index) => (
+                    <tr key={request.id}>
+                      <td style={applicationTableDataCellStyle}>{index + 1}</td>
+                      <td style={applicationTableDataCellStyle}>
+                        <small style={{ color: '#64748b' }}>To: {getManagerNames(request.applyTo)}</small>
+                      </td>
+                      <td style={applicationTableDataCellStyle}>{request.fromDate} - {request.toDate}</td>
+                      <td style={applicationTableDataCellStyle}>{request.leaveDays || 0}</td>
+                      <td style={applicationTableDataCellStyle}>
+                <span style={{ ...applicationStatusBadgeStyle, backgroundColor: '#e0f2f1', color: '#0d9488' }}>
+                    {request.leaveType} 
+                </span>
+            </td>
+                      <td style={applicationTableDataCellStyle} title={request.reason}>
+                        {request.reason.length > 50 ? `${request.reason.substring(0, 50)}...` : request.reason}
+                      </td>
+                      <td style={{ ...applicationTableDataCellStyle, textAlign: 'center' }}>
+                        <button
+                          onClick={() => handleOpenLeaveModal(request)}
+                          style={{ ...modalAddButtonPrimaryStyle, padding: '4px 8px', fontSize: '0.75rem', marginRight: '5px' }}
+                          disabled={request.status.toLowerCase() !== 'pending'} // Can only edit pending requests
+                          title={request.status.toLowerCase() !== 'pending' ? 'Only pending requests can be edited' : 'Edit Request'}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleRequestDeleteLeave(request)}
+                          style={{ ...modalCancelButtonStyle, padding: '4px 8px', fontSize: '0.75rem', background: '#ef4444', color: '#fff' }}
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+
+      {/* Modal Form for Apply Leave */}
+      <Modal show={showLeaveModal} onHide={handleCloseLeaveModal} size="md" centered>
+        <Modal.Header closeButton style={modalHeaderStyle}>
+          <Modal.Title style={modalTitleStyle}>{leaveRequestToEdit ? 'Edit Leave Request' : 'Apply for Leave'}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body style={modalBodyStyle}>
+          <form onSubmit={handleSubmiOrEditLeave}>
+            <div style={modalFormGridStyle}>
+              {/* Apply To Field - Multi-select Checkboxes */}
+              <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
+                <label style={modalLabelStyle}>Apply To <span style={{ color: 'red' }}>*</span></label>
+                <div style={{ maxHeight: '150px', overflowY: 'auto', border: '1px solid #e2e8f0', padding: '10px', borderRadius: '6px' }}>
+                  {managersAndAdmins.length === 0 ? (
+                    <p style={{ margin: 0, color: '#64748b' }}>No managers or admins found in the system.</p>
+                  ) : (
+                    managersAndAdmins.map(manager => (
+                      <div key={manager.id} style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
+                        <input
+                          type="checkbox"
+                          id={`applyTo-${manager.id}`}
+                          name="applyTo"
+                          value={manager.id}
+                          checked={leaveFormData.applyTo.includes(manager.id)}
+                          onChange={handleLeaveFormChange}
+                          style={{ marginRight: '10px' }}
+                        />
+                        <label htmlFor={`applyTo-${manager.id}`} style={{ fontWeight: 400, color: '#1e293b' }}>
+                          {manager.name} ({manager.role})
+                        </label>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+
+              {/* From Date - To Date Calendar */}
+              <div style={modalFormFieldGroupStyle}>
+                <label style={modalLabelStyle}>From Date <span style={{ color: 'red' }}>*</span></label>
+                <input
+                  type="date"
+                  name="fromDate"
+                  value={leaveFormData.fromDate}
+                  onChange={handleLeaveFormChange}
+                  style={modalInputStyle}
+                  required
+                />
+              </div>
+              <div style={modalFormFieldGroupStyle}>
+                <label style={modalLabelStyle}>To Date <span style={{ color: 'red' }}>*</span></label>
+                <input
+                  type="date"
+                  name="toDate"
+                  value={leaveFormData.toDate}
+                  onChange={handleLeaveFormChange}
+                  style={modalInputStyle}
+                  required
+                />
+              </div>
+
+                      {/* Leave Type Field (New) */}
+        <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
+          <label style={modalLabelStyle}>Leave Type</label>
+          <select
+            name="leaveType"
+            value={leaveFormData.leaveType}
+            onChange={handleLeaveFormChange}
+            style={modalInputStyle}
+          >
+            <option value="">Select a Leave Type</option>
+            <option value="Sick leave">Sick leave</option>
+            <option value="Casual leave">Casual leave</option>
+            <option value="Planned leave">Planned leave</option>
+          </select>
+        </div>
+
+              {/* Reason Field */}
+              <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
+                <label style={modalLabelStyle}>Reason</label>
+                <textarea
+                  name="reason"
+                  value={leaveFormData.reason}
+                  onChange={handleLeaveFormChange}
+                  style={modalTextareaStyle}
+                  rows="4"
+                  placeholder="Details of your leave request, e.g., reason, coverage plan."
+                ></textarea>
+              </div>
+            </div>
+            <Modal.Footer style={modalFooterStyle}>
+              <button type="button" onClick={handleCloseLeaveModal} style={modalCancelButtonStyle}>
+                Cancel
+              </button>
+              <button type="submit" style={modalAddButtonPrimaryStyle} disabled={isSubmittingLeave}>
+                {isSubmittingLeave ? <Spinner animation="border" size="sm" /> : (leaveRequestToEdit ? 'Save Changes' : 'Submit Request')}
+              </button>
+            </Modal.Footer>
+          </form>
+        </Modal.Body>
+      </Modal>
+
+      {/* Delete Leave Confirmation Modal */}
+      <Modal show={showDeleteLeaveModal} onHide={() => setShowDeleteLeaveModal(false)} size="md" centered>
+        <Modal.Header closeButton style={modalHeaderStyle}>
+          <Modal.Title style={modalTitleStyle}>Confirm Delete</Modal.Title>
+        </Modal.Header>
+        <Modal.Body style={modalBodyStyle}>
+          <p>Are you sure you want to delete the leave request: <strong>{leaveRequestToDelete?.leaveType}</strong>?</p>
+          <p style={{ color: '#ef4444' }}>This action cannot be undone.</p>
+        </Modal.Body>
+        <Modal.Footer style={modalFooterStyle}>
+          <button onClick={() => setShowDeleteLeaveModal(false)} style={modalCancelButtonStyle}>
+            Cancel
+          </button>
+          <button onClick={handleConfirmDeleteLeave} style={{ ...modalAddButtonPrimaryStyle, background: '#ef4444' }} disabled={isDeleting}>
+            {isDeleting ? <Spinner animation="border" size="sm" /> : 'Delete Leave Request'}
           </button>
         </Modal.Footer>
       </Modal>

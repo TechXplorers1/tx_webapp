@@ -483,7 +483,7 @@ const ManagerWorkSheet = () => {
       const assignedByManager = clientsForManager.filter(reg => ['pending_acceptance', 'active'].includes(reg.assignmentStatus));
       const inactiveAssigned = clientsForManager.filter(reg =>
     reg.assignmentStatus === 'inactive'
-);
+   );
 
       setUnassignedClients(unassignedForManager);
       setAssignedClients(assignedByManager);
@@ -524,15 +524,135 @@ const ManagerWorkSheet = () => {
           user.roles && Array.isArray(user.roles) && user.roles.includes('employee')
         );
         setEmployeesForAssignment(employeesOnly);
+
+       const empData = snapshot.val();
+        const firebaseEmps = {};
+        if (empData) {
+          Object.keys(empData).forEach(key => {
+            const user = empData[key];
+            if (user.roles?.includes('employee')) {
+              firebaseEmps[key] = {
+                firebaseKey: key,
+                firstName: user.firstName || '',
+                lastName: user.lastName || '',
+                fullName: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+              };
+            }
+          });
+        }
+        setFirebaseEmployees(firebaseEmps);
+        
       }
+    });
+
+    const leaveRequestsRef = ref(database, 'leave_requests');
+    const unsubscribeLeave = onValue(leaveRequestsRef, (snapshot) => {
+      const requestsData = snapshot.val();
+      const allRequests = [];
+      if (requestsData) {
+        Object.keys(requestsData).forEach(key => {
+          allRequests.push({ id: key, ...requestsData[key] });
+        });
+      }
+
+      // Filter requests: only show requests where this manager's ID is in the 'applyTo' array
+      const managerRequests = allRequests.filter(req => 
+        req.applyTo && Array.isArray(req.applyTo) && req.applyTo.includes(managerFirebaseKey)
+      );
+
+      // Sort by requested date descending
+      managerRequests.sort((a, b) => new Date(b.requestedDate) - new Date(a.requestedDate));
+
+      setEmployeeLeaveRequests(managerRequests);
     });
 
     return () => {
       unsubscribeManager();
       unsubscribeClients();
       unsubscribeUsers();
+      unsubscribeLeave();
     };
   }, []);
+
+
+  // 3. Fetch Leave Requests for Assigned Employees
+useEffect(() => {
+  if (activeTab !== 'LeaveRequests') return; // Only fetch when needed (optional: remove for always-on sync)
+
+  const fetchLeaveRequests = async () => {
+    try {
+      const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInEmployee'));
+      if (!loggedInUserData?.firebaseKey) return;
+
+      const managerFirebaseKey = loggedInUserData.firebaseKey;
+
+      // Get all clients assigned by this manager
+      const clientsRef = ref(database, 'clients');
+      const snapshot = await get(clientsRef);
+
+      if (!snapshot.exists()) return;
+
+      const clients = snapshot.val();
+      const assignedEmployeeKeys = new Set();
+
+      Object.values(clients).forEach(client => {
+        if (client.assignedBy === managerFirebaseKey && client.assignedTo) {
+          assignedEmployeeKeys.add(client.assignedTo);
+        }
+      });
+
+      if (assignedEmployeeKeys.size === 0) {
+        setEmployeeLeaveRequests([]);
+        return;
+      }
+
+      // Fetch all employees from Firebase
+const employeesRef = ref(database, 'users');
+const employeesSnap = await get(employeesRef);
+
+let firebaseEmps = {};
+if (employeesSnap.exists()) {
+  const empData = employeesSnap.val();
+  Object.keys(empData).forEach(key => {
+    const user = empData[key];
+    if (user.roles?.includes('employee')) { // assuming role-based filtering
+      firebaseEmps[key] = {
+        firebaseKey: key,
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        fullName: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+      };
+    }
+  });
+}
+setFirebaseEmployees(firebaseEmps);
+
+      // Fetch leave requests for each assigned employee
+      const requestsPromises = Array.from(assignedEmployeeKeys).map(async (empKey) => {
+        const leaveRef = ref(database, 'leave_requests');
+        const leaveSnap = await get(leaveRef);
+        if (leaveSnap.exists()) {
+          const empRequests = Object.entries(leaveSnap.val()).map(([id, req]) => ({
+            ...req,
+            id,
+            employeeFirebaseKey: empKey,
+          }));
+          return empRequests;
+        }
+        return [];
+      });
+
+      const allRequestsArrays = await Promise.all(requestsPromises);
+      const allRequests = allRequestsArrays.flat().sort((a, b) => new Date(b.requestedDate || b.fromDate) - new Date(a.requestedDate || a.fromDate));
+
+      setEmployeeLeaveRequests(allRequests);
+    } catch (error) {
+      console.error("Error fetching leave requests:", error);
+    }
+  };
+
+  fetchLeaveRequests();
+}, [database, activeTab]);
 
 
   // State to manage editable profile fields
@@ -911,9 +1031,16 @@ const handleUpdateClientStatus = async () => {
   const [isInternalClick, setIsInternalClick] = useState(false);
 const [isInactiveClientsModalOpen, setIsInactiveClientsModalOpen] = useState(false);
 const [inactiveAssignedClients, setInactiveAssignedClients] = useState([]);
+const [employeeLeaveRequests, setEmployeeLeaveRequests] = useState([]);
 
   // State to store application counts per client
   const [clientApplicationCounts, setClientApplicationCounts] = useState({});
+
+  const [selectedLeaveRequest, setSelectedLeaveRequest] = useState(null);
+const [showLeaveApprovalModal, setShowLeaveApprovalModal] = useState(false);
+const [approvalStatus, setApprovalStatus] = useState('Approved');
+
+const [firebaseEmployees, setFirebaseEmployees] = useState({});
 
   // NEW: Comprehensive dummy data for client details (from EmployeeData.txt structure)
   // This data will be the source of truth for detailed client profiles
@@ -4949,6 +5076,17 @@ Please provide a summary no longer than 150 words.`;
           />
           <label htmlFor="interviewsRadio">Interviews</label>
         </div>
+          <div className="radio-option">
+    <input
+      type="radio"
+      id="leaveRequestsRadio"
+      name="tabSelection"
+      value="LeaveRequests"
+      checked={activeTab === 'LeaveRequests'}
+      onChange={handleRadioChange}
+    />
+    <label htmlFor="leaveRequestsRadio">Leave Requests</label>
+  </div>
       </nav>
 
       {/* Tab Content */}
@@ -5206,6 +5344,83 @@ Please provide a summary no longer than 150 words.`;
             </div>
           </section>
         )}
+
+        {activeTab === 'LeaveRequests' && (
+  <section className="leave-requests-section client-assignment-overview">
+    <div className="client-assignment-header">
+      <h2 className="client-assignment-title">Employee Leave Requests</h2>
+      <span className="total-interviews-badge">{employeeLeaveRequests.length} total requests</span>
+    </div>
+
+    {employeeLeaveRequests.length === 0 ? (
+      <p style={{ textAlign: 'center', color: '#64748b', padding: '20px' }}>
+        No leave requests found from your assigned employees.
+      </p>
+    ) : (
+      <div className="table-responsive">
+        <table className="application-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Employee</th>
+              <th>Type</th>
+              <th>Dates</th>
+              <th>Subject</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {employeeLeaveRequests.map((req, index) => {
+const employee = firebaseEmployees[req.employeeFirebaseKey];
+const fullName = employee ? employee.fullName : 'Unknown Employee';
+              const statusColor = req.status === 'Approved' 
+                ? '#10b981' 
+                : req.status === 'Rejected' 
+                ? '#ef4444' 
+                : '#f59e0b';
+
+              return (
+                <tr key={`${req.id}-${index}`}>
+                  <td>{index + 1}</td>
+                  <td><strong>{fullName}</strong></td>
+                  <td>{req.jobType}</td>
+                  <td>{req.fromDate} → {req.toDate}</td>
+                  <td>{req.subject}</td>
+                  <td>
+                    <span style={{
+                      padding: '4px 12px',
+                      borderRadius: '20px',
+                      backgroundColor: statusColor + '20',
+                      color: statusColor,
+                      fontSize: '0.85em',
+                      fontWeight: 'bold'
+                    }}>
+                      {req.status}
+                    </span>
+                  </td>
+                  <td>
+                    <button
+                      className="btn-sm btn-primary"
+                      onClick={() => {
+                        setSelectedLeaveRequest(req);
+                        setShowLeaveApprovalModal(true);
+                      }}
+                    >
+                      Review
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </section>
+)}
+
+
       </div>
       {/* Unassigned Clients Modal */}
       {isUnassignedClientsModalOpen && (
@@ -6991,6 +7206,51 @@ Please provide a summary no longer than 150 words.`;
             </div>
         </div>
     </div>
+)}
+
+{selectedLeaveRequest && showLeaveApprovalModal && (
+  <div className="modal-overlay open">
+    <div className="modal-content" style={{ maxWidth: '600px' }}>
+      <div className="modal-header">
+        <h3>Review Leave Request</h3>
+        <button className="modal-close-button" onClick={() => setShowLeaveApprovalModal(false)}>&times;</button>
+      </div>
+      <div className="modal-body">
+        <p><strong>Employee:</strong> {`${allEmployees.find(e => e.firebaseKey === selectedLeaveRequest.employeeFirebaseKey)?.firstName || ''} ${allEmployees.find(e => e.firebaseKey === selectedLeaveRequest.employeeFirebaseKey)?.lastName || ''}`}</p>
+        <p><strong>Dates:</strong> {selectedLeaveRequest.fromDate} to {selectedLeaveRequest.toDate}</p>
+        <p><strong>Type:</strong> {selectedLeaveRequest.jobType}</p>
+        <p><strong>Reason:</strong> {selectedLeaveRequest.description}</p>
+        <div className="assign-form-group">
+          <label>Status</label>
+          <select
+            value={approvalStatus}
+            onChange={(e) => setApprovalStatus(e.target.value)}
+          >
+            <option value="Approved">Approve</option>
+            <option value="Rejected">Reject</option>
+          </select>
+        </div>
+      </div>
+      <div className="modal-footer">
+        <button className="confirm-cancel-btn" onClick={() => setShowLeaveApprovalModal(false)}>Cancel</button>
+        <button
+          className="confirm-proceed-btn"
+          onClick={async () => {
+          const reqRef = ref(database, `leave_requests/${selectedLeaveRequest.id}`);
+            await update(reqRef, { status: approvalStatus });
+            triggerNotification(`Leave request ${approvalStatus.toLowerCase()} successfully.`);
+            setShowLeaveApprovalModal(false);
+            // Refresh list
+            setEmployeeLeaveRequestsprev.map(r => 
+                r.id === selectedLeaveRequest.id ? { ...r, status: approvalStatus } : r
+              )
+          }}
+        >
+          Save
+        </button>
+      </div>
+    </div>
+  </div>
 )}
 
       {/* NEW: Success Confirmation Modal */}
