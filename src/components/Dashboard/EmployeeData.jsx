@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Modal, Spinner } from 'react-bootstrap'; // Using react-bootstrap Modal
-import { getDatabase, ref, onValue, query, orderByChild, equalTo, update, remove, set, push, get } from "firebase/database";
+import { getDatabase, ref, onValue, query, orderByChild, equalTo, update, remove, set, push, get, off } from "firebase/database";
 import { database } from '../../firebase'; // Import your Firebase config
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { utils, writeFile } from 'xlsx';
@@ -541,6 +541,10 @@ const EmployeeData = () => {
       unsubscribeClients();
       unsubscribeUsers();
       unsubscribeLeave();
+      off(employeeRef);
+      off(clientsRef);
+      off(usersRef);
+      off(leaveRef);
     };
   }, [database]);
 

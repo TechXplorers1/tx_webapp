@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 // Import Firebase functions and the initialized database
 // Make sure the path to your firebase configuration file is correct.
-import { getDatabase, ref, onValue, update } from "firebase/database";
+import { getDatabase, ref, onValue, update, off } from "firebase/database";
 import { database } from '../../firebase'; 
 
 const AssetManagement = () => {
@@ -57,6 +57,8 @@ const AssetManagement = () => {
     return () => {
       unsubscribeAssets();
       unsubscribeUsers();
+      off(assetsRef);
+      off(usersRef);
     };
   }, []); // The empty dependency array ensures this effect runs only once.
 

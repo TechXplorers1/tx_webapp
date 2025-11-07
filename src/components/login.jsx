@@ -34,40 +34,61 @@ export default function LoginPage() {
   const [modalAlert, setModalAlert] = useState({ type: "", message: "" });
 
   const processLogin = async (user) => {
-    const dbRef = ref(database);
-    const snapshot = await get(child(dbRef, `users/${user.uid}`));
-    let userDataFromDb;
+    try {
+      const { uid, email, photoURL } = user;
 
-    if (snapshot.exists()) {
+      // ✅ Use direct path reference instead of child() on root
+      const userRef = ref(database, `users/${uid}`);
+      const snapshot = await get(userRef);
+
+      let userDataFromDb;
+
+      if (snapshot.exists()) {
         userDataFromDb = snapshot.val();
-    } else {
-        userDataFromDb = { email: user.email, roles: ['client'] };
-        await set(ref(database, 'users/' + user.uid), userDataFromDb);
-        await set(ref(database, 'clients/' + user.uid), { email: user.email, firstName: user.email.split('@')[0], lastName: '' });
-    }
-    
-    const finalUserData = {
-       firebaseKey: user.uid,
-        uid: user.uid,
-        email: user.email,
+      } else {
+        // ✅ Batch both writes into one atomic update
+        const updates = {
+          [`users/${uid}`]: { email, roles: ['client'] },
+          [`clients/${uid}`]: {
+            email,
+            firstName: email.split('@')[0],
+            lastName: '',
+          },
+        };
+        await update(ref(database), updates);
+
+        userDataFromDb = updates[`users/${uid}`];
+      }
+
+      // ✅ Construct user data once
+      const finalUserData = {
+        firebaseKey: uid,
+        uid,
+        email,
         roles: userDataFromDb.roles || ['client'],
-        avatar: user.photoURL || `https://placehold.co/40x40/007bff/white?text=${user.email.charAt(0).toUpperCase()}`
-    };
+        avatar:
+          photoURL ||
+          `https://placehold.co/40x40/007bff/white?text=${email.charAt(0).toUpperCase()}`,
+      };
 
-    sessionStorage.setItem('loggedInEmployee', JSON.stringify(finalUserData));
-    login(finalUserData);
+      // ✅ Cache in sessionStorage and context
+      sessionStorage.setItem('loggedInEmployee', JSON.stringify(finalUserData));
+      login(finalUserData);
 
-    if (finalUserData.roles.includes('admin')) {
-        navigate('/adminpage');
-    } else if (finalUserData.roles.includes('manager')) {
-        navigate('/managerworksheet');
-    } else if (finalUserData.roles.includes('employee')) {
-        navigate('/employees');
-    }else if (finalUserData.roles.includes('asset')) {
-        navigate('/assetworksheet');
-    } 
-    else {
-        navigate('/');
+      // ✅ Map roles to routes (cleaner and faster)
+      const roleRoutes = {
+        admin: '/adminpage',
+        manager: '/managerworksheet',
+        employee: '/employees',
+        asset: '/assetworksheet',
+        client: '/',
+      };
+
+      const userRole = finalUserData.roles.find((r) => roleRoutes[r]) || 'client';
+      navigate(roleRoutes[userRole]);
+    } catch (error) {
+      console.error('Login process failed:', error);
+      alert('Login failed. Please try again.');
     }
   };
 

@@ -92,26 +92,41 @@ const LandingPage = () => {
   // Note: carouselRef removed as carousel animation is handled by CSS on active slide
 
   useEffect(() => {
-    // Only run this if the user is logged in and we have their Firebase key
-    if (isLoggedIn && user?.firebaseKey) {
-      // Create a reference to this client's serviceRegistrations in the database
-      const clientRegRef = ref(database, `clients/${user.firebaseKey}/serviceRegistrations`);
-      
-      // Listen for data at that reference
-      const unsubscribe = onValue(clientRegRef, (snapshot) => {
-        const registrations = snapshot.val();
-        setServiceRegistrations(registrations);
-        
-        // This new log will show you the service data being fetched
-      });
-
-      // Clean up the listener when the component unmounts
-      return () => unsubscribe();
-    } else {
-      // If user logs out, clear the data
+    if (!isLoggedIn || !user?.firebaseKey) {
       setServiceRegistrations(null);
+      return;
     }
-  }, [isLoggedIn, user]);
+
+    const clientRegRef = ref(database, `clients/${user.firebaseKey}/serviceRegistrations`);
+
+    // Optional: use child listeners if you expect frequent small updates
+    const handleAdd = onChildAdded(clientRegRef, (snapshot) => {
+      setServiceRegistrations(prev => ({
+        ...(prev || {}),
+        [snapshot.key]: snapshot.val(),
+      }));
+    });
+
+    const handleChange = onChildChanged(clientRegRef, (snapshot) => {
+      setServiceRegistrations(prev => ({
+        ...(prev || {}),
+        [snapshot.key]: snapshot.val(),
+      }));
+    });
+
+    const handleRemove = onChildRemoved(clientRegRef, (snapshot) => {
+      setServiceRegistrations(prev => {
+        const updated = { ...(prev || {}) };
+        delete updated[snapshot.key];
+        return updated;
+      });
+    });
+
+    // Cleanup
+    return () => {
+      off(clientRegRef); // remove all three listeners
+    };
+  }, [isLoggedIn, user?.firebaseKey]);
 
   const offices = [
     { name: 'USA', position: [40.7128, -74.006] },

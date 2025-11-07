@@ -385,37 +385,33 @@ const AssetWorksheet = () => {
 
   const branchLocations = ['Branch 1', 'Branch 2', 'Head Office', 'Remote'];
 
-    useEffect(() => {
-        // If Firebase is configured, set up listeners.
-        const assetsRef = ref(database, 'assets');
-        const usersRef = ref(database, 'users');
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [assetsSnap, usersSnap] = await Promise.all([
+          get(ref(database, 'assets')),
+          get(ref(database, 'users')),
+        ]);
 
-        // Listener for Assets
-        const unsubscribeAssets = onValue(assetsRef, (snapshot) => {
-            const data = snapshot.val();
-            const assetsArray = data ? Object.keys(data).map(key => ({ firebaseKey: key, ...data[key] })) : [];
-            setAssets(assetsArray);
-            setLoading(false);
-        }, (error) => {
-            console.error("Firebase read failed: " + error.name);
-            setLoading(false); // Stop loading even if there's an error
-        });
+        const assetsData = assetsSnap.val() || {};
+        const usersData = usersSnap.val() || {};
 
-        // Listener for Users (to populate assignment dropdowns)
-        const unsubscribeUsers = onValue(usersRef, (snapshot) => {
-            const data = snapshot.val();
-            const usersArray = data ? Object.keys(data).map(key => ({ firebaseKey: key, ...data[key] })) : [];
-            // Filter for users who can be assigned assets
-            const assignableUsers = usersArray.filter(u => u.roles && (u.roles.includes('employee') || u.roles.includes('manager') || u.roles.includes('admin')));
-            setUsers(assignableUsers);
-        });
+        setAssets(Object.entries(assetsData).map(([k, v]) => ({ firebaseKey: k, ...v })));
+        
+        const assignableUsers = Object.entries(usersData)
+          .map(([k, v]) => ({ firebaseKey: k, ...v }))
+          .filter(u => u.roles?.some(r => ['employee','manager','admin'].includes(r)));
+        
+        setUsers(assignableUsers);
+      } catch (err) {
+        console.error("Firebase read failed:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-        // Cleanup listeners on component unmount
-        return () => {
-            unsubscribeAssets();
-            unsubscribeUsers();
-        };
-    }, []);
+    fetchData();
+  }, []);
 
   // Helper to check if an asset should be considered available
   const isAssetConsideredAvailable = (asset) => {

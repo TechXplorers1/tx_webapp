@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { database } from '../../firebase'; // Corrected import path
-import { ref, onValue, update, remove } from "firebase/database";
+import { ref, onValue, update, remove, off } from "firebase/database";
 
 const RequestManagement = () => {
   // --- Request Management States ---
@@ -51,7 +51,10 @@ const RequestManagement = () => {
     });
 
     // Cleanup: Unsubscribe from the listener when the component unmounts
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      off(submissionsRef);
+    }
   }, []);
 
   // Handler to download the resume file
