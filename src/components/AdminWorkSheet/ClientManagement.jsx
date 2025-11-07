@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { getDatabase, ref, onValue, update, remove, set, get } from "firebase/database";
+import { getDatabase, ref, onValue, update, remove, set, get, off } from "firebase/database";
 import { database } from '../../firebase';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Spinner } from 'react-bootstrap';
@@ -109,6 +109,8 @@ const [selectedApplication, setSelectedApplication] = useState(null);
     return () => {
       unsubscribeClients();
       unsubscribeUsers();
+      off(clientsRef);
+      off(usersRef);
     };
   }, []);
 
