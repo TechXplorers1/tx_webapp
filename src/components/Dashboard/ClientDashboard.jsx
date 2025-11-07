@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { getDatabase, ref, onValue, query, orderByChild, equalTo, update, remove, set } from "firebase/database";
+import { getDatabase, ref, onValue, query, orderByChild, equalTo, update, remove, set, get, push } from "firebase/database";
 import { database, storage } from '../../firebase'; // Import your Firebase config
 import { getStorage, ref as storageRef, getDownloadURL } from "firebase/storage";
 import { useTheme } from '../../context/ThemeContext';
@@ -38,6 +38,43 @@ const documentTypes = {
   Portfolio: 'portfolio',
   Others: 'other'
 };
+
+// --- START: HELPER FUNCTIONS ---
+
+// Helper to convert DD-MM-YYYY to YYYY-MM-DD
+const convertDDMMYYYYtoYYYYMMDD = (dateString) => {
+  if (!dateString || typeof dateString !== 'string') return null;
+  const parts = dateString.split('-'); // [DD, MM, YYYY]
+  if (parts.length === 3) {
+    return `${parts[2]}-${parts[1]}-${parts[0]}`; // YYYY-MM-DD
+  }
+  return null; // Invalid format
+};
+
+// Helper function to check if a date is within a leave range
+const isDateOnLeave = (dateString, leaves) => {
+  // Convert the DD-MM-YYYY date string to a comparable Date object
+  const yyyyMmDd = convertDDMMYYYYtoYYYYMMDD(dateString);
+  if (!yyyyMmDd) return false;
+  
+  const checkDate = new Date(yyyyMmDd);
+  checkDate.setHours(0, 0, 0, 0); // Normalize to day start
+
+  return leaves.some(leave => {
+    // leave.fromDate and leave.toDate are stored as YYYY-MM-DD
+    const fromDate = new Date(leave.fromDate);
+    const toDate = new Date(leave.toDate);
+
+    // Normalize to day start
+    fromDate.setHours(0, 0, 0, 0);
+    toDate.setHours(0, 0, 0, 0);
+
+    return checkDate >= fromDate && checkDate <= toDate;
+  });
+};
+
+// --- END: HELPER FUNCTIONS ---
+
 
 // --- Styled Components for Radio ---
 const StyledWrapper = styled.div`
@@ -569,10 +606,10 @@ const ClientHeader = ({
         /* Hamburger menu is removed, so no styles are needed for it */
         `}
       </style>
-       <header className={`ad-header ${isDarkMode ? 'html-dark' : ''}`}>
+      <header className={`ad-header ${isDarkMode ? 'html-dark' : ''}`}>
         <div className="ad-header-left">
           <div className="ad-logo" onClick={onLogoClick} style={{ cursor: 'pointer' }}>
-           <span className="brand-full">TechXplorers</span>
+            <span className="brand-full">TechXplorers</span>
           </div>
         </div>
 
@@ -653,10 +690,10 @@ const ClientHeader = ({
                 <li className="profile-dropdown-item" onClick={onLogoClick}>
                   {/* User Icon */}
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" fill="currentColor" style={{ width: '1rem', height: '1rem', color: 'var(--text-primary)' }}>
-  <path d="M541 229.16 310.6 25.5c-7.7-6.9-19.5-6.9-27.2 0L35 229.16c-10.2 9.2-11 25-1.8 35.2s25 11 35.2 1.8L96 247.1V464c0 26.5 
+                    <path d="M541 229.16 310.6 25.5c-7.7-6.9-19.5-6.9-27.2 0L35 229.16c-10.2 9.2-11 25-1.8 35.2s25 11 35.2 1.8L96 247.1V464c0 26.5 
     21.5 48 48 48h112V336h64v176h112c26.5 0 48-21.5 48-48V247.1l27.6 19.1c4.5 3.1 9.6 4.6 14.6 4.6 
     7.1 0 14.2-3.1 19-9 9.2-10.2 8.4-26-1.8-35.2z"/>
-</svg>
+                  </svg>
                   Home Page
                 </li>
 
@@ -724,13 +761,13 @@ const SubscriptionDetailsModal = ({
   onClose
 }) => {
   return (
-        <div className="modal-overlay">
-      <div className="modal-content-style" style={{ 
-        maxWidth: '500px', 
-        padding: '40px', 
+    <div className="modal-overlay">
+      <div className="modal-content-style" style={{
+        maxWidth: '500px',
+        padding: '40px',
         // Use CSS variables for background and text
-        background: 'var(--bg-card)', 
-        color: 'var(--text-primary)' 
+        background: 'var(--bg-card)',
+        color: 'var(--text-primary)'
       }}>
         <button onClick={onClose} className="modal-close-button" style={{ color: 'var(--text-secondary)' }}>
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -746,8 +783,8 @@ const SubscriptionDetailsModal = ({
         }}>
           Your Subscription Details
         </h3>
-        <div className="subscription-details-card" 
-          // The CSS for this card is now managed through the global styles for consistency
+        <div className="subscription-details-card"
+        // The CSS for this card is now managed through the global styles for consistency
         >
           {/* FIX: Removed hardcoded inline styles for color to rely on CSS variables */}
           <div className="subscription-detail-item" style={{ borderBottom: '1px solid var(--border-color)' }}>
@@ -1255,7 +1292,7 @@ const AttachmentModal = ({ attachments, onClose }) => {
                 href={attachment.downloadUrl} // <-- Set link destination
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ textDecoration: 'none' }}
+                style={{ textDecoration: 'none', color: 'inherit' }}
               >
                 <div style={{
                   border: '1px solid #e2e8f0',
@@ -1351,33 +1388,23 @@ const formatDate = (date) => {
   return `${day}-${month}-${year}`;
 };
 
-// Format date string from DD-MM-YYYY to YYYY-MM-DD for Date constructor
-const convertDDMMYYYYtoYYYYMMDD = (dateString) => {
-  if (!dateString) return '';
-  const parts = dateString.split('-'); // ["DD", "MM", "YYYY"]
-  if (parts.length === 3) {
-    return `${parts[2]}-${parts[1]}-${parts[0]}`; // "YYYY-MM-DD"
-  }
-  return dateString; // Return as is if format is unexpected
-};
-
 
 // Generate 7-day date range for the ribbon
 // FIX: Rewritten generateDateRange function to center the current date
 const generateDateRange = (centerDate) => {
-    const dates = [];
-    const options = { weekday: 'short' }; // Option to get the day of the week like "Mon", "Tue"
-    
-    // Loop from 3 days before the center date to 3 days after to create a 7-day range
-    for (let i = -3; i <= 3; i++) {
-        const date = new Date(centerDate);
-        date.setDate(centerDate.getDate() + i);
-        dates.push({
-            date: formatDate(date),
-            dayOfWeek: date.toLocaleDateString('en-US', options) // Add the day of the week
-        });
-    }
-    return dates;
+  const dates = [];
+  const options = { weekday: 'short' }; // Option to get the day of the week like "Mon", "Tue"
+
+  // Loop from 3 days before the center date to 3 days after to create a 7-day range
+  for (let i = -3; i <= 3; i++) {
+    const date = new Date(centerDate);
+    date.setDate(centerDate.getDate() + i);
+    dates.push({
+      date: formatDate(date),
+      dayOfWeek: date.toLocaleDateString('en-US', options) // Add the day of the week
+    });
+  }
+  return dates;
 };
 
 // --- SAMPLE APPLICATIONS DATA ---
@@ -1400,7 +1427,7 @@ const Applications = ({
   handleWebsiteCheckboxChange, handlePositionCheckboxChange, handleCompanyCheckboxChange,
   isGlobalFilterActive, clearAllFilters, getApplicationsSectionTitle, filteredApplicationsForDisplay,
   downloadApplicationsData, applicationsData, allApplicationsFlattened,
-  activeWorksheetTab, setActiveWorksheetTab // New prop to control worksheet tabs
+  activeWorksheetTab, setActiveWorksheetTab, employeeLeaves, // New prop to control worksheet tabs // --- 1. RECEIVE THE FUNCTION AS A PROP ---
 }) => {
 
 
@@ -1450,60 +1477,73 @@ const Applications = ({
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
         }}>
-  <div style={{ display: 'inline-flex', gap: '8px' }}>
-            {dateRange.map((dateObj) => (
-                <div
-                    key={dateObj.date}
-                    onClick={() => setSelectedDate(dateObj.date)}
-                    style={{
-                        display: 'inline-block',
-                        padding: '10px 15px',
-                        borderRadius: '5px',
-                        backgroundColor: selectedDate === dateObj.date ? '#007bff' : '#e9ecef',
-                        color: selectedDate === dateObj.date ? 'white' : '#333',
-                        cursor: 'pointer',
-                        minWidth: '100px',
-                        textAlign: 'center',
-                        transition: 'all 0.2s ease',
-                        boxShadow: selectedDate === dateObj.date ? '0 2px 5px rgba(0,123,255,0.3)' : 'none',
-                        flexShrink: 0
-                    }}
-                >
-                    <div style={{ fontSize: '14px', fontWeight: 'bold' }}>{dateObj.date}</div>
-                    <div style={{ fontSize: '12px', marginTop: '2px', color: selectedDate === dateObj.date ? 'rgba(255,255,255,0.8)' : '#666' }}>
-                        {dateObj.dayOfWeek}
-                    </div>
-                    {applicationsData[dateObj.date] && (
-                        <div style={{
-                            fontSize: '12px',
-                            marginTop: '5px',
-                            fontWeight: 'bold',
-                            color: selectedDate === dateObj.date ? 'rgba(255,255,255,0.8)' : '#666'
-                        }}>
-                            {/* {applicationsData[dateObj.date].length} application(s) */}
-                        </div>
-                    )}
-                </div>
-            ))}
-        </div>
-    </div>
+          <div style={{ display: 'inline-flex', gap: '8px' }}>
+            {/* --- FIX 2: SYNTAX ERROR FIX & IMPLEMENTATION --- */}
+            {dateRange.map((dateObj) => {
+              // Logic is now inside the map callback, before the return
+              const isLeaveDay = isDateOnLeave(dateObj.date, employeeLeaves || []);
 
-     <button
-  onClick={showNextWeek}
-  style={{
-    background: '#007bff',
-    color: 'white',
-    border: 'none',
-    padding: '8px 12px',
-    borderRadius: '5px',
-    cursor: 'pointer',
-    marginLeft: '10px',
-    fontSize: '16px',
-    flexShrink: 0
-  }}
->
-  ▶
-</button>
+              return (
+                <div
+                  key={dateObj.date}
+                  onClick={() => setSelectedDate(dateObj.date)}
+                  style={{
+                    display: 'inline-block',
+                    padding: '10px 15px',
+                    borderRadius: '5px',
+                    // Apply red background/border/color if it's a leave day
+                    backgroundColor: isLeaveDay ? '#f8d7da' : (selectedDate === dateObj.date ? '#007bff' : '#e9ecef'),
+                    color: isLeaveDay ? '#721c24' : (selectedDate === dateObj.date ? 'white' : '#333'),
+                    border: isLeaveDay ? '1px solid #f5c6cb' : 'none',
+                    minWidth: '100px',
+                    textAlign: 'center',
+                    transition: 'all 0.2s ease',
+                    boxShadow: selectedDate === dateObj.date ? '0 2px 5px rgba(0,123,255,0.3)' : 'none',
+                    flexShrink: 0
+                  }}
+                >
+                  <div style={{ fontSize: '14px', fontWeight: 'bold' }}>{dateObj.date}</div>
+                  <div style={{ 
+                      fontSize: '12px', 
+                      marginTop: '2px', 
+                      // Adjust text color for leave day
+                      color: (isLeaveDay || selectedDate === dateObj.date) ? (isLeaveDay ? '#721c24' : 'rgba(255,255,255,0.8)') : '#666' 
+                    }}>
+                    {dateObj.dayOfWeek}
+                  </div>
+                  {applicationsData[dateObj.date] && (
+                    <div style={{
+                      fontSize: '12px',
+                      marginTop: '5px',
+                      fontWeight: 'bold',
+                      // --- FIX 3: ADDED MISSING COMMA ---
+                      color: selectedDate === dateObj.date ? 'rgba(255,255,255,0.8)' : '#666',
+                    }}>
+                      {/* {applicationsData[dateObj.date].length} application(s) */}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <button
+          onClick={showNextWeek}
+          style={{
+            background: '#007bff',
+            color: 'white',
+            border: 'none',
+            padding: '8px 12px',
+            borderRadius: '5px',
+            cursor: 'pointer',
+            marginLeft: '10px',
+            fontSize: '16px',
+            flexShrink: 0
+          }}
+        >
+          ▶
+        </button>
       </div>
 
       {/* Applications section */}
@@ -1514,7 +1554,7 @@ const Applications = ({
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
       }}>
         {/* Centered Heading */}
-         <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
           <h3 style={{ margin: '0 auto', color: '#333' }}>
             {getApplicationsSectionTitle(filteredApplicationsForDisplay.length)}
           </h3>
@@ -1692,7 +1732,7 @@ const Applications = ({
                     <td style={{ padding: '12px' }}>{app.jobType || 'N/A'}</td>
                     <td style={{ padding: '12px' }}>
                       <a href={app.link} target="_blank" rel="noopener noreferrer" style={{ color: '#007bff', textDecoration: 'none' }}>
-                       Link
+                        Link
                       </a>
                     </td>
                     {/* <td style={{ padding: '12px' }}>
@@ -1710,7 +1750,13 @@ const Applications = ({
             </table>
           </div>
         ) : (
-          <p style={{ textAlign: 'center', color: '#666' }}>No applications found for this date with the current filters.</p>
+          // --- FIX 4: CONDITIONAL "NO APPLICATIONS" MESSAGE ---
+          <p style={{ textAlign: 'center', color: '#666' }}>
+            {isDateOnLeave(selectedDate, employeeLeaves)
+              ? 'Employee might currently leave on this day.'
+              : 'No applications found for this date with the current filters.'
+            }
+          </p>
         )}
       </div>
 
@@ -2015,7 +2061,7 @@ const InterviewsScheduled = ({ interviews, onAttachmentClick, showAttachmentModa
                   <td className="modal-table-cell">{interview.interviewTime}</td>
                   {/* <td className="modal-table-cell">{interview.jobId}</td> */}
                   <td style={{ fontWeight: '600' }} className="modal-table-cell">{interview.company}</td>
-                   <td style={{ fontWeight: '600' }} className="modal-table-cell">{interview.jobType}</td>
+                  <td style={{ fontWeight: '600' }} className="modal-table-cell">{interview.jobType}</td>
                   <td className="modal-table-cell">{interview.recruiterMail}</td>
                   <td className="modal-table-cell">
                     <div style={{
@@ -2107,7 +2153,8 @@ const WorksheetView = ({ setActiveTab, activeWorksheetTab, setActiveWorksheetTab
   downloadApplicationsData, applicationsData, allApplicationsFlattened,
   activeSubTab, setActiveSubTab, clientData, // New prop to pass sub-tab state for Documents
   setIsInWorksheetView, onImageView, // New prop to allow WorksheetView to set its own visibility
-  scheduledInterviews, handleAttachmentClick , closeAttachmentModal, currentAttachments, showAttachmentModal// New props for interviews
+  scheduledInterviews, handleAttachmentClick, closeAttachmentModal, currentAttachments, showAttachmentModal,
+  employeeLeaves // --- 1. RECEIVE isDateOnLeave PROP ---
 }) => {
   return (
     <div style={{
@@ -2282,6 +2329,7 @@ const WorksheetView = ({ setActiveTab, activeWorksheetTab, setActiveWorksheetTab
           allApplicationsFlattened={allApplicationsFlattened}
           activeWorksheetTab={activeWorksheetTab} // Pass down
           setActiveWorksheetTab={setActiveWorksheetTab} // Pass down
+          employeeLeaves={employeeLeaves}
         />
       )}
 
@@ -2295,9 +2343,9 @@ const WorksheetView = ({ setActiveTab, activeWorksheetTab, setActiveWorksheetTab
       )}
 
       {activeWorksheetTab === "Interviews Scheduled" && (
-        <InterviewsScheduled 
-            interviews={scheduledInterviews} 
-            onAttachmentClick={handleAttachmentClick} 
+        <InterviewsScheduled
+          interviews={scheduledInterviews}
+          onAttachmentClick={handleAttachmentClick}
         />
       )}
     </div>
@@ -2313,6 +2361,10 @@ const ClientDashboard = () => {
   const [scheduledInterviews, setScheduledInterviews] = useState([]);
   const [clientData, setClientData] = useState(null);
   const [allFiles, setAllFiles] = useState([]);
+
+  // --- START: ADD NEW STATE FOR LEAVES ---
+  const [employeeLeaves, setEmployeeLeaves] = useState([]);
+  // --- END: ADD NEW STATE FOR LEAVES ---
 
   const { isDarkMode, toggleTheme } = useTheme();
 
@@ -2338,58 +2390,58 @@ const ClientDashboard = () => {
   };
 
   const allJobSupportFields = {
-  // Personal Information
-  firstName: 'N/A',
-  middleName: 'N/A',
-  lastName: 'N/A',
-  dob: 'N/A',
-  gender: 'N/A',
-  ethnicity: 'N/A',
-  // Contact Information
-  address: 'N/A',
-  county: 'N/A',
-  zipCode: 'N/A',
-  countryCode: 'N/A',
-  mobile: 'N/A',
-  email: 'N/A',
-  // Employment Information
-  securityClearance: 'N/A',
-  clearanceLevel: 'N/A',
-  willingToRelocate: 'N/A',
-  workPreference: 'N/A',
-  restrictedCompanies: 'N/A',
-  yearsOfExperience: 'N/A',
-  // Job Preferences
-  jobsToApply: 'N/A',
-  currentSalary: 'N/A',
-  expectedSalary: 'N/A',
-  visaStatus: 'N/A',
-  otherVisaStatus: 'N/A',
-  // Education
-  universityName: 'N/A',
-  universityAddress: 'N/A',
-  courseOfStudy: 'N/A',
-  graduationFromDate: 'N/A',
-  graduationToDate: 'N/A',
-  noticePeriod: 'N/A',
-  // Current Employment
-  currentCompany: 'N/A',
-  currentDesignation: 'N/A',
-  preferredInterviewTime: 'N/A',
-  earliestJoiningDate: 'N/A',
-  relievingDate: 'N/A',
-  // References
-  referenceName: 'N/A',
-  referencePhone: 'N/A',
-  referenceAddress: 'N/A',
-  referenceEmail: 'N/A',
-  referenceRole: 'N/A',
-  // Job Portal Information
-  jobPortalAccountNameandCredentials: 'N/A',
-  // Resume & Cover Letter
-  resumeFileName: 'N/A',
-  coverLetterFileName: 'N/A',
-};
+    // Personal Information
+    firstName: 'N/A',
+    middleName: 'N/A',
+    lastName: 'N/A',
+    dob: 'N/A',
+    gender: 'N/A',
+    ethnicity: 'N/A',
+    // Contact Information
+    address: 'N/A',
+    county: 'N/A',
+    zipCode: 'N/A',
+    countryCode: 'N/A',
+    mobile: 'N/A',
+    email: 'N/A',
+    // Employment Information
+    securityClearance: 'N/A',
+    clearanceLevel: 'N/A',
+    willingToRelocate: 'N/A',
+    workPreference: 'N/A',
+    restrictedCompanies: 'N/A',
+    yearsOfExperience: 'N/A',
+    // Job Preferences
+    jobsToApply: 'N/A',
+    currentSalary: 'N/A',
+    expectedSalary: 'N/A',
+    visaStatus: 'N/A',
+    otherVisaStatus: 'N/A',
+    // Education
+    universityName: 'N/A',
+    universityAddress: 'N/A',
+    courseOfStudy: 'N/A',
+    graduationFromDate: 'N/A',
+    graduationToDate: 'N/A',
+    noticePeriod: 'N/A',
+    // Current Employment
+    currentCompany: 'N/A',
+    currentDesignation: 'N/A',
+    preferredInterviewTime: 'N/A',
+    earliestJoiningDate: 'N/A',
+    relievingDate: 'N/A',
+    // References
+    referenceName: 'N/A',
+    referencePhone: 'N/A',
+    referenceAddress: 'N/A',
+    referenceEmail: 'N/A',
+    referenceRole: 'N/A',
+    // Job Portal Information
+    jobPortalAccountNameandCredentials: 'N/A',
+    // Resume & Cover Letter
+    resumeFileName: 'N/A',
+    coverLetterFileName: 'N/A',
+  };
 
 
   // Effect to save activeTab to localStorage whenever it changes
@@ -2417,7 +2469,7 @@ const ClientDashboard = () => {
 
   // States from clientdashboard.txt
   const [menuOpen, setMenuOpen] = useState(false); // No longer used for hamburger menu
-   const [showInterviewsModal, setShowInterviewsModal] = useState(false);
+  const [showInterviewsModal, setShowInterviewsModal] = useState(false);
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showSubscriptionDetailsModal, setShowSubscriptionDetailsModal] = useState(false);
@@ -2491,7 +2543,7 @@ const ClientDashboard = () => {
   const [filterWebsites, setFilterWebsites] = useState([]);
   const [filterPositions, setFilterPositions] = useState([]);
   const [filterCompanies, setFilterCompanies] = useState([]);
-    const [filtereJobType, setFilterJobType] = useState([]);
+  const [filtereJobType, setFilterJobType] = useState([]);
 
 
   const [uniqueWebsites, setUniqueWebsites] = useState([]);
@@ -2525,51 +2577,51 @@ const ClientDashboard = () => {
   // };
 
   const toggleMenu = () => setMenuOpen(!menuOpen); // This function is now effectively unused for the UI
-   const toggleInterviewsModal = () => setShowInterviewsModal(!showInterviewsModal);
+  const toggleInterviewsModal = () => setShowInterviewsModal(!showInterviewsModal);
   const toggleResumeModal = () => setShowResumeModal(!showResumeModal);
   const togglePaymentModal = () => setShowPaymentModal(!showPaymentModal);
   const toggleSubscriptionDetailsModal = () => setShowSubscriptionDetailsModal(!showSubscriptionDetailsModal);
 
   // Handlers for profile dropdown items
-// UPDATE: The handleClientProfileClick function needs to reference the new allJobSupportFields object.
-const handleClientProfileClick = useCallback(() => {
-  setIsProfileDropdownOpen(false);
-  if (clientData && clientData.serviceRegistrations) {
-    const registrationKeys = Object.keys(clientData.serviceRegistrations);
-    if (registrationKeys.length > 0) {
-      const mostRecentRegistration = registrationKeys.reduce((latest, key) => {
-        const current = { ...clientData.serviceRegistrations[key], key: key };
-        if (!latest || new Date(current.registeredDate) > new Date(latest.registeredDate)) {
-          return current;
-        }
-        return latest;
-      }, null);
+  // UPDATE: The handleClientProfileClick function needs to reference the new allJobSupportFields object.
+  const handleClientProfileClick = useCallback(() => {
+    setIsProfileDropdownOpen(false);
+    if (clientData && clientData.serviceRegistrations) {
+      const registrationKeys = Object.keys(clientData.serviceRegistrations);
+      if (registrationKeys.length > 0) {
+        const mostRecentRegistration = registrationKeys.reduce((latest, key) => {
+          const current = { ...clientData.serviceRegistrations[key], key: key };
+          if (!latest || new Date(current.registeredDate) > new Date(latest.registeredDate)) {
+            return current;
+          }
+          return latest;
+        }, null);
 
-      if (mostRecentRegistration) {
-        const fullDetails = {
-          ...allJobSupportFields, // Use all form fields as a base
-          ...mostRecentRegistration, // Overwrite with data from Firebase
-          // Combine parent client data for consistency
-          email: clientData.email || mostRecentRegistration.email,
-          mobile: clientData.mobile || mostRecentRegistration.mobile,
-          firstName: clientData.firstName || mostRecentRegistration.firstName,
-          lastName: clientData.lastName || mostRecentRegistration.lastName,
-          // Ensure file names and URLs are present for the modal
-          resumeFileName: mostRecentRegistration.resumeFileName,
-          resumeUrl: mostRecentRegistration.resumeUrl,
-          coverLetterFileName: mostRecentRegistration.coverLetterFileName,
-          coverLetterUrl: mostRecentRegistration.coverLetterUrl,
-        };
-        setSelectedServiceForDetails(fullDetails);
-        setIsServiceDetailsModalOpen(true);
+        if (mostRecentRegistration) {
+          const fullDetails = {
+            ...allJobSupportFields, // Use all form fields as a base
+            ...mostRecentRegistration, // Overwrite with data from Firebase
+            // Combine parent client data for consistency
+            email: clientData.email || mostRecentRegistration.email,
+            mobile: clientData.mobile || mostRecentRegistration.mobile,
+            firstName: clientData.firstName || mostRecentRegistration.firstName,
+            lastName: clientData.lastName || mostRecentRegistration.lastName,
+            // Ensure file names and URLs are present for the modal
+            resumeFileName: mostRecentRegistration.resumeFileName,
+            resumeUrl: mostRecentRegistration.resumeUrl,
+            coverLetterFileName: mostRecentRegistration.coverLetterFileName,
+            coverLetterUrl: mostRecentRegistration.coverLetterUrl,
+          };
+          setSelectedServiceForDetails(fullDetails);
+          setIsServiceDetailsModalOpen(true);
+        }
+      } else {
+        alert("You have no registered services to display.");
       }
     } else {
-      alert("You have no registered services to display.");
+      alert("Profile data is not available yet. Please try again in a moment.");
     }
-  } else {
-    alert("Profile data is not available yet. Please try again in a moment.");
-  }
-}, [clientData]);
+  }, [clientData]);
 
   const handleSubscriptionClick = useCallback(() => {
     setIsProfileDropdownOpen(false); // Close dropdown
@@ -2627,91 +2679,111 @@ const handleClientProfileClick = useCallback(() => {
 
   // ClientDashboard.jsx
 
-// In ClientDashboard.jsx, replace the useEffect hook that fetches client data
-useEffect(() => {
+  // In ClientDashboard.jsx, replace the useEffect hook that fetches client data
+  useEffect(() => {
     const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInEmployee'));
     // Ensure you are logged in as a client and have a firebaseKey
     if (!loggedInUserData || !loggedInUserData.firebaseKey) return;
+
+    const employeeFirebaseKey = loggedInUserData.firebaseKey;
+    const leaveRef = ref(database, 'leave_requests');
+    // Query for leaves submitted by this specific employee
+    const employeeLeaveQuery = query(leaveRef, orderByChild('employeeFirebaseKey'), equalTo(employeeFirebaseKey));
+
+    const unsubscribeLeaves = onValue(employeeLeaveQuery, (snapshot) => {
+      const leavesData = [];
+      snapshot.forEach((childSnapshot) => {
+        const leave = childSnapshot.val();
+        // Only store approved leaves for calendar blocking
+        if (leave.status === 'Approved') {
+          leavesData.push(leave);
+        }
+      });
+      setEmployeeLeaves(leavesData);
+    }, (error) => {
+      console.error("Error fetching employee leaves:", error);
+    });
 
     // Create a direct reference to this client's data in Firebase
     const clientRef = ref(database, `clients/${loggedInUserData.firebaseKey}`);
 
     const unsubscribe = onValue(clientRef, (snapshot) => {
-        const data = snapshot.val();
-        if (data) {
-            setClientData(data);
+      const data = snapshot.val();
+      if (data) {
+        setClientData(data);
 
-            const registrations = data.serviceRegistrations ? Object.values(data.serviceRegistrations) : [];
+        const registrations = data.serviceRegistrations ? Object.values(data.serviceRegistrations) : [];
 
-            // 1. Get files from the client's main 'files' node
-            const generalFiles = registrations.flatMap(reg => reg.files || []);
+        // 1. Get files from the client's main 'files' node
+        const generalFiles = registrations.flatMap(reg => reg.files || []);
 
-            // 2. Get attachment files from within each job application
-            const applicationAttachments = registrations
-                .flatMap(reg => reg.jobApplications || [])
-                .flatMap(app => app.attachments || []);
+        // 2. Get attachment files from within each job application
+        const applicationAttachments = registrations
+          .flatMap(reg => reg.jobApplications || [])
+          .flatMap(app => app.attachments || []);
 
-            // 3. Combine and deduplicate the file lists.
-            const allFilesMap = new Map();
+        // 3. Combine and deduplicate the file lists.
+        const allFilesMap = new Map();
 
-            [...generalFiles, ...applicationAttachments].forEach(file => {
-                if (file.downloadUrl) {
-                    allFilesMap.set(file.downloadUrl, file);
-                }
-            });
+        [...generalFiles, ...applicationAttachments].forEach(file => {
+          if (file.downloadUrl) {
+            allFilesMap.set(file.downloadUrl, file);
+          }
+        });
 
-            const combinedFiles = Array.from(allFilesMap.values());
-            setAllFiles(combinedFiles);
+        const combinedFiles = Array.from(allFilesMap.values());
+        setAllFiles(combinedFiles);
 
-            // 4. Extract and Group All Job Applications (REALTIME DATA FETCH)
-            const allApplications = registrations.flatMap(reg => reg.jobApplications || []);
-            const interviews = allApplications.filter(app => app.status === 'Interview');
-            setScheduledInterviews(interviews);
+        // 4. Extract and Group All Job Applications (REALTIME DATA FETCH)
+        const allApplications = registrations.flatMap(reg => reg.jobApplications || []);
+        const interviews = allApplications.filter(app => app.status === 'Interview');
+        setScheduledInterviews(interviews);
 
-            // This logic groups applications by date for the worksheet view
-            const groupedApplications = allApplications.reduce((acc, app) => {
-                // Use the application's appliedDate, formatted to DD-MM-YYYY
-                const dateKey = formatDate(app.appliedDate); 
-                
-                // Ensure link points to jobDescriptionUrl as required by the table structure
-                // Use jobBoards for the website column, and jobTitle for the position column
-                const applicationEntry = {
-                    id: app.id,
-                    jobId: app.jobId,
-                    website: app.jobBoards, // Map jobBoards to website column
-                    position: app.jobTitle, // Map jobTitle to position column
-                    company: app.company,
-                    link: app.jobDescriptionUrl, // Use jobDescriptionUrl for the link
-                    jobType: app.jobType || 'N/A',
-                    dateAdded: dateKey,
-                    jobDescription: app.jobDesc || app.jobTitle, // Use jobDesc or jobTitle for the description modal
-                    status: app.status,
-                    role: app.role,
-                };
-                
-                if (!acc[dateKey]) {
-                    acc[dateKey] = [];
-                }
-                acc[dateKey].push(applicationEntry);
-                return acc;
-            }, {});
-            
-            // Set the state with the grouped Firebase data
-            setApplicationsData(groupedApplications); 
+        // This logic groups applications by date for the worksheet view
+        const groupedApplications = allApplications.reduce((acc, app) => {
+          // Use the application's appliedDate, formatted to DD-MM-YYYY
+          const dateKey = formatDate(app.appliedDate);
 
-            // Process service registrations to categorize them (existing logic)
-            const registeredServiceNames = registrations.map(reg => reg.service);
+          // Ensure link points to jobDescriptionUrl as required by the table structure
+          // Use jobBoards for the website column, and jobTitle for the position column
+          const applicationEntry = {
+            id: app.id,
+            jobId: app.jobId,
+            website: app.jobBoards, // Map jobBoards to website column
+            position: app.jobTitle, // Map jobTitle to position column
+            company: app.company,
+            link: app.jobDescriptionUrl, // Use jobDescriptionUrl for the link
+            jobType: app.jobType || 'N/A',
+            dateAdded: dateKey,
+            jobDescription: app.jobDesc || app.jobTitle, // Use jobDesc or jobTitle for the description modal
+            status: app.status,
+            role: app.role,
+          };
 
-            const active = allServices.filter(service => registeredServiceNames.includes(service.title));
-            const inactive = allServices.filter(service => !registeredServiceNames.includes(service.title));
+          if (!acc[dateKey]) {
+            acc[dateKey] = [];
+          }
+          acc[dateKey].push(applicationEntry);
+          return acc;
+        }, {});
 
-            setActiveServices(active);
-            setInactiveServices(inactive);
-        }
+        // Set the state with the grouped Firebase data
+        setApplicationsData(groupedApplications);
+
+        // Process service registrations to categorize them (existing logic)
+        const registeredServiceNames = registrations.map(reg => reg.service);
+
+        const active = allServices.filter(service => registeredServiceNames.includes(service.title));
+        const inactive = allServices.filter(service => !registeredServiceNames.includes(service.title));
+
+        setActiveServices(active);
+        setInactiveServices(inactive);
+      }
     });
 
     return () => unsubscribe();
-}, []);
+    unsubscribeLeaves();
+  }, []);
 
   const handleActiveServiceClick = (service) => {
     if (clientData && clientData.serviceRegistrations) {
@@ -2938,7 +3010,7 @@ useEffect(() => {
   // --- Handlers for Applications tab ---
 
   // Effect to generate initial date range and select today's date for Applications tab
-   useEffect(() => {
+  useEffect(() => {
     const today = new Date();
     setSelectedDate(formatDate(today)); // Highlight today's date in the ribbon
     setCurrentStartDate(today); // Set today as the center date for the range
@@ -2964,11 +3036,11 @@ useEffect(() => {
     setUniqueWebsites(Array.from(allWebsites).sort());
     setUniquePositions(Array.from(allPositions).sort());
     setUniqueCompanies(Array.from(allCompanies).sort());
-     setUniqueJobType(Array.from(allJobType).sort());
+    setUniqueJobType(Array.from(allJobType).sort());
   }, []);
 
   // Flatten all applications once and add their original date for Applications tab
-const allApplicationsFlattened = useMemo(() => {
+  const allApplicationsFlattened = useMemo(() => {
     const flattened = [];
     for (const dateKey in applicationsData) {
       if (Object.prototype.hasOwnProperty.call(applicationsData, dateKey)) {
@@ -3042,13 +3114,13 @@ const allApplicationsFlattened = useMemo(() => {
   };
 
   // Callback from DateRangeCalendar when a range is selected
-   const handleDateRangeChangeFromCalendar = useCallback((start, end) => {
+  const handleDateRangeChangeFromCalendar = useCallback((start, end) => {
     setTempStartDate(start);
     setTempEndDate(end);
   }, []);
 
-  
-const handleApplyDateRange = () => {
+
+  const handleApplyDateRange = () => {
     // Validate dates before applying (optional, but good practice)
     if (tempStartDate && tempEndDate && tempStartDate > tempEndDate) {
       // You might want to show a user-friendly error message here
@@ -3058,14 +3130,14 @@ const handleApplyDateRange = () => {
     const newStartFilter = tempStartDate ? formatDate(tempStartDate) : '';
     const newEndFilter = tempEndDate ? formatDate(tempEndDate) : '';
 
-    
+
     setStartDateFilter(newStartFilter);
     setEndDateFilter(newEndFilter);
     setShowDateRangeModal(false);
 
     // NOTE: The asynchronous nature of set state means the console may show old state values 
     // outside of the rendering cycle. The next render cycle will use the new values set above.
-};
+  };
 
 
   const handleClearDateRangeInModal = () => {
@@ -3266,8 +3338,8 @@ const handleApplyDateRange = () => {
 
   // Apply all filters to the relevant base set of applications
   const filteredApplicationsForDisplay = useMemo(() => {
-    
-    
+
+
     let baseApps = [];
 
     const isDateRangeFilterSet = startDateFilter !== '' || endDateFilter !== ''; // Check if ANY date filter is set
@@ -3324,7 +3396,7 @@ const handleApplyDateRange = () => {
       // Combine all conditions
       return matchesWebsite && matchesPosition && matchesCompany && matchesSearchTerm && matchesDateRange;
     });
-    
+
     return result;
   }, [selectedDate, applicationsData, filterWebsites, filterPositions, filterCompanies, searchTerm, startDateFilter, endDateFilter, allApplicationsFlattened, isGlobalFilterActive]);
 
@@ -3346,10 +3418,10 @@ const handleApplyDateRange = () => {
   const ClientServiceDetailsModal = ({ show, onHide, serviceDetails }) => {
     if (!serviceDetails) return null;
 
-      const combinedDetails = {
-    ...allJobSupportFields,
-    ...serviceDetails,
-  };
+    const combinedDetails = {
+      ...allJobSupportFields,
+      ...serviceDetails,
+    };
 
     const isSimpleService = simplifiedServices.includes(serviceDetails.service);
 
@@ -3376,94 +3448,94 @@ const handleApplyDateRange = () => {
       </>
     );
 
- const renderJobSupportDetails = () => (
-    <>
-      <h4 className="border-bottom pb-2 mb-3">Personal Information</h4>
-      <Row className="mb-3"><Col><Form.Label>First Name:</Form.Label><div className="previewValueDisplay">{combinedDetails.firstName}</div></Col><Col><Form.Label>Middle Name:</Form.Label><div className="previewValueDisplay">{combinedDetails.middleName}</div></Col><Col><Form.Label>Last Name:</Form.Label><div className="previewValueDisplay">{combinedDetails.lastName}</div></Col></Row>
-      <Row className="mb-3"><Col><Form.Label>Date of Birth:</Form.Label><div className="previewValueDisplay">{combinedDetails.dob}</div></Col><Col><Form.Label>Gender:</Form.Label><div className="previewValueDisplay">{combinedDetails.gender}</div></Col><Col><Form.Label>Ethnicity:</Form.Label><div className="previewValueDisplay">{combinedDetails.ethnicity}</div></Col></Row>
+    const renderJobSupportDetails = () => (
+      <>
+        <h4 className="border-bottom pb-2 mb-3">Personal Information</h4>
+        <Row className="mb-3"><Col><Form.Label>First Name:</Form.Label><div className="previewValueDisplay">{combinedDetails.firstName}</div></Col><Col><Form.Label>Middle Name:</Form.Label><div className="previewValueDisplay">{combinedDetails.middleName}</div></Col><Col><Form.Label>Last Name:</Form.Label><div className="previewValueDisplay">{combinedDetails.lastName}</div></Col></Row>
+        <Row className="mb-3"><Col><Form.Label>Date of Birth:</Form.Label><div className="previewValueDisplay">{combinedDetails.dob}</div></Col><Col><Form.Label>Gender:</Form.Label><div className="previewValueDisplay">{combinedDetails.gender}</div></Col><Col><Form.Label>Ethnicity:</Form.Label><div className="previewValueDisplay">{combinedDetails.ethnicity}</div></Col></Row>
 
-      <h4 className="border-bottom pb-2 mb-3 mt-4">Contact Information</h4>
-      <Row className="mb-3"><Col><Form.Label>Address:</Form.Label><div className="previewValueDisplay">{combinedDetails.address}</div></Col><Col><Form.Label>County:</Form.Label><div className="previewValueDisplay">{combinedDetails.county}</div></Col><Col md={4}><Form.Label>Zip Code:</Form.Label><div className="previewValueDisplay">{combinedDetails.zipCode}</div></Col></Row>
-      <Row className="mb-3"><Col><Form.Label>Country:</Form.Label><div className="previewValueDisplay">{combinedDetails.country || 'N/A'}</div></Col><Col><Form.Label>Mobile:</Form.Label><div className="previewValueDisplay">{combinedDetails.mobile}</div></Col><Col><Form.Label>Email:</Form.Label><div className="previewValueDisplay">{combinedDetails.email}</div></Col></Row>
+        <h4 className="border-bottom pb-2 mb-3 mt-4">Contact Information</h4>
+        <Row className="mb-3"><Col><Form.Label>Address:</Form.Label><div className="previewValueDisplay">{combinedDetails.address}</div></Col><Col><Form.Label>County:</Form.Label><div className="previewValueDisplay">{combinedDetails.county}</div></Col><Col md={4}><Form.Label>Zip Code:</Form.Label><div className="previewValueDisplay">{combinedDetails.zipCode}</div></Col></Row>
+        <Row className="mb-3"><Col><Form.Label>Country:</Form.Label><div className="previewValueDisplay">{combinedDetails.country || 'N/A'}</div></Col><Col><Form.Label>Mobile:</Form.Label><div className="previewValueDisplay">{combinedDetails.mobile}</div></Col><Col><Form.Label>Email:</Form.Label><div className="previewValueDisplay">{combinedDetails.email}</div></Col></Row>
 
-      <h4 className="border-bottom pb-2 mb-3 mt-4">Employment Information</h4>
-      <Row className="mb-3"><Col><Form.Label>Security Clearance:</Form.Label><div className="previewValueDisplay">{combinedDetails.securityClearance}</div></Col>{combinedDetails.securityClearance === 'yes' && (<Col><Form.Label>Clearance Level:</Form.Label><div className="previewValueDisplay">{combinedDetails.clearanceLevel}</div></Col>)}<Col><Form.Label>Willing to Relocate:</Form.Label><div className="previewValueDisplay">{combinedDetails.willingToRelocate}</div></Col></Row>
-      <Row className="mb-3">
-        <Col><Form.Label>Work Preference:</Form.Label><div className="previewValueDisplay">{combinedDetails.workPreference}</div></Col>
-        <Col><Form.Label>Years of Experience:</Form.Label><div className="previewValueDisplay">{combinedDetails.yearsOfExperience}</div></Col>
-      </Row>
-      <Row className="mb-3">
-        <Col><Form.Label>Restricted Companies:</Form.Label><div className="previewValueDisplay">{combinedDetails.restrictedCompanies}</div></Col>
-      </Row>
+        <h4 className="border-bottom pb-2 mb-3 mt-4">Employment Information</h4>
+        <Row className="mb-3"><Col><Form.Label>Security Clearance:</Form.Label><div className="previewValueDisplay">{combinedDetails.securityClearance}</div></Col>{combinedDetails.securityClearance === 'yes' && (<Col><Form.Label>Clearance Level:</Form.Label><div className="previewValueDisplay">{combinedDetails.clearanceLevel}</div></Col>)}<Col><Form.Label>Willing to Relocate:</Form.Label><div className="previewValueDisplay">{combinedDetails.willingToRelocate}</div></Col></Row>
+        <Row className="mb-3">
+          <Col><Form.Label>Work Preference:</Form.Label><div className="previewValueDisplay">{combinedDetails.workPreference}</div></Col>
+          <Col><Form.Label>Years of Experience:</Form.Label><div className="previewValueDisplay">{combinedDetails.yearsOfExperience}</div></Col>
+        </Row>
+        <Row className="mb-3">
+          <Col><Form.Label>Restricted Companies:</Form.Label><div className="previewValueDisplay">{combinedDetails.restrictedCompanies}</div></Col>
+        </Row>
 
-      <h4 className="border-bottom pb-2 mb-3 mt-4">Job Preferences</h4>
-      <Row className="mb-3"><Col><Form.Label>Jobs to Apply For:</Form.Label><div className="previewValueDisplay">{combinedDetails.jobsToApply}</div></Col></Row>
-      <Row className="mb-3"><Col><Form.Label>Current Salary:</Form.Label><div className="previewValueDisplay">{combinedDetails.currentSalary}</div></Col><Col><Form.Label>Expected Salary:</Form.Label><div className="previewValueDisplay">{combinedDetails.expectedSalary}</div></Col><Col><Form.Label>Visa Status:</Form.Label><div className="previewValueDisplay">{combinedDetails.visaStatus}</div></Col></Row>
+        <h4 className="border-bottom pb-2 mb-3 mt-4">Job Preferences</h4>
+        <Row className="mb-3"><Col><Form.Label>Jobs to Apply For:</Form.Label><div className="previewValueDisplay">{combinedDetails.jobsToApply}</div></Col></Row>
+        <Row className="mb-3"><Col><Form.Label>Current Salary:</Form.Label><div className="previewValueDisplay">{combinedDetails.currentSalary}</div></Col><Col><Form.Label>Expected Salary:</Form.Label><div className="previewValueDisplay">{combinedDetails.expectedSalary}</div></Col><Col><Form.Label>Visa Status:</Form.Label><div className="previewValueDisplay">{combinedDetails.visaStatus}</div></Col></Row>
 
-      <h4 className="border-bottom pb-2 mb-3 mt-4">Education</h4>
-{combinedDetails.educationDetails && combinedDetails.educationDetails.length > 0 ? (
-  combinedDetails.educationDetails.map((edu, index) => (
-    <div key={index} style={{ marginBottom: '15px', padding: '15px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-      <h5 style={{ fontSize: '1rem', marginBottom: '10px', fontWeight: 600 }}>Education Entry {index + 1}</h5>
-      <Row className="mb-2"><Col><Form.Label>University Name:</Form.Label><div className="previewValueDisplay">{edu.universityName || 'N/A'}</div></Col><Col><Form.Label>University Address:</Form.Label><div className="previewValueDisplay">{edu.universityAddress || 'N/A'}</div></Col></Row>
-      <Row className="mb-2"><Col><Form.Label>Course of Study:</Form.Label><div className="previewValueDisplay">{edu.courseOfStudy || 'N/A'}</div></Col><Col><Form.Label>Graduation From Date:</Form.Label><div className="previewValueDisplay">{edu.graduationFromDate || 'N/A'}</div></Col></Row>
-      <Row className="mb-2"><Col><Form.Label>Graduation To Date:</Form.Label><div className="previewValueDisplay">{edu.graduationToDate || 'N/A'}</div></Col><Col><Form.Label>Notice Period:</Form.Label><div className="previewValueDisplay">{edu.noticePeriod || 'N/A'}</div></Col></Row>
-    </div>
-  ))
-) : (
-  <div className="previewValueDisplay">No education details provided.</div>
-)}
+        <h4 className="border-bottom pb-2 mb-3 mt-4">Education</h4>
+        {combinedDetails.educationDetails && combinedDetails.educationDetails.length > 0 ? (
+          combinedDetails.educationDetails.map((edu, index) => (
+            <div key={index} style={{ marginBottom: '15px', padding: '15px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+              <h5 style={{ fontSize: '1rem', marginBottom: '10px', fontWeight: 600 }}>Education Entry {index + 1}</h5>
+              <Row className="mb-2"><Col><Form.Label>University Name:</Form.Label><div className="previewValueDisplay">{edu.universityName || 'N/A'}</div></Col><Col><Form.Label>University Address:</Form.Label><div className="previewValueDisplay">{edu.universityAddress || 'N/A'}</div></Col></Row>
+              <Row className="mb-2"><Col><Form.Label>Course of Study:</Form.Label><div className="previewValueDisplay">{edu.courseOfStudy || 'N/A'}</div></Col><Col><Form.Label>Graduation From Date:</Form.Label><div className="previewValueDisplay">{edu.graduationFromDate || 'N/A'}</div></Col></Row>
+              <Row className="mb-2"><Col><Form.Label>Graduation To Date:</Form.Label><div className="previewValueDisplay">{edu.graduationToDate || 'N/A'}</div></Col><Col><Form.Label>Notice Period:</Form.Label><div className="previewValueDisplay">{edu.noticePeriod || 'N/A'}</div></Col></Row>
+            </div>
+          ))
+        ) : (
+          <div className="previewValueDisplay">No education details provided.</div>
+        )}
 
-      <h4 className="border-bottom pb-2 mb-3 mt-4">Current Employment</h4>
-      <Row className="mb-3"><Col><Form.Label>Current Company:</Form.Label><div className="previewValueDisplay">{combinedDetails.currentCompany}</div></Col><Col><Form.Label>Current Designation:</Form.Label><div className="previewValueDisplay">{combinedDetails.currentDesignation}</div></Col>        <Col><Form.Label>Notice Period:</Form.Label><div className="previewValueDisplay">{combinedDetails.noticePeriod}</div></Col>
-</Row>
-      <Row className="mb-3"><Col><Form.Label>Preferred Interview Time:</Form.Label><div className="previewValueDisplay">{combinedDetails.preferredInterviewTime}</div></Col><Col><Form.Label>Earliest Joining Date:</Form.Label><div className="previewValueDisplay">{combinedDetails.earliestJoiningDate}</div></Col><Col><Form.Label>Relieving Date:</Form.Label><div className="previewValueDisplay">{combinedDetails.relievingDate}</div></Col></Row>
+        <h4 className="border-bottom pb-2 mb-3 mt-4">Current Employment</h4>
+        <Row className="mb-3"><Col><Form.Label>Current Company:</Form.Label><div className="previewValueDisplay">{combinedDetails.currentCompany}</div></Col><Col><Form.Label>Current Designation:</Form.Label><div className="previewValueDisplay">{combinedDetails.currentDesignation}</div></Col>        <Col><Form.Label>Notice Period:</Form.Label><div className="previewValueDisplay">{combinedDetails.noticePeriod}</div></Col>
+        </Row>
+        <Row className="mb-3"><Col><Form.Label>Preferred Interview Time:</Form.Label><div className="previewValueDisplay">{combinedDetails.preferredInterviewTime}</div></Col><Col><Form.Label>Earliest Joining Date:</Form.Label><div className="previewValueDisplay">{combinedDetails.earliestJoiningDate}</div></Col><Col><Form.Label>Relieving Date:</Form.Label><div className="previewValueDisplay">{combinedDetails.relievingDate}</div></Col></Row>
 
-      <h4 className="border-bottom pb-2 mb-3 mt-4">References</h4>
-      <Row className="mb-3"><Col><Form.Label>Reference Name:</Form.Label><div className="previewValueDisplay">{combinedDetails.referenceName}</div></Col><Col><Form.Label>Reference Phone:</Form.Label><div className="previewValueDisplay">{combinedDetails.referencePhone}</div></Col><Col><Form.Label>Reference Address:</Form.Label><div className="previewValueDisplay">{combinedDetails.referenceAddress}</div></Col></Row>
-      <Row className="mb-3"><Col><Form.Label>Reference Email:</Form.Label><div className="previewValueDisplay">{combinedDetails.referenceEmail}</div></Col><Col><Form.Label>Reference Role:</Form.Label><div className="previewValueDisplay">{combinedDetails.referenceRole}</div></Col></Row>
+        <h4 className="border-bottom pb-2 mb-3 mt-4">References</h4>
+        <Row className="mb-3"><Col><Form.Label>Reference Name:</Form.Label><div className="previewValueDisplay">{combinedDetails.referenceName}</div></Col><Col><Form.Label>Reference Phone:</Form.Label><div className="previewValueDisplay">{combinedDetails.referencePhone}</div></Col><Col><Form.Label>Reference Address:</Form.Label><div className="previewValueDisplay">{combinedDetails.referenceAddress}</div></Col></Row>
+        <Row className="mb-3"><Col><Form.Label>Reference Email:</Form.Label><div className="previewValueDisplay">{combinedDetails.referenceEmail}</div></Col><Col><Form.Label>Reference Role:</Form.Label><div className="previewValueDisplay">{combinedDetails.referenceRole}</div></Col></Row>
 
-      <h4 className="border-bottom pb-2 mb-3 mt-4">Job Portal Information</h4>
-      <Form.Group className="mb-3"><Form.Label>Account Name & Credentials:</Form.Label><div className="previewTextAreaDisplay">{combinedDetails.jobPortalAccountNameandCredentials}</div></Form.Group>
+        <h4 className="border-bottom pb-2 mb-3 mt-4">Job Portal Information</h4>
+        <Form.Group className="mb-3"><Form.Label>Account Name & Credentials:</Form.Label><div className="previewTextAreaDisplay">{combinedDetails.jobPortalAccountNameandCredentials}</div></Form.Group>
 
-      <h4 className="border-bottom pb-2 mb-3 mt-4">Uploaded Resume(s) & Cover Letter</h4>
-<Form.Group className="mb-3">
-  <Form.Label>Resume File(s):</Form.Label>
-  <div className="previewValueDisplay">
-    {combinedDetails.resumes && combinedDetails.resumes.length > 0 ? (
-      combinedDetails.resumes.map((resume, index) => (
-        <a key={index} href={resume.url} target="_blank" rel="noopener noreferrer" style={{ marginRight: '10px', textDecoration: 'underline' }}>
-          {resume.name}
-        </a>
-      ))
-    ) : (
-      'N/A'
-    )}
-  </div>
-</Form.Group>
-      <Form.Group className="mb-3">
-  <Form.Label>Cover Letter File Name:</Form.Label>
-  <div className="previewValueDisplay">
-    {combinedDetails.coverLetterFileName ? <a href={combinedDetails.coverLetterUrl} target="_blank" rel="noopener noreferrer">{combinedDetails.coverLetterFileName}</a> : 'N/A'}
-  </div>
-</Form.Group>
-    </>
-  );
+        <h4 className="border-bottom pb-2 mb-3 mt-4">Uploaded Resume(s) & Cover Letter</h4>
+        <Form.Group className="mb-3">
+          <Form.Label>Resume File(s):</Form.Label>
+          <div className="previewValueDisplay">
+            {combinedDetails.resumes && combinedDetails.resumes.length > 0 ? (
+              combinedDetails.resumes.map((resume, index) => (
+                <a key={index} href={resume.url} target="_blank" rel="noopener noreferrer" style={{ marginRight: '10px', textDecoration: 'underline' }}>
+                  {resume.name}
+                </a>
+              ))
+            ) : (
+              'N/A'
+            )}
+          </div>
+        </Form.Group>
+        <Form.Group className="mb-3">
+          <Form.Label>Cover Letter File Name:</Form.Label>
+          <div className="previewValueDisplay">
+            {combinedDetails.coverLetterFileName ? <a href={combinedDetails.coverLetterUrl} target="_blank" rel="noopener noreferrer">{combinedDetails.coverLetterFileName}</a> : 'N/A'}
+          </div>
+        </Form.Group>
+      </>
+    );
 
-  return (
-    <Modal show={show} onHide={onHide} centered size="lg">
-      <Modal.Header closeButton>
-        <Modal.Title>Your Profile Details for "{serviceDetails.service}"</Modal.Title>
-      </Modal.Header>
-      <Modal.Body style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-        {isSimpleService ? renderSimpleDetails() : renderJobSupportDetails()}
-      </Modal.Body>
-      <Modal.Footer>
-        <Button variant="secondary" onClick={onHide}>Close</Button>
-      </Modal.Footer>
-    </Modal>
-  );
-};
+    return (
+      <Modal show={show} onHide={onHide} centered size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title>Your Profile Details for "{serviceDetails.service}"</Modal.Title>
+        </Modal.Header>
+        <Modal.Body style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+          {isSimpleService ? renderSimpleDetails() : renderJobSupportDetails()}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={onHide}>Close</Button>
+        </Modal.Footer>
+      </Modal>
+    );
+  };
 
   const handleImageView = (url) => {
     setImageUrlToView(url);
@@ -3480,74 +3552,74 @@ const handleApplyDateRange = () => {
   }, [clientData, allFiles]);
 
 
- const [hoveredServiceKey, setHoveredServiceKey] = useState(null);
+  const [hoveredServiceKey, setHoveredServiceKey] = useState(null);
 
-// Function to calculate metrics for Job Supporting service
-const getServiceMetrics = (serviceKey) => {
-  // For "Job Application", use the real-time Firebase data
-  if (serviceKey === 'Job Application') {
-    if (!applicationsData || !scheduledInterviews) return { appliedToday: 0, totalApplications: 0, interviewsScheduled: 0, responseRate: '0%' };
+  // Function to calculate metrics for Job Supporting service
+  const getServiceMetrics = (serviceKey) => {
+    // For "Job Application", use the real-time Firebase data
+    if (serviceKey === 'Job Application') {
+      if (!applicationsData || !scheduledInterviews) return { appliedToday: 0, totalApplications: 0, interviewsScheduled: 0, responseRate: '0%' };
 
-    const today = formatDate(new Date()); // Format today's date as DD-MM-YYYY
+      const today = formatDate(new Date()); // Format today's date as DD-MM-YYYY
 
-    // Calculate Applied Today
-    const appliedToday = applicationsData[today] ? applicationsData[today].length : 0;
+      // Calculate Applied Today
+      const appliedToday = applicationsData[today] ? applicationsData[today].length : 0;
 
-    // Calculate Total Applications
-    let totalApplications = 0;
-    Object.values(applicationsData).forEach(dateApps => {
-      totalApplications += dateApps.length;
-    });
+      // Calculate Total Applications
+      let totalApplications = 0;
+      Object.values(applicationsData).forEach(dateApps => {
+        totalApplications += dateApps.length;
+      });
 
-    // Calculate Interviews Scheduled
-    const interviewsScheduled = scheduledInterviews.length;
+      // Calculate Interviews Scheduled
+      const interviewsScheduled = scheduledInterviews.length;
 
-    // Calculate Response Rate (Simplified: Interviews Scheduled / Total Applications)
-    const responseRate = totalApplications > 0 ? ((interviewsScheduled / totalApplications) * 100).toFixed(0) + '%' : '0%';
+      // Calculate Response Rate (Simplified: Interviews Scheduled / Total Applications)
+      const responseRate = totalApplications > 0 ? ((interviewsScheduled / totalApplications) * 100).toFixed(0) + '%' : '0%';
 
-    return { appliedToday, totalApplications, interviewsScheduled, responseRate };
-  }
-
-  // For all other services, return the static dummy data
-  const metrics = {
-    'Mobile Development': {
-      activeProjects: 15,
-      appsDeployed: 47,
-      clientsSatisfied: 163,
-      avgRating: '4.9',
-      colors: ['#D946EF', '#EC4899', '#10B981', '#F59E0B']
-    },
-    'Web Development': {
-      sitesBuilt: 94,
-      domainsManaged: 71,
-      uptime: '99.9%',
-      performanceScore: 97,
-      colors: ['#3B82F6', '#38BDF8', '#10B981', '#60A5FA']
-    },
-    'Digital Marketing': {
-      activeCampaigns: 28,
-      leadsGenerated: 1389,
-      conversionRate: '13.8%',
-      roi: '365%',
-      colors: ['#F59E0B', '#EC4899', '#10B981', '#D946EF']
-    },
-    'IT Talent Supply': {
-      candidatesPlaced: 82,
-      interviewsToday: 18,
-      activePositions: 45,
-      placementRate: '96%',
-      colors: ['#10B981', '#38BDF8', '#3B82F6', '#10B981']
-    },
-    'Cyber Security': {
-      threatsBlocked: 2789,
-      securityScans: 178,
-      vulnerabilitiesFixed: 94,
-      systemsProtected: 267,
-      colors: ['#6B7280', '#9CA3AF', '#EF4444', '#10B981']
+      return { appliedToday, totalApplications, interviewsScheduled, responseRate };
     }
+
+    // For all other services, return the static dummy data
+    const metrics = {
+      'Mobile Development': {
+        activeProjects: 15,
+        appsDeployed: 47,
+        clientsSatisfied: 163,
+        avgRating: '4.9',
+        colors: ['#D946EF', '#EC4899', '#10B981', '#F59E0B']
+      },
+      'Web Development': {
+        sitesBuilt: 94,
+        domainsManaged: 71,
+        uptime: '99.9%',
+        performanceScore: 97,
+        colors: ['#3B82F6', '#38BDF8', '#10B981', '#60A5FA']
+      },
+      'Digital Marketing': {
+        activeCampaigns: 28,
+        leadsGenerated: 1389,
+        conversionRate: '13.8%',
+        roi: '365%',
+        colors: ['#F59E0B', '#EC4899', '#10B981', '#D946EF']
+      },
+      'IT Talent Supply': {
+        candidatesPlaced: 82,
+        interviewsToday: 18,
+        activePositions: 45,
+        placementRate: '96%',
+        colors: ['#10B981', '#38BDF8', '#3B82F6', '#10B981']
+      },
+      'Cyber Security': {
+        threatsBlocked: 2789,
+        securityScans: 178,
+        vulnerabilitiesFixed: 94,
+        systemsProtected: 267,
+        colors: ['#6B7280', '#9CA3AF', '#EF4444', '#10B981']
+      }
+    };
+    return metrics[serviceKey] || null;
   };
-  return metrics[serviceKey] || null;
-};
 
 
 
@@ -5414,7 +5486,7 @@ html.dark-mode .notify-success-message {
                       <td className="modal-table-cell">{interview.interviewTime}</td>
                       {/* <td className="modal-table-cell">{interview.jobId}</td> */}
                       <td style={{ fontWeight: '600' }} className="modal-table-cell">{interview.company}</td>
-                       <td style={{ fontWeight: '600' }} className="modal-table-cell">{interview.jobType}</td>
+                      <td style={{ fontWeight: '600' }} className="modal-table-cell">{interview.jobType}</td>
                       <td className="modal-table-cell">{interview.recruiterMail}</td>
                       <td className="modal-table-cell">
                         <div style={{
@@ -5662,18 +5734,18 @@ html.dark-mode .notify-success-message {
           width: '100%',
           marginBottom: '24px',
           padding: '16px',
-           backgroundColor: 'var(--bg-body)',
+          backgroundColor: 'var(--bg-body)',
           borderRadius: '12px'
         }}>
-         <div style={{ textAlign: 'center' }}>
-    <p style={{ margin: '0 0 4px 0', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>1 Month Plan</p>
-    <p style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700', color: 'var(--text-primary)' }}>$199</p>
-  </div>
-  <div style={{ textAlign: 'center' }}>
-    <p style={{ margin: '0 0 4px 0', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Days Left</p>
-    <p style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700', color: 'var(--text-primary)' }}>28</p>
-  </div>
-</div>
+          <div style={{ textAlign: 'center' }}>
+            <p style={{ margin: '0 0 4px 0', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>1 Month Plan</p>
+            <p style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700', color: 'var(--text-primary)' }}>$199</p>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <p style={{ margin: '0 0 4px 0', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Days Left</p>
+            <p style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700', color: 'var(--text-primary)' }}>28</p>
+          </div>
+        </div>
 
         {/* Renew Plan Button in Sidebar */}
         <button
@@ -5713,7 +5785,7 @@ html.dark-mode .notify-success-message {
       {/* Main Content Area */}
       <div className="main-content-area">
         {/* Conditional rendering for Client Module vs. Worksheet View */}
-          {showUnderDevelopment ? (
+        {showUnderDevelopment ? (
           // If true, render the "under development" container
           <div className="under-development-container">
             <button className="back-btn" onClick={handleGoBack}>← Go Back to Dashboard</button>
@@ -5728,31 +5800,31 @@ html.dark-mode .notify-success-message {
             </div>
           </div>
         ) : (
-        !isInWorksheetView ? (
-          <>
-            <h2 className="dashboard-title">
-              {/* Client Module */}
-            </h2>
+          !isInWorksheetView ? (
+            <>
+              <h2 className="dashboard-title">
+                {/* Client Module */}
+              </h2>
 
-            {/* Tabs for Dashboard, Applications, Documents */}
-            <div
-              style={{
-                display: "flex",
-                gap: "10px",
-                marginBottom: "20px",
-                flexWrap: 'wrap', // Allow tabs to wrap on smaller screens
-              }}
-            >
-            </div>
+              {/* Tabs for Dashboard, Applications, Documents */}
+              <div
+                style={{
+                  display: "flex",
+                  gap: "10px",
+                  marginBottom: "20px",
+                  flexWrap: 'wrap', // Allow tabs to wrap on smaller screens
+                }}
+              >
+              </div>
 
 
 
-{/* Content for main dashboard tabs */}
-{activeTab === "Dashboard" && (
-    <>
-        <h1 style={{ textAlign: 'center', marginBottom: '32px' }} className="brand-full">Welcome, {clientUserName} </h1>
+              {/* Content for main dashboard tabs */}
+              {activeTab === "Dashboard" && (
+                <>
+                  <h1 style={{ textAlign: 'center', marginBottom: '32px' }} className="brand-full">Welcome, {clientUserName} </h1>
 
-        {/* <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+                  {/* <div style={{ textAlign: 'center', marginBottom: '32px' }}>
             <button
                 onClick={() => {
                     setIsInWorksheetView(true); // Switch to worksheet view
@@ -5764,12 +5836,12 @@ html.dark-mode .notify-success-message {
             </button>
         </div> */}
 
-        {/* --- NEW SECTION REPLACING services-browse --- */}
-        <div className="dashboard-content-wrapper">
-            
-            {/* Inject CSS Variables and New Carousel Styles */}
-            <style>
-                {`
+                  {/* --- NEW SECTION REPLACING services-browse --- */}
+                  <div className="dashboard-content-wrapper">
+
+                    {/* Inject CSS Variables and New Carousel Styles */}
+                    <style>
+                      {`
                     /* Define colors used for card accents (can be moved to global CSS) */
                     :root {
                         --color-blue: #3b82f6;     
@@ -5959,114 +6031,114 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
                         background-color: white;
                     }
                 `}
-            </style>
-            
-            {/* --- START CAROUSEL SECTION --- */}
-            <div className="carousel-wrapper" style={{ maxWidth: '1200px', margin: '0 auto 40px auto', padding: '0 20px' }}>
-                <Carousel 
-                    className="client-dashboard-carousel"
-                    interval={5000} // Auto-advance every 5 seconds
-                    indicators={true}
-                    controls={false} // Hide Prev/Next controls as in the video
-                >
-                    <Carousel.Item>
-                        <img 
+                    </style>
+
+                    {/* --- START CAROUSEL SECTION --- */}
+                    <div className="carousel-wrapper" style={{ maxWidth: '1200px', margin: '0 auto 40px auto', padding: '0 20px' }}>
+                      <Carousel
+                        className="client-dashboard-carousel"
+                        interval={5000} // Auto-advance every 5 seconds
+                        indicators={true}
+                        controls={false} // Hide Prev/Next controls as in the video
+                      >
+                        <Carousel.Item>
+                          <img
                             className="carousel-background-image"
                             src="https://picsum.photos/seed/picsum/200" // Placeholder: Replace with actual image URL
                             alt="First slide: Job Applications"
-                        />
-                        <div className="carousel-content-overlay">
+                          />
+                          <div className="carousel-content-overlay">
                             <div className="carousel-text-box">
-                                
+
                             </div>
-                        </div>
-                    </Carousel.Item>
-                    <Carousel.Item>
-                        <img 
+                          </div>
+                        </Carousel.Item>
+                        <Carousel.Item>
+                          <img
                             className="carousel-background-image"
                             src="https://picsum.photos/200?grayscale" // Placeholder: Replace with actual image URL
                             alt="Second slide: New Service Announcement"
-                        />
-                        <div className="carousel-content-overlay">
+                          />
+                          <div className="carousel-content-overlay">
                             <div className="carousel-text-box">
-                               
+
                             </div>
+                          </div>
+                        </Carousel.Item>
+                        {/* Add more Carousel.Item components as needed */}
+                      </Carousel>
+                    </div>
+                    {/* --- END CAROUSEL SECTION --- */}
+
+
+                    {/* 1. All Services Grid */}
+                    <div className="all-services-section" style={{ maxWidth: '1200px', margin: '0 auto', padding: '50px 0' }}>
+                      {/* New Header Design */}
+                      <div style={{
+                        textAlign: 'center',
+                        marginBottom: '30px'
+                      }}>
+                        {/* Premium Services Badge */}
+                        <div style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          background: 'linear-gradient(90deg, #e0f2fe 0%, #f3e8ff 100%)',
+                          color: '#4f46e5',
+                          padding: '8px 16px',
+                          borderRadius: '20px',
+                          fontSize: '0.85rem',
+                          fontWeight: '600',
+                          marginBottom: '16px'
+                        }}>
+                          <div style={{
+                            width: '8px',
+                            height: '8px',
+                            borderRadius: '50%',
+                            backgroundColor: '#3b82f6'
+                          }}></div>
+                          Premium Services
+                          <div style={{
+                            width: '8px',
+                            height: '8px',
+                            borderRadius: '50%',
+                            backgroundColor: '#8b5cf6'
+                          }}></div>
                         </div>
-                    </Carousel.Item>
-                    {/* Add more Carousel.Item components as needed */}
-                </Carousel>
-            </div>
-            {/* --- END CAROUSEL SECTION --- */}
 
+                        {/* Main Title with Gradient */}
+                        <h2
+                          style={{
+                            fontSize: '2.5rem',
+                            fontWeight: '700',
+                            marginBottom: '10px',
+                            // Apply the linear gradient to the text itself
+                            background: 'linear-gradient(90deg, #1e293b 0%, #6d28d9 100%)', // Dark Blue to Purple
+                            WebkitBackgroundClip: 'text', // Clip the background to the text (for Chrome, Safari)
+                            WebkitTextFillColor: 'transparent', // Make the text color transparent to show the background
+                            MozBackgroundClip: 'text', // For Firefox
+                            MozTextFillColor: 'transparent', // For Firefox
+                            backgroundClip: 'text', // Standard property
+                            color: 'transparent', // Fallback for older browsers
+                          }}
+                        >
+                          All Services
+                        </h2>
 
-            {/* 1. All Services Grid */}
-<div className="all-services-section" style={{ maxWidth: '1200px', margin: '0 auto', padding: '50px 0' }}>
-  {/* New Header Design */}
-  <div style={{
-    textAlign: 'center',
-    marginBottom: '30px'
-  }}>
-    {/* Premium Services Badge */}
-    <div style={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '8px',
-      background: 'linear-gradient(90deg, #e0f2fe 0%, #f3e8ff 100%)',
-      color: '#4f46e5',
-      padding: '8px 16px',
-      borderRadius: '20px',
-      fontSize: '0.85rem',
-      fontWeight: '600',
-      marginBottom: '16px'
-    }}>
-      <div style={{
-        width: '8px',
-        height: '8px',
-        borderRadius: '50%',
-        backgroundColor: '#3b82f6'
-      }}></div>
-      Premium Services
-      <div style={{
-        width: '8px',
-        height: '8px',
-        borderRadius: '50%',
-        backgroundColor: '#8b5cf6'
-      }}></div>
-    </div>
+                        {/* Subtitle */}
+                        <p style={{
+                          fontSize: '1rem',
+                          color: 'var(--text-secondary)',
+                          marginBottom: '40px',
+                          lineHeight: 1.6,
+                          maxWidth: '800px',
+                          margin: '0 auto'
+                        }}>
+                          Explore our comprehensive suite of technology services designed to accelerate your business growth and transform your digital presence.
+                        </p>
 
-    {/* Main Title with Gradient */}
-    <h2 
-      style={{
-        fontSize: '2.5rem',
-        fontWeight: '700',
-        marginBottom: '10px',
-        // Apply the linear gradient to the text itself
-        background: 'linear-gradient(90deg, #1e293b 0%, #6d28d9 100%)', // Dark Blue to Purple
-        WebkitBackgroundClip: 'text', // Clip the background to the text (for Chrome, Safari)
-        WebkitTextFillColor: 'transparent', // Make the text color transparent to show the background
-        MozBackgroundClip: 'text', // For Firefox
-        MozTextFillColor: 'transparent', // For Firefox
-        backgroundClip: 'text', // Standard property
-        color: 'transparent', // Fallback for older browsers
-      }}
-    >
-      All Services
-    </h2>
-
-    {/* Subtitle */}
-    <p style={{ 
-      fontSize: '1rem', 
-      color: 'var(--text-secondary)', 
-      marginBottom: '40px', 
-      lineHeight: 1.6,
-      maxWidth: '800px',
-      margin: '0 auto'
-    }}>
-      Explore our comprehensive suite of technology services designed to accelerate your business growth and transform your digital presence.
-    </p>
-
-    {/* Decorative Line */}
-    {/* <div style={{
+                        {/* Decorative Line */}
+                        {/* <div style={{
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'center',
@@ -6090,872 +6162,875 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
         background: 'linear-gradient(90deg, #6d28d9 0%, #3b82f6 100%)'
       }}></div>
     </div> */}
-  </div>
+                      </div>
 
-  {/* Rest of the service cards grid */}
-  <div className="services-grid-new">
-    {servicesData.map((service, index) => {
-      const isActive = activeServices.some(active => active.title === service.title);
-      // Map index to a CSS variable color for the top border/accent
-      const colorMap = ['var(--color-blue)', 'var(--color-red)', 'var(--color-cyan)', 'var(--color-orange)', 'var(--color-green)', 'var(--color-purple)'];
-      const cardColorVar = colorMap[index % colorMap.length];
+                      {/* Rest of the service cards grid */}
+                      <div className="services-grid-new">
+                        {servicesData.map((service, index) => {
+                          const isActive = activeServices.some(active => active.title === service.title);
+                          // Map index to a CSS variable color for the top border/accent
+                          const colorMap = ['var(--color-blue)', 'var(--color-red)', 'var(--color-cyan)', 'var(--color-orange)', 'var(--color-green)', 'var(--color-purple)'];
+                          const cardColorVar = colorMap[index % colorMap.length];
 
-      // Get metrics for this service
-      const serviceMetrics = getServiceMetrics(service.key);
+                          // Get metrics for this service
+                          const serviceMetrics = getServiceMetrics(service.key);
 
-      // Determine if this card should show the hover state
-      const isHovered = hoveredServiceKey === service.key;
+                          // Determine if this card should show the hover state
+                          const isHovered = hoveredServiceKey === service.key;
 
-      return (
-        <div
-          key={service.key}
-          className={`service-card-new ${isActive ? 'active-service' : 'inactive-service'}`}
-          style={{
-            '--card-accent-color': cardColorVar,
-            // Apply a subtle scale effect on hover for the entire card
-            transform: isHovered ? 'scale(1.02)' : 'scale(1)',
-            transition: 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)'
-          }}
-          onMouseEnter={() => setHoveredServiceKey(service.key)}
-          onMouseLeave={() => setHoveredServiceKey(null)}
-        >
-          {/* Icon Container */}
-          <div className={`card-icon-container-new ${service.iconClass}`} style={{
-            // Scale the icon up slightly on hover
-            transform: isHovered ? 'scale(1.1)' : 'scale(1)',
-            transition: 'transform 0.3s ease'
-          }}>
-            {service.icon}
-          </div>
+                          return (
+                            <div
+                              key={service.key}
+                              className={`service-card-new ${isActive ? 'active-service' : 'inactive-service'}`}
+                              style={{
+                                '--card-accent-color': cardColorVar,
+                                // Apply a subtle scale effect on hover for the entire card
+                                transform: isHovered ? 'scale(1.02)' : 'scale(1)',
+                                transition: 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)'
+                              }}
+                              onMouseEnter={() => setHoveredServiceKey(service.key)}
+                              onMouseLeave={() => setHoveredServiceKey(null)}
+                            >
+                              {/* Icon Container */}
+                              <div className={`card-icon-container-new ${service.iconClass}`} style={{
+                                // Scale the icon up slightly on hover
+                                transform: isHovered ? 'scale(1.1)' : 'scale(1)',
+                                transition: 'transform 0.3s ease'
+                              }}>
+                                {service.icon}
+                              </div>
 
-          {/* Service Title */}
-          <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '8px', color: 'var(--text-primary)' }}>
-            {service.title}
-          </h3>
+                              {/* Service Title */}
+                              <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '8px', color: 'var(--text-primary)' }}>
+                                {service.title}
+                              </h3>
 
-          {/* Conditional Content Based on Hover State */}
-          {isHovered ? (
-            // Hovered State for any service
-            <>
-              {/* Description */}
-              <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', minHeight: '60px', flexGrow: 1 }}>
-                {service.description}
-              </p>
+                              {/* Conditional Content Based on Hover State */}
+                              {isHovered ? (
+                                // Hovered State for any service
+                                <>
+                                  {/* Description */}
+                                  <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', minHeight: '60px', flexGrow: 1 }}>
+                                    {service.description}
+                                  </p>
 
-              {/* Metrics Grid */}
-              <div
-                className={`metrics-grid ${isHovered ? 'metrics-visible' : 'metrics-hidden'}`}
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: '15px',
-                  marginTop: '15px',
-                  width: '100%',
-                  opacity: isHovered ? 1 : 0,
-                  transform: isHovered ? 'translateY(0)' : 'translateY(10px)',
-                  transition: 'opacity 0.3s ease, transform 0.3s ease'
-                }}
-              >
-                {/* Render metrics based on the service type */}
-                {service.key === 'Job Application' && serviceMetrics && (
-                  <>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#60A5FA' }}></div>
-                      <div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.appliedToday}</div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Applied Today</div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#3B82F6' }}></div>
-                      <div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.totalApplications}</div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Total Applications</div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10B981' }}></div>
-                      <div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.interviewsScheduled}</div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Interviews Scheduled</div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#93C5FD' }}></div>
-                      <div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.responseRate}</div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Response Rate</div>
-                      </div>
-                    </div>
-                  </>
-                )}
+                                  {/* Metrics Grid */}
+                                  <div
+                                    className={`metrics-grid ${isHovered ? 'metrics-visible' : 'metrics-hidden'}`}
+                                    style={{
+                                      display: 'grid',
+                                      gridTemplateColumns: '1fr 1fr',
+                                      gap: '15px',
+                                      marginTop: '15px',
+                                      width: '100%',
+                                      opacity: isHovered ? 1 : 0,
+                                      transform: isHovered ? 'translateY(0)' : 'translateY(10px)',
+                                      transition: 'opacity 0.3s ease, transform 0.3s ease'
+                                    }}
+                                  >
+                                    {/* Render metrics based on the service type */}
+                                    {service.key === 'Job Application' && serviceMetrics && (
+                                      <>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#60A5FA' }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.appliedToday}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Applied Today</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#3B82F6' }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.totalApplications}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Total Applications</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10B981' }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.interviewsScheduled}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Interviews Scheduled</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#93C5FD' }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.responseRate}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Response Rate</div>
+                                          </div>
+                                        </div>
+                                      </>
+                                    )}
 
-                {service.key === 'Mobile Development' && serviceMetrics && (
-                  <>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[0] }}></div>
-                      <div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.activeProjects}</div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Active Projects</div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[1] }}></div>
-                      <div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.appsDeployed}</div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Apps Deployed</div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[2] }}></div>
-                      <div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.clientsSatisfied}</div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Clients Satisfied</div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[3] }}></div>
-                      <div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.avgRating}</div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Avg Rating</div>
-                      </div>
-                    </div>
-                  </>
-                )}
+                                    {service.key === 'Mobile Development' && serviceMetrics && (
+                                      <>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[0] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.activeProjects}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Active Projects</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[1] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.appsDeployed}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Apps Deployed</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[2] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.clientsSatisfied}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Clients Satisfied</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[3] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.avgRating}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Avg Rating</div>
+                                          </div>
+                                        </div>
+                                      </>
+                                    )}
 
-                {service.key === 'Web Development' && serviceMetrics && (
-                  <>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[0] }}></div>
-                      <div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.sitesBuilt}</div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Sites Built</div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[1] }}></div>
-                      <div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.domainsManaged}</div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Domains Managed</div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[2] }}></div>
-                      <div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.uptime}</div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Uptime</div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[3] }}></div>
-                      <div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.performanceScore}</div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Performance Score</div>
-                      </div>
-                    </div>
-                  </>
-                )}
+                                    {service.key === 'Web Development' && serviceMetrics && (
+                                      <>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[0] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.sitesBuilt}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Sites Built</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[1] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.domainsManaged}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Domains Managed</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[2] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.uptime}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Uptime</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[3] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.performanceScore}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Performance Score</div>
+                                          </div>
+                                        </div>
+                                      </>
+                                    )}
 
-                {service.key === 'Digital Marketing' && serviceMetrics && (
-                  <>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[0] }}></div>
-                      <div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.activeCampaigns}</div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Active Campaigns</div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[1] }}></div>
-                      <div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.leadsGenerated}</div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Leads Generated</div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[2] }}></div>
-                      <div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.conversionRate}</div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Conversion Rate</div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[3] }}></div>
-                      <div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.roi}</div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>ROI</div>
-                      </div>
-                    </div>
-                  </>
-                )}
+                                    {service.key === 'Digital Marketing' && serviceMetrics && (
+                                      <>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[0] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.activeCampaigns}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Active Campaigns</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[1] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.leadsGenerated}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Leads Generated</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[2] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.conversionRate}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Conversion Rate</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[3] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.roi}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>ROI</div>
+                                          </div>
+                                        </div>
+                                      </>
+                                    )}
 
-                {service.key === 'IT Talent Supply' && serviceMetrics && (
-                  <>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[0] }}></div>
-                      <div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.candidatesPlaced}</div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Candidates Placed</div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[1] }}></div>
-                      <div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.interviewsToday}</div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Interviews Today</div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[2] }}></div>
-                      <div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.activePositions}</div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Active Positions</div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[3] }}></div>
-                      <div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.placementRate}</div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Placement Rate</div>
-                      </div>
-                    </div>
-                  </>
-                )}
+                                    {service.key === 'IT Talent Supply' && serviceMetrics && (
+                                      <>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[0] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.candidatesPlaced}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Candidates Placed</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[1] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.interviewsToday}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Interviews Today</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[2] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.activePositions}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Active Positions</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[3] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.placementRate}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Placement Rate</div>
+                                          </div>
+                                        </div>
+                                      </>
+                                    )}
 
-                {service.key === 'Cyber Security' && serviceMetrics && (
-                  <>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[0] }}></div>
-                      <div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.threatsBlocked}</div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Threats Blocked</div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[1] }}></div>
-                      <div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.securityScans}</div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Security Scans</div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[2] }}></div>
-                      <div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.vulnerabilitiesFixed}</div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Vulnerabilities Fixed</div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[3] }}></div>
-                      <div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.systemsProtected}</div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Systems Protected</div>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
+                                    {service.key === 'Cyber Security' && serviceMetrics && (
+                                      <>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[0] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.threatsBlocked}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Threats Blocked</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[1] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.securityScans}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Security Scans</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[2] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.vulnerabilitiesFixed}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Vulnerabilities Fixed</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[3] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.systemsProtected}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Systems Protected</div>
+                                          </div>
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
 
-              {/* Keep the button visible on hover */}
-              {isActive ? (
-                <button
-                  className="dashboard-btn-new"
-                  onClick={() => handleViewDashboardClick(service.title)}
-                  style={{
-                    marginTop: '15px',
-                    padding: '10px 15px',
-                    borderRadius: '6px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    transition: 'transform 0.2s',
-                    alignSelf: 'flex-start',
-                  }}
-                >
-                  View Dashboard →
-                </button>
-              ) : (
-                <button
-                  className="book-now-btn-new"
-                  onClick={() => handleViewDashboardClick(service.title)}
-                  style={{
-                    marginTop: '15px',
-                    padding: '10px 15px',
-                    borderRadius: '6px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    transition: 'background-color 0.2s, color 0.2s',
-                    alignSelf: 'flex-start',
-                  }}
-                >
-                  Book Now
-                </button>
+                                  {/* Keep the button visible on hover */}
+                                  {isActive ? (
+                                    <button
+                                      className="dashboard-btn-new"
+                                      onClick={() => handleViewDashboardClick(service.title)}
+                                      style={{
+                                        marginTop: '15px',
+                                        padding: '10px 15px',
+                                        borderRadius: '6px',
+                                        fontWeight: '600',
+                                        cursor: 'pointer',
+                                        transition: 'transform 0.2s',
+                                        alignSelf: 'flex-start',
+                                      }}
+                                    >
+                                      View Dashboard →
+                                    </button>
+                                  ) : (
+                                    <button
+                                      className="book-now-btn-new"
+                                      onClick={() => handleViewDashboardClick(service.title)}
+                                      style={{
+                                        marginTop: '15px',
+                                        padding: '10px 15px',
+                                        borderRadius: '6px',
+                                        fontWeight: '600',
+                                        cursor: 'pointer',
+                                        transition: 'background-color 0.2s, color 0.2s',
+                                        alignSelf: 'flex-start',
+                                      }}
+                                    >
+                                      Book Now
+                                    </button>
+                                  )}
+
+                                  {/* Add "Active" and "Featured" Badges (visible only on hover) */}
+                                  <div
+                                    className={`badge-container ${isHovered ? 'badges-visible' : 'badges-hidden'}`}
+                                    style={{
+                                      position: 'absolute',
+                                      top: '10px',
+                                      right: '10px',
+                                      display: 'flex',
+                                      gap: '8px',
+                                      zIndex: 1,
+                                      opacity: isHovered ? 1 : 0,
+                                      transform: isHovered ? 'translateY(0)' : 'translateY(-10px)',
+                                      transition: 'opacity 0.3s ease, transform 0.3s ease'
+                                    }}
+                                  >
+                                    <div
+                                      style={{
+                                        background: 'rgba(255, 255, 255, 0.8)',
+                                        color: '#3b82f6',
+                                        padding: '4px 8px',
+                                        borderRadius: '12px',
+                                        fontSize: '0.75rem',
+                                        fontWeight: '600',
+                                      }}
+                                    >
+                                      Active
+                                    </div>
+                                    <div
+                                      style={{
+                                        background: 'rgba(255, 255, 255, 0.8)',
+                                        color: '#6d28d9',
+                                        padding: '4px 8px',
+                                        borderRadius: '12px',
+                                        fontSize: '0.75rem',
+                                        fontWeight: '600',
+                                      }}
+                                    >
+                                      Featured
+                                    </div>
+                                  </div>
+                                </>
+                              ) : (
+                                // Default State (Not Hovered)
+                                <>
+                                  <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', minHeight: '60px', flexGrow: 1 }}>
+                                    {service.description}
+                                  </p>
+                                  {isActive ? (
+                                    <button
+                                      className="dashboard-btn-new"
+                                      onClick={() => handleViewDashboardClick(service.title)}
+                                      style={{
+                                        marginTop: '15px',
+                                        padding: '10px 15px',
+                                        borderRadius: '6px',
+                                        fontWeight: '600',
+                                        cursor: 'pointer',
+                                        transition: 'transform 0.2s',
+                                        alignSelf: 'flex-start',
+                                      }}
+                                    >
+                                      View Dashboard →
+                                    </button>
+                                  ) : (
+                                    <button
+                                      className="book-now-btn-new"
+                                      onClick={() => handleViewDashboardClick(service.title)}
+                                      style={{
+                                        marginTop: '15px',
+                                        padding: '10px 15px',
+                                        borderRadius: '6px',
+                                        fontWeight: '600',
+                                        cursor: 'pointer',
+                                        transition: 'background-color 0.2s, color 0.2s',
+                                        alignSelf: 'flex-start',
+                                      }}
+                                    >
+                                      Book Now
+                                    </button>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    {/* --- Responsive Custom Pricing Banner --- */}
+                    <div
+                      className="custom-pricing-banner"
+                      style={{
+                        width: "100%",
+                        maxWidth: "1200px",
+                        margin: "60px auto 0 auto",
+                        borderRadius: "20px",
+                        boxShadow: "0 12px 40px 0 rgba(30,44,76,0.17)",
+                        background: "linear-gradient(90deg, #1a2240 0%, #283366 100%)",
+                        overflow: "hidden",
+                        color: "#fff",
+                        fontSize: "1rem",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "row",
+                          flexWrap: "wrap",
+                          minHeight: "300px",
+                        }}
+                      >
+                        {/* Left Column - Text Content */}
+                        <div
+                          style={{
+                            flex: "1 1 500px", // Minimum 500px, grows if space allows
+                            background: "rgba(20,30,54,0.94)",
+                            padding: "40px",
+                            display: "flex",
+                            flexDirection: "column",
+                            justifyContent: "center",
+                            borderTopLeftRadius: "20px",
+                            borderBottomLeftRadius: "20px",
+                          }}
+                        >
+                          <div
+                            style={{
+                              background: "linear-gradient(90deg,#fbbf24 50%,#38bdf8 100%)",
+                              borderRadius: "20px",
+                              color: "#232142",
+                              fontWeight: 700,
+                              fontSize: "0.95rem",
+                              width: "fit-content",
+                              marginBottom: "16px",
+                              padding: "5px 16px",
+                              letterSpacing: "-0.5px",
+                            }}
+                          >
+                            Limited Time Offer
+                          </div>
+                          <h2
+                            style={{
+                              fontSize: "1.8rem",
+                              fontWeight: 700,
+                              marginBottom: "12px",
+                              color: "#fff",
+                              lineHeight: 1.3,
+                            }}
+                          >
+                            Get <span style={{ color: "#fbbf24" }}>Custom Pricing</span> For Your Business
+                          </h2>
+                          <p
+                            style={{
+                              fontSize: "1rem",
+                              color: "#dbeafe",
+                              lineHeight: 1.6,
+                              marginBottom: "24px",
+                              maxWidth: "500px",
+                            }}
+                          >
+                            Join thousands of professionals who trust TechXplorers.<br />
+                            Connect with our team to discuss tailored solutions and competitive pricing for your specific needs.
+                          </p>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "12px",
+                              flexWrap: "wrap",
+                              marginBottom: "20px",
+                            }}
+                          >
+                            <button
+                              onClick={() => { /* handle quote click */ }}
+                              style={{
+                                padding: "12px 28px",
+                                border: "none",
+                                borderRadius: "8px",
+                                background: "linear-gradient(90deg,#fbbf24 0,#3b82f6 100%)",
+                                color: "#232142",
+                                fontWeight: 700,
+                                fontSize: "1rem",
+                                cursor: "pointer",
+                                boxShadow: "0 4px 10px rgba(59,130,246,0.2)",
+                                transition: "opacity 0.2s",
+                              }}
+                            >
+                              Get Quote
+                            </button>
+                            <span
+                              style={{
+                                color: "#10b981",
+                                background: "rgba(16,185,129,0.08)",
+                                padding: "8px 16px",
+                                borderRadius: "8px",
+                                fontWeight: 600,
+                                fontSize: "0.95rem",
+                              }}
+                            >
+                              Free consultation available
+                            </span>
+                          </div>
+                          <div
+                            style={{
+                              fontSize: "0.95rem",
+                              color: "#93c5fd",
+                              display: "flex",
+                              flexWrap: "wrap",
+                              gap: "12px",
+                            }}
+                          >
+                            {[
+                              "• Free consultation included",
+                              "• 24/7 expert support",
+                              "• Scalable architecture",
+                              "• Custom pricing available"
+                            ].map((item, i) => (
+                              <span key={i}>{item}</span>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Right Column - Service Grid */}
+                        <div
+                          style={{
+                            flex: "1 1 500px",
+                            background: "rgba(32,52,105,0.91)",
+                            padding: "30px",
+                            display: "grid",
+                            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                            gap: "20px",
+                            alignContent: "center",
+                            borderTopRightRadius: "20px",
+                            borderBottomRightRadius: "20px",
+                          }}
+                        >
+                          {[
+                            { label: "Mobile Dev", tags: ["iOS & Android"], badgeColor: "#fbbf24" },
+                            { label: "Web Dev", tags: ["Full Stack"], badgeColor: "#38bdf8" },
+                            { label: "Marketing", tags: ["Digital Campaigns"], badgeColor: "#fb923c" },
+                            { label: "Security", tags: ["Enterprise Level"], badgeColor: "#64748b" }
+                          ].map(({ label, tags, badgeColor }, idx) => (
+                            <div
+                              key={label}
+                              style={{
+                                background: "rgba(255,255,255,0.08)",
+                                color: "#fff",
+                                borderRadius: "12px",
+                                padding: "20px",
+                                boxShadow: "0 3px 10px rgba(0,0,0,0.1)",
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: "8px",
+                              }}
+                            >
+                              <div style={{ fontWeight: 700, fontSize: "1rem" }}>
+                                {label}
+                                <span
+                                  style={{
+                                    background: `${badgeColor}`,
+                                    fontWeight: 600,
+                                    fontSize: "0.9rem",
+                                    color: "#fff",
+                                    borderRadius: "6px",
+                                    padding: "3px 8px",
+                                    marginLeft: "8px",
+                                  }}
+                                >
+                                  Available
+                                </span>
+                              </div>
+                              <div style={{ fontSize: "0.9rem", opacity: 0.9 }}>{tags.join(", ")}</div>
+                              <button
+                                style={{
+                                  marginTop: "auto",
+                                  padding: "8px 16px",
+                                  borderRadius: "6px",
+                                  background: "rgba(255,255,255,0.12)",
+                                  color: "#fff",
+                                  border: "none",
+                                  fontWeight: 600,
+                                  fontSize: "0.95rem",
+                                  cursor: "pointer",
+                                  transition: "background 0.2s",
+                                }}
+                                onClick={() => { /* handle pricing click */ }}
+                              >
+                                Contact for pricing
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    {/* --- END Custom Pricing Banner --- */}
+
+                  </div>
+                  {/* --- END NEW SECTION --- */}
+
+                </>
               )}
 
-              {/* Add "Active" and "Featured" Badges (visible only on hover) */}
-              <div
-                className={`badge-container ${isHovered ? 'badges-visible' : 'badges-hidden'}`}
-                style={{
-                  position: 'absolute',
-                  top: '10px',
-                  right: '10px',
-                  display: 'flex',
-                  gap: '8px',
-                  zIndex: 1,
-                  opacity: isHovered ? 1 : 0,
-                  transform: isHovered ? 'translateY(0)' : 'translateY(-10px)',
-                  transition: 'opacity 0.3s ease, transform 0.3s ease'
-                }}
-              >
-                <div
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.8)',
-                    color: '#3b82f6',
-                    padding: '4px 8px',
-                    borderRadius: '12px',
-                    fontSize: '0.75rem',
-                    fontWeight: '600',
+              {/* If activeTab is 'Applications' or 'Documents' directly from the main tabs, render WorksheetView */}
+              {activeTab === "Applications" && !isInWorksheetView && (
+                <WorksheetView
+                  setActiveTab={setActiveTab}
+                  activeWorksheetTab={"Applications"} // Force Applications tab
+                  setActiveWorksheetTab={setActiveWorksheetTab}
+                  selectedDate={selectedDate}
+                  setSelectedDate={setSelectedDate}
+                  dateRange={dateRange}
+                  currentStartDate={currentStartDate}
+                  setCurrentStartDate={setCurrentStartDate}
+                  showPreviousWeek={showPreviousWeek}
+                  showNextWeek={showNextWeek}
+                  searchTerm={searchTerm}
+                  setSearchTerm={setSearchTerm}
+                  startDateFilter={startDateFilter}
+                  setStartDateFilter={setStartDateFilter}
+                  endDateFilter={endDateFilter}
+                  setEndDateFilter={setEndDateFilter}
+                  showDateRangeModal={showDateRangeModal}
+                  setShowDateRangeModal={setShowDateRangeModal}
+                  tempStartDate={tempStartDate}
+                  setTempStartDate={setTempStartDate}
+                  tempEndDate={tempEndDate}
+                  setTempEndDate={tempEndDate}
+                  handleDateRangeChangeFromCalendar={handleDateRangeChangeFromCalendar}
+                  handleApplyDateRange={handleApplyDateRange}
+                  handleClearDateRangeInModal={handleClearDateRangeInModal}
+                  showJobDescriptionModal={showJobDescriptionModal}
+                  setShowJobDescriptionModal={setShowJobDescriptionModal}
+                  currentJobDescription={currentJobDescription}
+                  setCurrentJobDescription={setCurrentJobDescription}
+                  handleOpenJobDescriptionModal={handleOpenJobDescriptionModal}
+                  handleCloseJobDescriptionModal={handleCloseJobDescriptionModal}
+                  filterWebsites={filterWebsites}
+                  setFilterWebsites={setFilterWebsites}
+                  filterPositions={filterPositions}
+                  setFilterPositions={setFilterPositions}
+                  filterCompanies={filterCompanies}
+                  setFilterCompanies={setFilterCompanies}
+                  uniqueWebsites={uniqueWebsites}
+                  uniquePositions={uniquePositions}
+                  uniqueCompanies={uniqueCompanies}
+                  showFilterModal={showFilterModal}
+                  setShowFilterModal={setShowFilterModal}
+                  tempSelectedWebsites={tempSelectedWebsites}
+                  setTempSelectedWebsites={setTempSelectedWebsites}
+                  tempSelectedPositions={tempSelectedPositions}
+                  setTempSelectedPositions={setTempSelectedPositions}
+                  tempSelectedCompanies={tempSelectedCompanies}
+                  setTempSelectedCompanies={setTempSelectedCompanies}
+                  handleOpenFilterModal={() => setShowFilterModal(true)}
+                  handleCloseFilterModal={() => setShowFilterModal(false)}
+                  handleApplyCategoricalFilters={() => {
+                    setFilterWebsites(tempSelectedWebsites);
+                    setFilterPositions(tempSelectedPositions);
+                    setFilterCompanies(tempSelectedCompanies);
+                    setShowFilterModal(false);
                   }}
-                >
-                  Active
-                </div>
-                <div
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.8)',
-                    color: '#6d28d9',
-                    padding: '4px 8px',
-                    borderRadius: '12px',
-                    fontSize: '0.75rem',
-                    fontWeight: '600',
+                  handleClearTempFiltersInModal={() => {
+                    setTempSelectedWebsites([]);
+                    setTempSelectedPositions([]);
+                    setTempSelectedCompanies([]);
                   }}
-                >
-                  Featured
-                </div>
-              </div>
+                  handleWebsiteCheckboxChange={handleWebsiteCheckboxChange}
+                  handlePositionCheckboxChange={handlePositionCheckboxChange}
+                  handleCompanyCheckboxChange={handleCompanyCheckboxChange}
+                  isGlobalFilterActive={isGlobalFilterActive}
+                  clearAllFilters={clearAllFilters}
+                  getApplicationsSectionTitle={getApplicationsSectionTitle}
+                  filteredApplicationsForDisplay={filteredApplicationsForDisplay}
+                  downloadApplicationsData={downloadApplicationsData}
+                  applicationsData={applicationsData}
+                  allApplicationsFlattened={allApplicationsFlattened}
+                  setActiveSubTab={setActiveSubTab}
+                  clientData={clientData}
+                  setIsInWorksheetView={setIsInWorksheetView}
+                  onImageView={handleImageView}
+                  scheduledInterviews={scheduledInterviews}
+                  handleAttachmentClick={handleAttachmentClick}
+                  closeAttachmentModal={closeAttachmentModal}
+                  currentAttachments={currentAttachments}
+                  showAttachmentModal={showAttachmentModal}
+                  employeeLeaves={employeeLeaves}
+                />
+              )}
+
+              {activeTab === "Documents" && !isInWorksheetView && (
+                <WorksheetView
+                  setActiveTab={setActiveTab}
+                  activeWorksheetTab={"Documents"} // Force Documents tab
+                  setActiveWorksheetTab={setActiveWorksheetTab}
+                  selectedDate={selectedDate}
+                  setSelectedDate={setSelectedDate}
+                  dateRange={dateRange}
+                  currentStartDate={currentStartDate}
+                  setCurrentStartDate={setCurrentStartDate}
+                  showPreviousWeek={showPreviousWeek}
+                  showNextWeek={showNextWeek}
+                  searchTerm={searchTerm}
+                  setSearchTerm={setSearchTerm}
+                  startDateFilter={startDateFilter}
+                  setStartDateFilter={setStartDateFilter}
+                  endDateFilter={endDateFilter}
+                  setEndDateFilter={setEndDateFilter}
+                  showDateRangeModal={showDateRangeModal}
+                  setShowDateRangeModal={setShowDateRangeModal}
+                  tempStartDate={tempStartDate}
+                  setTempStartDate={setTempStartDate}
+                  tempEndDate={tempEndDate}
+                  setTempEndDate={tempEndDate}
+                  handleDateRangeChangeFromCalendar={handleDateRangeChangeFromCalendar}
+                  handleApplyDateRange={handleApplyDateRange}
+                  handleClearDateRangeInModal={handleClearDateRangeInModal}
+                  showJobDescriptionModal={showJobDescriptionModal}
+                  setShowJobDescriptionModal={setShowJobDescriptionModal}
+                  currentJobDescription={currentJobDescription}
+                  setCurrentJobDescription={setCurrentJobDescription}
+                  handleOpenJobDescriptionModal={handleOpenJobDescriptionModal}
+                  handleCloseJobDescriptionModal={handleCloseJobDescriptionModal}
+                  filterWebsites={filterWebsites}
+                  setFilterWebsites={setFilterWebsites}
+                  filterPositions={filterPositions}
+                  setFilterPositions={setFilterPositions}
+                  filterCompanies={filterCompanies}
+                  setFilterCompanies={setFilterCompanies}
+                  uniqueWebsites={uniqueWebsites}
+                  uniquePositions={uniquePositions}
+                  uniqueCompanies={uniqueCompanies}
+                  showFilterModal={showFilterModal}
+                  setShowFilterModal={setShowFilterModal}
+                  tempSelectedWebsites={tempSelectedWebsites}
+                  setTempSelectedWebsites={setTempSelectedWebsites}
+                  tempSelectedPositions={tempSelectedPositions}
+                  setTempSelectedPositions={setTempSelectedPositions}
+                  tempSelectedCompanies={tempSelectedCompanies}
+                  setTempSelectedCompanies={setTempSelectedCompanies}
+                  handleOpenFilterModal={() => setShowFilterModal(true)}
+                  handleCloseFilterModal={() => setShowFilterModal(false)}
+                  handleApplyCategoricalFilters={() => {
+                    setFilterWebsites(tempSelectedWebsites);
+                    setFilterPositions(tempSelectedPositions);
+                    setFilterCompanies(tempSelectedCompanies);
+                    setShowFilterModal(false);
+                  }}
+                  handleClearTempFiltersInModal={() => {
+                    setTempSelectedWebsites([]);
+                    setTempSelectedPositions([]);
+                    setTempSelectedCompanies([]);
+                  }}
+                  handleWebsiteCheckboxChange={handleWebsiteCheckboxChange}
+                  handlePositionCheckboxChange={handlePositionCheckboxChange}
+                  handleCompanyCheckboxChange={handleCompanyCheckboxChange}
+                  isGlobalFilterActive={isGlobalFilterActive}
+                  clearAllFilters={clearAllFilters}
+                  getApplicationsSectionTitle={getApplicationsSectionTitle}
+                  filteredApplicationsForDisplay={filteredApplicationsForDisplay}
+                  downloadApplicationsData={downloadApplicationsData}
+                  applicationsData={applicationsData}
+                  allApplicationsFlattened={allApplicationsFlattened}
+                  activeSubTab={activeSubTab} // Pass sub-tab state for Documents
+                  setActiveSubTab={setActiveSubTab} // Pass sub-tab state for Documents
+                  setIsInWorksheetView={setIsInWorksheetView} // Pass down
+                  clientData={updatedClientData}
+                  onImageView={handleImageView}
+                  scheduledInterviews={scheduledInterviews}
+                  handleAttachmentClick={handleAttachmentClick}
+                  closeAttachmentModal={closeAttachmentModal}
+                  currentAttachments={currentAttachments}
+                  showAttachmentModal={showAttachmentModal}
+                  employeeLeaves={employeeLeaves}
+                />
+              )}
+              <Modal show={showImageViewer} onHide={() => setShowImageViewer(false)} size="lg" centered>
+                <Modal.Header closeButton>
+                  <Modal.Title>Image Preview</Modal.Title>
+                </Modal.Header>
+                <Modal.Body style={{ textAlign: 'center', padding: '10px' }}>
+                  <img src={imageUrlToView} alt="Document Preview" style={{ maxWidth: '100%', maxHeight: '75vh', borderRadius: '8px' }} />
+                </Modal.Body>
+              </Modal>
             </>
           ) : (
-            // Default State (Not Hovered)
-            <>
-              <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', minHeight: '60px', flexGrow: 1 }}>
-                {service.description}
-              </p>
-              {isActive ? (
-                <button
-                  className="dashboard-btn-new"
-                  onClick={() => handleViewDashboardClick(service.title)}
-                  style={{
-                    marginTop: '15px',
-                    padding: '10px 15px',
-                    borderRadius: '6px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    transition: 'transform 0.2s',
-                    alignSelf: 'flex-start',
-                  }}
-                >
-                  View Dashboard →
-                </button>
-              ) : (
-                <button
-                  className="book-now-btn-new"
-                  onClick={() => handleViewDashboardClick(service.title)}
-                  style={{
-                    marginTop: '15px',
-                    padding: '10px 15px',
-                    borderRadius: '6px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    transition: 'background-color 0.2s, color 0.2s',
-                    alignSelf: 'flex-start',
-                  }}
-                >
-                  Book Now
-                </button>
-              )}
-            </>
-          )}
-        </div>
-      );
-    })}
-  </div>
-</div>
-{/* --- Responsive Custom Pricing Banner --- */}
-<div
-  className="custom-pricing-banner"
-  style={{
-    width: "100%",
-    maxWidth: "1200px",
-    margin: "60px auto 0 auto",
-    borderRadius: "20px",
-    boxShadow: "0 12px 40px 0 rgba(30,44,76,0.17)",
-    background: "linear-gradient(90deg, #1a2240 0%, #283366 100%)",
-    overflow: "hidden",
-    color: "#fff",
-    fontSize: "1rem",
-  }}
->
-  <div
-    style={{
-      display: "flex",
-      flexDirection: "row",
-      flexWrap: "wrap",
-      minHeight: "300px",
-    }}
-  >
-    {/* Left Column - Text Content */}
-    <div
-      style={{
-        flex: "1 1 500px", // Minimum 500px, grows if space allows
-        background: "rgba(20,30,54,0.94)",
-        padding: "40px",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-        borderTopLeftRadius: "20px",
-        borderBottomLeftRadius: "20px",
-      }}
-    >
-      <div
-        style={{
-          background: "linear-gradient(90deg,#fbbf24 50%,#38bdf8 100%)",
-          borderRadius: "20px",
-          color: "#232142",
-          fontWeight: 700,
-          fontSize: "0.95rem",
-          width: "fit-content",
-          marginBottom: "16px",
-          padding: "5px 16px",
-          letterSpacing: "-0.5px",
-        }}
-      >
-        Limited Time Offer
-      </div>
-      <h2
-        style={{
-          fontSize: "1.8rem",
-          fontWeight: 700,
-          marginBottom: "12px",
-          color: "#fff",
-          lineHeight: 1.3,
-        }}
-      >
-        Get <span style={{ color: "#fbbf24" }}>Custom Pricing</span> For Your Business
-      </h2>
-      <p
-        style={{
-          fontSize: "1rem",
-          color: "#dbeafe",
-          lineHeight: 1.6,
-          marginBottom: "24px",
-          maxWidth: "500px",
-        }}
-      >
-        Join thousands of professionals who trust TechXplorers.<br />
-        Connect with our team to discuss tailored solutions and competitive pricing for your specific needs.
-      </p>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "12px",
-          flexWrap: "wrap",
-          marginBottom: "20px",
-        }}
-      >
-        <button
-          onClick={() => { /* handle quote click */ }}
-          style={{
-            padding: "12px 28px",
-            border: "none",
-            borderRadius: "8px",
-            background: "linear-gradient(90deg,#fbbf24 0,#3b82f6 100%)",
-            color: "#232142",
-            fontWeight: 700,
-            fontSize: "1rem",
-            cursor: "pointer",
-            boxShadow: "0 4px 10px rgba(59,130,246,0.2)",
-            transition: "opacity 0.2s",
-          }}
-        >
-          Get Quote
-        </button>
-        <span
-          style={{
-            color: "#10b981",
-            background: "rgba(16,185,129,0.08)",
-            padding: "8px 16px",
-            borderRadius: "8px",
-            fontWeight: 600,
-            fontSize: "0.95rem",
-          }}
-        >
-          Free consultation available
-        </span>
-      </div>
-      <div
-        style={{
-          fontSize: "0.95rem",
-          color: "#93c5fd",
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "12px",
-        }}
-      >
-        {[
-          "• Free consultation included",
-          "• 24/7 expert support",
-          "• Scalable architecture",
-          "• Custom pricing available"
-        ].map((item, i) => (
-          <span key={i}>{item}</span>
-        ))}
-      </div>
-    </div>
-
-    {/* Right Column - Service Grid */}
-    <div
-      style={{
-        flex: "1 1 500px",
-        background: "rgba(32,52,105,0.91)",
-        padding: "30px",
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-        gap: "20px",
-        alignContent: "center",
-        borderTopRightRadius: "20px",
-        borderBottomRightRadius: "20px",
-      }}
-    >
-      {[
-        { label: "Mobile Dev", tags: ["iOS & Android"], badgeColor: "#fbbf24" },
-        { label: "Web Dev", tags: ["Full Stack"], badgeColor: "#38bdf8" },
-        { label: "Marketing", tags: ["Digital Campaigns"], badgeColor: "#fb923c" },
-        { label: "Security", tags: ["Enterprise Level"], badgeColor: "#64748b" }
-      ].map(({ label, tags, badgeColor }, idx) => (
-        <div
-          key={label}
-          style={{
-            background: "rgba(255,255,255,0.08)",
-            color: "#fff",
-            borderRadius: "12px",
-            padding: "20px",
-            boxShadow: "0 3px 10px rgba(0,0,0,0.1)",
-            display: "flex",
-            flexDirection: "column",
-            gap: "8px",
-          }}
-        >
-          <div style={{ fontWeight: 700, fontSize: "1rem" }}>
-            {label}
-            <span
-              style={{
-                background: `${badgeColor}`,
-                fontWeight: 600,
-                fontSize: "0.9rem",
-                color: "#fff",
-                borderRadius: "6px",
-                padding: "3px 8px",
-                marginLeft: "8px",
+            // Render the WorksheetView when isInWorksheetView is true
+            <WorksheetView
+              setActiveTab={setActiveTab} // To go back to main Dashboard
+              activeWorksheetTab={activeWorksheetTab}
+              setActiveWorksheetTab={setActiveWorksheetTab}
+              selectedDate={selectedDate}
+              setSelectedDate={setSelectedDate}
+              dateRange={dateRange}
+              currentStartDate={currentStartDate}
+              setCurrentStartDate={setCurrentStartDate}
+              showPreviousWeek={showPreviousWeek}
+              showNextWeek={showNextWeek}
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              startDateFilter={startDateFilter}
+              setStartDateFilter={setStartDateFilter}
+              endDateFilter={endDateFilter}
+              setEndDateFilter={setEndDateFilter}
+              showDateRangeModal={showDateRangeModal}
+              setShowDateRangeModal={setShowDateRangeModal}
+              tempStartDate={tempStartDate}
+              setTempStartDate={setTempStartDate}
+              tempEndDate={tempEndDate}
+              setTempEndDate={tempEndDate}
+              handleDateRangeChangeFromCalendar={handleDateRangeChangeFromCalendar}
+              handleApplyDateRange={handleApplyDateRange}
+              handleClearDateRangeInModal={handleClearDateRangeInModal}
+              showJobDescriptionModal={showJobDescriptionModal}
+              setShowJobDescriptionModal={setShowJobDescriptionModal}
+              currentJobDescription={currentJobDescription}
+              setCurrentJobDescription={setCurrentJobDescription}
+              handleOpenJobDescriptionModal={handleOpenJobDescriptionModal}
+              handleCloseJobDescriptionModal={handleCloseJobDescriptionModal}
+              filterWebsites={filterWebsites}
+              setFilterWebsites={setFilterWebsites}
+              filterPositions={filterPositions}
+              setFilterPositions={setFilterPositions}
+              filterCompanies={filterCompanies}
+              setFilterCompanies={setFilterCompanies}
+              uniqueWebsites={uniqueWebsites}
+              uniquePositions={uniquePositions}
+              uniqueCompanies={uniqueCompanies}
+              showFilterModal={showFilterModal}
+              setShowFilterModal={setShowFilterModal}
+              tempSelectedWebsites={tempSelectedWebsites}
+              setTempSelectedWebsites={setTempSelectedWebsites}
+              tempSelectedPositions={tempSelectedPositions}
+              setTempSelectedPositions={setTempSelectedPositions}
+              tempSelectedCompanies={tempSelectedCompanies}
+              setTempSelectedCompanies={setTempSelectedCompanies}
+              handleOpenFilterModal={() => setShowFilterModal(true)}
+              handleCloseFilterModal={() => setShowFilterModal(false)}
+              handleApplyCategoricalFilters={() => {
+                setFilterWebsites(tempSelectedWebsites);
+                setFilterPositions(tempSelectedPositions);
+                setFilterCompanies(tempSelectedCompanies);
+                setShowFilterModal(false);
               }}
-            >
-              Available
-            </span>
-          </div>
-          <div style={{ fontSize: "0.9rem", opacity: 0.9 }}>{tags.join(", ")}</div>
-          <button
-            style={{
-              marginTop: "auto",
-              padding: "8px 16px",
-              borderRadius: "6px",
-              background: "rgba(255,255,255,0.12)",
-              color: "#fff",
-              border: "none",
-              fontWeight: 600,
-              fontSize: "0.95rem",
-              cursor: "pointer",
-              transition: "background 0.2s",
-            }}
-            onClick={() => { /* handle pricing click */ }}
-          >
-            Contact for pricing
-          </button>
-        </div>
-      ))}
-    </div>
-  </div>
-</div>
-{/* --- END Custom Pricing Banner --- */}
-
-</div>
-        {/* --- END NEW SECTION --- */}
-        
-    </>
-)}
-
-            {/* If activeTab is 'Applications' or 'Documents' directly from the main tabs, render WorksheetView */}
-            {activeTab === "Applications" && !isInWorksheetView && (
-              <WorksheetView
-                setActiveTab={setActiveTab}
-                activeWorksheetTab={"Applications"} // Force Applications tab
-                setActiveWorksheetTab={setActiveWorksheetTab}
-                selectedDate={selectedDate}
-                setSelectedDate={setSelectedDate}
-                dateRange={dateRange}
-                currentStartDate={currentStartDate}
-                setCurrentStartDate={setCurrentStartDate}
-                showPreviousWeek={showPreviousWeek}
-                showNextWeek={showNextWeek}
-                searchTerm={searchTerm}
-                setSearchTerm={setSearchTerm}
-                startDateFilter={startDateFilter}
-                setStartDateFilter={setStartDateFilter}
-                endDateFilter={endDateFilter}
-                setEndDateFilter={setEndDateFilter}
-                showDateRangeModal={showDateRangeModal}
-                setShowDateRangeModal={setShowDateRangeModal}
-                tempStartDate={tempStartDate}
-                setTempStartDate={setTempStartDate}
-                tempEndDate={tempEndDate}
-                setTempEndDate={tempEndDate}
-                handleDateRangeChangeFromCalendar={handleDateRangeChangeFromCalendar}
-                handleApplyDateRange={handleApplyDateRange}
-                handleClearDateRangeInModal={handleClearDateRangeInModal}
-                showJobDescriptionModal={showJobDescriptionModal}
-                setShowJobDescriptionModal={setShowJobDescriptionModal}
-                currentJobDescription={currentJobDescription}
-                setCurrentJobDescription={setCurrentJobDescription}
-                handleOpenJobDescriptionModal={handleOpenJobDescriptionModal}
-                handleCloseJobDescriptionModal={handleCloseJobDescriptionModal}
-                filterWebsites={filterWebsites}
-                setFilterWebsites={setFilterWebsites}
-                filterPositions={filterPositions}
-                setFilterPositions={setFilterPositions}
-                filterCompanies={filterCompanies}
-                setFilterCompanies={setFilterCompanies}
-                uniqueWebsites={uniqueWebsites}
-                uniquePositions={uniquePositions}
-                uniqueCompanies={uniqueCompanies}
-                showFilterModal={showFilterModal}
-                setShowFilterModal={setShowFilterModal}
-                tempSelectedWebsites={tempSelectedWebsites}
-                setTempSelectedWebsites={setTempSelectedWebsites}
-                tempSelectedPositions={tempSelectedPositions}
-                setTempSelectedPositions={setTempSelectedPositions}
-                tempSelectedCompanies={tempSelectedCompanies}
-                setTempSelectedCompanies={setTempSelectedCompanies}
-                handleOpenFilterModal={() => setShowFilterModal(true)}
-                handleCloseFilterModal={() => setShowFilterModal(false)}
-                handleApplyCategoricalFilters={() => {
-                  setFilterWebsites(tempSelectedWebsites);
-                  setFilterPositions(tempSelectedPositions);
-                  setFilterCompanies(tempSelectedCompanies);
-                  setShowFilterModal(false);
-                }}
-                handleClearTempFiltersInModal={() => {
-                  setTempSelectedWebsites([]);
-                  setTempSelectedPositions([]);
-                  setTempSelectedCompanies([]);
-                }}
-                handleWebsiteCheckboxChange={handleWebsiteCheckboxChange}
-                handlePositionCheckboxChange={handlePositionCheckboxChange}
-                handleCompanyCheckboxChange={handleCompanyCheckboxChange}
-                isGlobalFilterActive={isGlobalFilterActive}
-                clearAllFilters={clearAllFilters}
-                getApplicationsSectionTitle={getApplicationsSectionTitle}
-                filteredApplicationsForDisplay={filteredApplicationsForDisplay}
-                downloadApplicationsData={downloadApplicationsData}
-                applicationsData={applicationsData}
-                allApplicationsFlattened={allApplicationsFlattened}
-                setActiveSubTab={setActiveSubTab}
-                clientData={clientData}
-                setIsInWorksheetView={setIsInWorksheetView}
-                onImageView={handleImageView}
-                    scheduledInterviews={scheduledInterviews}
-    handleAttachmentClick={handleAttachmentClick}
-    closeAttachmentModal={closeAttachmentModal}
-    currentAttachments={currentAttachments}
-    showAttachmentModal={showAttachmentModal}
-              />
-            )}
-
-            {activeTab === "Documents" && !isInWorksheetView && (
-              <WorksheetView
-                setActiveTab={setActiveTab}
-                activeWorksheetTab={"Documents"} // Force Documents tab
-                setActiveWorksheetTab={setActiveWorksheetTab}
-                selectedDate={selectedDate}
-                setSelectedDate={setSelectedDate}
-                dateRange={dateRange}
-                currentStartDate={currentStartDate}
-                setCurrentStartDate={setCurrentStartDate}
-                showPreviousWeek={showPreviousWeek}
-                showNextWeek={showNextWeek}
-                searchTerm={searchTerm}
-                setSearchTerm={setSearchTerm}
-                startDateFilter={startDateFilter}
-                setStartDateFilter={setStartDateFilter}
-                endDateFilter={endDateFilter}
-                setEndDateFilter={setEndDateFilter}
-                showDateRangeModal={showDateRangeModal}
-                setShowDateRangeModal={setShowDateRangeModal}
-                tempStartDate={tempStartDate}
-                setTempStartDate={setTempStartDate}
-                tempEndDate={tempEndDate}
-                setTempEndDate={tempEndDate}
-                handleDateRangeChangeFromCalendar={handleDateRangeChangeFromCalendar}
-                handleApplyDateRange={handleApplyDateRange}
-                handleClearDateRangeInModal={handleClearDateRangeInModal}
-                showJobDescriptionModal={showJobDescriptionModal}
-                setShowJobDescriptionModal={setShowJobDescriptionModal}
-                currentJobDescription={currentJobDescription}
-                setCurrentJobDescription={setCurrentJobDescription}
-                handleOpenJobDescriptionModal={handleOpenJobDescriptionModal}
-                handleCloseJobDescriptionModal={handleCloseJobDescriptionModal}
-                filterWebsites={filterWebsites}
-                setFilterWebsites={setFilterWebsites}
-                filterPositions={filterPositions}
-                setFilterPositions={setFilterPositions}
-                filterCompanies={filterCompanies}
-                setFilterCompanies={setFilterCompanies}
-                uniqueWebsites={uniqueWebsites}
-                uniquePositions={uniquePositions}
-                uniqueCompanies={uniqueCompanies}
-                showFilterModal={showFilterModal}
-                setShowFilterModal={setShowFilterModal}
-                tempSelectedWebsites={tempSelectedWebsites}
-                setTempSelectedWebsites={setTempSelectedWebsites}
-                tempSelectedPositions={tempSelectedPositions}
-                setTempSelectedPositions={setTempSelectedPositions}
-                tempSelectedCompanies={tempSelectedCompanies}
-                setTempSelectedCompanies={setTempSelectedCompanies}
-                handleOpenFilterModal={() => setShowFilterModal(true)}
-                handleCloseFilterModal={() => setShowFilterModal(false)}
-                handleApplyCategoricalFilters={() => {
-                  setFilterWebsites(tempSelectedWebsites);
-                  setFilterPositions(tempSelectedPositions);
-                  setFilterCompanies(tempSelectedCompanies);
-                  setShowFilterModal(false);
-                }}
-                handleClearTempFiltersInModal={() => {
-                  setTempSelectedWebsites([]);
-                  setTempSelectedPositions([]);
-                  setTempSelectedCompanies([]);
-                }}
-                handleWebsiteCheckboxChange={handleWebsiteCheckboxChange}
-                handlePositionCheckboxChange={handlePositionCheckboxChange}
-                handleCompanyCheckboxChange={handleCompanyCheckboxChange}
-                isGlobalFilterActive={isGlobalFilterActive}
-                clearAllFilters={clearAllFilters}
-                getApplicationsSectionTitle={getApplicationsSectionTitle}
-                filteredApplicationsForDisplay={filteredApplicationsForDisplay}
-                downloadApplicationsData={downloadApplicationsData}
-                applicationsData={applicationsData}
-                allApplicationsFlattened={allApplicationsFlattened}
-                activeSubTab={activeSubTab} // Pass sub-tab state for Documents
-                setActiveSubTab={setActiveSubTab} // Pass sub-tab state for Documents
-                setIsInWorksheetView={setIsInWorksheetView} // Pass down
-                clientData={updatedClientData}
-                onImageView={handleImageView}
-                    scheduledInterviews={scheduledInterviews}
-    handleAttachmentClick={handleAttachmentClick}
-    closeAttachmentModal={closeAttachmentModal}
-    currentAttachments={currentAttachments}
-    showAttachmentModal={showAttachmentModal}
-              />
-            )}
-            <Modal show={showImageViewer} onHide={() => setShowImageViewer(false)} size="lg" centered>
-              <Modal.Header closeButton>
-                <Modal.Title>Image Preview</Modal.Title>
-              </Modal.Header>
-              <Modal.Body style={{ textAlign: 'center', padding: '10px' }}>
-                <img src={imageUrlToView} alt="Document Preview" style={{ maxWidth: '100%', maxHeight: '75vh', borderRadius: '8px' }} />
-              </Modal.Body>
-            </Modal>
-          </>
-        ) : (
-          // Render the WorksheetView when isInWorksheetView is true
-          <WorksheetView
-            setActiveTab={setActiveTab} // To go back to main Dashboard
-            activeWorksheetTab={activeWorksheetTab}
-            setActiveWorksheetTab={setActiveWorksheetTab}
-            selectedDate={selectedDate}
-            setSelectedDate={setSelectedDate}
-            dateRange={dateRange}
-            currentStartDate={currentStartDate}
-            setCurrentStartDate={setCurrentStartDate}
-            showPreviousWeek={showPreviousWeek}
-            showNextWeek={showNextWeek}
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            startDateFilter={startDateFilter}
-            setStartDateFilter={setStartDateFilter}
-            endDateFilter={endDateFilter}
-            setEndDateFilter={setEndDateFilter}
-            showDateRangeModal={showDateRangeModal}
-            setShowDateRangeModal={setShowDateRangeModal}
-            tempStartDate={tempStartDate}
-            setTempStartDate={setTempStartDate}
-            tempEndDate={tempEndDate}
-            setTempEndDate={tempEndDate}
-            handleDateRangeChangeFromCalendar={handleDateRangeChangeFromCalendar}
-            handleApplyDateRange={handleApplyDateRange}
-            handleClearDateRangeInModal={handleClearDateRangeInModal}
-            showJobDescriptionModal={showJobDescriptionModal}
-            setShowJobDescriptionModal={setShowJobDescriptionModal}
-            currentJobDescription={currentJobDescription}
-            setCurrentJobDescription={setCurrentJobDescription}
-            handleOpenJobDescriptionModal={handleOpenJobDescriptionModal}
-            handleCloseJobDescriptionModal={handleCloseJobDescriptionModal}
-            filterWebsites={filterWebsites}
-            setFilterWebsites={setFilterWebsites}
-            filterPositions={filterPositions}
-            setFilterPositions={setFilterPositions}
-            filterCompanies={filterCompanies}
-            setFilterCompanies={setFilterCompanies}
-            uniqueWebsites={uniqueWebsites}
-            uniquePositions={uniquePositions}
-            uniqueCompanies={uniqueCompanies}
-            showFilterModal={showFilterModal}
-            setShowFilterModal={setShowFilterModal}
-            tempSelectedWebsites={tempSelectedWebsites}
-            setTempSelectedWebsites={setTempSelectedWebsites}
-            tempSelectedPositions={tempSelectedPositions}
-            setTempSelectedPositions={setTempSelectedPositions}
-            tempSelectedCompanies={tempSelectedCompanies}
-            setTempSelectedCompanies={setTempSelectedCompanies}
-            handleOpenFilterModal={() => setShowFilterModal(true)}
-            handleCloseFilterModal={() => setShowFilterModal(false)}
-            handleApplyCategoricalFilters={() => {
-              setFilterWebsites(tempSelectedWebsites);
-              setFilterPositions(tempSelectedPositions);
-              setFilterCompanies(tempSelectedCompanies);
-              setShowFilterModal(false);
-            }}
-            handleClearTempFiltersInModal={() => {
-              setTempSelectedWebsites([]);
-              setTempSelectedPositions([]);
-              setTempSelectedCompanies([]);
-            }}
-            handleWebsiteCheckboxChange={handleWebsiteCheckboxChange}
-            handlePositionCheckboxChange={handlePositionCheckboxChange}
-            handleCompanyCheckboxChange={handleCompanyCheckboxChange}
-            isGlobalFilterActive={isGlobalFilterActive}
-            clearAllFilters={clearAllFilters}
-            getApplicationsSectionTitle={getApplicationsSectionTitle}
-            filteredApplicationsForDisplay={filteredApplicationsForDisplay}
-            downloadApplicationsData={downloadApplicationsData}
-            applicationsData={applicationsData}
-            allApplicationsFlattened={allApplicationsFlattened}
-            activeSubTab={activeSubTab} // Pass sub-tab state for Documents
-            setActiveSubTab={setActiveSubTab} // Pass sub-tab state for Documents
-            setIsInWorksheetView={setIsInWorksheetView} // Pass down
-            clientData={updatedClientData}
-            onImageView={handleImageView}
-                scheduledInterviews={scheduledInterviews}
-    handleAttachmentClick={handleAttachmentClick}
-    closeAttachmentModal={closeAttachmentModal}
-    currentAttachments={currentAttachments}
-    showAttachmentModal={showAttachmentModal}
-          />
+              handleClearTempFiltersInModal={() => {
+                setTempSelectedWebsites([]);
+                setTempSelectedPositions([]);
+                setTempSelectedCompanies([]);
+              }}
+              handleWebsiteCheckboxChange={handleWebsiteCheckboxChange}
+              handlePositionCheckboxChange={handlePositionCheckboxChange}
+              handleCompanyCheckboxChange={handleCompanyCheckboxChange}
+              isGlobalFilterActive={isGlobalFilterActive}
+              clearAllFilters={clearAllFilters}
+              getApplicationsSectionTitle={getApplicationsSectionTitle}
+              filteredApplicationsForDisplay={filteredApplicationsForDisplay}
+              downloadApplicationsData={downloadApplicationsData}
+              applicationsData={applicationsData}
+              allApplicationsFlattened={allApplicationsFlattened}
+              activeSubTab={activeSubTab} // Pass sub-tab state for Documents
+              setActiveSubTab={setActiveSubTab} // Pass sub-tab state for Documents
+              setIsInWorksheetView={setIsInWorksheetView} // Pass down
+              clientData={updatedClientData}
+              onImageView={handleImageView}
+              scheduledInterviews={scheduledInterviews}
+              handleAttachmentClick={handleAttachmentClick}
+              closeAttachmentModal={closeAttachmentModal}
+              currentAttachments={currentAttachments}
+              showAttachmentModal={showAttachmentModal}
+              employeeLeaves={employeeLeaves}
+            />
           )
         )}
 

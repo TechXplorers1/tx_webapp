@@ -34,6 +34,11 @@ const ManagerWorkSheet = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [originalClientData, setOriginalClientData] = useState(null);
 
+const [searchQuery, setSearchQuery] = useState('');
+
+// This is the array that will hold the final filtered leave requests
+const [filteredLeaveRequests, setFilteredLeaveRequests] = useState([]);
+
 
   // State to manage the active tab, now including 'Assigned', 'Interviews', 'Notes'
   const [activeTab, setActiveTab] = useState('Assignments'); // Default to 'Assignments'
@@ -579,79 +584,7 @@ const ManagerWorkSheet = () => {
 useEffect(() => {
   if (activeTab !== 'LeaveRequests') return; // Only fetch when needed (optional: remove for always-on sync)
 
-  const fetchLeaveRequests = async () => {
-    try {
-      const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInEmployee'));
-      if (!loggedInUserData?.firebaseKey) return;
-
-      const managerFirebaseKey = loggedInUserData.firebaseKey;
-
-      // Get all clients assigned by this manager
-      const clientsRef = ref(database, 'clients');
-      const snapshot = await get(clientsRef);
-
-      if (!snapshot.exists()) return;
-
-      const clients = snapshot.val();
-      const assignedEmployeeKeys = new Set();
-
-      Object.values(clients).forEach(client => {
-        if (client.assignedBy === managerFirebaseKey && client.assignedTo) {
-          assignedEmployeeKeys.add(client.assignedTo);
-        }
-      });
-
-      if (assignedEmployeeKeys.size === 0) {
-        setEmployeeLeaveRequests([]);
-        return;
-      }
-
-      // Fetch all employees from Firebase
-const employeesRef = ref(database, 'users');
-const employeesSnap = await get(employeesRef);
-
-let firebaseEmps = {};
-if (employeesSnap.exists()) {
-  const empData = employeesSnap.val();
-  Object.keys(empData).forEach(key => {
-    const user = empData[key];
-    if (user.roles?.includes('employee')) { // assuming role-based filtering
-      firebaseEmps[key] = {
-        firebaseKey: key,
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        fullName: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
-      };
-    }
-  });
-}
-setFirebaseEmployees(firebaseEmps);
-
-      // Fetch leave requests for each assigned employee
-      const requestsPromises = Array.from(assignedEmployeeKeys).map(async (empKey) => {
-        const leaveRef = ref(database, 'leave_requests');
-        const leaveSnap = await get(leaveRef);
-        if (leaveSnap.exists()) {
-          const empRequests = Object.entries(leaveSnap.val()).map(([id, req]) => ({
-            ...req,
-            id,
-            employeeFirebaseKey: empKey,
-          }));
-          return empRequests;
-        }
-        return [];
-      });
-
-      const allRequestsArrays = await Promise.all(requestsPromises);
-      const allRequests = allRequestsArrays.flat().sort((a, b) => new Date(b.requestedDate || b.fromDate) - new Date(a.requestedDate || a.fromDate));
-
-      setEmployeeLeaveRequests(allRequests);
-    } catch (error) {
-      console.error("Error fetching leave requests:", error);
-    }
-  };
-
-  fetchLeaveRequests();
+  
 }, [database, activeTab]);
 
 
@@ -1041,6 +974,12 @@ const [showLeaveApprovalModal, setShowLeaveApprovalModal] = useState(false);
 const [approvalStatus, setApprovalStatus] = useState('Approved');
 
 const [firebaseEmployees, setFirebaseEmployees] = useState({});
+  const [leaveRequests, setLeaveRequests] = useState([]);
+
+  const [leaveSearchQuery, setLeaveSearchQuery] = useState('');
+const [leaveFilterFromDate, setLeaveFilterFromDate] = useState('');
+const [leaveFilterToDate, setLeaveFilterToDate] = useState('');
+
 
   // NEW: Comprehensive dummy data for client details (from EmployeeData.txt structure)
   // This data will be the source of truth for detailed client profiles
@@ -1102,6 +1041,45 @@ const [firebaseEmployees, setFirebaseEmployees] = useState({});
     });
     setClientApplicationCounts(counts);
   }, [applicationData]);
+
+
+  // Inside the ManagerWorkSheet component:
+useEffect(() => {
+  if (!leaveRequests) return;
+
+  let tempRequests = leaveRequests;
+
+  // 1. Search Query Filter (Matches Employee Name or Reason)
+  if (searchQuery) {
+    const lowerCaseQuery = searchQuery.toLowerCase();
+    tempRequests = tempRequests.filter(request => {
+      const employeeName = `${request.employeeFirstName} ${request.employeeLastName}`.toLowerCase();
+      const reason = (request.reason || '').toLowerCase();
+      return employeeName.includes(lowerCaseQuery) || reason.includes(lowerCaseQuery);
+    });
+  }
+
+  // 2. Date Range Filter (Checks if the leave start date falls within the range)
+  if (startDateFilter && endDateFilter) {
+    const start = new Date(startDateFilter);
+    const end = new Date(endDateFilter);
+    
+    // Set time to end of day to include the end date
+    end.setHours(23, 59, 59, 999); 
+
+    tempRequests = tempRequests.filter(request => {
+      // Assuming 'startDate' is the field for the leave start date in the request object
+      const leaveDate = new Date(request.startDate);
+      
+      // Filter is applied to the START date of the leave request
+      return leaveDate >= start && leaveDate <= end;
+    });
+  }
+  
+  // Update the state with the filtered list
+  setFilteredLeaveRequests(tempRequests);
+
+}, [leaveRequests, searchQuery, startDateFilter, endDateFilter]); // Re-run when these dependencies change
 
 
   // NEW: Effect to update employee assigned client counts whenever assignedClients changes
@@ -5345,70 +5323,208 @@ Please provide a summary no longer than 150 words.`;
           </section>
         )}
 
-        {activeTab === 'LeaveRequests' && (
+       {activeTab === 'LeaveRequests' && (
   <section className="leave-requests-section client-assignment-overview">
     <div className="client-assignment-header">
       <h2 className="client-assignment-title">Employee Leave Requests</h2>
-      <span className="total-interviews-badge">{employeeLeaveRequests.length} total requests</span>
+      {/* Visual badge for total requests */}
+      <span 
+        className="total-interviews-badge" 
+        style={{ 
+          backgroundColor: '#e0f2fe', 
+          color: '#0ea5e9', 
+          padding: '6px 12px', 
+          borderRadius: '20px', 
+          fontWeight: '600'
+        }}
+      >
+        {employeeLeaveRequests.length} total requests
+      </span>
     </div>
 
+
+<div style={filterContainerStyle}>
+  {/* Search Bar */}
+  <input
+    type="text"
+    placeholder="Search by Employee or Reason..."
+    value={searchQuery}
+    onChange={(e) => setSearchQuery(e.target.value)}
+    style={searchInputStyle}
+  />
+
+  {/* Date Range Filters */}
+  <div style={dateFilterGroupStyle}>
+    <label style={dateLabelStyle}>Start Date:</label>
+    <input
+      type="date"
+      value={startDateFilter}
+      onChange={(e) => setStartDateFilter(e.target.value)}
+      style={dateInputStyle}
+    />
+  </div>
+  <div style={dateFilterGroupStyle}>
+    <label style={dateLabelStyle}>End Date:</label>
+    <input
+      type="date"
+      value={endDateFilter}
+      onChange={(e) => setEndDateFilter(e.target.value)}
+      style={dateInputStyle}
+    />
+  </div>
+</div>
+
     {employeeLeaveRequests.length === 0 ? (
-      <p style={{ textAlign: 'center', color: '#64748b', padding: '20px' }}>
+      <p style={{ 
+        textAlign: 'center', 
+        color: '#64748b', 
+        padding: '20px', 
+        border: '1px dashed #e2e8f0', 
+        borderRadius: '8px', 
+        backgroundColor: '#f9fafb' 
+      }}>
+        <i className="fas fa-box-open" style={{ marginRight: '8px' }}></i>
         No leave requests found from your assigned employees.
       </p>
     ) : (
-      <div className="table-responsive">
-        <table className="application-table">
+      <div 
+        className="table-responsive" 
+        style={{ 
+          borderRadius: '12px', 
+          overflow: 'hidden', 
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)' /* Soft shadow for lift */
+        }}
+      >
+        <table 
+          className="application-table" 
+          style={{ 
+            width: '100%', 
+            borderCollapse: 'separate', 
+            borderSpacing: '0' 
+          }}
+        >
           <thead>
-            <tr>
-              <th>#</th>
-              <th>Employee</th>
-              <th>Type</th>
-              <th>Dates</th>
-              <th>Subject</th>
-              <th>Status</th>
-              <th>Actions</th>
+            <tr style={{ backgroundColor: '#f1f5f9' }}> {/* Light blue/gray header background */}
+              {[
+                { label: 'S.No', align: 'center' },
+                { label: 'Employee', align: 'center' },
+                { label: 'Leave Type', align: 'center' },
+                { label: 'Date Range', align: 'center' },
+                { label: 'Days', align: 'center' },
+                { label: 'Reason', align: 'center' },
+                { label: 'Actions', align: 'center' }
+              ].map(header => (
+                <th 
+                  key={header.label}
+                  style={{ 
+                    padding: '15px', 
+                    textAlign: header.align, 
+                    color: '#1e293b', 
+                    fontSize: '0.9rem', 
+                    fontWeight: '700', 
+                    borderBottom: '2px solid #e2e8f0' 
+                  }}
+                >
+                  {header.label}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
             {employeeLeaveRequests.map((req, index) => {
-const employee = firebaseEmployees[req.employeeFirebaseKey];
-const fullName = employee ? employee.fullName : 'Unknown Employee';
+              const employee = firebaseEmployees[req.employeeFirebaseKey];
+              const fullName = employee ? employee.fullName : 'Unknown Employee';
+              
+              const isPending = req.status === 'Pending';
+              
+              // Dynamic Row Style (Zebra striping and highlight for pending)
+              const rowStyle = {
+                backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8fafc',
+                borderLeft: isPending ? '4px solid #f59e0b' : '4px solid transparent',
+                transition: 'all 0.3s ease',
+              };
+
+              // Status badge styling
               const statusColor = req.status === 'Approved' 
                 ? '#10b981' 
                 : req.status === 'Rejected' 
                 ? '#ef4444' 
                 : '#f59e0b';
+              
+              const statusBg = req.status === 'Approved' 
+                ? '#d1fae5' 
+                : req.status === 'Rejected' 
+                ? '#fee2e2' 
+                : '#fef3c7';
+
+              const statusBadgeStyle = {
+                  backgroundColor: statusBg,
+                  color: statusColor,
+                  padding: '4px 10px',
+                  borderRadius: '16px',
+                  fontWeight: '600',
+                  fontSize: '0.75rem',
+                  display: 'inline-block',
+                  minWidth: '75px',
+                  textAlign: 'center',
+              };
+
+              const tableDataStyle = {
+                padding: '15px',
+                color: '#334155',
+                fontSize: '0.875rem',
+                borderBottom: '1px solid #e2e8f0',
+              };
 
               return (
-                <tr key={`${req.id}-${index}`}>
-                  <td>{index + 1}</td>
-                  <td><strong>{fullName}</strong></td>
-                  <td>{req.jobType}</td>
-                  <td>{req.fromDate} → {req.toDate}</td>
-                  <td>{req.subject}</td>
-                  <td>
-                    <span style={{
-                      padding: '4px 12px',
-                      borderRadius: '20px',
-                      backgroundColor: statusColor + '20',
-                      color: statusColor,
-                      fontSize: '0.85em',
-                      fontWeight: 'bold'
-                    }}>
-                      {req.status}
-                    </span>
+                <tr key={`${req.id}-${index}`} style={rowStyle}>
+                  <td style={tableDataStyle}>{index + 1}</td>
+                  <td style={tableDataStyle}>
+                    <strong style={{ color: '#1e293b' }}>{fullName}</strong>
                   </td>
-                  <td>
-                    <button
-                      className="btn-sm btn-primary"
-                      onClick={() => {
-                        setSelectedLeaveRequest(req);
-                        setShowLeaveApprovalModal(true);
-                      }}
-                    >
-                      Review
-                    </button>
+                  <td style={tableDataStyle}>
+                     <span style={{...statusBadgeStyle, backgroundColor: '#eff6ff', color: '#1d4ed8', minWidth: 'auto'}}>
+                        {req.leaveType}
+                     </span>
+                  </td>
+                  <td style={{...tableDataStyle, fontWeight: '500'}}>
+                    {req.fromDate} <i className="fas fa-arrow-right" style={{margin: '0 5px', color: '#94a3b8', fontSize: '0.8rem'}}></i> {req.toDate}
+                  </td>
+                  <td style={{...tableDataStyle, fontWeight: '700', color: '#4b5563'}}>{req.leaveDays}</td>
+                  <td style={{
+                    ...tableDataStyle, 
+                    maxWidth: '250px', 
+                    whiteSpace: 'nowrap', 
+                    overflow: 'hidden', 
+                    textOverflow: 'ellipsis'
+                  }} title={req.reason}>{req.reason}</td>
+                  <td style={{...tableDataStyle, textAlign: 'center'}}>
+                    {isPending ? (
+                      <button
+                        className="btn-sm btn-primary"
+                        onClick={() => {
+                          setSelectedLeaveRequest(req);
+                          setShowLeaveApprovalModal(true);
+                        }}
+                        style={{
+                          padding: '8px 16px',
+                          borderRadius: '8px',
+                          fontSize: '0.85rem',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          backgroundColor: '#10b981', /* Green/Success Color */
+                          border: 'none',
+                          color: '#ffffff',
+                          transition: 'background-color 0.2s ease, transform 0.1s ease',
+                          boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)',
+                        }}
+                      >
+                        <i className="fas fa-file-signature" style={{marginRight: '5px'}}></i> Review
+                      </button>
+                    ) : (
+                      // Show the processed status as a badge
+                      <span style={statusBadgeStyle}>{req.status}</span>
+                    )}
                   </td>
                 </tr>
               );
@@ -7218,8 +7334,9 @@ const fullName = employee ? employee.fullName : 'Unknown Employee';
       <div className="modal-body">
         <p><strong>Employee:</strong> {`${allEmployees.find(e => e.firebaseKey === selectedLeaveRequest.employeeFirebaseKey)?.firstName || ''} ${allEmployees.find(e => e.firebaseKey === selectedLeaveRequest.employeeFirebaseKey)?.lastName || ''}`}</p>
         <p><strong>Dates:</strong> {selectedLeaveRequest.fromDate} to {selectedLeaveRequest.toDate}</p>
-        <p><strong>Type:</strong> {selectedLeaveRequest.jobType}</p>
-        <p><strong>Reason:</strong> {selectedLeaveRequest.description}</p>
+        <p><strong>Leave Type:</strong> {selectedLeaveRequest.leaveType}</p>
+        <p><strong>Leave days:</strong> {selectedLeaveRequest.leaveDays}</p>
+        <p><strong>Reason:</strong> {selectedLeaveRequest.reason}</p>
         <div className="assign-form-group">
           <label>Status</label>
           <select
@@ -7327,6 +7444,44 @@ const AttachmentModal = ({ attachments, onClose }) => {
       </Modal.Footer>
     </Modal>
   );
+};
+
+
+// Add these styles inside or just above the ManagerWorkSheet component:
+const filterContainerStyle = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: '20px',
+  padding: '15px 20px',
+  backgroundColor: '#f9f9f9', // Light background for filter area
+  borderRadius: '8px',
+  marginBottom: '20px',
+  alignItems: 'center',
+};
+
+const searchInputStyle = {
+  padding: '10px 15px',
+  border: '1px solid #ccc',
+  borderRadius: '6px',
+  flexGrow: 1, // Allows the search bar to take up more space
+  minWidth: '250px',
+};
+
+const dateFilterGroupStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '10px',
+};
+
+const dateLabelStyle = {
+  fontWeight: '600',
+  color: '#555',
+};
+
+const dateInputStyle = {
+  padding: '10px 15px',
+  border: '1px solid #ccc',
+  borderRadius: '6px',
 };
 
 export default ManagerWorkSheet;
