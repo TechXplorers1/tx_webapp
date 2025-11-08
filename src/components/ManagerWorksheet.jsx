@@ -1,17 +1,22 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'; // Import useRef
 import { useNavigate } from 'react-router-dom';
 import { Modal, Button, Spinner } from 'react-bootstrap'; // Using react-bootstrap Modal
-import { getDatabase, ref, onValue, update, push, set, query, off, orderByChild, equalTo } from "firebase/database"; // Import Firebase functions
+import {
+  ref,
+  onValue,
+  query,
+  orderByChild,
+  equalTo,
+  get,
+  off,
+  onChildAdded,
+  onChildChanged,
+  onChildRemoved
+} from "firebase/database";
 import { database, auth } from '../firebase'; // Import your Firebase config
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { utils, writeFile } from 'xlsx';
-
-
-
-
-
-
 
 
 const ManagerWorkSheet = () => {
