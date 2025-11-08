@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'; // Import useRef
 import { useNavigate } from 'react-router-dom';
 import { Modal, Button, Spinner } from 'react-bootstrap'; // Using react-bootstrap Modal
-import { getDatabase, ref, onValue, update, push, set, off } from "firebase/database"; // Import Firebase functions
+import { getDatabase, ref, onValue, update, push, set } from "firebase/database"; // Import Firebase functions
 import { database, auth } from '../firebase'; // Import your Firebase config
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -398,7 +398,9 @@ const [filteredLeaveRequests, setFilteredLeaveRequests] = useState([]);
       // Step 2: Add the unique auth UID (firebaseKey) to the data object
       newEmployeeData.firebaseKey = user.uid;
 
+
       const usersRef = ref(database, `users/${user.uid}`);
+
 
       await set(usersRef, newEmployeeData);
 
@@ -444,124 +446,109 @@ const [filteredLeaveRequests, setFilteredLeaveRequests] = useState([]);
       }
     });
 
-    useEffect(() => {
-      if (!managerFirebaseKey) return;
+    const clientsRef = ref(database, 'clients');
+    const usersRef = ref(database, 'users');
 
-      // ✅ Query only clients managed by this manager
-      const clientsQuery = query(
-        ref(database, 'clients'),
-        orderByChild('assignedManager'),
-        equalTo(managerFirebaseKey)
+    const unsubscribeClients = onValue(clientsRef, (snapshot) => {
+      const clientsData = snapshot.val();
+      const allRegistrations = [];
+      if (clientsData) {
+        Object.keys(clientsData).forEach(clientKey => {
+          const client = clientsData[clientKey];
+          if (client.serviceRegistrations) {
+            Object.keys(client.serviceRegistrations).forEach(regKey => {
+              const registration = client.serviceRegistrations[regKey];
+
+              // FIX: Convert the jobApplications object to an array here
+              const jobApplicationsArray = registration.jobApplications
+                ? Object.values(registration.jobApplications)
+                : [];
+
+              allRegistrations.push({
+                ...registration,
+                jobApplications: jobApplicationsArray, // Use the new array
+                clientFirebaseKey: clientKey,
+                registrationKey: regKey,
+                email: client.email,
+                mobile: client.mobile,
+                firstName: registration.firstName || client.firstName,
+                lastName: registration.lastName || client.lastName,
+                name: registration.name || `${registration.firstName || ''} ${registration.lastName || ''}`,
+              });
+            });
+          }
+        });
+      }
+
+      const clientsForManager = allRegistrations.filter(reg =>
+        reg.assignedManager === managerFirebaseKey
       );
 
-      const unsubscribeClients = onValue(clientsQuery, (snapshot) => {
-        const clientsData = snapshot.val() || {};
-        const allRegistrations = [];
+      const unassignedForManager = clientsForManager.filter(reg => reg.assignmentStatus === 'pending_employee');
+      const assignedByManager = clientsForManager.filter(reg => ['pending_acceptance', 'active'].includes(reg.assignmentStatus));
+      const inactiveAssigned = clientsForManager.filter(reg =>
+    reg.assignmentStatus === 'inactive'
+   );
 
-        // ✅ Single-pass flattening
-        Object.entries(clientsData).forEach(([clientKey, client]) => {
-          const registrations = client.serviceRegistrations || {};
-          Object.entries(registrations).forEach(([regKey, reg]) => {
-            const jobApplicationsArray = reg.jobApplications
-              ? Object.values(reg.jobApplications)
-              : [];
+      setUnassignedClients(unassignedForManager);
+      setAssignedClients(assignedByManager);
+      setInactiveAssignedClients(inactiveAssigned); 
+ 
+      const allAssignedClients = [...assignedByManager, ...inactiveAssigned];
 
-            allRegistrations.push({
-              ...reg,
-              jobApplications: jobApplicationsArray,
-              clientFirebaseKey: clientKey,
-              registrationKey: regKey,
-              email: client.email,
-              mobile: client.mobile,
-              firstName: reg.firstName || client.firstName,
-              lastName: reg.lastName || client.lastName,
-              name:
-                reg.name ||
-                `${reg.firstName || ""} ${reg.lastName || ""}`.trim(),
-            });
-          });
-        });
+      setApplicationData(allAssignedClients.flatMap(clientReg =>
+        (clientReg.jobApplications || []).map(app => ({
+          ...app,
+          clientFirebaseKey: clientReg.clientFirebaseKey,
+          registrationKey: clientReg.registrationKey,
+          clientName: `${clientReg.firstName} ${clientReg.lastName}`,
+          assignedTo: clientReg.assignedTo
+        }))
+      ));
+      setInterviewData(allAssignedClients.flatMap(clientReg =>
+        (clientReg.jobApplications || [])
+          .filter(app => app.status === 'Interview')
+          .map(app => ({
+            ...app,
+            clientFirebaseKey: clientReg.clientFirebaseKey,
+            registrationKey: clientReg.registrationKey,
+            clientName: `${clientReg.firstName} ${clientReg.lastName}`,
+            assignedTo: clientReg.assignedTo
+          }))
+      ));
 
-        // ✅ Grouped filtering once per update
-        const unassigned = [];
-        const assigned = [];
-        const inactive = [];
+      setLoading(false);
+    });
 
-        for (const reg of allRegistrations) {
-          switch (reg.assignmentStatus) {
-            case "pending_employee":
-              unassigned.push(reg);
-              break;
-            case "pending_acceptance":
-            case "active":
-              assigned.push(reg);
-              break;
-            case "inactive":
-              inactive.push(reg);
-              break;
-          }
-        }
-
-        // ✅ Set all states at once (React batches these)
-        setUnassignedClients(unassigned);
-        setAssignedClients(assigned);
-        setInactiveAssignedClients(inactive);
-
-        const allAssignedClients = [...assigned, ...inactive];
-
-        // Compute applications + interviews
-        const appData = [];
-        const interviewData = [];
-
-        allAssignedClients.forEach((clientReg) => {
-          (clientReg.jobApplications || []).forEach((app) => {
-            const enriched = {
-              ...app,
-              clientFirebaseKey: clientReg.clientFirebaseKey,
-              registrationKey: clientReg.registrationKey,
-              clientName: `${clientReg.firstName} ${clientReg.lastName}`,
-              assignedTo: clientReg.assignedTo,
-            };
-            appData.push(enriched);
-            if (app.status === "Interview") interviewData.push(enriched);
-          });
-        });
-
-        setApplicationData(appData);
-        setInterviewData(interviewData);
-        setLoading(false);
-      });
-
-      // ✅ Only get employees once (if not frequently changing)
-      const usersQuery = ref(database, 'users');
-      const unsubscribeUsers = onValue(usersQuery, (snapshot) => {
-        const usersData = snapshot.val() || {};
-        const employees = [];
-
-        Object.entries(usersData).forEach(([key, user]) => {
-          if (user.roles?.includes('employee')) {
-            employees.push({
-              firebaseKey: key,
-              ...user,
-              fullName: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
-            });
-          }
-        });
-
-        setAllEmployees(employees);
-        setEmployeesForAssignment(employees);
-        setFirebaseEmployees(
-          Object.fromEntries(
-            employees.map(emp => [emp.firebaseKey, emp])
-          )
+    const unsubscribeUsers = onValue(usersRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const usersArray = Object.keys(data).map(key => ({ firebaseKey: key, ...data[key] }));
+        setAllEmployees(usersArray);
+        const employeesOnly = usersArray.filter(user =>
+          user.roles && Array.isArray(user.roles) && user.roles.includes('employee')
         );
-      });
+        setEmployeesForAssignment(employeesOnly);
 
-      return () => {
-        off(clientsQuery);
-        off(usersQuery);
-      };
-    }, [managerFirebaseKey]);
+       const empData = snapshot.val();
+        const firebaseEmps = {};
+        if (empData) {
+          Object.keys(empData).forEach(key => {
+            const user = empData[key];
+            if (user.roles?.includes('employee')) {
+              firebaseEmps[key] = {
+                firebaseKey: key,
+                firstName: user.firstName || '',
+                lastName: user.lastName || '',
+                fullName: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+              };
+            }
+          });
+        }
+        setFirebaseEmployees(firebaseEmps);
+        
+      }
+    });
 
     const leaveRequestsRef = ref(database, 'leave_requests');
     const unsubscribeLeave = onValue(leaveRequestsRef, (snapshot) => {
@@ -589,79 +576,15 @@ const [filteredLeaveRequests, setFilteredLeaveRequests] = useState([]);
       unsubscribeClients();
       unsubscribeUsers();
       unsubscribeLeave();
-      off(leaveRequestsRef)
-      off(managerRef);
-      off(clientsRef);
-      off(usersRef);
     };
   }, []);
 
 
-  useEffect(() => {
-  if (activeTab !== 'LeaveRequests') return; // Only run when relevant
+  // 3. Fetch Leave Requests for Assigned Employees
+useEffect(() => {
+  if (activeTab !== 'LeaveRequests') return; // Only fetch when needed (optional: remove for always-on sync)
 
-  const fetchLeaveRequests = async () => {
-    try {
-      const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInEmployee'));
-      const managerFirebaseKey = loggedInUserData?.firebaseKey;
-      if (!managerFirebaseKey) return;
-
-      // 1️⃣ Fetch all required data in parallel (clients, users, leave_requests)
-      const [clientsSnap, usersSnap, leaveSnap] = await Promise.all([
-        get(ref(database, 'clients')),
-        get(ref(database, 'users')),
-        get(ref(database, 'leave_requests')),
-      ]);
-
-      if (!clientsSnap.exists() || !usersSnap.exists() || !leaveSnap.exists()) {
-        setEmployeeLeaveRequests([]);
-        return;
-      }
-
-      const clientsData = clientsSnap.val();
-      const usersData = usersSnap.val();
-      const leaveRequestsData = leaveSnap.val();
-
-      // 2️⃣ Identify employees assigned by this manager
-      const assignedEmployeeKeys = Object.values(clientsData)
-        .filter(client => client.assignedBy === managerFirebaseKey && client.assignedTo)
-        .map(client => client.assignedTo);
-
-      if (assignedEmployeeKeys.length === 0) {
-        setEmployeeLeaveRequests([]);
-        return;
-      }
-
-      // 3️⃣ Extract only employees (and store mapping for display)
-      const firebaseEmps = {};
-      Object.entries(usersData).forEach(([key, user]) => {
-        if (user.roles?.includes('employee')) {
-          firebaseEmps[key] = {
-            firebaseKey: key,
-            firstName: user.firstName || '',
-            lastName: user.lastName || '',
-            fullName: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
-          };
-        }
-      });
-      setFirebaseEmployees(firebaseEmps);
-
-      // 4️⃣ Filter leave requests belonging to assigned employees
-      const allRequests = Object.entries(leaveRequestsData)
-        .map(([id, req]) => ({ id, ...req }))
-        .filter(req => assignedEmployeeKeys.includes(req.employeeFirebaseKey))
-        .sort((a, b) =>
-          new Date(b.requestedDate || b.fromDate) - new Date(a.requestedDate || a.fromDate)
-        );
-
-      setEmployeeLeaveRequests(allRequests);
-    } catch (error) {
-      console.error("Error fetching leave requests:", error);
-      setEmployeeLeaveRequests([]);
-    }
-  };
-
-  fetchLeaveRequests();
+  
 }, [database, activeTab]);
 
 
