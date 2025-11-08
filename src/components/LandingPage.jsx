@@ -9,7 +9,18 @@ import '../styles/LandingPage.css';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../components/AuthContext'; // Import useAuth
 import { database } from '../firebase';
-import { ref, onValue } from "firebase/database";
+import {
+  ref,
+  onValue,
+  onChildAdded,
+  onChildChanged,
+  onChildRemoved,
+  get,
+  query,
+  orderByChild,
+  equalTo,
+  off,
+} from "firebase/database";
 import { useInView } from 'react-intersection-observer'; // Ensure this is imported
 import L from 'leaflet';
 import icon from 'leaflet/dist/images/marker-icon.png';
