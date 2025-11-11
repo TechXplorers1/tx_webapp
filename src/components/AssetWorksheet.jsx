@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Bell, User, ChevronDown, Plus, Search, Info, X, Hash, Edit, Trash2, LogOut, CheckCircle, Wrench, DollarSign, FilterX } from 'lucide-react';
-import { getDatabase, ref, onValue, push, set, remove, update } from "firebase/database";
+import { ref, onValue, push, set, remove, update, get } from "firebase/database";
 // Make sure this path is correct for your project structure and that the file exports your initialized database.
 import { database } from '../firebase'; 
 
@@ -268,7 +268,7 @@ const AddAssetModal = ({ show, onClose, onAdd, branchLocations }) => {
 };
 
 const AssignAssetModal = ({ show, onClose, onAssign, availableAssets, users }) => {
-    const [selectedAssetName, setSelectedAssetName] = useState('');
+    const [selectedAssetId, setSelectedAssetId] = useState('');
     const [assignedUser, setAssignedUser] = useState('');
     const [assignmentReason, setAssignmentReason] = useState('');
     const [assignedDate, setAssignedDate] = useState('');
@@ -296,23 +296,10 @@ const AssignAssetModal = ({ show, onClose, onAssign, availableAssets, users }) =
 
     const handleSubmit = (e) => {
       e.preventDefault();
-      if (selectedAssetName && assignedUser && assignmentReason && assignedDate) {
-        let assetIdToAssign = selectedAssetName;
-        for (const typeGroup of Object.values(groupedAssets)) {
-            const foundAsset = typeGroup.find(asset => asset.name === selectedAssetName);
-            if (foundAsset) {
-                assetIdToAssign = foundAsset.ids[0];
-                break;
-            }
-        }
-        
-        if (assetIdToAssign) {
-            onAssign(assetIdToAssign, assignedUser, assignmentReason, assignedDate);
-            onClose();
-        } else {
-            alert("Could not find the selected asset. Please try again.");
-        }
-      }
+    if (selectedAssetId && assignedUser && assignmentReason && assignedDate) {
+   onAssign(selectedAssetId, assignedUser, assignmentReason, assignedDate);
+    onClose();
+    }
     };
 
     if (!show) return null;
@@ -325,7 +312,8 @@ const AssignAssetModal = ({ show, onClose, onAssign, availableAssets, users }) =
           <form onSubmit={handleSubmit}>
             <div className="form-group">
                 <label className="form-label">Select Asset *</label>
-                <select className="form-select" value={selectedAssetName} onChange={(e) => setSelectedAssetName(e.target.value)} required>
+                <select className="form-select" value={selectedAssetId}
+           onChange={(e) => setSelectedAssetId(e.target.value)} required>
                     <option value="">Choose an available asset</option>
                     {Object.entries(groupedAssets).map(([type, assets]) => (
   <optgroup key={type} label={type}>
@@ -562,13 +550,13 @@ const AssetWorksheet = () => {
   const handleUnassignAssetConfirm = async (firebaseKey, assetName) => {
     const assetRef = ref(database, `assets/${firebaseKey}`);
     try {
-       await update(assetRef, {
-    status: 'assigned',
-    assignedTo: assignedUserId,
-    assignedDate: assignedDate,
-    assignmentReason: assignmentReason,
-    returnDate: null
-});
+   await update(assetRef, {
+     status: 'available',
+     assignedTo: 'Unassigned',
+     assignedDate: null,
+     assignmentReason: '',
+     returnDate: null
+   });
         setNotifications(prev => [{ id: Date.now(), message: `Asset "${assetName}" has been unassigned.`, timestamp: new Date() }, ...prev]);
     } catch (error) {
         console.error("Failed to unassign asset:", error);
