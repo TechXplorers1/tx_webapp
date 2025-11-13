@@ -7,6 +7,7 @@ import AssetManagement from './AssetManagement';
 import RequestManagement from './RequestManagement';
 import { database } from '../../firebase'; // Import your Firebase config
 import { ref, update } from "firebase/database"; // Import update function
+import { getDatabase, goOffline, goOnline } from "firebase/database"; // Import Firebase functions
 
 const AdminPage = () => {
   const navigate = useNavigate();
@@ -77,6 +78,63 @@ const AdminPage = () => {
       setIsEditingUserProfile(false);
     }
   }, [isUserProfileModalOpen, userProfile]);
+
+
+  useEffect(() => {
+  let idleTimer;
+
+  // Function to disconnect from Firebase
+  const disconnectFirebase = () => {
+    console.log("User idle for 1 minute. Disconnecting from Firebase RTDB.");
+    // Get the database instance and call goOffline
+    const db = getDatabase();
+    goOffline(db);
+  };
+
+  // Function to reconnect and reset the timer
+  const resetIdleTimer = () => {
+    // Reconnect to Firebase
+        console.log("User Active. Re-connecting to Firebase RTDB.");
+    const db = getDatabase();
+    goOnline(db);
+
+    // Clear the old timer
+    if (idleTimer) {
+      clearTimeout(idleTimer);
+    }
+
+    // Set a new 1-minute timer
+    idleTimer = setTimeout(disconnectFirebase, 60000); // 60,000 ms = 1 minute
+  };
+
+  // List of events that count as "activity"
+  const events = ['mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
+
+  // Add listeners for all activity events
+  events.forEach(event => {
+    window.addEventListener(event, resetIdleTimer);
+  });
+
+  // Set the initial timer when the component mounts
+  resetIdleTimer();
+
+  // Cleanup function when the component unmounts
+  return () => {
+    console.log("AdminPage unmounted. Cleaning up idle timer.");
+    // Clear the timer
+    if (idleTimer) {
+      clearTimeout(idleTimer);
+    }
+    // Remove all activity listeners
+    events.forEach(event => {
+      window.removeEventListener(event, resetIdleTimer);
+    });
+    
+    // As an extra precaution, disconnect when unmounting
+    // Note: Your *other* useEffect cleanup (with unsubscribes) will also run.
+    disconnectFirebase();
+  };
+}, []); // Empty dependency array ensures this runs only once on mount/unmount
 
   const closeUserProfileModal = () => {
     setIsUserProfileModalOpen(false);
