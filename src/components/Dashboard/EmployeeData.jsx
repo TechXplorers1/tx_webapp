@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Modal, Spinner } from 'react-bootstrap'; // Using react-bootstrap Modal
-import { getDatabase, ref, onValue, query, orderByChild, equalTo, update, remove, set, push, get, off } from "firebase/database";
-import { goOffline, goOnline } from "firebase/database"; // Import Firebase functions
+import { getDatabase, ref, onValue, query, orderByChild, equalTo, update, remove, set, push, get } from "firebase/database";
 import { database } from '../../firebase'; // Import your Firebase config
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { utils, writeFile } from 'xlsx';
@@ -542,69 +541,8 @@ const EmployeeData = () => {
       unsubscribeClients();
       unsubscribeUsers();
       unsubscribeLeave();
-      off(employeeRef);
-      off(clientsRef);
-      off(usersRef);
-      off(leaveRef);
     };
   }, [database]);
-
-
-  useEffect(() => {
-  let idleTimer;
-
-  // Function to disconnect from Firebase
-  const disconnectFirebase = () => {
-    console.log("User idle for 1 minute. Disconnecting from Firebase RTDB.");
-    // Get the database instance and call goOffline
-    const db = getDatabase();
-    goOffline(db);
-  };
-
-  // Function to reconnect and reset the timer
-  const resetIdleTimer = () => {
-    // Reconnect to Firebase
-        console.log("User Active. Re-connecting to Firebase RTDB.");
-    const db = getDatabase();
-    goOnline(db);
-
-    // Clear the old timer
-    if (idleTimer) {
-      clearTimeout(idleTimer);
-    }
-
-    // Set a new 1-minute timer
-    idleTimer = setTimeout(disconnectFirebase, 60000); // 60,000 ms = 1 minute
-  };
-
-  // List of events that count as "activity"
-  const events = ['mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
-
-  // Add listeners for all activity events
-  events.forEach(event => {
-    window.addEventListener(event, resetIdleTimer);
-  });
-
-  // Set the initial timer when the component mounts
-  resetIdleTimer();
-
-  // Cleanup function when the component unmounts
-  return () => {
-    console.log("EMployeeData unmounted. Cleaning up idle timer.");
-    // Clear the timer
-    if (idleTimer) {
-      clearTimeout(idleTimer);
-    }
-    // Remove all activity listeners
-    events.forEach(event => {
-      window.removeEventListener(event, resetIdleTimer);
-    });
-    
-    // As an extra precaution, disconnect when unmounting
-    // Note: Your *other* useEffect cleanup (with unsubscribes) will also run.
-    disconnectFirebase();
-  };
-}, []); // Empty dependency array ensures this runs only once on mount/unmount
 
 
 

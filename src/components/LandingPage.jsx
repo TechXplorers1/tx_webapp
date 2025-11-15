@@ -185,7 +185,7 @@ const LandingPage = () => {
       path: "/services/job-support",
     },
     {
-      title: "Cyber Security",
+      title: "Cyber Security",  
       description: "Protect your digital assets with our advanced cyber security solutions and proactive threat analysis.",
       image: "https://images.unsplash.com/photo-1606606767399-01e271823a2e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjeWJlciUyMHNlY3VyaXR5JTIwdGVjaG5vbG9neXxlbnwxfHx8fDE3NTgwNzAzNzB8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
       features: ["Threat Analysis", "Data Protection", "Security Audits"],
