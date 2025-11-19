@@ -290,12 +290,11 @@ function AboutUs() {
           </Container>
         </section>
 
-        <section className="videos-section section-padding">
+        {/* <section className="videos-section section-padding">
           <Container>
             <h2 className="section-title">Our Videos</h2>
             <div className="video-marquee-wrapper">
               <div className="video-marquee-track">
-                {/* Render videos twice for a seamless loop */}
                 {[...videoUrls, ...videoUrls].map((url, index) => (
                   <div className="video-item" key={index}>
                     <Card className="video-card">
@@ -313,7 +312,7 @@ function AboutUs() {
               </div>
             </div>
           </Container>
-        </section>
+        </section> */}
 
         <footer className="about-footer">
           <Container>
