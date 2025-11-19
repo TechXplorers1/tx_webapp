@@ -258,7 +258,7 @@ export default function SignupPage() {
       <Modal show={showSuccessModal} onHide={handleCloseSuccessModal} centered>
         <Modal.Body className="text-center p-4">
                   <img
-                    src="https://cdn-icons-png.flaticon.com/512/845/845646.png"
+                    src="https://cdn-icons-png.flaticon.com/512/845/845646.jpeg"
                     alt="Success"
                     style={{ width: '80px' }}
                     onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/80x80/28a745/white?text=OK'; }}

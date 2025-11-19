@@ -756,7 +756,7 @@ const [selectedApplication, setSelectedApplication] = useState(null);
                       onClick={() => handleOpenPaymentModal(registration)}
                       className="action-button send-payment-link"
                     >
-                      {/* Credit Card Icon (from Screenshot 2025-07-02 at 7.33.16 PM.png) */}
+                      {/* Credit Card Icon (from Screenshot 2025-07-02 at 7.33.16 PM.jpeg) */}
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '0.9rem', height: '0.9rem' }}>
                         <path d="M20 4H4C3.44772 4 3 4.44772 3 5V19C3 19.5523 3.44772 20 4 20H20C20.5523 20 21 19.5523 21 19V5C21 4.44772 20.5523 4 20 4ZM5 7H19V9H5V7ZM5 11H17V13H5V11ZM5 15H13V17H5V15Z" />
                       </svg>

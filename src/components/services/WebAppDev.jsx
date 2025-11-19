@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import img1 from '../../assets/WebDev.png';
+import img1 from '../../assets/WebDev.jpeg';
 import '../../styles/Services/WebAppDev.css';
 import { useNavigate } from 'react-router-dom';
 import CustomNavbar from '../Navbar';

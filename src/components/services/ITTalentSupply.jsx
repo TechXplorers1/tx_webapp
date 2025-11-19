@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import img1 from '../../assets/ItTalentSupply.png';
+import img1 from '../../assets/ItTalentSupply.jpeg';
 import '../../styles/Services/MobileAppDev.css'; // Reusing styles
 import { useNavigate } from 'react-router-dom';
 import CustomNavbar from '../Navbar';

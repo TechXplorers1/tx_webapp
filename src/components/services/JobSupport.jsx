@@ -1,5 +1,5 @@
 import React from 'react';
-import img1 from '../../assets/JobApply.png';
+import img1 from '../../assets/JobApply.jpeg';
 import '../../styles/Services/MobileAppDev.css'; // Reusing MobileAppDev styles
 import { useNavigate } from 'react-router-dom';
 import CustomNavbar from '../Navbar';
