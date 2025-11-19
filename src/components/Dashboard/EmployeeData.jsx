@@ -449,101 +449,101 @@ const EmployeeData = () => {
       return;
     }
     const employeeFirebaseKey = loggedInUserData.firebaseKey;
+
+    // Keep a small realtime listener only for the employee profile (small path)
     const employeeRef = ref(database, `users/${employeeFirebaseKey}`);
-    const clientsRef = ref(database, 'clients');
-
-    const usersRef = ref(database, 'users');
-    const unsubscribeUsers = onValue(usersRef, (snapshot) => {
-      const usersData = snapshot.val();
-      const managementList = [];
-      if (usersData) {
-        Object.keys(usersData).forEach(key => {
-          const user = usersData[key];
-          if (user.role && (user.role.toLowerCase() === 'manager' || user.role.toLowerCase() === 'admin')) {
-            managementList.push({
-              id: key,
-              name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
-              role: user.role,
-            });
-          }
-        });
-      }
-      setManagersAndAdmins(managementList);
-    });
-
-    // 2. Fetch Employee's Leave Requests
-    const leaveRef = ref(database, 'leave_requests');
-    const employeeLeaveQuery = query(leaveRef, orderByChild('employeeFirebaseKey'), equalTo(employeeFirebaseKey));
-
-    const unsubscribeLeave = onValue(employeeLeaveQuery, (snapshot) => {
-      const requests = snapshot.val();
-      const requestsList = [];
-      if (requests) {
-        Object.keys(requests).forEach(key => {
-          requestsList.push({
-            id: key, // The Firebase key
-            ...requests[key],
-          });
-        });
-      }
-      // Sort by requested date (newest first)
-      requestsList.sort((a, b) => new Date(b.requestedDate) - new Date(a.requestedDate));
-      setLeaveRequests(requestsList);
-    });
-
     const unsubscribeEmployee = onValue(employeeRef, (snapshot) => {
       const data = snapshot.val();
-      if (data) {
-        setEmployeeDetails(data);
-      }
+      if (data) setEmployeeDetails(data);
+    }, (err) => {
+      console.error('Employee listener error', err);
     });
-    const unsubscribeClients = onValue(clientsRef, (snapshot) => {
-      const clientsData = snapshot.val();
-      const allRegistrations = [];
 
-      if (clientsData) {
-        Object.keys(clientsData).forEach(clientKey => {
-          const client = clientsData[clientKey];
-          if (client.serviceRegistrations) {
-            Object.keys(client.serviceRegistrations).forEach(regKey => {
-              const registration = client.serviceRegistrations[regKey];
-              const jobApplicationsArray = registration.jobApplications
-                ? Object.values(registration.jobApplications)
-                : [];
-              allRegistrations.push({
-                ...registration,
-                jobApplications: jobApplicationsArray,
-                clientFirebaseKey: clientKey,
-                registrationKey: regKey,
-                email: client.email,
-                mobile: client.mobile,
-                firstName: registration.firstName || client.firstName,
-                lastName: registration.lastName || client.lastName,
-                name: `${(registration.firstName || client.firstName || '')} ${(registration.lastName || client.lastName || '')}`.trim(),
-                initials: `${(registration.firstName || 'C').charAt(0)}${(registration.lastName || 'L').charAt(0)}`
+    // Keep a filtered realtime listener for leaves if you need live updates
+    const leaveRef = ref(database, 'leave_requests');
+    const employeeLeaveQuery = query(leaveRef, orderByChild('employeeFirebaseKey'), equalTo(employeeFirebaseKey));
+    const unsubscribeLeave = onValue(employeeLeaveQuery, (snapshot) => {
+      const requestsList = [];
+      snapshot.forEach(childSnap => {
+        const val = childSnap.val();
+        requestsList.push({ id: childSnap.key, ...val });
+      });
+      requestsList.sort((a, b) => new Date(b.requestedDate) - new Date(a.requestedDate));
+      setLeaveRequests(requestsList);
+    }, (err) => {
+      console.error('Leave listener error', err);
+    });
+
+    // ONE-TIME fetch: users (managers/admins). Avoid streaming the whole /users node.
+    (async () => {
+      try {
+        const usersSnap = await get(ref(database, 'users'));
+        const usersData = usersSnap.exists() ? usersSnap.val() : null;
+        const managementList = [];
+        if (usersData) {
+          Object.keys(usersData).forEach(key => {
+            const user = usersData[key];
+            if (user && user.role && (String(user.role).toLowerCase() === 'manager' || String(user.role).toLowerCase() === 'admin')) {
+              managementList.push({
+                id: key,
+                name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
+                role: user.role,
               });
-            });
-          }
-        });
+            }
+          });
+        }
+        setManagersAndAdmins(managementList);
+      } catch (err) {
+        console.error('Failed to fetch users once:', err);
       }
-      const myRegistrations = allRegistrations.filter(reg => reg.assignedTo === employeeFirebaseKey);
-      const newAssigned = myRegistrations.filter(c => c.assignmentStatus === 'pending_acceptance');
-      const active = myRegistrations.filter(c => c.assignmentStatus === 'active');
-      const inactive = myRegistrations.filter(c => c.assignmentStatus === 'inactive');
+    })();
 
-      setNewClients(newAssigned);
-      setActiveClients(active);
-      setInactiveClients(inactive);
-    });
+    // ONE-TIME fetch: clients -> build registrations and set local client lists
+    (async () => {
+      try {
+        const clientsSnap = await get(ref(database, 'clients'));
+        const clientsData = clientsSnap.exists() ? clientsSnap.val() : null;
+        const allRegistrations = [];
 
+        if (clientsData) {
+          Object.keys(clientsData).forEach(clientKey => {
+            const client = clientsData[clientKey];
+            if (client && client.serviceRegistrations) {
+              Object.keys(client.serviceRegistrations).forEach(regKey => {
+                const registration = client.serviceRegistrations[regKey];
+                const jobApplicationsArray = registration.jobApplications ? Object.values(registration.jobApplications) : [];
+                allRegistrations.push({
+                  ...registration,
+                  jobApplications: jobApplicationsArray,
+                  clientFirebaseKey: clientKey,
+                  registrationKey: regKey,
+                  email: client.email,
+                  mobile: client.mobile,
+                  firstName: registration.firstName || client.firstName,
+                  lastName: registration.lastName || client.lastName,
+                  name: `${(registration.firstName || client.firstName || '')} ${(registration.lastName || client.lastName || '')}`.trim(),
+                  initials: `${(registration.firstName || 'C').charAt(0)}${(registration.lastName || 'L').charAt(0)}`
+                });
+              });
+            }
+          });
+        }
+
+        const myRegistrations = allRegistrations.filter(reg => reg.assignedTo === employeeFirebaseKey);
+        setNewClients(myRegistrations.filter(c => c.assignmentStatus === 'pending_acceptance'));
+        setActiveClients(myRegistrations.filter(c => c.assignmentStatus === 'active'));
+        setInactiveClients(myRegistrations.filter(c => c.assignmentStatus === 'inactive'));
+      } catch (err) {
+        console.error('Failed to fetch clients once:', err);
+      }
+    })();
+
+    // Cleanup — detach only the realtime listeners we attached
     return () => {
-      unsubscribeEmployee();
-      unsubscribeClients();
-      unsubscribeUsers();
-      unsubscribeLeave();
+      try { if (typeof unsubscribeEmployee === 'function') unsubscribeEmployee(); } catch (e) { }
+      try { if (typeof unsubscribeLeave === 'function') unsubscribeLeave(); } catch (e) { }
     };
-  }, [database]);
-
+  }, [navigate]); // keep deps minimal
 
 
 
@@ -653,20 +653,15 @@ const EmployeeData = () => {
         console.error("No logged in user found in session.");
         return;
       }
-
       const employeeRef = ref(database, `users/${loggedInUserData.firebaseKey}`);
-      onValue(employeeRef, (snapshot) => {
-        if (snapshot.exists()) {
-          const employeeDetails = snapshot.val();
-
-          // Save to state
-          setEmployeeDetails(employeeDetails);
-          setEditedEmployeeDetails({ ...employeeDetails }); // Pre-fill for editing
-        } else {
-          console.warn("No employee data found in Firebase for this key.");
-        }
-      }, { onlyOnce: true }); // fetch once
-
+      const snap = await get(employeeRef);
+      if (snap.exists()) {
+        const employee = snap.val();
+        setEmployeeDetails(employee);
+        setEditedEmployeeDetails({ ...employee });
+      } else {
+        console.warn("No employee data found in Firebase for this key.");
+      }
       setIsEditingProfile(false);
       setShowEmployeeProfileModal(true);
     } catch (error) {
@@ -889,13 +884,13 @@ const EmployeeData = () => {
   const [newFilesToUpload, setNewFilesToUpload] = useState([]);
 
   const [searchQuery, setSearchQuery] = useState('');
-const [filterFromDate, setFilterFromDate] = useState('');
-const [filterToDate, setFilterToDate] = useState('');
+  const [filterFromDate, setFilterFromDate] = useState('');
+  const [filterToDate, setFilterToDate] = useState('');
 
-// Handlers for filter changes
-const handleSearchChange = (e) => setSearchQuery(e.target.value);
-const handleFromDateChange = (e) => setFilterFromDate(e.target.value);
-const handleToDateChange = (e) => setFilterToDate(e.target.value);
+  // Handlers for filter changes
+  const handleSearchChange = (e) => setSearchQuery(e.target.value);
+  const handleFromDateChange = (e) => setFilterFromDate(e.target.value);
+  const handleToDateChange = (e) => setFilterToDate(e.target.value);
 
 
   useEffect(() => {
@@ -1072,9 +1067,12 @@ const handleToDateChange = (e) => setFilterToDate(e.target.value);
       await deleteObject(fileStorageRef);
 
       // 2. Fetch the current list of files from the Realtime Database once
-      const snapshot = await new Promise(resolve => onValue(ref(database, `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}`), resolve, { onlyOnce: true }));
-      const registrationData = snapshot.val();
-      const currentFiles = registrationData.files || [];
+      // inside handleConfirmDeleteFile
+      const regSnap = await get(ref(database, `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}`));
+      const registrationData = regSnap.exists() ? regSnap.val() : null;
+      const currentFiles = registrationData?.files || [];
+      // ... then filter and set updated files as before
+
 
       // 3. Filter out the deleted file
       const updatedFiles = currentFiles.filter(f => f.id !== file.id);
@@ -2062,7 +2060,7 @@ const handleToDateChange = (e) => setFilterToDate(e.target.value);
         applyTo: [],
         fromDate: '',
         toDate: '',
-        leaveType:'',
+        leaveType: '',
         reason: '',
       });
     }
@@ -2086,200 +2084,200 @@ const handleToDateChange = (e) => setFilterToDate(e.target.value);
     setShowDeleteLeaveModal(true);
   };
 
-// Inside EmployeeData.jsx, replace your existing handleConfirmDeleteLeave function with this:
-const handleConfirmDeleteLeave = async () => {
-  if (!leaveRequestToDelete) return;
+  // Inside EmployeeData.jsx, replace your existing handleConfirmDeleteLeave function with this:
+  const handleConfirmDeleteLeave = async () => {
+    if (!leaveRequestToDelete) return;
 
-  setIsDeleting(true);
-  const leaveId = leaveRequestToDelete.id;
+    setIsDeleting(true);
+    const leaveId = leaveRequestToDelete.id;
 
-  try {
-    // Corrected path: Include 'users/' prefix
-    const leaveRef = ref(database, `leave_requests/${leaveId}`);
-    await remove(leaveRef);
-
-
-    triggerNotification("Leave request deleted successfully!");
-  } catch (error) {
-    console.error("Failed to delete leave request:", error);
-    alert("Error deleting leave request. Please try again.");
-  } finally {
-    setShowDeleteLeaveModal(false);
-    setLeaveRequestToDelete(null);
-    setIsDeleting(false);
-  }
-};
+    try {
+      // Corrected path: Include 'users/' prefix
+      const leaveRef = ref(database, `leave_requests/${leaveId}`);
+      await remove(leaveRef);
 
 
- // Inside EmployeeData.jsx, replace your existing handleSubmiOrEditLeave function with this:
-const handleSubmiOrEditLeave = async (e) => {
-  e.preventDefault();
-  setIsSubmittingLeave(true);
+      triggerNotification("Leave request deleted successfully!");
+    } catch (error) {
+      console.error("Failed to delete leave request:", error);
+      alert("Error deleting leave request. Please try again.");
+    } finally {
+      setShowDeleteLeaveModal(false);
+      setLeaveRequestToDelete(null);
+      setIsDeleting(false);
+    }
+  };
 
-  const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInEmployee'));
-  if (!loggedInUserData || !loggedInUserData.firebaseKey) {
-    triggerNotification("Session expired. Please log in again.");
-    setIsSubmittingLeave(false);
-    return;
-  }
 
-  const employeeFirebaseKey = loggedInUserData.firebaseKey;
-  const { fromDate, toDate, jobType } = leaveFormData;
+  // Inside EmployeeData.jsx, replace your existing handleSubmiOrEditLeave function with this:
+  const handleSubmiOrEditLeave = async (e) => {
+    e.preventDefault();
+    setIsSubmittingLeave(true);
 
-  // Calculate leave days
-  const leaveDays = calculateLeaveDays(fromDate, toDate);
-  if (leaveDays <= 0) {
-    triggerNotification("Please select a valid date range for your leave.");
-    setIsSubmittingLeave(false);
-    return;
-  }
-
-  // 🔒 Prevent duplicate casual leaves in same month
-  if (jobType === 'Casual leave') {
-    const isDuplicate = hasExistingCasualLeaveInMonth(fromDate, toDate, leaveRequestToEdit?.id);
-    if (isDuplicate) {
-      triggerNotification("You can only take one Casual Leave per month.");
+    const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInEmployee'));
+    if (!loggedInUserData || !loggedInUserData.firebaseKey) {
+      triggerNotification("Session expired. Please log in again.");
       setIsSubmittingLeave(false);
       return;
     }
-  }
 
-  const employeeName = `${loggedInUserData.firstName || ''} ${loggedInUserData.lastName || ''}`.trim() || loggedInUserData.name;
+    const employeeFirebaseKey = loggedInUserData.firebaseKey;
+    const { fromDate, toDate, jobType } = leaveFormData;
 
-  const leaveRequestData = {
-    applyTo: leaveFormData.applyTo,
-    subject: leaveFormData.subject,
-    fromDate,
-    toDate,
-    jobType,
-    description: leaveFormData.description,
-    status: 'Pending',
-    requestedDate: new Date().toISOString(),
-    employeeFirebaseKey,
-    employeeName,
-    leaveDays,
-    clientIds: loggedInUserData.assignedClients || [] // Important: which clients this employee serves
-  };
-
-  try {
-    let newRequestId = null;
-
-    if (leaveRequestToEdit) {
-      // Update existing
-      const refPath = ref(database, `leave_requests/${leaveRequestToEdit.id}`);
-      await update(refPath, leaveRequestData);
-      newRequestId = leaveRequestToEdit.id;
-      triggerNotification("Leave request updated successfully!");
-    } else {
-      // Create new
-      const refPath = ref(database, 'leave_requests');
-      const newRef = push(refPath);
-      await set(newRef, { id: newRef.key, ...leaveRequestData });
-      newRequestId = newRef.key;
-      triggerNotification("Leave request submitted successfully!");
+    // Calculate leave days
+    const leaveDays = calculateLeaveDays(fromDate, toDate);
+    if (leaveDays <= 0) {
+      triggerNotification("Please select a valid date range for your leave.");
+      setIsSubmittingLeave(false);
+      return;
     }
 
-    // Manually update local state immediately
-    setLeaveRequests(prev => {
-      const filtered = prev.filter(r => r.id !== newRequestId);
-      return [{ id: newRequestId, ...leaveRequestData }, ...filtered];
-    });
+    // 🔒 Prevent duplicate casual leaves in same month
+    if (jobType === 'Casual leave') {
+      const isDuplicate = hasExistingCasualLeaveInMonth(fromDate, toDate, leaveRequestToEdit?.id);
+      if (isDuplicate) {
+        triggerNotification("You can only take one Casual Leave per month.");
+        setIsSubmittingLeave(false);
+        return;
+      }
+    }
 
-    handleCloseLeaveModal();
+    const employeeName = `${loggedInUserData.firstName || ''} ${loggedInUserData.lastName || ''}`.trim() || loggedInUserData.name;
 
-  } catch (error) {
-    console.error("Error saving leave request:", error);
-    triggerNotification("Failed to submit leave request. Please try again.");
-  } finally {
-    setIsSubmittingLeave(false);
-  }
-};
+    const leaveRequestData = {
+      applyTo: leaveFormData.applyTo,
+      subject: leaveFormData.subject,
+      fromDate,
+      toDate,
+      jobType,
+      description: leaveFormData.description,
+      status: 'Pending',
+      requestedDate: new Date().toISOString(),
+      employeeFirebaseKey,
+      employeeName,
+      leaveDays,
+      clientIds: loggedInUserData.assignedClients || [] // Important: which clients this employee serves
+    };
+
+    try {
+      let newRequestId = null;
+
+      if (leaveRequestToEdit) {
+        // Update existing
+        const refPath = ref(database, `leave_requests/${leaveRequestToEdit.id}`);
+        await update(refPath, leaveRequestData);
+        newRequestId = leaveRequestToEdit.id;
+        triggerNotification("Leave request updated successfully!");
+      } else {
+        // Create new
+        const refPath = ref(database, 'leave_requests');
+        const newRef = push(refPath);
+        await set(newRef, { id: newRef.key, ...leaveRequestData });
+        newRequestId = newRef.key;
+        triggerNotification("Leave request submitted successfully!");
+      }
+
+      // Manually update local state immediately
+      setLeaveRequests(prev => {
+        const filtered = prev.filter(r => r.id !== newRequestId);
+        return [{ id: newRequestId, ...leaveRequestData }, ...filtered];
+      });
+
+      handleCloseLeaveModal();
+
+    } catch (error) {
+      console.error("Error saving leave request:", error);
+      triggerNotification("Failed to submit leave request. Please try again.");
+    } finally {
+      setIsSubmittingLeave(false);
+    }
+  };
 
   // Helper function to calculate the number of days between two dates (inclusive)
-const calculateLeaveDays = (fromDate, toDate) => {
-  if (!fromDate || !toDate) return 0;
-  const start = new Date(fromDate);
-  const end = new Date(toDate);
-  // Calculate the time difference in milliseconds
-  const timeDiff = end.getTime() - start.getTime();
-  // Convert to days (including the start day)
-  // Adding 1 ensures both start and end dates are counted
-  const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1;
-  return Math.max(0, daysDiff); // Ensure it's not negative
-};
+  const calculateLeaveDays = (fromDate, toDate) => {
+    if (!fromDate || !toDate) return 0;
+    const start = new Date(fromDate);
+    const end = new Date(toDate);
+    // Calculate the time difference in milliseconds
+    const timeDiff = end.getTime() - start.getTime();
+    // Convert to days (including the start day)
+    // Adding 1 ensures both start and end dates are counted
+    const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1;
+    return Math.max(0, daysDiff); // Ensure it's not negative
+  };
 
-const hasExistingCasualLeaveInMonth = (fromDate, toDate, currentRequestId = null) => {
-  const start = new Date(fromDate);
-  const end = new Date(toDate);
+  const hasExistingCasualLeaveInMonth = (fromDate, toDate, currentRequestId = null) => {
+    const start = new Date(fromDate);
+    const end = new Date(toDate);
 
-  // Get year and month of the leave period
-  const startYear = start.getFullYear();
-  const startMonth = start.getMonth();
-  const endYear = end.getFullYear();
-  const endMonth = end.getMonth();
+    // Get year and month of the leave period
+    const startYear = start.getFullYear();
+    const startMonth = start.getMonth();
+    const endYear = end.getFullYear();
+    const endMonth = end.getMonth();
 
-  // If range spans multiple months, we need to check both
-  const monthsToCheck = new Set();
-  monthsToCheck.add(`${startYear}-${startMonth}`);
-  if (startYear !== endYear || startMonth !== endMonth) {
-    monthsToCheck.add(`${endYear}-${endMonth}`);
-  }
+    // If range spans multiple months, we need to check both
+    const monthsToCheck = new Set();
+    monthsToCheck.add(`${startYear}-${startMonth}`);
+    if (startYear !== endYear || startMonth !== endMonth) {
+      monthsToCheck.add(`${endYear}-${endMonth}`);
+    }
 
-  return leaveRequests.some(req => {
-    // Skip self when editing
-    if (req.id === currentRequestId) return false;
+    return leaveRequests.some(req => {
+      // Skip self when editing
+      if (req.id === currentRequestId) return false;
 
-    // Only check casual leaves
-    if (req.leaveType !== 'Casual leave') return false;
+      // Only check casual leaves
+      if (req.leaveType !== 'Casual leave') return false;
 
-    const reqStart = new Date(req.fromDate);
-    const reqYear = reqStart.getFullYear();
-    const reqMonth = reqStart.getMonth();
+      const reqStart = new Date(req.fromDate);
+      const reqYear = reqStart.getFullYear();
+      const reqMonth = reqStart.getMonth();
 
-    const reqMonthKey = `${reqYear}-${reqMonth}`;
-    return monthsToCheck.has(reqMonthKey);
-  });
-};
+      const reqMonthKey = `${reqYear}-${reqMonth}`;
+      return monthsToCheck.has(reqMonthKey);
+    });
+  };
 
 
-const filteredLeaveRequests = useMemo(() => {
-  // Use leaveRequests or an empty array if not defined
-  const requestsToFilter = leaveRequests || []; 
-  
-  return requestsToFilter.filter(request => {
-    // 1. Filter by Search Query (Reason, Leave Type)
-    const searchLower = searchQuery.toLowerCase();
-    const matchesSearch = searchLower === '' || 
-      request.reason.toLowerCase().includes(searchLower) ||
-      request.leaveType.toLowerCase().includes(searchLower);
+  const filteredLeaveRequests = useMemo(() => {
+    // Use leaveRequests or an empty array if not defined
+    const requestsToFilter = leaveRequests || [];
 
-    // 2. Filter by Date Range
-    const requestStartDate = new Date(request.fromDate);
-    const requestEndDate = new Date(request.toDate);
-    
-    const filterStart = filterFromDate ? new Date(filterFromDate) : null;
-    const filterEnd = filterToDate ? new Date(filterToDate) : null;
+    return requestsToFilter.filter(request => {
+      // 1. Filter by Search Query (Reason, Leave Type)
+      const searchLower = searchQuery.toLowerCase();
+      const matchesSearch = searchLower === '' ||
+        request.reason.toLowerCase().includes(searchLower) ||
+        request.leaveType.toLowerCase().includes(searchLower);
 
-    let matchesDateRange = true;
-    
-    // Check if the request's start date is on or after the filter's start date
-    if (filterStart) {
+      // 2. Filter by Date Range
+      const requestStartDate = new Date(request.fromDate);
+      const requestEndDate = new Date(request.toDate);
+
+      const filterStart = filterFromDate ? new Date(filterFromDate) : null;
+      const filterEnd = filterToDate ? new Date(filterToDate) : null;
+
+      let matchesDateRange = true;
+
+      // Check if the request's start date is on or after the filter's start date
+      if (filterStart) {
         // Set time to midnight for accurate date comparison
         filterStart.setHours(0, 0, 0, 0);
         requestStartDate.setHours(0, 0, 0, 0);
         matchesDateRange = matchesDateRange && (requestStartDate >= filterStart);
-    }
-    
-    // Check if the request's end date is on or before the filter's end date
-    if (filterEnd) {
+      }
+
+      // Check if the request's end date is on or before the filter's end date
+      if (filterEnd) {
         filterEnd.setHours(0, 0, 0, 0);
         requestEndDate.setHours(0, 0, 0, 0);
         matchesDateRange = matchesDateRange && (requestEndDate <= filterEnd);
-    }
+      }
 
-    return matchesSearch && matchesDateRange;
-  }).sort((a, b) => new Date(b.requestedDate) - new Date(a.requestedDate)); // Keep sorting by newest first
-}, [leaveRequests, searchQuery, filterFromDate, filterToDate]);
+      return matchesSearch && matchesDateRange;
+    }).sort((a, b) => new Date(b.requestedDate) - new Date(a.requestedDate)); // Keep sorting by newest first
+  }, [leaveRequests, searchQuery, filterFromDate, filterToDate]);
 
 
 
@@ -5706,278 +5704,278 @@ const filteredLeaveRequests = useMemo(() => {
       </Modal>
 
 
-{/* Apply Leave Tab Content */}
-{activeTab === 'Apply Leave' && (
-  <div style={applicationsSectionStyle}>
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-      <div>
-        <h2 style={sectionTitleStyle}>Leave Request Management</h2>
-        <p style={subLabelStyle}>Submit new leave requests and track their status.</p>
-      </div>
-      {/* 'Apply Leave' button in the right-side top corner */}
-      <button style={addApplicationButtonStyle} onClick={() => handleOpenLeaveModal()} >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19"></line>
-          <line x1="5" y1="12" x2="19" y2="12"></line>
-        </svg>
-        Apply Leave
-      </button>
-    </div>
+      {/* Apply Leave Tab Content */}
+      {activeTab === 'Apply Leave' && (
+        <div style={applicationsSectionStyle}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <div>
+              <h2 style={sectionTitleStyle}>Leave Request Management</h2>
+              <p style={subLabelStyle}>Submit new leave requests and track their status.</p>
+            </div>
+            {/* 'Apply Leave' button in the right-side top corner */}
+            <button style={addApplicationButtonStyle} onClick={() => handleOpenLeaveModal()} >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              Apply Leave
+            </button>
+          </div>
 
-    {/* Leave Summary Cards */}
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-      gap: '20px',
-      marginBottom: '30px'
-    }}>
-      {/* Total Leaves Card */}
-      <div style={{
-        background: 'linear-gradient(135deg, #f0f9ff, #e0f2fe)',
-        padding: '20px',
-        borderRadius: '12px',
-        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
-        border: '1px solid #bae6fd'
-      }}>
-        <h3 style={{
-          fontSize: '1.1rem',
-          fontWeight: '600',
-          color: '#0369a1',
-          margin: '0 0 10px 0'
-        }}>Total Annual Leaves (Days)</h3>
-        <p style={{
-          fontSize: '2rem',
-          fontWeight: '700',
-          color: '#0284c7',
-          margin: '0'
-        }}>12</p>
-      </div>
+          {/* Leave Summary Cards */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+            gap: '20px',
+            marginBottom: '30px'
+          }}>
+            {/* Total Leaves Card */}
+            <div style={{
+              background: 'linear-gradient(135deg, #f0f9ff, #e0f2fe)',
+              padding: '20px',
+              borderRadius: '12px',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
+              border: '1px solid #bae6fd'
+            }}>
+              <h3 style={{
+                fontSize: '1.1rem',
+                fontWeight: '600',
+                color: '#0369a1',
+                margin: '0 0 10px 0'
+              }}>Total Annual Leaves (Days)</h3>
+              <p style={{
+                fontSize: '2rem',
+                fontWeight: '700',
+                color: '#0284c7',
+                margin: '0'
+              }}>12</p>
+            </div>
 
-      {/* Used Leaves Card (Casual Leave Days) */}
-      <div style={{
-        background: 'linear-gradient(135deg, #fffbeb, #fef3c7)',
-        padding: '20px',
-        borderRadius: '12px',
-        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
-        border: '1px solid #fbbf24'
-      }}>
-        <h3 style={{
-          fontSize: '1.1rem',
-          fontWeight: '600',
-          color: '#92400e',
-          margin: '0 0 10px 0'
-        }}>Used Leaves (Days)</h3>
-        <p style={{
-          fontSize: '2rem',
-          fontWeight: '700',
-          color: '#d97706',
-          margin: '0'
-        }}>
-          {leaveRequests
-            .filter(req => (req.leaveType === 'Casual leave' || req.leaveType === 'Sick leave') && req.status === 'Approved')
-            .reduce((total, req) => total + (req.leaveDays || 0), 0)}
-        </p>
-      </div>
-
-      {/* Planned Leaves Card (Planned Leave Days) */}
-      <div style={{
-        background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)',
-        padding: '20px',
-        borderRadius: '12px',
-        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
-        border: '1px solid #86efac'
-      }}>
-        <h3 style={{
-          fontSize: '1.1rem',
-          fontWeight: '600',
-          color: '#14532d',
-          margin: '0 0 10px 0'
-        }}>Planned Leaves (Days)</h3>
-        <p style={{
-          fontSize: '2rem',
-          fontWeight: '700',
-          color: '#16a34a',
-          margin: '0'
-        }}>
-          {leaveRequests
-            .filter(req => req.leaveType === 'Planned leave' && req.status === 'Approved')
-            .reduce((total, req) => total + (req.leaveDays || 0), 0)}
-        </p>
-      </div>
-    </div>
-
-    {/* --- NEW: Search Bar and Date Filters --- */}
-    <div style={{ 
-      display: 'flex', 
-      gap: '15px', 
-      marginBottom: '20px', 
-      alignItems: 'center',
-      flexWrap: 'wrap',
-      padding: '15px',
-      backgroundColor: '#f9fafb',
-      borderRadius: '8px',
-      border: '1px solid #e5e7eb'
-    }}>
-      {/* Search Input */}
-      <div style={{ flex: '2 1 250px', position: 'relative',top:'11px' }}>
-        <input
-          type="text"
-          placeholder="Search by Reason or Leave Type..."
-          value={searchQuery}
-          onChange={handleSearchChange}
-          style={{
-            width: '100%',
-            padding: '10px 10px 10px 40px',
-            border: '1px solid #d1d5db',
-            borderRadius: '6px',
-            fontSize: '0.9rem',
-            boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)',
-          }}
-        />
-        <i className="fas fa-search" style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }}></i>
-      </div>
-
-      {/* From Date Filter */}
-      <div style={{ flex: '1 1 150px' }}>
-        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.8rem', fontWeight: '500', color: '#4b5563' }}>From Date</label>
-        <input
-          type="date"
-          value={filterFromDate}
-          onChange={handleFromDateChange}
-          style={{
-            width: '100%',
-            padding: '10px',
-            border: '1px solid #d1d5db',
-            borderRadius: '6px',
-            fontSize: '0.9rem',
-          }}
-        />
-      </div>
-
-      {/* To Date Filter */}
-      <div style={{ flex: '1 1 150px' }}>
-        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.8rem', fontWeight: '500', color: '#4b5563' }}>To Date</label>
-        <input
-          type="date"
-          value={filterToDate}
-          onChange={handleToDateChange}
-          style={{
-            width: '100%',
-            padding: '10px',
-            border: '1px solid #d1d5db',
-            borderRadius: '6px',
-            fontSize: '0.9rem',
-          }}
-        />
-      </div>
-      
-      {/* Clear Filters Button */}
-      {(searchQuery || filterFromDate || filterToDate) && (
-        <button
-          onClick={() => {
-            setSearchQuery('');
-            setFilterFromDate('');
-            setFilterToDate('');
-          }}
-          style={{
-            padding: '8px 15px',
-            fontSize: '0.85rem',
-            backgroundColor: '#ef4444',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            alignSelf: 'flex-end',
-            marginBottom: '0',
-          }}
-        >
-          Clear Filters
-        </button>
-      )}
-    </div>
-    {/* --- END: Search Bar and Date Filters --- */}
-
-
-    {/* Leave Request Table */}
-    <div style={{ overflowX: 'auto', background: 'var(--bg-header)', borderRadius: '10px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead>
-          <tr>
-            <th style={{ ...applicationTableHeaderCellStyle, width: '5%' }}>S.No</th>
-            <th style={{ ...applicationTableHeaderCellStyle, width: '15%' }}>Status</th> {/* Replaced Apply To with Status for better info */}
-            <th style={{ ...applicationTableHeaderCellStyle, width: '15%' }}>From Date - To Date</th>
-            <th style={{ ...applicationTableHeaderCellStyle, width: '5%' }}>Days</th>
-            <th style={{ ...applicationTableHeaderCellStyle, width: '12%'}}>Leave Type</th>
-            <th style={{ ...applicationTableHeaderCellStyle, width: '30%' }}>Reason</th>
-            <th style={{ ...applicationTableHeaderCellStyle, width: '15%', textAlign: 'center' }}>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filteredLeaveRequests.length === 0 ? (
-            <tr>
-              <td colSpan="7" style={{ ...applicationTableDataCellStyle, textAlign: 'center', color: '#64748b' }}>
-                {leaveRequests.length === 0 
-                  ? 'No leave requests submitted yet.' 
-                  : 'No requests match your current filters.'}
-              </td>
-            </tr>
-          ) : (
-            filteredLeaveRequests.map((request, index) => (
-              <tr key={request.id} style={{ 
-                  backgroundColor: index % 2 === 0 ? '#ffffff' : '#f9fafb', // Zebra striping
-                  borderLeft: request.status === 'Pending' ? '4px solid #f59e0b' : '4px solid transparent'
+            {/* Used Leaves Card (Casual Leave Days) */}
+            <div style={{
+              background: 'linear-gradient(135deg, #fffbeb, #fef3c7)',
+              padding: '20px',
+              borderRadius: '12px',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
+              border: '1px solid #fbbf24'
+            }}>
+              <h3 style={{
+                fontSize: '1.1rem',
+                fontWeight: '600',
+                color: '#92400e',
+                margin: '0 0 10px 0'
+              }}>Used Leaves (Days)</h3>
+              <p style={{
+                fontSize: '2rem',
+                fontWeight: '700',
+                color: '#d97706',
+                margin: '0'
               }}>
-                <td style={applicationTableDataCellStyle}>{index + 1}</td>
-                <td style={applicationTableDataCellStyle}>
-                  <span style={{ 
-                    ...applicationStatusBadgeStyle, 
-                    backgroundColor: request.status === 'Approved' ? '#d1fae5' : request.status === 'Rejected' ? '#fee2e2' : '#eff6ff', 
-                    color: request.status === 'Approved' ? '#059669' : request.status === 'Rejected' ? '#dc2626' : '#2563eb',
-                    minWidth: '80px',
-                  }}>
-                    {request.status}
-                  </span>
-                </td>
-                <td style={applicationTableDataCellStyle}>{request.fromDate} - {request.toDate}</td>
-                <td style={applicationTableDataCellStyle}>{request.leaveDays || 0}</td>
-                <td style={applicationTableDataCellStyle}>
-                  <span style={{ ...applicationStatusBadgeStyle, backgroundColor: '#e0f2f1', color: '#0d9488' }}>
-                      {request.leaveType} 
-                  </span>
-                </td>
-                <td style={applicationTableDataCellStyle} title={request.reason}>
-                  {request.reason.length > 50 ? `${request.reason.substring(0, 50)}...` : request.reason}
-                </td>
-                <td style={{ ...applicationTableDataCellStyle, textAlign: 'center' }}>
-                  {request.status.toLowerCase() === 'pending' ? (
-                    <>
-                      <button
-                        onClick={() => handleOpenLeaveModal(request)}
-                        style={{ ...modalAddButtonPrimaryStyle, padding: '4px 8px', fontSize: '0.75rem', marginRight: '5px', backgroundColor: '#3b82f6' }}
-                        title={'Edit Request'}
-                      >
-                        <i className="fas fa-edit"></i> Edit
-                      </button>
-                      <button
-                        onClick={() => handleRequestDeleteLeave(request)}
-                        style={{ ...modalCancelButtonStyle, padding: '4px 8px', fontSize: '0.75rem', background: '#ef4444', color: '#fff' }}
-                        title="Delete Request"
-                      >
-                        <i className="fas fa-trash"></i> Delete
-                      </button>
-                    </>
-                  ) : (
-                    <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>Action Taken</span>
-                  )}
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    </div>
-  </div>
-)}
+                {leaveRequests
+                  .filter(req => (req.leaveType === 'Casual leave' || req.leaveType === 'Sick leave') && req.status === 'Approved')
+                  .reduce((total, req) => total + (req.leaveDays || 0), 0)}
+              </p>
+            </div>
+
+            {/* Planned Leaves Card (Planned Leave Days) */}
+            <div style={{
+              background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)',
+              padding: '20px',
+              borderRadius: '12px',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
+              border: '1px solid #86efac'
+            }}>
+              <h3 style={{
+                fontSize: '1.1rem',
+                fontWeight: '600',
+                color: '#14532d',
+                margin: '0 0 10px 0'
+              }}>Planned Leaves (Days)</h3>
+              <p style={{
+                fontSize: '2rem',
+                fontWeight: '700',
+                color: '#16a34a',
+                margin: '0'
+              }}>
+                {leaveRequests
+                  .filter(req => req.leaveType === 'Planned leave' && req.status === 'Approved')
+                  .reduce((total, req) => total + (req.leaveDays || 0), 0)}
+              </p>
+            </div>
+          </div>
+
+          {/* --- NEW: Search Bar and Date Filters --- */}
+          <div style={{
+            display: 'flex',
+            gap: '15px',
+            marginBottom: '20px',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            padding: '15px',
+            backgroundColor: '#f9fafb',
+            borderRadius: '8px',
+            border: '1px solid #e5e7eb'
+          }}>
+            {/* Search Input */}
+            <div style={{ flex: '2 1 250px', position: 'relative', top: '11px' }}>
+              <input
+                type="text"
+                placeholder="Search by Reason or Leave Type..."
+                value={searchQuery}
+                onChange={handleSearchChange}
+                style={{
+                  width: '100%',
+                  padding: '10px 10px 10px 40px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontSize: '0.9rem',
+                  boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)',
+                }}
+              />
+              <i className="fas fa-search" style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }}></i>
+            </div>
+
+            {/* From Date Filter */}
+            <div style={{ flex: '1 1 150px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.8rem', fontWeight: '500', color: '#4b5563' }}>From Date</label>
+              <input
+                type="date"
+                value={filterFromDate}
+                onChange={handleFromDateChange}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontSize: '0.9rem',
+                }}
+              />
+            </div>
+
+            {/* To Date Filter */}
+            <div style={{ flex: '1 1 150px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.8rem', fontWeight: '500', color: '#4b5563' }}>To Date</label>
+              <input
+                type="date"
+                value={filterToDate}
+                onChange={handleToDateChange}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontSize: '0.9rem',
+                }}
+              />
+            </div>
+
+            {/* Clear Filters Button */}
+            {(searchQuery || filterFromDate || filterToDate) && (
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setFilterFromDate('');
+                  setFilterToDate('');
+                }}
+                style={{
+                  padding: '8px 15px',
+                  fontSize: '0.85rem',
+                  backgroundColor: '#ef4444',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  alignSelf: 'flex-end',
+                  marginBottom: '0',
+                }}
+              >
+                Clear Filters
+              </button>
+            )}
+          </div>
+          {/* --- END: Search Bar and Date Filters --- */}
+
+
+          {/* Leave Request Table */}
+          <div style={{ overflowX: 'auto', background: 'var(--bg-header)', borderRadius: '10px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th style={{ ...applicationTableHeaderCellStyle, width: '5%' }}>S.No</th>
+                  <th style={{ ...applicationTableHeaderCellStyle, width: '15%' }}>Status</th> {/* Replaced Apply To with Status for better info */}
+                  <th style={{ ...applicationTableHeaderCellStyle, width: '15%' }}>From Date - To Date</th>
+                  <th style={{ ...applicationTableHeaderCellStyle, width: '5%' }}>Days</th>
+                  <th style={{ ...applicationTableHeaderCellStyle, width: '12%' }}>Leave Type</th>
+                  <th style={{ ...applicationTableHeaderCellStyle, width: '30%' }}>Reason</th>
+                  <th style={{ ...applicationTableHeaderCellStyle, width: '15%', textAlign: 'center' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredLeaveRequests.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" style={{ ...applicationTableDataCellStyle, textAlign: 'center', color: '#64748b' }}>
+                      {leaveRequests.length === 0
+                        ? 'No leave requests submitted yet.'
+                        : 'No requests match your current filters.'}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredLeaveRequests.map((request, index) => (
+                    <tr key={request.id} style={{
+                      backgroundColor: index % 2 === 0 ? '#ffffff' : '#f9fafb', // Zebra striping
+                      borderLeft: request.status === 'Pending' ? '4px solid #f59e0b' : '4px solid transparent'
+                    }}>
+                      <td style={applicationTableDataCellStyle}>{index + 1}</td>
+                      <td style={applicationTableDataCellStyle}>
+                        <span style={{
+                          ...applicationStatusBadgeStyle,
+                          backgroundColor: request.status === 'Approved' ? '#d1fae5' : request.status === 'Rejected' ? '#fee2e2' : '#eff6ff',
+                          color: request.status === 'Approved' ? '#059669' : request.status === 'Rejected' ? '#dc2626' : '#2563eb',
+                          minWidth: '80px',
+                        }}>
+                          {request.status}
+                        </span>
+                      </td>
+                      <td style={applicationTableDataCellStyle}>{request.fromDate} - {request.toDate}</td>
+                      <td style={applicationTableDataCellStyle}>{request.leaveDays || 0}</td>
+                      <td style={applicationTableDataCellStyle}>
+                        <span style={{ ...applicationStatusBadgeStyle, backgroundColor: '#e0f2f1', color: '#0d9488' }}>
+                          {request.leaveType}
+                        </span>
+                      </td>
+                      <td style={applicationTableDataCellStyle} title={request.reason}>
+                        {request.reason.length > 50 ? `${request.reason.substring(0, 50)}...` : request.reason}
+                      </td>
+                      <td style={{ ...applicationTableDataCellStyle, textAlign: 'center' }}>
+                        {request.status.toLowerCase() === 'pending' ? (
+                          <>
+                            <button
+                              onClick={() => handleOpenLeaveModal(request)}
+                              style={{ ...modalAddButtonPrimaryStyle, padding: '4px 8px', fontSize: '0.75rem', marginRight: '5px', backgroundColor: '#3b82f6' }}
+                              title={'Edit Request'}
+                            >
+                              <i className="fas fa-edit"></i> Edit
+                            </button>
+                            <button
+                              onClick={() => handleRequestDeleteLeave(request)}
+                              style={{ ...modalCancelButtonStyle, padding: '4px 8px', fontSize: '0.75rem', background: '#ef4444', color: '#fff' }}
+                              title="Delete Request"
+                            >
+                              <i className="fas fa-trash"></i> Delete
+                            </button>
+                          </>
+                        ) : (
+                          <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>Action Taken</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Modal Form for Apply Leave */}
       <Modal show={showLeaveModal} onHide={handleCloseLeaveModal} size="md" centered>
@@ -6039,21 +6037,21 @@ const filteredLeaveRequests = useMemo(() => {
                 />
               </div>
 
-                      {/* Leave Type Field (New) */}
-        <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
-          <label style={modalLabelStyle}>Leave Type</label>
-          <select
-            name="leaveType"
-            value={leaveFormData.leaveType}
-            onChange={handleLeaveFormChange}
-            style={modalInputStyle}
-          >
-            <option value="">Select a Leave Type</option>
-            <option value="Sick leave">Sick leave</option>
-            <option value="Casual leave">Casual leave</option>
-            <option value="Planned leave">Planned leave</option>
-          </select>
-        </div>
+              {/* Leave Type Field (New) */}
+              <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
+                <label style={modalLabelStyle}>Leave Type</label>
+                <select
+                  name="leaveType"
+                  value={leaveFormData.leaveType}
+                  onChange={handleLeaveFormChange}
+                  style={modalInputStyle}
+                >
+                  <option value="">Select a Leave Type</option>
+                  <option value="Sick leave">Sick leave</option>
+                  <option value="Casual leave">Casual leave</option>
+                  <option value="Planned leave">Planned leave</option>
+                </select>
+              </div>
 
               {/* Reason Field */}
               <div style={{ ...modalFormFieldGroupStyle, gridColumn: '1 / -1' }}>
