@@ -336,7 +336,7 @@ const ContactPage = () => {
                     </Container>
                 </section>
 
-                <section className="section-padding" style={{paddingTop: 0}}>
+                {/* <section className="section-padding" style={{paddingTop: 0}}>
                     <Container>
                          <h2 className="section-title">Our Locations</h2>
                          <Row className="g-4">
@@ -364,7 +364,7 @@ const ContactPage = () => {
                             </Col>
                          </Row>
                     </Container>
-                </section>
+                </section> */}
 
                 <footer className="contact-footer">
                     <Container>
