@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal } from 'react-bootstrap';
 import { Country, State, City } from 'country-state-city';
-import successImage from '../assets/successImage.png'; // Adjust path as needed
+import successImage from '../assets/successImage.jpeg'; // Adjust path as needed
 import { database } from '../firebase'; // Import your Firebase config
 import { ref, push, set } from "firebase/database";
 

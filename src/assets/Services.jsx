@@ -1,10 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import mobileIcon from '../assets/mobile_app_dev.png';
-import webIcon from '../assets/web_app_dev.png';
-import marketingIcon from '../assets/digi_mark.png';
-import talentIcon from '../assets/it_talent_supply.png';
-import consultingIcon from '../assets/job_support.png';
+import mobileIcon from '../assets/mobile_app_dev.jpeg';
+import webIcon from '../assets/web_app_dev.jpeg';
+import marketingIcon from '../assets/digi_mark.jpeg';
+import talentIcon from '../assets/it_talent_supply.jpeg';
+import consultingIcon from '../assets/job_support.jpeg';
 import '../styles/Services.css';
 
 const services = [

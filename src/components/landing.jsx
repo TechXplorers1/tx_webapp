@@ -9,17 +9,17 @@
 // import { useAuth } from '../components/AuthContext'; // Import useAuth
 
 // // Import images
-// import Image1 from '../assets/MobileDev.png';
-// import Image2 from '../assets/WebDev.png';
-// import Image3 from '../assets/DigiMark.png';
-// import Image4 from '../assets/JobApply.png';
-// import Image5 from '../assets/ItTalentSupply.png';
-// import Image6 from '../assets/CyberSecurity.png';
+// import Image1 from '../assets/MobileDev.jpeg';
+// import Image2 from '../assets/WebDev.jpeg';
+// import Image3 from '../assets/DigiMark.jpeg';
+// import Image4 from '../assets/JobApply.jpeg';
+// import Image5 from '../assets/ItTalentSupply.jpeg';
+// import Image6 from '../assets/CyberSecurity.jpeg';
 
 // // Service images
-// import WebAnalyticsImg from '../assets/WebAnalytics&Reporting.png';
-// import ProjectPlanningImg from '../assets/project_planning.png';
-// import techSupportImg from '../assets/tech_support.png';
+// import WebAnalyticsImg from '../assets/WebAnalytics&Reporting.jpeg';
+// import ProjectPlanningImg from '../assets/project_planning.jpeg';
+// import techSupportImg from '../assets/tech_support.jpeg';
 
 // // Scroll animation hook
 // import { useInView } from 'react-intersection-observer';
@@ -242,7 +242,7 @@
 //               >
 //                 <TileLayer
 //                   attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>  contributors'
-//                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+//                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.jpeg"
 //                 />
 //                 {offices.map((office, index) => (
 //                   <Marker key={index} position={office.position}>
@@ -362,12 +362,12 @@
 // );
 
 // // Import images
-// import Image1 from '../assets/MobileDev.png';
-// import Image2 from '../assets/WebDev.png';
-// import Image3 from '../assets/DigiMark.png';
-// import Image4 from '../assets/JobApply.png';
-// import Image5 from '../assets/ItTalentSupply.png';
-// import Image6 from '../assets/CyberSecurity.png';
+// import Image1 from '../assets/MobileDev.jpeg';
+// import Image2 from '../assets/WebDev.jpeg';
+// import Image3 from '../assets/DigiMark.jpeg';
+// import Image4 from '../assets/JobApply.jpeg';
+// import Image5 from '../assets/ItTalentSupply.jpeg';
+// import Image6 from '../assets/CyberSecurity.jpeg';
 
 // import { useInView } from 'react-intersection-observer';
 

@@ -12,11 +12,11 @@ const videoUrls = [
   'https://www.youtube.com/embed/CzRQ9mnmh44',
 ];
 
-import industry1 from '../assets/mobile1.png';
-import industry2 from '../assets/mobile2.png';
-import industry3 from '../assets/mobile3.png';
-import industry4 from '../assets/mobile4.png';
-import industry5 from '../assets/mobile5.png';
+import industry1 from '../assets/mobile1.jpeg';
+import industry2 from '../assets/mobile2.jpeg';
+import industry3 from '../assets/mobile3.jpeg';
+import industry4 from '../assets/mobile4.jpeg';
+import industry5 from '../assets/mobile5.jpeg';
 
 
 // About Us Page - Data for Carousel

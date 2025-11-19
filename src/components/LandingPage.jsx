@@ -63,12 +63,12 @@ const ContinentsIcon = () => (
 
 
 // Import images
-import Image1 from '../assets/MobileDev.png';
-import Image2 from '../assets/WebDev.png';
-import Image3 from '../assets/DigiMark.png';
-import Image4 from '../assets/JobApply.png';
-import Image5 from '../assets/ItTalentSupply.png';
-import Image6 from '../assets/CyberSecurity.png';
+import Image1 from '../assets/MobileDev.jpeg';
+import Image2 from '../assets/WebDev.jpeg';
+import Image3 from '../assets/DigiMark.jpeg';
+import Image4 from '../assets/JobApply.jpeg';
+import Image5 from '../assets/ItTalentSupply.jpeg';
+import Image6 from '../assets/CyberSecurity.jpeg';
 
 // --- NEW COMPONENT FOR MAP REFRESH ---
 // This component must be a child of MapContainer to use useMap()
@@ -1239,7 +1239,7 @@ const LandingPage = () => {
                 <TileLayer
                   attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
                   // Using dark tiles as per your current setup
-                  url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                  url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.jpeg"
                 />
                 {offices.map((office, index) => (
                   <Marker key={index} position={office.position}>

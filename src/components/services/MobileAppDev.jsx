@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import img1 from '../../assets/MobileDev.png';
+import img1 from '../../assets/MobileDev.jpeg';
 import '../../styles/Services/MobileAppDev.css';
 import { useNavigate } from 'react-router-dom';
 import CustomNavbar from '../Navbar';
