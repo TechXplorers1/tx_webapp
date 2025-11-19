@@ -56,7 +56,7 @@ const isDateOnLeave = (dateString, leaves) => {
   // Convert the DD-MM-YYYY date string to a comparable Date object
   const yyyyMmDd = convertDDMMYYYYtoYYYYMMDD(dateString);
   if (!yyyyMmDd) return false;
-  
+
   const checkDate = new Date(yyyyMmDd);
   checkDate.setHours(0, 0, 0, 0); // Normalize to day start
 
@@ -1503,12 +1503,12 @@ const Applications = ({
                   }}
                 >
                   <div style={{ fontSize: '14px', fontWeight: 'bold' }}>{dateObj.date}</div>
-                  <div style={{ 
-                      fontSize: '12px', 
-                      marginTop: '2px', 
-                      // Adjust text color for leave day
-                      color: (isLeaveDay || selectedDate === dateObj.date) ? (isLeaveDay ? '#721c24' : 'rgba(255,255,255,0.8)') : '#666' 
-                    }}>
+                  <div style={{
+                    fontSize: '12px',
+                    marginTop: '2px',
+                    // Adjust text color for leave day
+                    color: (isLeaveDay || selectedDate === dateObj.date) ? (isLeaveDay ? '#721c24' : 'rgba(255,255,255,0.8)') : '#666'
+                  }}>
                     {dateObj.dayOfWeek}
                   </div>
                   {applicationsData[dateObj.date] && (
@@ -2682,108 +2682,120 @@ const ClientDashboard = () => {
   // In ClientDashboard.jsx, replace the useEffect hook that fetches client data
   useEffect(() => {
     const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInEmployee'));
-    // Ensure you are logged in as a client and have a firebaseKey
     if (!loggedInUserData || !loggedInUserData.firebaseKey) return;
 
     const employeeFirebaseKey = loggedInUserData.firebaseKey;
+
+    // --- 1) Leaves: small realtime query (kept realtime but properly unsubscribed) ---
     const leaveRef = ref(database, 'leave_requests');
-    // Query for leaves submitted by this specific employee
     const employeeLeaveQuery = query(leaveRef, orderByChild('employeeFirebaseKey'), equalTo(employeeFirebaseKey));
 
-    const unsubscribeLeaves = onValue(employeeLeaveQuery, (snapshot) => {
-      const leavesData = [];
-      snapshot.forEach((childSnapshot) => {
-        const leave = childSnapshot.val();
-        // Only store approved leaves for calendar blocking
-        if (leave.status === 'Approved') {
-          leavesData.push(leave);
-        }
-      });
-      setEmployeeLeaves(leavesData);
-    }, (error) => {
-      console.error("Error fetching employee leaves:", error);
-    });
+    let unsubscribeLeaves = null;
 
-    // Create a direct reference to this client's data in Firebase
+    try {
+      unsubscribeLeaves = onValue(employeeLeaveQuery, (snapshot) => {
+        const leavesData = [];
+        snapshot.forEach((childSnapshot) => {
+          const leave = childSnapshot.val();
+          if (leave.status === 'Approved') {
+            leavesData.push(leave);
+          }
+        });
+        setEmployeeLeaves(leavesData);
+      }, (error) => {
+        console.error("Error fetching employee leaves:", error);
+      });
+    } catch (err) {
+      console.error('Failed to attach leave listener', err);
+    }
+
+    // --- 2) Fetch client data ONCE instead of using onValue (prevents GB downloads!) ---
     const clientRef = ref(database, `clients/${loggedInUserData.firebaseKey}`);
 
-    const unsubscribe = onValue(clientRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
+    get(clientRef)
+      .then((snapshot) => {
+        const data = snapshot.exists() ? snapshot.val() : null;
+        if (!data) {
+          setClientData(null);
+          setAllFiles([]);
+          setApplicationsData({});
+          setScheduledInterviews([]);
+          setActiveServices([]);
+          setInactiveServices([]);
+          return;
+        }
+
         setClientData(data);
 
-        const registrations = data.serviceRegistrations ? Object.values(data.serviceRegistrations) : [];
+        const registrations = data.serviceRegistrations
+          ? Object.values(data.serviceRegistrations)
+          : [];
 
-        // 1. Get files from the client's main 'files' node
         const generalFiles = registrations.flatMap(reg => reg.files || []);
-
-        // 2. Get attachment files from within each job application
         const applicationAttachments = registrations
           .flatMap(reg => reg.jobApplications || [])
           .flatMap(app => app.attachments || []);
 
-        // 3. Combine and deduplicate the file lists.
         const allFilesMap = new Map();
-
         [...generalFiles, ...applicationAttachments].forEach(file => {
-          if (file.downloadUrl) {
+          if (file && file.downloadUrl) {
             allFilesMap.set(file.downloadUrl, file);
           }
         });
+        setAllFiles(Array.from(allFilesMap.values()));
 
-        const combinedFiles = Array.from(allFilesMap.values());
-        setAllFiles(combinedFiles);
-
-        // 4. Extract and Group All Job Applications (REALTIME DATA FETCH)
         const allApplications = registrations.flatMap(reg => reg.jobApplications || []);
         const interviews = allApplications.filter(app => app.status === 'Interview');
         setScheduledInterviews(interviews);
 
-        // This logic groups applications by date for the worksheet view
         const groupedApplications = allApplications.reduce((acc, app) => {
-          // Use the application's appliedDate, formatted to DD-MM-YYYY
           const dateKey = formatDate(app.appliedDate);
-
-          // Ensure link points to jobDescriptionUrl as required by the table structure
-          // Use jobBoards for the website column, and jobTitle for the position column
           const applicationEntry = {
             id: app.id,
             jobId: app.jobId,
-            website: app.jobBoards, // Map jobBoards to website column
-            position: app.jobTitle, // Map jobTitle to position column
+            website: app.jobBoards,
+            position: app.jobTitle,
             company: app.company,
-            link: app.jobDescriptionUrl, // Use jobDescriptionUrl for the link
+            link: app.jobDescriptionUrl,
             jobType: app.jobType || 'N/A',
             dateAdded: dateKey,
-            jobDescription: app.jobDesc || app.jobTitle, // Use jobDesc or jobTitle for the description modal
+            jobDescription: app.jobDesc || app.jobTitle,
             status: app.status,
             role: app.role,
           };
-
-          if (!acc[dateKey]) {
-            acc[dateKey] = [];
-          }
+          if (!acc[dateKey]) acc[dateKey] = [];
           acc[dateKey].push(applicationEntry);
           return acc;
         }, {});
 
-        // Set the state with the grouped Firebase data
         setApplicationsData(groupedApplications);
 
-        // Process service registrations to categorize them (existing logic)
-        const registeredServiceNames = registrations.map(reg => reg.service);
+        const registeredServiceNames = registrations.map(reg => reg.service || '');
 
-        const active = allServices.filter(service => registeredServiceNames.includes(service.title));
-        const inactive = allServices.filter(service => !registeredServiceNames.includes(service.title));
+        const active = allServices.filter(service =>
+          registeredServiceNames.includes(service.title)
+        );
+        const inactive = allServices.filter(service =>
+          !registeredServiceNames.includes(service.title)
+        );
 
         setActiveServices(active);
         setInactiveServices(inactive);
-      }
-    });
+      })
+      .catch(err => {
+        console.error('Error fetching client data (one-time):', err);
+      });
 
-    return () => unsubscribe();
-    unsubscribeLeaves();
+    // --- Cleanup: detach ALL listeners ---
+    return () => {
+      try {
+        if (typeof unsubscribeLeaves === 'function') unsubscribeLeaves();
+      } catch (e) {
+        console.error("Cleanup error:", e);
+      }
+    };
   }, []);
+
 
   const handleActiveServiceClick = (service) => {
     if (clientData && clientData.serviceRegistrations) {
