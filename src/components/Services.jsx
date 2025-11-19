@@ -110,7 +110,7 @@ const ServicesDropdown = () => {
         ))}
       </div>
       <div className="services-dropdown-footer">
-        <Link to="/services" className="view-all-services-btn">
+        <Link className="view-all-services-btn">
           View All Services
         </Link>
       </div>
