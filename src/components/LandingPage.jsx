@@ -428,7 +428,16 @@ const LandingPage = () => {
                       .description {
                    margin-left:70px;
                 }
-                
+                /* === PASTE THIS FIX HERE (Before the animation classes) === */
+        .hero-carousel-text > *, 
+        .hero-carousel-image-wrapper,
+        .hero-carousel-buttons,
+        .feature-pills,
+        .hero-stats,
+        .pill-badge {
+            opacity: 0; 
+            transform: translateY(20px);
+        }
                 .feature-pills {
                     display: flex;
                     gap: 0.75rem;

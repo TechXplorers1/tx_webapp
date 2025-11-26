@@ -214,7 +214,7 @@ const ManagerWorkSheet = () => {
       );
 
       // 2. Fetch the current array from the database once
-      const snapshot = await new Promise(resolve => onValue(jobApplicationsRef, resolve, { onlyOnce: true }));
+      const snapshot = await get(jobApplicationsRef);
       const currentApplications = snapshot.val() || [];
 
       // 3. Create a new array with the updated application
@@ -441,18 +441,18 @@ const ManagerWorkSheet = () => {
       return;
     }
 
-    const managerRef = ref(database, `users/${managerFirebaseKey}`);
-    const unsubscribeManager = onValue(managerRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        const fullName = `${data.firstName || ''} ${data.lastName || ''}`.trim();
-        const avatarLetter = fullName.charAt(0).toUpperCase();
+ const managerRef = ref(database, `users/${managerFirebaseKey}`);
+const unsubscribeManager = onValue(managerRef, (snapshot) => {
+  const data = snapshot.val();
+  if (data) {
+    const fullName = `${data.firstName || ''} ${data.lastName || ''}`.trim();
+    const avatarLetter = fullName.charAt(0).toUpperCase();
 
-        setUserProfile({ ...data, fullName });
-        setUserName(fullName);
-        setUserAvatarLetter(avatarLetter);
-      }
-    });
+    setUserProfile({ ...data, fullName });
+    setUserName(fullName);
+    setUserAvatarLetter(avatarLetter);
+  }
+});
 
 const leaveRequestsRef = ref(database, 'leave_requests');
 let cancelledLeaveFetch = false;
@@ -461,11 +461,14 @@ let cancelledLeaveFetch = false;
   try {
     const snapshot = await get(leaveRequestsRef);
     if (cancelledLeaveFetch) return;
+
     const requestsData = snapshot.val() || {};
     const allRequests = Object.entries(requestsData).map(([id, req]) => ({ id, ...req }));
+
     const managerRequests = allRequests
       .filter(req => req.applyTo?.includes(managerFirebaseKey))
-      .sort((a,b)=> new Date(b.requestedDate) - new Date(a.requestedDate));
+      .sort((a, b) => new Date(b.requestedDate) - new Date(a.requestedDate));
+
     setEmployeeLeaveRequests(managerRequests);
   } catch (err) {
     console.error("Failed to fetch leave requests once:", err);
@@ -474,7 +477,9 @@ let cancelledLeaveFetch = false;
 
 return () => {
   cancelledLeaveFetch = true;
+  unsubscribeManager();   // ✅ important cleanup
 };
+
   }, []); // Runs once when mounted
 
 

@@ -94,91 +94,80 @@ const EmployeeManagement = () => {
   );
 
 
-  useEffect(() => {
-    const usersRef = ref(database, 'users');
-    
-    // Set up a listener for real-time data fetching
-    const unsubscribe = onValue(usersRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        // Firebase returns an object; convert it to an array
-        const allUsersArray = Object.keys(data).map(key => ({
-          firebaseKey: key, // Keep the Firebase key for future updates/deletes
-          ...data[key]
-        }));
+ // 1️⃣ LOAD USERS ONE-TIME FROM FIREBASE (CHEAP)
+useEffect(() => {
+  const fetchEmployees = async () => {
+    try {
+      setLoading(true);
 
-        // --- NEW: Filter for users with the 'employee' role ---
-        const filteredUsers = allUsersArray.filter(user => 
-            user.roles && Array.isArray(user.roles) && (
-                user.roles.includes('employee') || 
-                user.roles.includes('admin') || 
-                user.roles.includes('manager')
-            )
-        );
+      const usersSnap = await get(ref(database, "users"));
+      const usersData = usersSnap.exists() ? usersSnap.val() : {};
 
-        setEmployees(filteredUsers);
+      const allUsersArray = Object.keys(usersData).map(key => ({
+        firebaseKey: key,
+        ...usersData[key],
+      }));
+
+      // Filter for employee/admin/manager roles
+      const filteredUsers = allUsersArray.filter(user =>
+        user.roles &&
+        Array.isArray(user.roles) &&
+        (
+          user.roles.includes("employee") ||
+          user.roles.includes("admin") ||
+          user.roles.includes("manager")
+        )
+      );
+
+      setEmployees(filteredUsers);
+      setError(null);
+    } catch (error) {
+      console.error("Error fetching employees:", error);
+
+      // 2️⃣ FALLBACK TO LOCAL DATA IF FIREBASE FAILS
+      const savedEmployees = localStorage.getItem("users");
+      if (savedEmployees) {
+        setEmployees(JSON.parse(savedEmployees));
       } else {
-        setEmployees([]); // Handle case where there are no users
-      }
-      setLoading(false);
-    }, (error) => {
-      console.error("Firebase employees fetch error:", error);
-      setError(error.message);
-      setLoading(false);
-    });
-
-    // Cleanup function: Unsubscribe from Firebase listener when the component unmounts
-    return () => {
-      unsubscribe();
-      off(usersRef);
-    }
-  }, []);
-
-  useEffect(() => {
-    const loadEmployees = async () => {
-      try {
-        const savedEmployees = localStorage.getItem('users');
-        if (savedEmployees && JSON.parse(savedEmployees).length > 0) {
-          setEmployees(JSON.parse(savedEmployees));
-        } else {
-          const response = await fetch('/employees.json');
-          if (!response.ok) {
-            throw new Error('Network response was not ok');
-          }
+        // fallback to /employees.json only if required
+        try {
+          const response = await fetch("/employees.json");
           const data = await response.json();
           setEmployees(data);
+        } catch (err) {
+          console.error("Fallback file failed:", err);
         }
-      } catch (err) {
-        setError(err.message);
-        console.error("Failed to load employees:", err);
-      } finally {
-        setLoading(false);
       }
-    };
-    loadEmployees();
-  }, []);
-
-  useEffect(() => {
-    if (!loading && employees.length > 0) {
-      localStorage.setItem('users', JSON.stringify(employees));
+    } finally {
+      setLoading(false);
     }
-  }, [employees, loading]);
+  };
 
-  useEffect(() => {
-    const handleStorageChange = (event) => {
-      if (event.key === 'users' && event.newValue) {
-        try {
-          setEmployees(JSON.parse(event.newValue));
-        } catch (error) {
-          console.error("Failed to parse employees from storage event", error);
-        }
+  fetchEmployees();
+}, [database]);
+
+// 3️⃣ SAVE TO LOCALSTORAGE WHEN DATA IS LOADED
+useEffect(() => {
+  if (!loading && employees.length > 0) {
+    localStorage.setItem("users", JSON.stringify(employees));
+  }
+}, [employees, loading]);
+
+// 4️⃣ LISTEN TO OTHER TABS UPDATING LOCALSTORAGE
+useEffect(() => {
+  const handleStorageChange = (event) => {
+    if (event.key === "users" && event.newValue) {
+      try {
+        setEmployees(JSON.parse(event.newValue));
+      } catch (error) {
+        console.error("Storage sync failed:", error);
       }
-    };
-    window.addEventListener('storage', handleStorageChange);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, []);
+    }
+  };
+
+  window.addEventListener("storage", handleStorageChange);
+  return () => window.removeEventListener("storage", handleStorageChange);
+}, []);
 
   const handleAddEmployeeClick = () => {
     setIsAddEmployeeModalOpen(true);

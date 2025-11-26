@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { getDatabase, ref, onValue, update, remove, set, get, off } from "firebase/database";
+import { getDatabase, ref, update, remove, set, get } from "firebase/database";
 import { database } from '../../firebase';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Spinner } from 'react-bootstrap';
@@ -62,86 +62,103 @@ const [selectedApplication, setSelectedApplication] = useState(null);
 
 
 
+// 1) Load clients + users ONCE (no streaming)
+useEffect(() => {
+  let cancelled = false;
 
-  useEffect(() => {
-    const clientsRef = ref(database, 'clients');
-    const usersRef = ref(database, 'users');
+  const fetchData = async () => {
+    try {
+      setLoading(true);
 
-    const unsubscribeClients = onValue(clientsRef, (snapshot) => {
-      const clientsData = snapshot.val();
+      // Fetch clients and users in parallel
+      const [clientsSnap, usersSnap] = await Promise.all([
+        get(ref(database, 'clients')),
+        get(ref(database, 'users')),
+      ]);
+
+      if (cancelled) return;
+
+      // ---- Clients → serviceRegistrations ----
+      const clientsData = clientsSnap.exists() ? clientsSnap.val() : {};
       const allRegistrations = [];
-      if (clientsData) {
-        Object.keys(clientsData).forEach(clientKey => {
-          const client = clientsData[clientKey];
-          if (client.serviceRegistrations) {
-            Object.keys(client.serviceRegistrations).forEach(regKey => {
-              const registration = client.serviceRegistrations[regKey];
-              allRegistrations.push({
-                ...registration,
-                clientFirebaseKey: clientKey,
-                registrationKey: regKey,
-                email: client.email,
-                mobile: client.mobile,
-                firstName: registration.firstName || client.firstName,
-                lastName: registration.lastName || client.lastName,
-              });
-            });
-          }
+
+      Object.keys(clientsData).forEach(clientKey => {
+        const client = clientsData[clientKey];
+        if (!client || !client.serviceRegistrations) return;
+
+        Object.keys(client.serviceRegistrations).forEach(regKey => {
+          const registration = client.serviceRegistrations[regKey];
+          allRegistrations.push({
+            ...registration,
+            clientFirebaseKey: clientKey,
+            registrationKey: regKey,
+            email: client.email,
+            mobile: client.mobile,
+            firstName: registration.firstName || client.firstName,
+            lastName: registration.lastName || client.lastName,
+          });
         });
-      }
-      setServiceRegistrations(allRegistrations);
-      setLoading(false);
-    }, (error) => {
-      console.error("Firebase fetch error:", error);
-      setError(error.message);
-      setLoading(false);
-    });
-
-    const unsubscribeUsers = onValue(usersRef, (snapshot) => {
-      const usersData = snapshot.val();
-      if (usersData) {
-        const usersArray = Object.keys(usersData).map(key => ({ firebaseKey: key, ...usersData[key] }));
-        const managers = usersArray.filter(user => user.roles && user.roles.includes('manager'));
-        setManagerList(managers);
-      }
-    });
-
-    return () => {
-      unsubscribeClients();
-      unsubscribeUsers();
-      off(clientsRef);
-      off(usersRef);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!serviceRegistrations || serviceRegistrations.length === 0) return;
-
-    const today = new Date().toISOString().split('T')[0];
-    const counts = {};
-
-    serviceRegistrations.forEach((client) => {
-      const appsRef = ref(
-        database,
-        `clients/${client.clientFirebaseKey}/serviceRegistrations/${client.registrationKey}/jobApplications`
-      );
-
-      onValue(appsRef, (snapshot) => {
-        const data = snapshot.val();
-        if (data) {
-          const appsArray = Array.isArray(data) ? data : Object.values(data);
-          const todayCount = appsArray.filter(
-            (app) =>
-              app.appliedDate &&
-              new Date(app.appliedDate).toISOString().split('T')[0] === today
-          ).length;
-
-          counts[client.registrationKey] = todayCount;
-          setTodayClientAppCounts((prev) => ({ ...prev, ...counts }));
-        }
       });
-    });
-  }, [serviceRegistrations]);
+
+      setServiceRegistrations(allRegistrations);
+
+      // ---- Users → managers list ----
+      const usersData = usersSnap.exists() ? usersSnap.val() : {};
+      const usersArray = Object.keys(usersData).map(key => ({
+        firebaseKey: key,
+        ...usersData[key],
+      }));
+
+      const managers = usersArray.filter(
+        user => user.roles && user.roles.includes('manager')
+      );
+      setManagerList(managers);
+
+      setError(null);
+    } catch (error) {
+      console.error('Firebase fetch error:', error);
+      if (!cancelled) setError(error.message);
+    } finally {
+      if (!cancelled) setLoading(false);
+    }
+  };
+
+  fetchData();
+
+  return () => {
+    cancelled = true; // just stop state updates if the effect is cleaned up
+  };
+}, [database]);
+
+// 2) Compute today's applications COUNT from in-memory data (NO DB calls)
+useEffect(() => {
+  if (!serviceRegistrations || serviceRegistrations.length === 0) {
+    setTodayClientAppCounts({});
+    return;
+  }
+
+  const today = new Date().toISOString().split('T')[0];
+  const counts = {};
+
+  serviceRegistrations.forEach(client => {
+    const jobAppsRaw = client.jobApplications || client.jobapplications || null;
+
+    const appsArray = jobAppsRaw
+      ? (Array.isArray(jobAppsRaw) ? jobAppsRaw : Object.values(jobAppsRaw))
+      : [];
+
+    const todayCount = appsArray.filter(app => {
+      if (!app.appliedDate) return false;
+      const appDate = new Date(app.appliedDate).toISOString().split('T')[0];
+      return appDate === today;
+    }).length;
+
+    counts[client.registrationKey] = todayCount;
+  });
+
+  setTodayClientAppCounts(counts);
+}, [serviceRegistrations]);
+
 
 
   const serviceOptions = [

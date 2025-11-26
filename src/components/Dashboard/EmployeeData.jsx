@@ -646,28 +646,28 @@ const EmployeeData = () => {
   };
 
 
-  const handleOpenProfileModal = async () => {
-    try {
-      const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInEmployee'));
-      if (!loggedInUserData || !loggedInUserData.firebaseKey) {
-        console.error("No logged in user found in session.");
-        return;
-      }
-      const employeeRef = ref(database, `users/${loggedInUserData.firebaseKey}`);
-      const snap = await get(employeeRef);
-      if (snap.exists()) {
-        const employee = snap.val();
-        setEmployeeDetails(employee);
-        setEditedEmployeeDetails({ ...employee });
-      } else {
-        console.warn("No employee data found in Firebase for this key.");
-      }
-      setIsEditingProfile(false);
-      setShowEmployeeProfileModal(true);
-    } catch (error) {
-      console.error("Error fetching employee details:", error);
+ const handleOpenProfileModal = async () => {
+  try {
+    const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInEmployee'));
+    if (!loggedInUserData || !loggedInUserData.firebaseKey) {
+      console.error("No logged in user found in session.");
+      return;
     }
-  };
+    const employeeRef = ref(database, `users/${loggedInUserData.firebaseKey}`);
+    const snap = await get(employeeRef);   // ✅ one-time read
+    if (snap.exists()) {
+      const employee = snap.val();
+      setEmployeeDetails(employee);
+      setEditedEmployeeDetails({ ...employee });
+    } else {
+      console.warn("No employee data found in Firebase for this key.");
+    }
+    setIsEditingProfile(false);
+    setShowEmployeeProfileModal(true);
+  } catch (error) {
+    console.error("Error fetching employee details:", error);
+  }
+};
 
   // NEW: Handle changes in edit profile form
   const handleProfileFormChange = (e) => {
@@ -1055,69 +1055,81 @@ const EmployeeData = () => {
   };
 
   // Find and replace the existing handleConfirmDeleteFile function
-  const handleConfirmDeleteFile = async () => {
-    if (!fileToDelete) return;
+const handleConfirmDeleteFile = async () => {
+  if (!fileToDelete) return;
 
-    setIsDeleting(true);
-    const { clientFirebaseKey, registrationKey, file } = fileToDelete;
+  setIsDeleting(true);
+  const { clientFirebaseKey, registrationKey, file } = fileToDelete;
 
-    try {
-      // 1. Create a reference from the download URL and delete from Firebase Storage
-      const fileStorageRef = storageRef(getStorage(), file.downloadUrl);
-      await deleteObject(fileStorageRef);
+  try {
+    // 1) Delete from Firebase Storage (if URL exists)
+    if (file?.downloadUrl) {
+      const storage = getStorage();
+      const fileStorageRef = storageRef(storage, file.downloadUrl);
 
-      // 2. Fetch the current list of files from the Realtime Database once
-      // inside handleConfirmDeleteFile
-      const regSnap = await get(ref(database, `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}`));
-      const registrationData = regSnap.exists() ? regSnap.val() : null;
-      const currentFiles = registrationData?.files || [];
-      // ... then filter and set updated files as before
-
-
-      // 3. Filter out the deleted file
-      const updatedFiles = currentFiles.filter(f => f.id !== file.id);
-
-      // 4. Update the list in the Realtime Database
-      const filesRef = ref(database, `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}/files`);
-      await set(filesRef, updatedFiles);
-
-      // 5. Update the local state in a single, atomic operation to avoid race conditions
-      const updateClientList = (prevClients) => {
-        return prevClients.map(c => {
-          if (c.registrationKey === registrationKey) {
-            const updatedClient = {
-              ...c,
-              files: updatedFiles,
-            };
-            // Ensure the selectedClient points to this new object
-            setSelectedClient(updatedClient);
-            return updatedClient;
-          }
-          return c;
-        });
-      };
-
-      // Update the correct client list (active, inactive, new)
-      setActiveClients(updateClientList);
-      setInactiveClients(updateClientList);
-      setNewClients(updateClientList);
-
-      triggerNotification("File deleted successfully from storage and database!");
-
-    } catch (error) {
-      console.error("Error deleting file:", error);
-      if (error.code === 'storage/object-not-found') {
-        alert("File not found in storage, but removing from database.");
-      } else {
-        alert("Failed to delete file. Please check permissions or try again.");
+      try {
+        await deleteObject(fileStorageRef);
+      } catch (err) {
+        // Ignore "not found" in storage; still clean DB
+        if (err.code !== 'storage/object-not-found') {
+          throw err;
+        }
       }
-    } finally {
-      // 6. Close the modal and reset the state
-      setShowDeleteFileModal(false);
-      setFileToDelete(null);
-      setIsDeleting(false);
     }
-  };
+
+    // 2) One-time read of the registration from Realtime DB
+    const regRef = ref(
+      database,
+      `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}`
+    );
+    const regSnap = await get(regRef);
+    const registrationData = regSnap.exists() ? regSnap.val() : null;
+
+    const currentFiles = Array.isArray(registrationData?.files)
+      ? registrationData.files
+      : [];
+
+    // 3) Filter out the deleted file
+    const updatedFiles = currentFiles.filter(f => f.id !== file.id);
+
+    // 4) Write updated files list back to DB
+    const filesRef = ref(
+      database,
+      `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}/files`
+    );
+    await set(filesRef, updatedFiles);
+
+    // 5) Update local state (active / inactive / new clients)
+    const updateClientList = prevClients =>
+      prevClients.map(c => {
+        if (c.registrationKey !== registrationKey) return c;
+        const updatedClient = { ...c, files: updatedFiles };
+
+        // keep selectedClient in sync
+        setSelectedClient(prev =>
+          prev && prev.registrationKey === registrationKey
+            ? updatedClient
+            : prev
+        );
+
+        return updatedClient;
+      });
+
+    setActiveClients(updateClientList);
+    setInactiveClients(updateClientList);
+    setNewClients(updateClientList);
+
+    triggerNotification('File deleted successfully from storage and database!');
+  } catch (error) {
+    console.error('Error deleting file:', error);
+    alert('Failed to delete file. Please check permissions or try again.');
+  } finally {
+    // 6) Close modal and reset state
+    setShowDeleteFileModal(false);
+    setFileToDelete(null);
+    setIsDeleting(false);
+  }
+};
 
 
   const handleDownloadResume = (clientName) => {
