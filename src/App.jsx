@@ -24,6 +24,7 @@ import AssetsWorksheet from './components/AssetWorksheet';
 import EmployeeRegistrationForm from './components/employeeRegistrationForm';
 import EmployeeOnboardingWorkSheet from './components/employeeOnboardingSheet';
 import ServicesForm from './components/services/ServicesForm';
+import Projects from './components/Projects';
 
 // import AdminWorksheet from './components/AdminWorksheet';
 import ManagerWorksheet from './components/ManagerWorksheet';
@@ -65,6 +66,7 @@ const App = () => {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/careers" element={<Careers />} />
+        <Route path="/projects" element={<Projects />} />
         
            {/* Services-Path */}
         <Route path="/services/mobile-app-development" element={<MobileAppDev />} />

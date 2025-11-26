@@ -131,13 +131,23 @@ const CustomNavbar = () => {
           font-weight: 500;
           font-size: 1rem;
           padding: 0.5rem 1rem !important;
-          transition: color 0.2s ease;
+          transition: all 0.2s ease;
           display: flex;
           align-items: center;
+          border-radius: 8px; /* Added rounded corners */
+          margin: 0 2px;
         }
 
+        /* HOVER & ACTIVE STATE: Blue Background + White Text */
         .nav-link-custom:hover, .nav-link-custom.active {
-          color: #4F46E5 !important;
+          background-color: #4F46E5; /* Brand Blue */
+          color: #ffffff !important; /* White Text */
+          box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2); /* Soft shadow */
+        }
+
+        /* Ensure Icon turns white on hover too */
+        .nav-link-custom:hover svg, .nav-link-custom.active svg {
+            stroke: #ffffff !important;
         }
 
         /* Theme Button Styling */
@@ -146,7 +156,7 @@ const CustomNavbar = () => {
           border: none;
           width: 40px;
           height: 40px;
-          border-radius: 12px; /* Soft square look */
+          border-radius: 12px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -174,8 +184,13 @@ const CustomNavbar = () => {
 
         .login-btn-minimal:hover {
           border-color: #4F46E5;
-          color: #4F46E5;
-          background-color: ${isDarkMode ? 'rgba(79, 70, 229, 0.1)' : '#fff'};
+          color: #ffffff;
+          background-color: #4F46E5; /* Match nav link hover style */
+        }
+        
+        /* Fix icon color on hover for login button */
+        .login-btn-minimal:hover svg {
+            stroke: #ffffff;
         }
 
         .dark-navbar {
@@ -199,7 +214,7 @@ const CustomNavbar = () => {
         className={`fixed-top shadow-sm py-3 ${isDarkMode ? 'dark-navbar' : 'bg-white'}`}
       >
         <Container fluid className="px-lg-5">
-          {/* 1. Logo Section (Kept as requested) */}
+          {/* 1. Logo Section */}
           <Navbar.Brand as={Link} to="/" className="fw-bold d-flex align-items-center">
             <span className="brand-full">TechXplorers</span>
           </Navbar.Brand>
@@ -216,7 +231,7 @@ const CustomNavbar = () => {
                 onMouseLeave={handleServicesLeave}
               >
                 <div 
-                  className="nav-link-custom" 
+                  className={`nav-link-custom ${showServicesPopup ? 'active' : ''}`}
                   style={{cursor: 'pointer'}}
                   onClick={handleServicesClick}
                 >
@@ -237,6 +252,9 @@ const CustomNavbar = () => {
               </NavLink>
               <NavLink to="/contactus" className={({ isActive }) => `nav-link-custom ${isActive ? 'active' : ''}`}>
                 Contact
+              </NavLink>
+               <NavLink to="/projects" className={({ isActive }) => `nav-link-custom ${isActive ? 'active' : ''}`}>
+                Our Projects
               </NavLink>
             </Nav>
 
