@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { database } from '../../firebase';
+import { database, storage } from '../../firebase'; // Import storage
 import { ref, push, onValue, remove, update } from "firebase/database";
-import { Container, Form, Button, Table, Card, Row, Col, Badge, Modal } from 'react-bootstrap';
+import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage"; // Storage methods
+import { Container, Form, Button, Table, Card, Row, Col, Badge, Modal, Spinner } from 'react-bootstrap';
 
 const ProjectManagement = () => {
   const [projects, setProjects] = useState([]);
   const [showModal, setShowModal] = useState(false);
+  
+  // Form State
   const [formData, setFormData] = useState({
     title: '',
     category: 'Web App',
@@ -15,6 +18,11 @@ const ProjectManagement = () => {
     client: '',
     order: 0
   });
+
+  // Image Upload State
+  const [imageFile, setImageFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+
   const [isEditing, setIsEditing] = useState(false);
   const [editId, setEditId] = useState(null);
 
@@ -50,25 +58,14 @@ const ProjectManagement = () => {
   }, []);
 
   // --- DRAG AND DROP HANDLERS ---
-  
   const handleSort = async () => {
-    // 1. Duplicate items
     let _projects = [...projects];
-
-    // 2. Remove and save the dragged item content
     const draggedItemContent = _projects.splice(dragItem.current, 1)[0];
-
-    // 3. Switch the position
     _projects.splice(dragOverItem.current, 0, draggedItemContent);
-
-    // 4. Reset refs
     dragItem.current = null;
     dragOverItem.current = null;
-
-    // 5. Update Local State immediately for smoothness
     setProjects(_projects);
 
-    // 6. Update Firebase with new order
     const updates = {};
     _projects.forEach((project, index) => {
         updates[`projects/${project.id}/order`] = index;
@@ -92,6 +89,7 @@ const ProjectManagement = () => {
       client: '',
       order: projects.length 
     });
+    setImageFile(null); // Reset file
     setIsEditing(false);
     setShowModal(true);
   };
@@ -100,30 +98,67 @@ const ProjectManagement = () => {
     setShowModal(false);
     setIsEditing(false);
     setEditId(null);
+    setImageFile(null);
+    setUploading(false);
   };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleFileChange = (e) => {
+    if (e.target.files[0]) {
+      setImageFile(e.target.files[0]);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validation: Must have either a URL string OR a File selected
+    if (!formData.image && !imageFile) {
+        alert("Please provide an Image URL or Upload an Image.");
+        return;
+    }
+
+    setUploading(true);
+    let finalImageUrl = formData.image;
+
     try {
+      // 1. If file is selected, upload it to Firebase Storage
+      if (imageFile) {
+        const imageRef = storageRef(storage, `project_images/${Date.now()}_${imageFile.name}`);
+        const snapshot = await uploadBytes(imageRef, imageFile);
+        finalImageUrl = await getDownloadURL(snapshot.ref);
+      }
+
+      // 2. Prepare payload with the final image URL
+      const payload = {
+          ...formData,
+          image: finalImageUrl
+      };
+
+      // 3. Save to Database
       if (isEditing) {
         const projectRef = ref(database, `projects/${editId}`);
-        await update(projectRef, formData);
+        await update(projectRef, payload);
       } else {
         const projectsRef = ref(database, 'projects');
-        await push(projectsRef, formData);
+        await push(projectsRef, payload);
       }
       handleClose();
+
     } catch (error) {
+      console.error("Error saving project:", error);
       alert("Error saving project: " + error.message);
+    } finally {
+      setUploading(false);
     }
   };
 
   const handleEdit = (project) => {
     setFormData(project);
+    setImageFile(null); // Reset file input when editing
     setIsEditing(true);
     setEditId(project.id);
     setShowModal(true);
@@ -288,20 +323,46 @@ const ProjectManagement = () => {
                 </Form.Group>
               </Col>
             </Row>
+
+            {/* --- IMAGE SECTION UPDATED --- */}
             <Row>
               <Col md={6}>
                 <Form.Group className="mb-3">
-                  <Form.Label className="fw-semibold small text-secondary">IMAGE URL</Form.Label>
-                  <Form.Control type="text" name="image" value={formData.image} onChange={handleChange} required placeholder="https://..." className="py-2"/>
+                  <Form.Label className="fw-semibold small text-secondary">IMAGE (URL)</Form.Label>
+                  <Form.Control 
+                    type="text" 
+                    name="image" 
+                    value={formData.image} 
+                    onChange={handleChange} 
+                    placeholder="https://..."
+                    disabled={!!imageFile} // Disable text input if file selected
+                    className="py-2"
+                  />
                 </Form.Group>
               </Col>
               <Col md={6}>
+                <Form.Group className="mb-3">
+                  <Form.Label className="fw-semibold small text-secondary">OR UPLOAD IMAGE</Form.Label>
+                  <Form.Control 
+                    type="file" 
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="py-2"
+                  />
+                  {imageFile && <Form.Text className="text-success">File selected: {imageFile.name}</Form.Text>}
+                </Form.Group>
+              </Col>
+            </Row>
+
+            <Row>
+              <Col md={12}>
                 <Form.Group className="mb-3">
                   <Form.Label className="fw-semibold small text-secondary">PROJECT LINK</Form.Label>
                   <Form.Control type="text" name="link" value={formData.link} onChange={handleChange} placeholder="https://play.google.com/..." className="py-2"/>
                 </Form.Group>
               </Col>
             </Row>
+
              <Row>
               <Col md={12}>
                 <Form.Group className="mb-3">
@@ -322,8 +383,19 @@ const ProjectManagement = () => {
             <Form.Control type="hidden" name="order" value={formData.order} />
 
             <div className="d-flex justify-content-end gap-2 border-top pt-3">
-              <Button variant="light" onClick={handleClose} className="px-4 fw-semibold text-secondary">← Go Back</Button>
-              <Button variant="primary" type="submit" className="px-4 fw-bold">{isEditing ? 'Save Changes' : 'Publish Project'}</Button>
+              <Button variant="light" onClick={handleClose} disabled={uploading} className="px-4 fw-semibold text-secondary">
+                ← Go Back
+              </Button>
+              <Button variant="primary" type="submit" disabled={uploading} className="px-4 fw-bold">
+                {uploading ? (
+                    <>
+                    <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2"/>
+                    Uploading...
+                    </>
+                ) : (
+                    isEditing ? 'Save Changes' : 'Publish Project'
+                )}
+              </Button>
             </div>
           </Form>
         </Modal.Body>
