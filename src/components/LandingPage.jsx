@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Container, Row, Col, Carousel } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
+import { FaFacebookF, FaTwitter, FaInstagram, FaLinkedinIn } from 'react-icons/fa';
 // Import useMap from react-leaflet
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'; 
 import 'leaflet/dist/leaflet.css';
@@ -1273,60 +1274,68 @@ const LandingPage = () => {
         </section>
 
         {/* Footer - ANIMATED */}
-        <footer 
-            ref={footerRef}
-            className={`py-5 ${isDarkMode ? 'bg-dark text-white' : 'bg-dark text-white'} ${footerInView ? 'fade-up-section' : ''}`}
-            style={{ opacity: footerInView ? 1 : 0, transitionDuration: '1s' }}
-        >
-          <Container>
-            <Row className="g-4">
-              <Col md={4}>
-                <h5 className="text-white">TechXplorers</h5>
-                <p className="text-secondary small">Empowering businesses through innovative technology solutions. We deliver excellence in web analytics, project planning, and technical support to help you achieve your digital transformation goals.</p>
-                <div className="d-flex social-icons mt-3">
-                  <a href="#" className="text-secondary me-3"><i className="bi bi-twitter"></i></a>
-                  <a href="#" className="text-secondary me-3"><i className="bi bi-linkedin"></i></a>
-                  <a href="#" className="text-secondary me-3"><i className="bi bi-instagram"></i></a>
-                  <a href="#" className="text-secondary"><i className="bi bi-youtube"></i></a>
-                </div>
-              </Col>
-              <Col md={2}>
-                <h5 className="text-white">Services</h5>
-                <ul className="list-unstyled text-secondary small">
-                  <li><a href="#" className="text-decoration-none text-secondary">Web Analytics</a></li>
-                  <li><a href="#" className="text-decoration-none text-secondary">Project Planning</a></li>
-                  <li><a href="#" className="text-decoration-none text-secondary">Tech Support</a></li>
-                  <li><a href="#" className="text-decoration-none text-secondary">Job Services</a></li>
-                  <li><a href="#" className="text-decoration-none text-secondary">Consulting</a></li>
-                </ul>
-              </Col>
-              <Col md={2}>
-                <h5 className="text-white">Company</h5>
-                <ul className="list-unstyled text-secondary small">
-                  <li><a href="#" className="text-decoration-none text-secondary">About Us</a></li>
-                  <li><a href="#" className="text-decoration-none text-secondary">Careers</a></li>
-                  <li><a href="#" className="text-decoration-none text-secondary">Blog</a></li>
-                  <li><a href="#" className="text-decoration-none text-secondary">News</a></li>
-                  <li><a href="#" className="text-decoration-none text-secondary">Partners</a></li>
-                </ul>
-              </Col>
-              <Col md={4}>
-                <h5 className="text-white">Contact</h5>
-                <p className="text-secondary small">2034 Masaka close Wuse zone 7 FCT Abuja</p>
-                <p className="text-secondary small">Email: contact@techxplorers.com<br />Phone: +2348188560032 <br/><br/></p>
-              </Col>
-            </Row>
-            <hr className="my-4" />
-            <div className="d-flex justify-content-between align-items-center flex-wrap">
-              <p className="text-secondary small mb-0">© {new Date().getFullYear()} TechXplorers Pvt. Ltd. All rights reserved.</p>
-              <div className="text-secondary small">
-                <a href="#" className="text-decoration-none text-secondary me-3">Privacy Policy</a>
-                <a href="#" className="text-decoration-none text-secondary me-3">Terms of Service</a>
-                <a href="#" className="text-decoration-none text-secondary">Cookie Policy</a>
-              </div>
-            </div>
-          </Container>
-        </footer>
+<footer 
+    ref={footerRef}
+    className={`py-5 ${isDarkMode ? 'bg-dark text-white' : 'bg-dark text-white'} ${footerInView ? 'fade-up-section' : ''}`}
+    style={{ opacity: footerInView ? 1 : 0, transitionDuration: '1s' }}
+>
+  <Container>
+    <Row className="g-4">
+      <Col md={4}>
+        <h5 className="text-white">TechXplorers</h5>
+        <p className="text-secondary small">Empowering businesses through innovative technology solutions. We deliver excellence in web analytics, project planning, and technical support to help you achieve your digital transformation goals.</p>
+        <div className="d-flex social-icons mt-3">
+            <a href="https://www.instagram.com/techxplorers.pvt.ltd/" target="_blank" rel="noopener noreferrer" className="text-secondary me-3">
+            <FaInstagram />
+          </a>
+          <a href="https://www.facebook.com/profile.php?id=61571029190090" target="_blank" rel="noopener noreferrer" className="text-secondary me-3">
+            <FaFacebookF />
+          </a>
+            <a href="https://x.com/techXplorers_" target="_blank" rel="noopener noreferrer" className="text-secondary me-3">
+            <FaTwitter />
+          </a>
+           <a href="https://www.linkedin.com/company/techxplorers-private-limited/" target="_blank" rel="noopener noreferrer" className="text-secondary">
+            <FaLinkedinIn />
+          </a>
+        </div>
+      </Col>
+      <Col md={2}>
+        <h5 className="text-white">Services</h5>
+        <ul className="list-unstyled text-secondary small">
+          <li><a href="/services/mobile-app-development" className="text-decoration-none text-secondary">Mobile App</a></li>
+          <li><a href="/services/web-app-development" className="text-decoration-none text-secondary">Web App</a></li>
+          <li><a href="/services/digital-marketing" className="text-decoration-none text-secondary">Digital Marketing</a></li>
+          <li><a href="/services/it-talent-supply" className="text-decoration-none text-secondary">IT Talent Supply</a></li>
+          <li><a href="/services/job-support" className="text-decoration-none text-secondary">JOB SUpport & IT Consulting</a></li>
+          <li><a href="/services/cyber-security" className="text-decoration-none text-secondary">Cyber Security</a></li>
+        </ul>
+      </Col>
+      <Col md={2}>
+        <h5 className="text-white">Company</h5>
+        <ul className="list-unstyled text-secondary small">
+          <li><a href="/aboutus" className="text-decoration-none text-secondary">About Us</a></li>
+          <li><a href="/careers" className="text-decoration-none text-secondary">Career</a></li>
+          <li><a href="/contactus" className="text-decoration-none text-secondary">Contact</a></li>
+          <li><a href="/projects" className="text-decoration-none text-secondary">Our Projects</a></li>
+        </ul>
+      </Col>
+      <Col md={4}>
+        <h5 className="text-white">Contact</h5>
+        <p className="text-secondary small">2034 Masaka close Wuse zone 7 FCT Abuja</p>
+        <p className="text-secondary small">Email: contact@techxplorers.com<br />Phone: +2348188560032 <br/><br/></p>
+      </Col>
+    </Row>
+    <hr className="my-4" />
+    <div className="d-flex justify-content-between align-items-center flex-wrap">
+      <p className="text-secondary small mb-0">© {new Date().getFullYear()} TechXplorers Pvt. Ltd. All rights reserved.</p>
+      <div className="text-secondary small">
+        <a href="#" className="text-decoration-none text-secondary me-3">Privacy Policy</a>
+        <a href="#" className="text-decoration-none text-secondary me-3">Terms of Service</a>
+        <a href="#" className="text-decoration-none text-secondary">Cookie Policy</a>
+      </div>
+    </div>
+  </Container>
+</footer>
       </div>
     </>
   );
