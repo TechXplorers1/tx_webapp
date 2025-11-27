@@ -355,15 +355,34 @@ useEffect(() => {
 
   const handleConfirmClientDelete = async () => {
     if (!clientToDelete) return;
-    const clientRef = ref(database, `clients/${clientToDelete.clientFirebaseKey}`);
-    try {
-      await remove(clientRef);
-      setIsDeleteClientConfirmModalOpen(false);
-      setClientToDelete(null);
-    } catch (error) {
-      console.error("Failed to delete client:", error);
-      alert("Error deleting client.");
-    }
+if (!clientToDelete || !clientToDelete.clientFirebaseKey || !clientToDelete.registrationKey) {
+    console.error("Missing client or registration keys for deletion.");
+    return;
+  }
+  
+  // 🎯 FIX: Target the specific service registration path
+  const serviceRegistrationRef = ref(
+    database, 
+    `clients/${clientToDelete.clientFirebaseKey}/serviceRegistrations/${clientToDelete.registrationKey}`
+  );
+  
+  try {
+    // Use remove() on the specific service registration path
+    await remove(serviceRegistrationRef); 
+    
+    console.log(`Successfully deleted service registration: ${clientToDelete.registrationKey}`);
+
+    // Clean up local state (Optional: also update the local clients list to remove the service instantly)
+    setIsDeleteClientConfirmModalOpen(false);
+    setClientToDelete(null);
+
+    // After successful deletion in Firebase, your real-time listener will 
+    // update the clients list, and only this single service will be gone.
+    
+  } catch (error) {
+    console.error("Failed to delete client service registration:", error);
+    alert("Error deleting service registration.");
+  }
   };
 
   const handleCancelClientDelete = () => {
