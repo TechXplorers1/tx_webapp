@@ -51,27 +51,6 @@ const convertDDMMYYYYtoYYYYMMDD = (dateString) => {
   return null; // Invalid format
 };
 
-// Helper function to check if a date is within a leave range
-const isDateOnLeave = (dateString, leaves) => {
-  // Convert the DD-MM-YYYY date string to a comparable Date object
-  const yyyyMmDd = convertDDMMYYYYtoYYYYMMDD(dateString);
-  if (!yyyyMmDd) return false;
-
-  const checkDate = new Date(yyyyMmDd);
-  checkDate.setHours(0, 0, 0, 0); // Normalize to day start
-
-  return leaves.some(leave => {
-    // leave.fromDate and leave.toDate are stored as YYYY-MM-DD
-    const fromDate = new Date(leave.fromDate);
-    const toDate = new Date(leave.toDate);
-
-    // Normalize to day start
-    fromDate.setHours(0, 0, 0, 0);
-    toDate.setHours(0, 0, 0, 0);
-
-    return checkDate >= fromDate && checkDate <= toDate;
-  });
-};
 
 // --- END: HELPER FUNCTIONS ---
 
@@ -2362,71 +2341,78 @@ const ClientDashboard = () => {
   const [clientData, setClientData] = useState(null);
   const [allFiles, setAllFiles] = useState([]);
 
-  const [welcomeCardData, setWelcomeCardData] = useState(null);
-    const [showWelcomeCardModal, setShowWelcomeCardModal] = useState(false);
+  // --- NEW ADS & BANNERS LOGIC ---
+  const [activeBannerAds, setActiveBannerAds] = useState([]); 
+  const [activePopupAd, setActivePopupAd] = useState(null); 
+  const [showPopupModal, setShowPopupModal] = useState(false);
 
-    const wasCardClosedToday = (cardKey) => {
-        const key = `closedCard_${cardKey}`;
-        const lastClosedDate = localStorage.getItem(key);
-        const today = new Date().toDateString();
-        return lastClosedDate === today;
-    };
+  // Helper to check if a specific ad ID was closed
+  const isAdClosed = (adId) => localStorage.getItem(`closed_ad_${adId}`) === 'true';
 
-    // Helper function to mark the card as closed today
-    const markCardAsClosedToday = (cardKey) => {
-        const key = `closedCard_${cardKey}`;
-        localStorage.setItem(key, new Date().toDateString());
-    };
+  // Helper to close a specific ad ID
+  const markAdAsClosed = (adId) => {
+      if (adId) {
+          localStorage.setItem(`closed_ad_${adId}`, 'true');
+      }
+  };
 
-    const handleCloseWelcomeModal = () => {
-        if (welcomeCardData?.key) {
-            markCardAsClosedToday(welcomeCardData.key);
-        }
-        setShowWelcomeCardModal(false);
-    };
+  useEffect(() => {
+    const database = getDatabase();
+    const adsRef = ref(database, 'welcomeCards');
 
-    useEffect(() => {
-        const database = getDatabase();
-        const cardRef = ref(database, 'welcomeCards');
+    const unsubscribe = onValue(adsRef, (snapshot) => {
+        if (snapshot.exists()) {
+            const data = snapshot.val();
+            const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+            
+            const banners = [];
+            const popups = [];
 
-        // Query to get the latest card based on creation time, if possible
-        // For simplicity, we'll just listen to all and filter for today's date
-        const unsubscribe = onValue(cardRef, (snapshot) => {
-            if (snapshot.exists()) {
-                const cards = snapshot.val();
-                const cardKeys = Object.keys(cards);
-                const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-
-                let activeCard = null;
-                let activeCardKey = null;
-
-                // Find the latest card whose targetDate is today
-                // Loop through all cards and find the one matching today's date
-                for (const key of cardKeys) {
-                    const card = cards[key];
-                    if (card.targetDate === today) {
-                        // Found a card for today
-                        activeCard = card;
-                        activeCardKey = key;
-                        break; 
+            // Filter active ads for today
+            Object.keys(data).forEach(key => {
+                const ad = { ...data[key], id: key };
+                if (ad.targetDate === today) {
+                    if (ad.type === 'banner') {
+                        banners.push(ad);
+                    } else {
+                        // For popups, only add if NOT closed in local storage
+                        if (!isAdClosed(ad.id)) {
+                            popups.push(ad);
+                        }
                     }
                 }
-                
-                if (activeCard && !wasCardClosedToday(activeCardKey)) {
-                    setWelcomeCardData({ ...activeCard, key: activeCardKey });
-                    setShowWelcomeCardModal(true);
-                } else {
-                    setWelcomeCardData(null);
-                    setShowWelcomeCardModal(false);
-                }
+            });
+
+            // Set Banners (for the Carousel)
+            setActiveBannerAds(banners);
+
+            // Set Popup (Show the *latest* created one that hasn't been closed)
+            popups.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+            
+            if (popups.length > 0) {
+                setActivePopupAd(popups[0]); 
+                setShowPopupModal(true);
             } else {
-                setWelcomeCardData(null);
+                setActivePopupAd(null);
+                setShowPopupModal(false);
             }
-        });
+        } else {
+            setActiveBannerAds([]);
+            setActivePopupAd(null);
+            setShowPopupModal(false);
+        }
+    });
 
-        return () => unsubscribe();
-    }, []);
+    return () => unsubscribe();
+  }, []);
 
+  const handleClosePopup = () => {
+    if (activePopupAd?.id) {
+        markAdAsClosed(activePopupAd.id);
+    }
+    setShowPopupModal(false);
+  };
+  // --- END NEW ADS LOGIC ---
   // --- START: ADD NEW STATE FOR LEAVES ---
   const [employeeLeaves, setEmployeeLeaves] = useState([]);
   // --- END: ADD NEW STATE FOR LEAVES ---
@@ -5698,40 +5684,44 @@ html.dark-mode .notify-success-message {
         />
       )}
 
-      {welcomeCardData && (
-                <Modal 
-                    show={showWelcomeCardModal} 
-                    onHide={handleCloseWelcomeModal} 
-                    centered
-                    // Prevent closing with backdrop click or escape key to force user acknowledgement
-                    backdrop="static" 
-                    keyboard={false}
-                >
-                    <Modal.Header>
-                        <Modal.Title style={{ color: '#007bff' }}>
-                            {welcomeCardData.title}
-                        </Modal.Title>
-                    </Modal.Header>
-                    <Modal.Body className="text-center">
-                        {welcomeCardData.imageUrl && (
-                            <img 
-                                src={welcomeCardData.imageUrl} 
-                                alt="Welcome Card" 
-                                style={{ maxWidth: '100%', height: 'auto', marginBottom: '15px', borderRadius: '8px' }}
-                            />
-                        )}
-                        <p style={{ fontSize: '1.1rem', whiteSpace: 'pre-wrap' }}>
-                            {welcomeCardData.message}
-                        </p>
-                    </Modal.Body>
-                    <Modal.Footer>
-                        {/* The client can able to close that pop up modal. */}
-                        <Button variant="primary" onClick={handleCloseWelcomeModal}>
-                            Close
-                        </Button>
-                    </Modal.Footer>
-                </Modal>
-            )}
+      {/* --- NEW ADS POPUP MODAL --- */}
+      {activePopupAd && (
+        <Modal 
+            show={showPopupModal} 
+            onHide={handleClosePopup} 
+            centered 
+            backdrop="static" 
+            keyboard={false}
+        >
+            <Modal.Header>
+                <Modal.Title style={{ color: '#007bff', fontWeight: '700' }}>
+                    {activePopupAd.title}
+                </Modal.Title>
+            </Modal.Header>
+            <Modal.Body className="text-center">
+                {activePopupAd.imageUrl && (
+                    <img 
+                        src={activePopupAd.imageUrl} 
+                        alt="Announcement" 
+                        style={{ maxWidth: '100%', maxHeight: '300px', marginBottom: '15px', borderRadius: '8px', objectFit: 'cover' }} 
+                    />
+                )}
+                <p style={{ fontSize: '1.1rem', whiteSpace: 'pre-wrap', color: '#334155' }}>
+                    {activePopupAd.message}
+                </p>
+            </Modal.Body>
+            <Modal.Footer>
+                {activePopupAd.linkUrl && (
+                    <Button variant="success" onClick={() => window.open(activePopupAd.linkUrl, '_blank')}>
+                        Open Link
+                    </Button>
+                )}
+                <Button variant="primary" onClick={handleClosePopup}>
+                    Close
+                </Button>
+            </Modal.Footer>
+        </Modal>
+      )}
 
       <ClientServiceDetailsModal
         show={isServiceDetailsModalOpen}
@@ -6118,42 +6108,125 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
                 `}
                     </style>
 
-                    {/* --- START CAROUSEL SECTION --- */}
-                    <div className="carousel-wrapper" style={{ maxWidth: '1200px', margin: '0 auto 40px auto', padding: '0 20px' }}>
-                      <Carousel
-                        className="client-dashboard-carousel"
-                        interval={5000} // Auto-advance every 5 seconds
-                        indicators={true}
-                        controls={false} // Hide Prev/Next controls as in the video
-                      >
-                        <Carousel.Item>
-                          <img
-                            className="carousel-background-image"
-                            src="https://picsum.photos/seed/picsum/200" // Placeholder: Replace with actual image URL
-                            alt="First slide: Job Applications"
-                          />
-                          <div className="carousel-content-overlay">
-                            <div className="carousel-text-box">
+    {/* --- START CAROUSEL SECTION --- */}
+<div className="carousel-wrapper" style={{ maxWidth: '1200px', margin: '0 auto 20px auto', padding: '0 20px' }}>
+  <Carousel
+    className="client-dashboard-carousel"
+    interval={5000}
+    indicators={true}
+    controls={activeBannerAds.length > 0} 
+  >
+    {activeBannerAds.length > 0 ? (
+      // 1. SHOW DYNAMIC ADS FROM ADMIN (SPLIT LAYOUT)
+      activeBannerAds.map((ad) => (
+        <Carousel.Item key={ad.id} onClick={() => ad.linkUrl ? window.open(ad.linkUrl, '_blank') : null} style={{ cursor: ad.linkUrl ? 'pointer' : 'default' }}>
+          
+          {/* Main Container: Flexbox for 50/50 split */}
+          <div style={{ height: '320px', background: '#ffffff', borderRadius: '16px', overflow: 'hidden', display: 'flex', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
+             
+             {/* LEFT HALF: IMAGE (50%) */}
+             <div style={{ width: '50%', position: 'relative', overflow: 'hidden' }}>
+                {ad.imageUrl ? (
+                   <img src={ad.imageUrl} alt={ad.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                   <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontSize: '3rem', opacity: 0.3 }}>📢</span>
+                   </div>
+                )}
+             </div>
+             
+             {/* RIGHT HALF: CONTENT (50%) */}
+             <div style={{ 
+                 width: '50%', 
+                 padding: '40px', 
+                 display: 'flex', 
+                 flexDirection: 'column', 
+                 justifyContent: 'flex-start', /* Aligns content to top */
+                 alignItems: 'flex-start', 
+                 backgroundColor: '#fff' 
+             }}>
+                
+                {/* Optional Badge */}
+                <span style={{ 
+                    background: '#e0f2fe', color: '#0284c7', padding: '4px 12px', borderRadius: '20px', 
+                    fontSize: '0.75rem', fontWeight: '700', marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '0.5px'
+                }}>
+                    Announcement
+                </span>
 
-                            </div>
-                          </div>
-                        </Carousel.Item>
-                        <Carousel.Item>
-                          <img
-                            className="carousel-background-image"
-                            src="https://picsum.photos/200?grayscale" // Placeholder: Replace with actual image URL
-                            alt="Second slide: New Service Announcement"
-                          />
-                          <div className="carousel-content-overlay">
-                            <div className="carousel-text-box">
+                <h3 style={{ color: '#1e293b', fontWeight: '800', marginBottom: '12px', fontSize: '1.8rem', lineHeight: '1.2' }}>
+                    {ad.title}
+                </h3>
+                
+                <p style={{ color: '#64748b', fontSize: '1.05rem', marginBottom: '20px', lineHeight: '1.6', maxWidth: '95%' }}>
+                    {ad.message}
+                </p>
 
-                            </div>
-                          </div>
-                        </Carousel.Item>
-                        {/* Add more Carousel.Item components as needed */}
-                      </Carousel>
-                    </div>
-                    {/* --- END CAROUSEL SECTION --- */}
+                {ad.linkUrl && (
+                    <button style={{ 
+                        background: '#3b82f6', border: 'none', color: 'white', padding: '12px 28px', 
+                        borderRadius: '10px', fontWeight: '600', fontSize: '0.95rem', cursor: 'pointer', 
+                        boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)', transition: 'transform 0.2s', display: 'flex', alignItems: 'center', gap: '8px',
+                        marginTop: '5px' /* Changed from 'auto' to '5px' to keep it near text */
+                    }}>
+                        {ad.buttonText || 'Learn More'} 
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"></path><path d="M12 5l7 7-7 7"></path></svg>
+                    </button>
+                )}
+             </div>
+
+          </div>
+        </Carousel.Item>
+      ))
+    ) : (
+      // 2. FALLBACK: SHOW DEFAULT CONTENT IF NO ADS
+      <>
+        <Carousel.Item>
+           <div style={{ height: '320px', background: '#ffffff', borderRadius: '16px', overflow: 'hidden', display: 'flex', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
+               <div style={{ width: '50%', position: 'relative' }}>
+                   <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontSize: '4rem', opacity: 0.3 }}>👋</span>
+                   </div>
+               </div>
+               <div style={{ 
+                   width: '50%', 
+                   padding: '40px', 
+                   display: 'flex', 
+                   flexDirection: 'column', 
+                   justifyContent: 'flex-start', 
+                   alignItems: 'flex-start' 
+               }}>
+                  <h3 style={{ color: '#1e293b', fontWeight: '800', marginBottom: '15px', fontSize: '2rem' }}>Welcome to TechXplorers</h3>
+                  <p style={{ color: '#64748b', fontSize: '1.1rem', lineHeight: '1.6', marginBottom: '20px' }}>Manage your services, track applications, and grow your business with our comprehensive dashboard.</p>
+               </div>
+           </div>
+        </Carousel.Item>
+         <Carousel.Item>
+           <div style={{ height: '320px', background: '#ffffff', borderRadius: '16px', overflow: 'hidden', display: 'flex', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
+               <div style={{ width: '50%', position: 'relative' }}>
+                   <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontSize: '4rem', opacity: 0.3 }}>🚀</span>
+                   </div>
+               </div>
+               <div style={{ 
+                   width: '50%', 
+                   padding: '40px', 
+                   display: 'flex', 
+                   flexDirection: 'column', 
+                   justifyContent: 'flex-start', 
+                   alignItems: 'flex-start' 
+               }}>
+                  <h3 style={{ color: '#1e293b', fontWeight: '800', marginBottom: '15px', fontSize: '2rem' }}>Explore Our Services</h3>
+                  <p style={{ color: '#64748b', fontSize: '1.1rem', lineHeight: '1.6', marginBottom: '20px' }}>From Web Development to Cyber Security, check out what's new in our service catalog.</p>
+               </div>
+           </div>
+        </Carousel.Item>
+      </>
+    )}
+  </Carousel>
+</div>
+{/* --- END CAROUSEL SECTION --- */}
+
 
 
                     {/* 1. All Services Grid */}
