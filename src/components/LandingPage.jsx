@@ -1273,65 +1273,80 @@ const LandingPage = () => {
           </Container>
         </section>
 
-        {/* Footer - ANIMATED */}
+  {/* Footer - ANIMATED */}
 <footer 
     ref={footerRef}
-    className={`py-5 ${isDarkMode ? 'bg-dark text-white' : 'bg-dark text-white'} ${footerInView ? 'fade-up-section' : ''}`}
-    style={{ opacity: footerInView ? 1 : 0, transitionDuration: '1s' }}
+    className={`py-5 ${footerInView ? 'fade-up-section' : ''}`}
+    style={{ 
+        // 1. Apply the exact background logic from Global Stats section
+        backgroundColor: 'var(--light-gray)',
+        backgroundImage: isDarkMode 
+            ? 'radial-gradient(circle at 10% 20%, rgba(76, 29, 149, 0.5), transparent 40%), radial-gradient(circle at 80% 90%, rgba(76, 29, 149, 0.5), transparent 50%)'
+            : 'radial-gradient(circle at 10% 20%, rgba(190, 182, 224, 0.5), transparent 40%), radial-gradient(circle at 80% 90%, rgba(184, 169, 250, 0.5), transparent 50%)',
+        opacity: footerInView ? 1 : 0, 
+        transitionDuration: '1s',
+        color: 'var(--text-color)' // Ensure base text color matches theme
+    }}
 >
   <Container>
     <Row className="g-4">
       <Col md={4}>
-        <h5 className="text-white">TechXplorers</h5>
-        <p className="text-secondary small">Empowering businesses through innovative technology solutions. We deliver excellence in web analytics, project planning, and technical support to help you achieve your digital transformation goals.</p>
+        {/* Headings use secondary-color (Dark in light mode, White in dark mode) */}
+        <h5 style={{ color: 'var(--secondary-color)', fontWeight: 'bold' }}>TechXplorers</h5>
+        <p style={{ color: 'var(--text-color)', fontSize: '0.9rem' }}>
+          Empowering businesses through innovative technology solutions. We deliver excellence in web analytics, project planning, and technical support to help you achieve your digital transformation goals.
+        </p>
         <div className="d-flex social-icons mt-3">
-            <a href="https://www.instagram.com/techxplorers.pvt.ltd/" target="_blank" rel="noopener noreferrer" className="text-secondary me-3">
+            <a href="https://www.instagram.com/techxplorers.pvt.ltd/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-color)', fontSize: '1.2rem' }} className="me-3">
             <FaInstagram />
           </a>
-          <a href="https://www.facebook.com/profile.php?id=61571029190090" target="_blank" rel="noopener noreferrer" className="text-secondary me-3">
+          <a href="https://www.facebook.com/profile.php?id=61571029190090" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-color)', fontSize: '1.2rem' }} className="me-3">
             <FaFacebookF />
           </a>
-            <a href="https://x.com/techXplorers_" target="_blank" rel="noopener noreferrer" className="text-secondary me-3">
+            <a href="https://x.com/techXplorers_" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-color)', fontSize: '1.2rem' }} className="me-3">
             <FaTwitter />
           </a>
-           <a href="https://www.linkedin.com/company/techxplorers-private-limited/" target="_blank" rel="noopener noreferrer" className="text-secondary">
+           <a href="https://www.linkedin.com/company/techxplorers-private-limited/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-color)', fontSize: '1.2rem' }}>
             <FaLinkedinIn />
           </a>
         </div>
       </Col>
       <Col md={2}>
-        <h5 className="text-white">Services</h5>
-        <ul className="list-unstyled text-secondary small">
-          <li><a href="/services/mobile-app-development" className="text-decoration-none text-secondary">Mobile App</a></li>
-          <li><a href="/services/web-app-development" className="text-decoration-none text-secondary">Web App</a></li>
-          <li><a href="/services/digital-marketing" className="text-decoration-none text-secondary">Digital Marketing</a></li>
-          <li><a href="/services/it-talent-supply" className="text-decoration-none text-secondary">IT Talent Supply</a></li>
-          <li><a href="/services/job-support" className="text-decoration-none text-secondary">JOB SUpport & IT Consulting</a></li>
-          <li><a href="/services/cyber-security" className="text-decoration-none text-secondary">Cyber Security</a></li>
+        <h5 style={{ color: 'var(--secondary-color)', fontWeight: 'bold' }}>Services</h5>
+        <ul className="list-unstyled" style={{ fontSize: '0.9rem' }}>
+          <li className="mb-2"><a href="/services/mobile-app-development" className="text-decoration-none" style={{ color: 'var(--text-color)' }}>Mobile App</a></li>
+          <li className="mb-2"><a href="/services/web-app-development" className="text-decoration-none" style={{ color: 'var(--text-color)' }}>Web App</a></li>
+          <li className="mb-2"><a href="/services/digital-marketing" className="text-decoration-none" style={{ color: 'var(--text-color)' }}>Digital Marketing</a></li>
+          <li className="mb-2"><a href="/services/it-talent-supply" className="text-decoration-none" style={{ color: 'var(--text-color)' }}>IT Talent Supply</a></li>
+          <li className="mb-2"><a href="/services/job-support" className="text-decoration-none" style={{ color: 'var(--text-color)' }}>Job Support & IT</a></li>
+          <li className="mb-2"><a href="/services/cyber-security" className="text-decoration-none" style={{ color: 'var(--text-color)' }}>Cyber Security</a></li>
         </ul>
       </Col>
       <Col md={2}>
-        <h5 className="text-white">Company</h5>
-        <ul className="list-unstyled text-secondary small">
-          <li><a href="/aboutus" className="text-decoration-none text-secondary">About Us</a></li>
-          <li><a href="/careers" className="text-decoration-none text-secondary">Career</a></li>
-          <li><a href="/contactus" className="text-decoration-none text-secondary">Contact</a></li>
-          <li><a href="/projects" className="text-decoration-none text-secondary">Our Projects</a></li>
+        <h5 style={{ color: 'var(--secondary-color)', fontWeight: 'bold' }}>Company</h5>
+        <ul className="list-unstyled" style={{ fontSize: '0.9rem' }}>
+          <li className="mb-2"><a href="/aboutus" className="text-decoration-none" style={{ color: 'var(--text-color)' }}>About Us</a></li>
+          <li className="mb-2"><a href="/careers" className="text-decoration-none" style={{ color: 'var(--text-color)' }}>Career</a></li>
+          <li className="mb-2"><a href="/contactus" className="text-decoration-none" style={{ color: 'var(--text-color)' }}>Contact</a></li>
+          <li className="mb-2"><a href="/projects" className="text-decoration-none" style={{ color: 'var(--text-color)' }}>Our Projects</a></li>
         </ul>
       </Col>
       <Col md={4}>
-        <h5 className="text-white">Contact</h5>
-        <p className="text-secondary small">2034 Masaka close Wuse zone 7 FCT Abuja</p>
-        <p className="text-secondary small">Email: contact@techxplorers.com<br />Phone: +2348188560032 <br/><br/></p>
+        <h5 style={{ color: 'var(--secondary-color)', fontWeight: 'bold' }}>Contact</h5>
+        <p style={{ color: 'var(--text-color)', fontSize: '0.9rem' }}>2034 Masaka close Wuse zone 7 FCT Abuja</p>
+        <p style={{ color: 'var(--text-color)', fontSize: '0.9rem' }}>
+            Email: contact@techxplorers.com<br />
+            Phone: +2348188560032 <br/><br/>
+        </p>
       </Col>
     </Row>
-    <hr className="my-4" />
+    <hr className="my-4" style={{ borderColor: 'var(--border-color)' }} />
     <div className="d-flex justify-content-between align-items-center flex-wrap">
-      <p className="text-secondary small mb-0">© {new Date().getFullYear()} TechXplorers Pvt. Ltd. All rights reserved.</p>
-      <div className="text-secondary small">
-        <a href="#" className="text-decoration-none text-secondary me-3">Privacy Policy</a>
-        <a href="#" className="text-decoration-none text-secondary me-3">Terms of Service</a>
-        <a href="#" className="text-decoration-none text-secondary">Cookie Policy</a>
+      <p className="small mb-0" style={{ color: 'var(--text-color)' }}>© {new Date().getFullYear()} TechXplorers Pvt. Ltd. All rights reserved.</p>
+      <div className="small">
+        <a href="#" className="text-decoration-none me-3" style={{ color: 'var(--text-color)' }}>Privacy Policy</a>
+        <a href="#" className="text-decoration-none me-3" style={{ color: 'var(--text-color)' }}>Terms of Service</a>
+        <a href="#" className="text-decoration-none" style={{ color: 'var(--text-color)' }}>Cookie Policy</a>
       </div>
     </div>
   </Container>
