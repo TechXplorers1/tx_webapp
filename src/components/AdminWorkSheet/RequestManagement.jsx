@@ -108,6 +108,8 @@ const RequestManagement = () => {
     if (action === 'reject') message = `Are you sure you want to reject the application from ${item.firstName} ${item.lastName}?`;
     if (action === 'deleteContact') message = `Are you sure you want to delete the message from ${item.firstName} ${item.lastName}? This cannot be undone.`;
     if (action === 'deleteServiceRequest') message = `Are you sure you want to delete the service request from ${item.email}? This cannot be undone.`;
+    if (action === 'deleteCareerSubmission')
+  message = `Are you sure you want to delete the career application from ${item.firstName} ${item.lastName}? This cannot be undone.`;
     setRequestConfirmMessage(message);
     setShowRequestConfirmModal(true);
   };
@@ -134,6 +136,10 @@ const RequestManagement = () => {
         itemRef = ref(database, `submissions/serviceRequests/${itemToProcess.firebaseKey}`);
         await remove(itemRef);
       }
+      if (requestConfirmAction === 'deleteCareerSubmission') {
+  itemRef = ref(database, `submissions/career_submissions/${itemToProcess.firebaseKey}`);
+  await remove(itemRef);
+}
       closeRequestConfirmModal(); // Close modal after action
     } catch (error) {
       console.error("Firebase action failed", error);
@@ -424,15 +430,46 @@ const RequestManagement = () => {
                     </td>
               
                     <td>
-                      <div className="action-buttons">
-                        <button className="action-button view" onClick={() => handleViewCareerDetails(sub)}>View</button>
-                        {sub.status === 'Pending' && (
-                          <>
-                            <button className="action-button accept" onClick={() => handleRequestAction('accept', sub)}>Accept</button>
-                            <button className="action-button reject" onClick={() => handleRequestAction('reject', sub)}>Reject</button>
-                          </>
-                        )}
-                      </div>
+<div className="action-buttons">
+  <button
+    className="action-button view"
+    onClick={() => handleViewCareerDetails(sub)}
+  >
+    View
+  </button>
+
+  {sub.status === 'Pending' && (
+    <>
+      <button
+        className="action-button accept"
+        onClick={() => handleRequestAction('accept', sub)}
+      >
+        Accept
+      </button>
+      <button
+        className="action-button reject"
+        onClick={() => handleRequestAction('reject', sub)}
+      >
+        Reject
+      </button>
+    </>
+  )}
+
+  {/* Delete Button for Career Applications */}
+  <button
+    className="action-button reject"
+    onClick={() =>
+      handleRequestAction(
+        'deleteCareerSubmission',
+        sub
+      )
+    }
+    style={{ backgroundColor: '#DC2626', color: 'white' }}
+  >
+    Delete
+  </button>
+</div>
+
                     </td>
                   </tr>
                 ))}
