@@ -2350,9 +2350,11 @@ const ClientDashboard = () => {
   const [clientData, setClientData] = useState(null);
   const [allFiles, setAllFiles] = useState([]);
 
-  // --- NEW ADS & BANNERS LOGIC ---
+  // --- UPDATED ADS & BANNERS LOGIC ---
   const [activeBannerAds, setActiveBannerAds] = useState([]);
-  const [activePopupAd, setActivePopupAd] = useState(null);
+  
+  // CHANGE 1: State is now an array, not a single object
+  const [activePopupAds, setActivePopupAds] = useState([]); 
   const [showPopupModal, setShowPopupModal] = useState(false);
 
   // Helper to check if a specific ad ID was closed
@@ -2392,22 +2394,22 @@ const ClientDashboard = () => {
           }
         });
 
-        // Set Banners (for the Carousel)
+        // Set Banners
         setActiveBannerAds(banners);
 
-        // Set Popup (Show the *latest* created one that hasn't been closed)
+        // CHANGE 2: Set ALL valid popups to state, not just the first one
         popups.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
         if (popups.length > 0) {
-          setActivePopupAd(popups[0]);
+          setActivePopupAds(popups);
           setShowPopupModal(true);
         } else {
-          setActivePopupAd(null);
+          setActivePopupAds([]);
           setShowPopupModal(false);
         }
       } else {
         setActiveBannerAds([]);
-        setActivePopupAd(null);
+        setActivePopupAds([]);
         setShowPopupModal(false);
       }
     });
@@ -2415,10 +2417,13 @@ const ClientDashboard = () => {
     return () => unsubscribe();
   }, []);
 
+  // CHANGE 3: Update close handler to mark ALL displayed popups as closed
   const handleClosePopup = () => {
-    if (activePopupAd?.id) {
-      markAdAsClosed(activePopupAd.id);
-    }
+    // Loop through all currently active popups and mark them as seen locally
+    // so they don't appear again on refresh
+    activePopupAds.forEach(ad => {
+      markAdAsClosed(ad.id);
+    });
     setShowPopupModal(false);
   };
   // --- END NEW ADS LOGIC ---
@@ -5690,45 +5695,81 @@ html.dark-mode .notify-success-message {
         />
       )}
 
-      {/* --- NEW ADS POPUP MODAL --- */}
-      {activePopupAd && (
+      {/* --- UPDATED ADS POPUP MODAL (CAROUSEL) --- */}
+      {activePopupAds.length > 0 && (
         <Modal
           show={showPopupModal}
           onHide={handleClosePopup}
           centered
           backdrop="static"
           keyboard={false}
+          size="lg" // Increased size for better slideshow visibility
         >
-          <Modal.Header>
+          <Modal.Header closeButton>
             <Modal.Title style={{ color: '#007bff', fontWeight: '700' }}>
-              {activePopupAd.title}
+              Welcome / Announcements
             </Modal.Title>
           </Modal.Header>
-          <Modal.Body className="text-center">
-            {activePopupAd.imageUrl && (
-              <img
-                src={activePopupAd.imageUrl}
-                alt="Announcement"
-                style={{ maxWidth: '100%', maxHeight: '300px', marginBottom: '15px', borderRadius: '8px', objectFit: 'cover' }}
-              />
-            )}
-            <p style={{ fontSize: '1.1rem', whiteSpace: 'pre-wrap', color: '#334155' }}>
-              {activePopupAd.message}
-            </p>
+          
+          <Modal.Body className="p-0"> {/* Padding 0 to let carousel fill body */}
+            <Carousel
+              interval={null} // Set to 3000 or 5000 if you want auto-play, null for manual only
+              indicators={activePopupAds.length > 1}
+              controls={activePopupAds.length > 1}
+              variant="dark" // Use dark controls if background is light
+            >
+              {activePopupAds.map((ad) => (
+                <Carousel.Item key={ad.id}>
+                  <div style={{ padding: '20px', textAlign: 'center', minHeight: '350px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    
+                    {/* Title */}
+                    <h4 style={{ color: '#1e293b', fontWeight: '700', marginBottom: '15px' }}>
+                      {ad.title}
+                    </h4>
+
+                    {/* Image */}
+                    {ad.imageUrl && (
+                      <img
+                        src={ad.imageUrl}
+                        alt={ad.title}
+                        style={{ 
+                          maxWidth: '100%', 
+                          maxHeight: '250px', 
+                          borderRadius: '8px', 
+                          objectFit: 'contain',
+                          marginBottom: '15px'
+                        }}
+                      />
+                    )}
+
+                    {/* Message */}
+                    <p style={{ fontSize: '1.1rem', whiteSpace: 'pre-wrap', color: '#334155', marginBottom: '20px' }}>
+                      {ad.message}
+                    </p>
+
+                    {/* Button (Moved inside the slide so it's specific to the ad) */}
+                    {ad.linkUrl && (
+                      <Button 
+                        variant="success" 
+                        onClick={() => window.open(ad.linkUrl, '_blank')}
+                        style={{ fontWeight: '600' }}
+                      >
+                        {ad.buttonText || 'Open Link'}
+                      </Button>
+                    )}
+                  </div>
+                </Carousel.Item>
+              ))}
+            </Carousel>
           </Modal.Body>
+          
           <Modal.Footer>
-            {activePopupAd.linkUrl && (
-              <Button variant="success" onClick={() => window.open(activePopupAd.linkUrl, '_blank')}>
-                Open Link
-              </Button>
-            )}
-            <Button variant="primary" onClick={handleClosePopup}>
-              Close
+            <Button variant="secondary" onClick={handleClosePopup}>
+              Close All
             </Button>
           </Modal.Footer>
         </Modal>
       )}
-
       <ClientServiceDetailsModal
         show={isServiceDetailsModalOpen}
         onHide={() => setIsServiceDetailsModalOpen(false)}
