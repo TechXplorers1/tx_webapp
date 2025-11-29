@@ -3,7 +3,8 @@ import img1 from '../../assets/JobApply.jpeg';
 import '../../styles/Services/MobileAppDev.css'; // Reusing MobileAppDev styles
 import { useNavigate } from 'react-router-dom';
 import CustomNavbar from '../Navbar';
-import { useAuth } from '../../components/AuthContext'; // Step 1: Import useAuth
+import { useAuth } from '../../components/AuthContext'; 
+import Footer from '../../components/Footer';// Step 1: Import useAuth
 
 const JobSupport = () => {
   const navigate = useNavigate();
@@ -147,6 +148,7 @@ Our comprehensive job support services are designed to assist IT professionals i
           </button>
         </div>
       </section>
+       <Footer />
     </div>
   );
 };
