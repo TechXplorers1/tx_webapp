@@ -5,7 +5,6 @@ import DepartmentManagement from './DepartmentManagement';
 import EmployeeManagement from './EmployeeManagement';
 import AssetManagement from './AssetManagement';
 import RequestManagement from './RequestManagement';
-import ProjectManagement from './ProjectManagement';
 import { database } from '../../firebase'; // Import your Firebase config
 import { ref, update } from "firebase/database"; // Import update function
 
@@ -136,8 +135,6 @@ const AdminPage = () => {
     { value: 'employeeManagement', label: 'Employee Management' },
     { value: 'assetManagement', label: 'Asset Management' },
     { value: 'requestManagement', label: 'Request Management' },
-    { value: 'projectManagement', label: 'Project Management' },
-    
   ];
 
   return (
@@ -358,7 +355,6 @@ const AdminPage = () => {
             {currentView === 'employeeManagement' && <EmployeeManagement />}
             {currentView === 'assetManagement' && <AssetManagement />}
             {currentView === 'requestManagement' && <RequestManagement />}
-            {currentView === 'projectManagement' && <ProjectManagement />}
           </div>
         </div>
       </main>
