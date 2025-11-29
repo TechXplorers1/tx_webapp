@@ -16,38 +16,49 @@ const Footer = () => {
       --text-color: #4B5563;
       --light-gray: #F9FAFB;
       --border-color: #E5E7EB;
-      --primary-light: #EDE9FE;
     }
 
-    /* Dark Mode Override logic handled by parent class or manual check below */
+    /* Dark Mode Override */
     .dark-mode-footer {
       --secondary-color: #F9FAFB;
       --text-color: #D1D5DB;
       --light-gray: #1F2937;
       --border-color: #374151;
-      --primary-light: #4c1d95;
     }
 
     .footer-modern {
       text-align: center;
       padding: 2rem 0;
-      /* Background logic is handled inline for dynamic gradient */
     }
-    .footer-modern a {
+
+    /* --- UNIFIED LINK STYLING --- */
+    /* Base Link Style (Replaces inline styles) */
+    .footer-link {
+      color: var(--text-color) !important;
       text-decoration: none;
-      margin: 0 0.5rem; /* Default margin */
-      transition: color 0.3s;
+      transition: color 0.3s ease;
+      margin: 0 0.5rem;
+      cursor: pointer;
     }
-    .footer-modern a:hover {
-      color: var(--primary-light) !important;
+
+    /* HOVER: Light Mode (Vivid Purple) */
+    .footer-link:hover {
+      color: #6D28D9 !important; 
+    }
+
+    /* HOVER: Dark Mode (Bright Lavender) */
+    /* We target the parent class to override light mode hover */
+    .dark-mode-footer .footer-link:hover {
+      color: #A78BFA !important;
     }
     
-    /* Fixed: Added gap between social icons */
-    .social-icons a {
-       margin-right: 15px !important;
+    /* Social Icons specific spacing */
+    .social-icons .footer-link {
+       margin-right: 15px;
+       margin-left: 0;
     }
-    .social-icons a:last-child {
-       margin-right: 0 !important;
+    .social-icons .footer-link:last-child {
+       margin-right: 0;
     }
 
     /* Animation Keyframes */
@@ -89,16 +100,16 @@ const Footer = () => {
                 Empowering businesses through innovative technology solutions. We deliver excellence in web analytics, project planning, and technical support to help you achieve your digital transformation goals.
               </p>
               <div className="d-flex social-icons mt-3">
-                  <a href="https://www.instagram.com/techxplorers.pvt.ltd/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-color)', fontSize: '1.2rem' }}>
+                  <a href="https://www.instagram.com/techxplorers.pvt.ltd/" target="_blank" rel="noopener noreferrer" className="footer-link" style={{ fontSize: '1.2rem' }}>
                   <FaInstagram />
                 </a>
-                <a href="https://www.facebook.com/profile.php?id=61571029190090" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-color)', fontSize: '1.2rem' }}>
+                <a href="https://www.facebook.com/profile.php?id=61571029190090" target="_blank" rel="noopener noreferrer" className="footer-link" style={{ fontSize: '1.2rem' }}>
                   <FaFacebookF />
                 </a>
-                  <a href="https://x.com/techXplorers_" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-color)', fontSize: '1.2rem' }}>
+                  <a href="https://x.com/techXplorers_" target="_blank" rel="noopener noreferrer" className="footer-link" style={{ fontSize: '1.2rem' }}>
                   <FaTwitter />
                 </a>
-                 <a href="https://www.linkedin.com/company/techxplorers-private-limited/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-color)', fontSize: '1.2rem' }}>
+                 <a href="https://www.linkedin.com/company/techxplorers-private-limited/" target="_blank" rel="noopener noreferrer" className="footer-link" style={{ fontSize: '1.2rem' }}>
                   <FaLinkedinIn />
                 </a>
               </div>
@@ -108,12 +119,12 @@ const Footer = () => {
             <Col md={2} className="text-start">
               <h5 style={{ color: 'var(--secondary-color)', fontWeight: 'bold' }}>Services</h5>
               <ul className="list-unstyled" style={{ fontSize: '0.9rem' }}>
-                <li className="mb-2"><a href="/services/mobile-app-development" style={{ color: 'var(--text-color)' }}>Mobile App</a></li>
-                <li className="mb-2"><a href="/services/web-app-development" style={{ color: 'var(--text-color)' }}>Web App</a></li>
-                <li className="mb-2"><a href="/services/digital-marketing" style={{ color: 'var(--text-color)' }}>Digital Marketing</a></li>
-                <li className="mb-2"><a href="/services/it-talent-supply" style={{ color: 'var(--text-color)' }}>IT Talent Supply</a></li>
-                <li className="mb-2"><a href="/services/job-support" style={{ color: 'var(--text-color)' }}>Job Support & IT</a></li>
-                <li className="mb-2"><a href="/services/cyber-security" style={{ color: 'var(--text-color)' }}>Cyber Security</a></li>
+                <li className="mb-2"><a href="/services/mobile-app-development" className="footer-link">Mobile App</a></li>
+                <li className="mb-2"><a href="/services/web-app-development" className="footer-link">Web App</a></li>
+                <li className="mb-2"><a href="/services/digital-marketing" className="footer-link">Digital Marketing</a></li>
+                <li className="mb-2"><a href="/services/it-talent-supply" className="footer-link">IT Talent Supply</a></li>
+                <li className="mb-2"><a href="/services/job-support" className="footer-link">Job Support & IT</a></li>
+                <li className="mb-2"><a href="/services/cyber-security" className="footer-link">Cyber Security</a></li>
               </ul>
             </Col>
 
@@ -121,14 +132,14 @@ const Footer = () => {
             <Col md={2} className="text-start">
               <h5 style={{ color: 'var(--secondary-color)', fontWeight: 'bold' }}>Company</h5>
               <ul className="list-unstyled" style={{ fontSize: '0.9rem' }}>
-                <li className="mb-2"><a href="/aboutus" style={{ color: 'var(--text-color)' }}>About Us</a></li>
-                <li className="mb-2"><a href="/careers" style={{ color: 'var(--text-color)' }}>Career</a></li>
-                <li className="mb-2"><a href="/contactus" style={{ color: 'var(--text-color)' }}>Contact</a></li>
-                <li className="mb-2"><a href="/projects" style={{ color: 'var(--text-color)' }}>Our Projects</a></li>
+                <li className="mb-2"><a href="/aboutus" className="footer-link">About Us</a></li>
+                <li className="mb-2"><a href="/careers" className="footer-link">Career</a></li>
+                <li className="mb-2"><a href="/contactus" className="footer-link">Contact</a></li>
+                <li className="mb-2"><a href="/projects" className="footer-link">Our Projects</a></li>
               </ul>
             </Col>
 
-            {/* 4. CONTACT DETAILS (UPDATED) */}
+            {/* 4. CONTACT DETAILS */}
             <Col md={4} className="text-start">
               <h5 style={{ color: 'var(--secondary-color)', fontWeight: 'bold' }}>Contact</h5>
               
@@ -164,9 +175,9 @@ const Footer = () => {
           <div className="d-flex justify-content-between align-items-center flex-wrap">
             <p className="small mb-0" style={{ color: 'var(--text-color)' }}>© {new Date().getFullYear()} TechXplorers Pvt. Ltd. All rights reserved.</p>
             <div className="small">
-              <a href="#" className="me-3" style={{ color: 'var(--text-color)' }}>Privacy Policy</a>
-              <a href="#" className="me-3" style={{ color: 'var(--text-color)' }}>Terms of Service</a>
-              <a href="#" style={{ color: 'var(--text-color)' }}>Cookie Policy</a>
+              <a href="/privacy-policy" className="footer-link me-3">Privacy Policy</a>
+              <a href="/terms-of-service" className="footer-link me-3">Terms of Service</a>
+              <a href="/cookie-policy" className="footer-link">Cookie Policy</a>
             </div>
           </div>
         </Container>

@@ -4,7 +4,8 @@ import '../../styles/Services/DigitalMarketing.css';
 import { useNavigate } from 'react-router-dom';
 import CustomNavbar from '../Navbar';
 import { Modal, Button, Form } from 'react-bootstrap';
-import { useAuth } from '../../components/AuthContext'; // Step 1: Import useAuth
+import { useAuth } from '../../components/AuthContext'; 
+import Footer from '../../components/Footer'; // Step 1: Import useAuth
 
 const DigitalMarketing = () => {
   const navigate = useNavigate();
@@ -206,6 +207,7 @@ const DigitalMarketing = () => {
           </Form>
         </Modal.Body>
       </Modal>
+       <Footer />
     </div>
   );
 };

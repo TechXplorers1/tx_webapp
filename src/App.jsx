@@ -26,6 +26,9 @@ import EmployeeOnboardingWorkSheet from './components/employeeOnboardingSheet';
 import ServicesForm from './components/services/ServicesForm';
 import Projects from './components/Projects';
 import WhatsAppFloat from './components/WhatsAppFloat';
+import PrivacyPolicy from './components/PrivacyPolicy';
+import TermsOfService from './components/TermsOfService';
+import CookiePolicy from './components/CookiePolicy';
 
 
 // import AdminWorksheet from './components/AdminWorksheet';
@@ -88,6 +91,9 @@ const App = () => {
             <Route path="/managerworksheet" element={<ProtectedRoute allowedRoles={['manager']}><ManagerWorksheet /></ProtectedRoute>} />
             <Route path="/employee-registration-form" element={<ProtectedRoute allowedRoles={['admin']}><EmployeeRegistrationForm /></ProtectedRoute>} />
             <Route path="/employee-onboarding-sheet" element={<ProtectedRoute allowedRoles={['admin']}><EmployeeOnboardingWorkSheet /></ProtectedRoute>} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/terms-of-service" element={<TermsOfService />} />
+        <Route path="/cookie-policy" element={<CookiePolicy />} />
 
           </Routes> 
           {/* <--- CLOSED Routes here */}

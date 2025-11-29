@@ -4,7 +4,8 @@ import '../../styles/Services/WebAppDev.css';
 import { useNavigate } from 'react-router-dom';
 import CustomNavbar from '../Navbar';
 import { Modal, Button, Form } from 'react-bootstrap';
-import { useAuth } from '../../components/AuthContext'; // Corrected the import path
+import { useAuth } from '../../components/AuthContext'; 
+import Footer from '../../components/Footer';// Corrected the import path
 
 const WebAppDev = () => {
   const navigate = useNavigate();
@@ -267,6 +268,7 @@ const WebAppDev = () => {
           </Form>
         </Modal.Body>
       </Modal>
+       <Footer />
     </div>
   );
 };

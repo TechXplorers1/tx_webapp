@@ -4,7 +4,8 @@ import '../../styles/Services/MobileAppDev.css';
 import { useNavigate } from 'react-router-dom';
 import CustomNavbar from '../Navbar';
 import { Modal, Button, Form } from 'react-bootstrap';
-import { useAuth } from '../../components/AuthContext'; // Corrected the import path
+import { useAuth } from '../../components/AuthContext'; 
+import Footer from '../../components/Footer';// Corrected the import path
 
 const MobileAppDev = () => {
   const navigate = useNavigate();
@@ -257,6 +258,7 @@ TechXplorers specializes in a wide range of mobile solutions including Bluetooth
           </Form>
         </Modal.Body>
       </Modal>
+       <Footer />
     </div>
   );
 };
