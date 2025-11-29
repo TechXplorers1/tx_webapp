@@ -17,7 +17,7 @@ import {
   GoogleAuthProvider,
   signInWithPopup
 } from "firebase/auth";
-import { ref, get, child, set } from "firebase/database";
+import { ref, get, child, set, update } from "firebase/database";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -71,6 +71,8 @@ export default function LoginPage() {
           `https://placehold.co/40x40/007bff/white?text=${email.charAt(0).toUpperCase()}`,
       };
 
+
+      sessionStorage.setItem('loggedInClient', JSON.stringify(finalUserData));
       // ✅ Cache in sessionStorage and context
       sessionStorage.setItem('loggedInEmployee', JSON.stringify(finalUserData));
       login(finalUserData);
