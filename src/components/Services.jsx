@@ -109,11 +109,11 @@ const ServicesDropdown = () => {
           </Link>
         ))}
       </div>
-      <div className="services-dropdown-footer">
+      {/* <div className="services-dropdown-footer">
         <Link className="view-all-services-btn">
           View All Services
         </Link>
-      </div>
+      </div> */}
     </div>
   );
 };

@@ -4,6 +4,7 @@ import CustomNavbar from './Navbar';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEnvelope, faPhone, faMapMarkerAlt } from '@fortawesome/free-solid-svg-icons';
 import AOS from 'aos';
+import Footer from './Footer'; 
 import 'aos/dist/aos.css';
 import { database, auth } from '../firebase';
 import { ref, push } from "firebase/database";
@@ -365,16 +366,6 @@ const ContactPage = () => {
                          </Row>
                     </Container>
                 </section> */}
-
-                <footer className="contact-footer">
-                    <Container>
-                        <p className="mb-2">© {new Date().getFullYear()} TechXplorers Pvt. Ltd. All rights reserved.</p>
-                        <div>
-                            <a href="#" className="text-secondary text-decoration-none mx-2">Privacy & Legal</a>
-                            <a href="/contactus" className="text-secondary text-decoration-none mx-2">Contact</a>
-                        </div>
-                    </Container>
-                </footer>
             </div>
 
             <Modal show={showSuccessModal} onHide={handleCloseSuccessModal} centered dialogClassName="success-modal">
@@ -390,6 +381,7 @@ const ContactPage = () => {
                     </div>
                 </Modal.Body>
             </Modal>
+             <Footer />
         </>
     );
 };

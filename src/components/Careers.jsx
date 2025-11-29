@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Container, Card, Button, Form, Modal, Row, Col } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import CustomNavbar from './Navbar';
+import Footer from './Footer'; 
 import { database, auth, storage } from '../firebase';
 import { ref as dbRef, push } from "firebase/database";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -605,12 +606,6 @@ function Careers() {
             )}
           </Container>
         </section>
-
-        <footer className="careers-footer">
-          <Container>
-            <p className="mb-0 text-muted">© {new Date().getFullYear()} TechXplorers Pvt. Ltd. All rights reserved.</p>
-          </Container>
-        </footer>
       </div>
 
       {/* --- Main Job Application Modal --- */}
@@ -683,6 +678,7 @@ function Careers() {
           </Button>
         </Modal.Body>
       </Modal>
+       <Footer />
     </>
   );
 }
