@@ -854,6 +854,36 @@ if (!clientToDelete || !clientToDelete.clientFirebaseKey || !clientToDelete.regi
     );
   }
 
+  const [showScrollToTop, setShowScrollToTop] = useState(false);
+
+useEffect(() => {
+  const handleScroll = () => {
+    const nearBottom =
+      window.innerHeight + window.scrollY >= document.body.offsetHeight - 200;
+
+    setShowScrollToTop(nearBottom);
+  };
+
+  window.addEventListener("scroll", handleScroll);
+  return () => window.removeEventListener("scroll", handleScroll);
+}, []);
+
+
+const scrollToBottom = () => {
+  window.scrollTo({
+    top: document.body.scrollHeight,
+    behavior: "smooth"
+  });
+};
+
+const scrollToTop = () => {
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
+};
+
+
 
   return (
     <div className="ad-body-container">
@@ -943,6 +973,31 @@ if (!clientToDelete || !clientToDelete.clientFirebaseKey || !clientToDelete.regi
   color: var(--text-secondary);
   transition: all 0.2s ease;
 }
+
+.scroll-btn {
+  position: fixed;
+  bottom: 90px;
+  right: 25px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: #007bff;
+  color: #fff;
+  font-size: 1.5rem;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0px 4px 10px rgba(0,0,0,0.15);
+  transition: background 0.3s ease;
+  z-index: 9999;
+}
+
+.scroll-btn:hover {
+  background: #0058c9;
+}
+
 
 .tab-button:hover {
   background-color: var(--bg-body);
@@ -3116,6 +3171,13 @@ if (!clientToDelete || !clientToDelete.clientFirebaseKey || !clientToDelete.regi
           </div>
         </div>
       )}
+      <button
+  className="scroll-btn"
+  onClick={showScrollToTop ? scrollToTop : scrollToBottom}
+>
+  {showScrollToTop ? "⬆" : "⬇"}
+</button>
+
     </div>
   );
 };
