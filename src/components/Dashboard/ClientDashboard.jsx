@@ -5695,7 +5695,7 @@ html.dark-mode .notify-success-message {
         />
       )}
 
-      {/* --- UPDATED ADS POPUP MODAL (CAROUSEL) --- */}
+     {/* --- UPDATED ADS POPUP MODAL (AUTO-SLIDE ENABLED) --- */}
       {activePopupAds.length > 0 && (
         <Modal
           show={showPopupModal}
@@ -5703,7 +5703,7 @@ html.dark-mode .notify-success-message {
           centered
           backdrop="static"
           keyboard={false}
-          size="lg" // Increased size for better slideshow visibility
+          size="lg"
         >
           <Modal.Header closeButton>
             <Modal.Title style={{ color: '#007bff', fontWeight: '700' }}>
@@ -5711,12 +5711,13 @@ html.dark-mode .notify-success-message {
             </Modal.Title>
           </Modal.Header>
           
-          <Modal.Body className="p-0"> {/* Padding 0 to let carousel fill body */}
+          <Modal.Body className="p-0">
             <Carousel
-              interval={null} // Set to 3000 or 5000 if you want auto-play, null for manual only
+              interval={3000} // <--- CHANGED: Set to 3000ms (3 seconds) for auto-slide
+              pause="hover"   // Pauses sliding when the user hovers over the ad
               indicators={activePopupAds.length > 1}
               controls={activePopupAds.length > 1}
-              variant="dark" // Use dark controls if background is light
+              variant="dark"
             >
               {activePopupAds.map((ad) => (
                 <Carousel.Item key={ad.id}>
@@ -5747,7 +5748,7 @@ html.dark-mode .notify-success-message {
                       {ad.message}
                     </p>
 
-                    {/* Button (Moved inside the slide so it's specific to the ad) */}
+                    {/* Button */}
                     {ad.linkUrl && (
                       <Button 
                         variant="success" 
