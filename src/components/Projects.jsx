@@ -3,6 +3,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import { Link } from 'react-router-dom'; 
 import CustomNavbar from './Navbar';
 import { useTheme } from '../context/ThemeContext';
+import Footer from './Footer'; 
 import { database } from '../firebase'; // Import firebase db
 import { ref, onValue } from "firebase/database"; // Import methods
 
@@ -374,6 +375,7 @@ const Projects = () => {
         </div>
         
       </div>
+       <Footer />
     </>
   );
 };

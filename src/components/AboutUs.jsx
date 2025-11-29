@@ -1,6 +1,7 @@
 import React from 'react';
 import { Container, Carousel, Card, Row, Col } from 'react-bootstrap';
 import CustomNavbar from './Navbar';
+import Footer from './Footer'; 
 
 // --- Data for Component ---
 
@@ -313,17 +314,8 @@ function AboutUs() {
             </div>
           </Container>
         </section> */}
-
-        <footer className="about-footer">
-          <Container>
-            <p className="mb-2">© {new Date().getFullYear()} TechXplorers Pvt. Ltd. All rights reserved.</p>
-            <div>
-              <a href="#" className="text-secondary text-decoration-none mx-2">Privacy & Legal</a>
-              <a href="/contactus" className="text-secondary text-decoration-none mx-2">Contact</a>
-            </div>
-          </Container>
-        </footer>
       </div>
+       <Footer />
     </>
   );
 }

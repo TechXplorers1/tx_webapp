@@ -1,34 +1,29 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Container, Row, Col, Carousel } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaFacebookF, FaTwitter, FaInstagram, FaLinkedinIn } from 'react-icons/fa';
 // Import useMap from react-leaflet
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'; 
 import 'leaflet/dist/leaflet.css';
 import CustomNavbar from './Navbar';
+import Footer from './Footer'; // --- IMPORT FOOTER ---
 import '../styles/LandingPage.css';
 import { useTheme } from '../context/ThemeContext';
-import { useAuth } from '../components/AuthContext'; // Import useAuth
+import { useAuth } from '../components/AuthContext'; 
 import { database } from '../firebase';
 import {
   ref,
-  onValue,
   onChildAdded,
   onChildChanged,
   onChildRemoved,
-  get,
-  query,
-  orderByChild,
-  equalTo,
   off,
 } from "firebase/database";
-import { useInView } from 'react-intersection-observer'; // Ensure this is imported
+import { useInView } from 'react-intersection-observer'; 
 import L from 'leaflet';
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconRetina from 'leaflet/dist/images/marker-icon-2x.png';
 import shadow from 'leaflet/dist/images/marker-shadow.png';
 
-// === Leaflet Icon Fix (Kept from previous correction) ===
+// === Leaflet Icon Fix ===
 delete L.Icon.Default.prototype._getIconUrl;
 
 L.Icon.Default.mergeOptions({
@@ -36,10 +31,9 @@ L.Icon.Default.mergeOptions({
     iconUrl: icon,
     shadowUrl: shadow,
 });
-// ========================================================
+// ========================
 
-// --- Icon Components (omitted for brevity) ---
-// ... (Icon Components remain the same) ...
+// --- Icon Components ---
 const StarIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="feather feather-star"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
 );
@@ -62,70 +56,45 @@ const ContinentsIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
 );
 
-
 // Import images
 import Image1 from '../assets/MobileDev.jpeg';
-import Image2 from '../assets/WebDev.jpeg';
-import Image3 from '../assets/DigiMark.jpeg';
-import Image4 from '../assets/JobApply.jpeg';
-import Image5 from '../assets/ItTalentSupply.jpeg';
-import Image6 from '../assets/CyberSecurity.jpeg';
 
-// --- NEW COMPONENT FOR MAP REFRESH ---
-// This component must be a child of MapContainer to use useMap()
+// --- COMPONENT FOR MAP REFRESH ---
 const MapRefresher = ({ worldInView }) => {
     const map = useMap();
-
     useEffect(() => {
-        // If the section comes into view, the map container is visible.
         if (worldInView) {
-            // Invalidate size forces Leaflet to re-check the container's dimensions
-            // and redraw all elements (tiles, markers) correctly.
             map.invalidateSize();
         }
     }, [worldInView, map]);
-
-    return null; // This component doesn't render anything itself
+    return null; 
 };
-// -------------------------------------
-
 
 const LandingPage = () => {
-  const { user, isLoggedIn } = useAuth(); // Get authentication status
+  const { user, isLoggedIn } = useAuth(); 
   const navigate = useNavigate();
   const [serviceRegistrations, setServiceRegistrations] = useState(null);
-  const { isDarkMode } = useTheme(); // Use the theme context
+  const { isDarkMode } = useTheme(); 
 
   // --- Animation Hooks ---
   const [servicesRef, servicesInView] = useInView({ triggerOnce: true, threshold: 0.1 });
   const [globalStatsRef, globalStatsInView] = useInView({ triggerOnce: true, threshold: 0.1 });
   const [worldRef, worldInView] = useInView({ triggerOnce: true, threshold: 0.1 });
-  const [footerRef, footerInView] = useInView({ triggerOnce: true, threshold: 0.1 });
-  // Note: carouselRef removed as carousel animation is handled by CSS on active slide
+  // Note: Footer ref is now inside the Footer component
 
   useEffect(() => {
     if (!isLoggedIn || !user?.firebaseKey) {
       setServiceRegistrations(null);
       return;
     }
-
     const clientRegRef = ref(database, `clients/${user.firebaseKey}/serviceRegistrations`);
-
-    // Optional: use child listeners if you expect frequent small updates
+    
     const handleAdd = onChildAdded(clientRegRef, (snapshot) => {
-      setServiceRegistrations(prev => ({
-        ...(prev || {}),
-        [snapshot.key]: snapshot.val(),
-      }));
+      setServiceRegistrations(prev => ({ ...(prev || {}), [snapshot.key]: snapshot.val() }));
     });
-
     const handleChange = onChildChanged(clientRegRef, (snapshot) => {
-      setServiceRegistrations(prev => ({
-        ...(prev || {}),
-        [snapshot.key]: snapshot.val(),
-      }));
+      setServiceRegistrations(prev => ({ ...(prev || {}), [snapshot.key]: snapshot.val() }));
     });
-
     const handleRemove = onChildRemoved(clientRegRef, (snapshot) => {
       setServiceRegistrations(prev => {
         const updated = { ...(prev || {}) };
@@ -134,10 +103,7 @@ const LandingPage = () => {
       });
     });
 
-    // Cleanup
-    return () => {
-      off(clientRegRef); // remove all three listeners
-    };
+    return () => off(clientRegRef);
   }, [isLoggedIn, user?.firebaseKey]);
 
   const offices = [
@@ -265,766 +231,577 @@ const LandingPage = () => {
   ];
 
 
-  
   const handleBookServiceClick = (item) => {
     if (isLoggedIn) {
-      // User is logged in, proceed to the form
       if (item.isJobSupport) {
         navigate("/services/job-contact-form");
       } else {
         navigate('/services/servicesForm', { state: { service: item.service } });
       }
     } else {
-      // User is not logged in, redirect to the login page
-      // You can also pass the intended destination to redirect back after login
       navigate('/login', { state: { from: window.location.pathname } });
     }
   };
 
-  // In LandingPage.jsx, replace the existing useMemo hook
   const activeServices = useMemo(() => {
-    // Now we check our new state variable
-    if (!serviceRegistrations) {
-      return [];
-    }
-    const services = Object.values(serviceRegistrations).map(reg =>
-      (reg.service || '').trim().toLowerCase()
-    );
+    if (!serviceRegistrations) return [];
+    const services = Object.values(serviceRegistrations).map(reg => (reg.service || '').trim().toLowerCase());
     return services;
   }, [serviceRegistrations]);
 
   return (
     <>
       <style>{`
-                /* ... (Internal CSS Styles including the animation keyframes) ... */
-                /* Omitted for brevity, assuming the animation styles are present */
-                
-                :root {
-                    /* Light Mode */
-                    --primary-color: #6D28D9; /* Purple */
-                    --primary-light: #EDE9FE; /* Light Purple */
-                    --secondary-color: #1F2937; /* Dark Gray/Black */
-                    --text-color: #4B5563;
-                    --light-gray: #F9FAFB;
-                    --white: #FFFFFF;
-                    --border-color: #E5E7EB;
-                    /* --- NEW: Grid Background Color --- */
-                    --grid-line-color: rgba(109, 40, 217, 0.1); /* 10% opacity of primary color */
-                }
+            :root {
+                /* Light Mode */
+                --primary-color: #6D28D9; /* Purple */
+                --primary-light: #EDE9FE; /* Light Purple */
+                --secondary-color: #1F2937; /* Dark Gray/Black */
+                --text-color: #4B5563;
+                --light-gray: #F9FAFB;
+                --white: #FFFFFF;
+                --border-color: #E5E7EB;
+                /* --- Grid Background Color --- */
+                --grid-line-color: rgba(109, 40, 217, 0.1); 
+            }
 
-                .dark-mode-active {
-                    /* Dark Mode Overrides */
-                    --primary-light: #4c1d95; /* Darker primary light */
-                    --secondary-color: #F9FAFB; /* White text */
-                    --text-color: #D1D5DB; /* Light gray text */
-                    --light-gray: #1F2937; /* Dark background for sections */
-                    --white: #111827; /* Very dark background */
-                    --border-color: #374151; /* Darker border */
-                     /* --- NEW: Dark Mode Grid Background Color --- */
-                    --grid-line-color: rgba(249, 250, 251, 0.05); /* 5% opacity of light gray */
-                }
+            .dark-mode-active {
+                /* Dark Mode Overrides */
+                --primary-light: #4c1d95; 
+                --secondary-color: #F9FAFB; 
+                --text-color: #D1D5DB; 
+                --light-gray: #1F2937; 
+                --white: #111827; 
+                --border-color: #374151; 
+                --grid-line-color: rgba(249, 250, 251, 0.05); 
+            }
 
-                .landing-page-modern {
-                    font-family: 'Inter', sans-serif;
-                    background-color: var(--white);
-                    color: var(--text-color);
-                    overflow-x: hidden;
-                    transition: background-color 0.3s, color 0.3s; /* Smooth transition */
-                }
+            .landing-page-modern {
+                font-family: 'Inter', sans-serif;
+                background-color: var(--white);
+                color: var(--text-color);
+                overflow-x: hidden;
+                transition: background-color 0.3s, color 0.3s;
+            }
 
-                /* New Hero Carousel Section */
-                .hero-carousel-section {
-                    position: relative;
-  overflow: hidden;
-  padding: 60px 0;
-  background-color: #f1f1f1ff;
+            /* New Hero Carousel Section */
+            .hero-carousel-section {
+                position: relative;
+                overflow: hidden;
+                padding: 60px 0;
+                background-color: #f1f1f1ff;
+                background-image:
+                    linear-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+                background-size: 23px 23px; 
+            }
 
-  /* Subtle grid pattern */
-  background-image:
-    linear-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
-  background-size: 23px 23px; /* smaller = denser grid */
-                }
+            .hero-carousel-section::before,
+            .hero-carousel-section::after {
+                content: '';
+                position: absolute;
+                width: 300px;
+                height: 300px;
+                border-radius: 50%;
+                filter: blur(120px);
+                z-index: 0;
+            }
 
-                .hero-carousel-section::before,
-.hero-carousel-section::after {
-  content: '';
-  position: absolute;
-  width: 300px;
-  height: 300px;
-  border-radius: 50%;
-  filter: blur(120px);
-  z-index: 0;
-}
+            .hero-carousel-section::before {
+                top: -60px;
+                left: -60px;
+                background: radial-gradient(circle, rgba(120, 90, 255, 0.25), transparent 70%);
+            }
 
-.hero-carousel-section::before {
-  top: -60px;
-  left: -60px;
-  background: radial-gradient(circle, rgba(120, 90, 255, 0.25), transparent 70%);
-}
+            .hero-carousel-section::after {
+                bottom: -80px;
+                right: -80px;
+                background: radial-gradient(circle, rgba(0, 180, 255, 0.25), transparent 70%);
+            }
 
-.hero-carousel-section::after {
-  bottom: -80px;
-  right: -80px;
-  background: radial-gradient(circle, rgba(0, 180, 255, 0.25), transparent 70%);
-}
+            .hero-content-wrapper { position: relative; z-index: 1; }
+            
+            .dark-mode-active .hero-carousel-section {
+                background: 
+                    radial-gradient(circle at top left, rgba(76, 29, 149, 0.4), transparent 40%),
+                    radial-gradient(circle at bottom right, rgba(28, 11, 19, 0.4), transparent 50%),
+                    repeating-conic-gradient(from 0deg, var(--grid-line-color) 0deg 0.001deg, transparent 0.001deg 90deg),
+                    var(--white); 
+                background-size: 50px 50px; 
+                background-position: 0 0, 0 0, 0 0, 0 0; 
+                background-blend-mode: color-dodge, normal, normal, normal;
+            }
 
-.hero-content-wrapper {
-  position: relative;
-  z-index: 1;
-}
-                
-                .dark-mode-active .hero-carousel-section {
-                     /* Dark Mode Hero Background */
-                    background: 
-                        /* 1. Radial Gradients (The spots) */
-                        radial-gradient(circle at top left, rgba(76, 29, 149, 0.4), transparent 40%),
-                        radial-gradient(circle at bottom right, rgba(28, 11, 19, 0.4), transparent 50%),
-                        
-                        /* 2. Grid Pattern (Dark Mode) */
-                        repeating-conic-gradient(
-                            from 0deg, 
-                            var(--grid-line-color) 0deg 0.001deg,
-                            transparent 0.001deg 90deg
-                        ),
-                        /* Base color in dark mode */
-                        var(--white); 
-                    background-size: 50px 50px; 
-                    background-position: 0 0, 0 0, 0 0, 0 0; 
-                    background-blend-mode: color-dodge, normal, normal, normal;
-                }
-                /* --- END NEW BACKGROUND --- */
+            .hero-carousel-section .carousel,
+            .hero-carousel-section .carousel-inner,
+            .hero-carousel-section .carousel-item { height: 100%; }
 
+            .carousel-slide-content { min-height: 80vh; display: flex; align-items: center; }
+            
+            .hero-carousel-text h1 {
+                font-size: 3.2rem;
+                font-weight: 800;
+                color: var(--secondary-color);
+                line-height: 1.2;
+                margin-bottom: 1.5rem;
+            }
+            .hero-carousel-text h1 span { color: var(--primary-color); }
 
-                .hero-carousel-section .carousel,
-                .hero-carousel-section .carousel-inner,
-                .hero-carousel-section .carousel-item {
-                    height: 100%;
-                }
+            .hero-carousel-text p {
+                font-size: 1.125rem;
+                line-height: 1.6;
+                margin-bottom: 1.5rem;
+                max-width: 500px;
+                color: var(--text-color);
+            }
+            .description { margin-left:70px; }
 
-                .carousel-slide-content {
-                    min-height: 80vh;
-                    display: flex;
-                    align-items: center;
-                }
-                
-                .hero-carousel-text h1 {
-                    font-size: 3.2rem;
-                    font-weight: 800;
-                    color: var(--secondary-color);
-                    line-height: 1.2;
-                    margin-bottom: 1.5rem;
-                }
-                .hero-carousel-text h1 span {
-                    color: var(--primary-color);
-                }
+            .hero-carousel-text > *, 
+            .hero-carousel-image-wrapper,
+            .hero-carousel-buttons,
+            .feature-pills,
+            .hero-stats,
+            .pill-badge { opacity: 0; transform: translateY(20px); }
 
-                .hero-carousel-text p {
-                    font-size: 1.125rem;
-                    line-height: 1.6;
-                    margin-bottom: 1.5rem;
-                    max-width: 500px;
-                    color: var(--text-color); /* Ensure paragraph text uses text color */
-                }
-                      .description {
-                   margin-left:70px;
-                }
-                /* === PASTE THIS FIX HERE (Before the animation classes) === */
-        .hero-carousel-text > *, 
-        .hero-carousel-image-wrapper,
-        .hero-carousel-buttons,
-        .feature-pills,
-        .hero-stats,
-        .pill-badge {
-            opacity: 0; 
-            transform: translateY(20px);
-        }
-                .feature-pills {
-                    display: flex;
-                    gap: 0.75rem;
-                    flex-wrap: wrap;
-                    margin-bottom: 2rem;
-                    margin-left:70px;
-                }
+            .feature-pills {
+                display: flex;
+                gap: 0.75rem;
+                flex-wrap: wrap;
+                margin-bottom: 2rem;
+                margin-left:70px;
+            }
 
-                .feature-pills span {
-                    background-color: var(--white);
-                    border: 1px solid var(--border-color);
-                    padding: 0.3rem 0.8rem;
-                    border-radius: 9999px;
-                    font-size: 0.875rem;
-                    font-weight: 500;
-                    color: var(--text-color); /* Ensure text in pills is readable */
-                }
-                
-                .hero-carousel-buttons {
+            .feature-pills span {
+                background-color: var(--white);
+                border: 1px solid var(--border-color);
+                padding: 0.3rem 0.8rem;
+                border-radius: 9999px;
+                font-size: 0.875rem;
+                font-weight: 500;
+                color: var(--text-color);
+            }
+            
+            .hero-carousel-buttons {
                 margin-left:150px;
-                    display: flex;
-                    gap: 1rem;
-                    margin-bottom: 3rem;
-                }
+                display: flex;
+                gap: 1rem;
+                margin-bottom: 3rem;
+            }
 
-                .hero-carousel-image-wrapper {
-                   position: relative;
-                }
-                
-                .hero-carousel-image {
-                    width: 80%;
-                    height:70%;
-                    border-radius: 1.5rem;
-                    aspect-ratio: 1/1;
-                    object-fit: cover;
-                }
+            .hero-carousel-image-wrapper { position: relative; }
+            
+            .hero-carousel-image {
+                width: 80%;
+                height:70%;
+                border-radius: 1.5rem;
+                aspect-ratio: 1/1;
+                object-fit: cover;
+            }
 
-                .hero-carousel-section .carousel-indicators {
-            /* Move the indicators below the carousel frame */
-            bottom: -1.5rem; 
-        }
+            .hero-carousel-section .carousel-indicators { bottom: -1.5rem; }
 
-        .hero-carousel-section .carousel-indicators [data-bs-target] {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background-color: #D1C4E9; /* Lighter purple for inactive dots */
-            border: none;
-            opacity: 0.7;
-            transition: opacity 0.3s ease;
-        }
+            .hero-carousel-section .carousel-indicators [data-bs-target] {
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background-color: #D1C4E9;
+                border: none;
+                opacity: 0.7;
+                transition: opacity 0.3s ease;
+            }
 
-        .hero-carousel-section .carousel-indicators .active {
-            background-color: var(--primary-color); /* Use your primary purple for the active dot */
-            opacity: 1;
-        }
+            .hero-carousel-section .carousel-indicators .active {
+                background-color: var(--primary-color);
+                opacity: 1;
+            }
 
-                .code-snippet-overlay {
-                    position: absolute;
-                    top: 2rem;
-                    left: -2rem;
-                    background-color: rgba(29, 39, 55, 0.8);
-                    color: #A5B4FC;
-                    padding: 1rem;
-                    border-radius: 0.75rem;
-                    font-family: 'Fira Code', monospace;
-                    font-size: 0.8rem;
-                    backdrop-filter: blur(4px);
-                    max-width: 250px;
-                    border: 1px solid rgba(255, 255, 255, 0.1);
-                }
-                
-                 .carousel-indicators [data-bs-target] {
-                    background-color: var(--primary-color);
-                    width: 10px;
-                    height: 10px;
-                    border-radius: 50%;
-                }
+            /* Services Section */
+            .services-section-modern {
+                padding: 6rem 0;
+                background-color: var(--light-gray);
+            }
 
+            .services-section-modern .service-card-modern .flip-in-item {
+                animation: flipIn 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+                opacity: 0;
+                transform: rotateY(-90deg) scale(0.8);
+                transform-origin: left center;
+            }
+            .services-section-modern .service-card-modern .flip-in-item.active {
+                opacity: 1;
+                transform: rotateY(0deg) scale(1);
+            }
+            
+            .dark-mode-active .services-section-modern { background-color: var(--light-gray); }
 
-                /* Services Section */
-                .services-section-modern {
-                    padding: 6rem 0;
-                    background-color: var(--light-gray);
-                }
+            .section-header { text-align: center; margin-bottom: 4rem; }
 
-                  .services-section-modern .service-card-modern .flip-in-item {
-    animation: flipIn 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
-    /* Set the initial state for the animation */
-    opacity: 0;
-    transform: rotateY(-90deg) scale(0.8);
-    transform-origin: left center;
-  }
-      .services-section-modern .service-card-modern .flip-in-item.active {
-    opacity: 1;
-    transform: rotateY(0deg) scale(1);
-  }
-                
-                .dark-mode-active .services-section-modern {
-                    background-color: var(--light-gray); /* Already defined as dark background in dark mode */
-                }
+            .section-header h2 {
+                font-size: 2.5rem;
+                font-weight: 700;
+                color: var(--secondary-color);
+                margin-bottom: 1rem;
+            }
 
-                .section-header {
-                    text-align: center;
-                    margin-bottom: 4rem;
-                }
+            .section-header p {
+                font-size: 1.125rem;
+                max-width: 600px;
+                margin: 0 auto;
+                color: var(--text-color);
+            }
+            .icon-container {
+                position: absolute;
+                top: 15px;
+                left: 15px;
+                width: 36px;
+                height: 36px;
+                border-radius: 8px;
+                background-color: #e0f2fe; 
+                color: #0ea5e9;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 1;
+            }
 
-                .section-header h2 {
-                    font-size: 2.5rem;
-                    font-weight: 700;
-                    color: var(--secondary-color);
-                    margin-bottom: 1rem;
-                }
+            .service-card-modern {
+                background-color: var(--white);
+                border: 1px solid var(--border-color);
+                border-radius: 1rem;
+                transition: transform 0.3s, box-shadow 0.3s;
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+            }
+            .service-card-modern:hover {
+                transform: translateY(-2px);
+                box-shadow: 1px 1px 1px 1px rgba(0,0,0,0.1), 5px -5px 5px 5px rgba(0, 0, 0, 0.23);
+                transition: transform 0.2s ease;
+            }
+            .service-card-modern:hover .service-card-body h3 { color: #3b82f6; }
 
-                .section-header p {
-                    font-size: 1.125rem;
-                    max-width: 600px;
-                    margin: 0 auto;
-                    color: var(--text-color); /* Ensure paragraph text uses text color */
-                }
-                    .icon-container {
-  position: absolute;
-  top: 15px;
-  left: 15px;
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  background-color: #e0f2fe; /* Light blue background */
-  color: #0ea5e9; /* Blue text */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1;
-}
+            .service-card-body {
+                padding: 1.5rem;
+                display: flex;
+                flex-direction: column;
+                flex-grow: 1; 
+            }
 
-                .service-card-modern {
-  background-color: var(--white);
-  border: 1px solid var(--border-color);
-  border-radius: 1rem;
-  transition: transform 0.3s, box-shadow 0.3s;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-                }
-                .service-card-modern:hover {
-                       transform: translateY(-2px);
-  box-shadow: 1px 1px 1px 1px rgba(0,0,0,0.1), 5px -5px 5px 5px rgba(0, 0, 0, 0.23);
-  transition: transform 0.2s ease;
-                }
-  .service-card-modern:hover .service-card-body h3 {
-  color: #3b82f6; /* Sky Blue */
-}
+            .dark-mode-active .service-card-modern:hover {
+                box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3), 0 4px 6px -2px rgba(0,0,0,0.2);
+            }
+            
+            .service-card-img {
+                width: 100%;
+                height: 200px;
+                object-fit: cover;
+                border-top-left-radius: 1rem;
+                border-top-right-radius: 1rem;
+            }
 
-.service-card-body {
-  padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  flex-grow: 1; /* Take up remaining space */
-}
+            .service-card-body h3 {
+                font-size: 1.25rem;
+                font-weight: 600;
+                color: var(--secondary-color);
+                margin-bottom: 1rem;
+            }
 
-                .dark-mode-active .service-card-modern:hover {
-                    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3), 0 4px 6px -2px rgba(0,0,0,0.2);
-                }
-                
-                .service-card-img {
-                    width: 100%;
-                    height: 200px;
-                    object-fit: cover;
-                    border-top-left-radius: 1rem;
-                    border-top-right-radius: 1rem;
-                }
+            .service-features {
+                list-style: none;
+                padding: 0;
+                margin-bottom: 1.5rem;
+                flex-grow: 1;
+            }
+            .service-features li {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                margin-bottom: 0.5rem;
+                color: var(--text-color);
+            }
+            .service-features li svg {
+                color: var(--primary-color);
+                flex-shrink: 0;
+            }
 
-                .service-card-body {
-                    padding: 1.5rem;
-                    display: flex;
-                    flex-direction: column;
-                    flex-grow: 1;
-                }
+            .leaflet-map {
+                filter: grayscale(20%) contrast(110%);
+                transition: transform 0.4s ease;
+            }
+            .leaflet-map:hover { transform: scale(1.01); }
 
-                .service-card-body h3 {
-                    font-size: 1.25rem;
-                    font-weight: 600;
-                    color: var(--secondary-color);
-                    margin-bottom: 1rem;
-                }
+            .learn-more-link {
+                color: #3b82f6; 
+                text-decoration: none;
+                font-weight: 500;
+                transition: color 0.3s, background-color 0.3s;
+                margin-top: auto;
+                padding: 5px 16px;
+                border: 2px solid #3b82f6; 
+                border-radius: 8px;
+                display: inline-block;
+                text-align: center;
+                width: 100%;
+            }
+            .learn-more-link:hover {
+                background-color: #3b82f6;
+                color: #ffffff;
+            }
 
-                .service-features {
-                    list-style: none;
-                    padding: 0;
-                    margin-bottom: 1.5rem;
-                    flex-grow: 1;
-                }
-                .service-features li {
-                    display: flex;
-                    align-items: center;
-                    gap: 0.5rem;
-                    margin-bottom: 0.5rem;
-                    color: var(--text-color);
-                }
-                .service-features li svg {
-                    color: var(--primary-color);
-                    flex-shrink: 0;
-                }
+            /* Global Stats Section */
+            .global-stats-section {
+                padding: 6rem 0;
+                background-color: var(--light-gray);
+                background-image: radial-gradient(circle at 10% 20%, rgba(190, 182, 224, 0.5), transparent 40%),
+                                    radial-gradient(circle at 80% 90%, rgba(184, 169, 250, 0.5), transparent 50%);
+            }
+            
+            .dark-mode-active .global-stats-section {
+                background-image: radial-gradient(circle at 10% 20%, rgba(76, 29, 149, 0.5), transparent 40%),
+                                    radial-gradient(circle at 80% 90%, rgba(76, 29, 149, 0.5), transparent 50%);
+            }
 
-                .leaflet-map {
-  filter: grayscale(20%) contrast(110%);
-  transition: transform 0.4s ease;
-}
-.leaflet-map:hover {
-  transform: scale(1.01);
-}
+            .stat-card {
+                text-align: center;
+                padding: 2rem;
+                border-radius: 1rem;
+                transition: transform 0.3s, box-shadow 0.3s;
+                height: 100%;
+            }
 
-                .learn-more-link {
-                    color: #3b82f6; /* Blue color */
-  text-decoration: none;
-  font-weight: 500;
-  transition: color 0.3s, background-color 0.3s;
-  margin-top: auto;
-  padding: 5px 16px;
-  border: 2px solid #3b82f6; /* Blue border */
-  border-radius: 8px;
-  display: inline-block;
-  text-align: center;
-  width: 100%;
-                }
-                .learn-more-link:hover {
-                   background-color: #3b82f6;
-  color: #ffffff;
-                }
+            .stat-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+            }
 
-                  /* Global Stats Section */
-                .global-stats-section {
-                    padding: 6rem 0;
-                    background-color: var(--light-gray);
-                    background-image: radial-gradient(circle at 10% 20%, rgba(190, 182, 224, 0.5), transparent 40%),
-                                      radial-gradient(circle at 80% 90%, rgba(184, 169, 250, 0.5), transparent 50%);
-                }
-                
-                .dark-mode-active .global-stats-section {
-                    background-image: radial-gradient(circle at 10% 20%, rgba(76, 29, 149, 0.5), transparent 40%),
-                                      radial-gradient(circle at 80% 90%, rgba(76, 29, 149, 0.5), transparent 50%);
-                }
+            .dark-mode-active .stat-card:hover {
+                box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3), 0 4px 6px -2px rgba(0,0,0,0.2);
+            }
 
-                .stat-card {
-                    text-align: center;
-                    // background-color: var(--light-gray);
-                    
-                    padding: 2rem;
-                    border-radius: 1rem;
-                    transition: transform 0.3s, box-shadow 0.3s;
-                    height: 100%;
-                }
+            .stat-icon-wrapper {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 64px;
+                height: 64px;
+                border-radius: 50%;
+                background-color: var(--white);
+                color: var(--primary-color);
+                margin-bottom: 1.5rem;
+            }
 
-                .stat-card:hover {
-                    transform: translateY(-5px);
-                    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
-                }
+            .stat-icon-wrapper svg { width: 32px; height: 32px; }
 
-                .dark-mode-active .stat-card:hover {
-                    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3), 0 4px 6px -2px rgba(0,0,0,0.2);
-                }
+            .stat-card h3 {
+                font-size: 2.25rem;
+                font-weight: 700;
+                color: var(--secondary-color);
+                margin-bottom: 0.5rem;
+            }
 
-                .stat-icon-wrapper {
-                    display: inline-flex;
-                    align-items: center;
+            .stat-card p {
+                font-size: 1rem;
+                color: var(--text-color);
+                margin-bottom: 0;
+            }
+
+            /* World Services Section */
+            .world-services-modern { padding: 6rem 0; }
+
+            .map-container-modern {
+                position: relative;
+                height: 500px;
+                border-radius: 1rem;
+                overflow: hidden;
+                box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            }
+
+            .map-img-modern {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+
+            .operate-overlay {
+                position: absolute;
+                top: 120px;
+                left: 20px;
+                width: 200px;
+                background: rgba(255, 255, 255, 0.95);
+                padding: 20px;
+                border-radius: 8px;
+                z-index: 10;
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+            }
+
+            .dark-mode-active .operate-overlay {
+                background: rgba(30, 41, 59, 0.95);
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            }
+            
+            .operate-overlay h3 { color: var(--secondary-color); }
+
+            .country-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+                gap: 10px;
+            }
+
+            .country-item {
+                padding: 8px 12px;
+                background-color: #f1f1f1;
+                border-radius: 5px;
+                text-align: center;
+                font-weight: 500;
+            }
+            
+            .dark-mode-active .country-item {
+                background-color: #4a5568;
+                color: #e2e8f0; 
+            }
+            
+            .pill-badge {
+                display: inline-block;
+                padding: 0.5rem 1rem;
+                background-color: var(--primary-light);
+                color: var(--primary-color);
+                border-radius: 9999px;
+                font-weight: 500;
+                font-size: 0.875rem;
+                margin-bottom: 1rem;
+            }
+
+            .btn-modern {
+                padding: 0.75rem 1.5rem;
+                border-radius: 1.5rem;
+                text-decoration: none;
+                font-weight: 500;
+                transition: all 0.3s;
+                border: 1px solid transparent;
+            }
+
+            .btn-primary-modern {
+                background-color: var(--primary-color);
+                color: var(--white);
+            }
+            .btn-primary-modern:hover {
+                background-color: #5B21B6;
+                color: var(--white);
+            }
+            
+            .btn-secondary-modern {
+                background-color: var(--white);
+                color: var(--text-color);
+                border: 1px solid var(--border-color);
+            }
+            .btn-secondary-modern:hover { background-color: var(--light-gray); }
+
+            .hero-stats {
+                display: flex;
+                gap: 2rem;
+                align-items: center;
+                margin-left:80px;
+            }
+
+            .stat-item {
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+            }
+
+            .stat-item .icon { color: #f59e0b; }
+
+            .stat-item .text strong {
+                display: block;
+                font-size: 1.25rem;
+                font-weight: 600;
+                color: var(--secondary-color);
+            }
+            .stat-item .text span {
+                font-size: 0.875rem;
+                color: var(--text-color);
+            }
+
+            .dark-mode-active body { background-color: var(--white); color: var(--text-color); }
+            .dark-mode-active .section-title, .dark-mode-active .section-header h2 { color: var(--secondary-color); }
+            .dark-mode-active .section-subtitle { color: var(--text-color); }
+
+            .map-overlay.light { background-color: rgba(0, 0, 0, 0.4); }
+            .dark-mode-active .map-overlay.light { background-color: rgba(0, 0, 0, 0.6); }
+
+            @keyframes slideInUp {
+                from { opacity: 0; transform: translateY(20px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+
+            @keyframes zoomIn {
+                from { opacity: 0; transform: scale(0.9); }
+                to { opacity: 1; transform: scale(1); }
+            }
+
+            .carousel-item.active .hero-carousel-text > * {
+                animation: slideInUp 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; 
+            }
+
+            .carousel-item.active .pill-badge { animation-delay: 0.1s; }
+            .carousel-item.active h1 { animation-delay: 0.2s; }
+            .carousel-item.active p { animation-delay: 0.3s; }
+            .carousel-item.active .feature-pills { animation-delay: 0.4s; }
+            .carousel-item.active .hero-carousel-buttons { animation-delay: 0.5s; }
+            .carousel-item.active .hero-stats { animation-delay: 0.6s; }
+
+            .carousel-item.active .hero-carousel-image-wrapper {
+                animation: zoomIn 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.3s both;
+            }
+
+            .fade-up-section { animation: fadeUp 0.8s ease-out forwards; }
+            @keyframes fadeUp {
+                from { transform: translateY(40px); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+            }
+
+            .slide-up-section { animation: slideUp 1s ease-out forwards; }
+            @keyframes slideUp {
+                from { transform: translateY(60px); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+            }
+
+            .fade-in-item { opacity: 0; }
+
+            .services-section-modern.fade-up-section .fade-in-item {
+                animation: fadeUp 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; 
+                opacity: 0;
+            }
+
+            .global-stats-section.fade-up-section .fade-in-item {
+                animation: fadeUp 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+                opacity: 0;
+            }
+
+            @media (max-width: 991px) {
+                .carousel-slide-content { flex-direction: column; text-align: center; }
+                .hero-carousel-text { margin-bottom: 3rem; }
+                .hero-carousel-buttons, .feature-pills, .hero-stats, .description, .hero-stats {
                     justify-content: center;
-                    width: 64px;
-                    height: 64px;
-                    border-radius: 50%;
-                    background-color: var(--white);
-                    color: var(--primary-color);
-                    margin-bottom: 1.5rem;
+                    margin-right:60px;
                 }
-
-                .stat-icon-wrapper svg {
-                    width: 32px;
-                    height: 32px;
+                    .hero-carousel-buttons { margin-left:60px; }   
+                .hero-carousel-image-wrapper { order: -1; }
+                .code-snippet-overlay {
+                    left: 50%;
+                    transform: translateX(-50%);
+                    top: -1rem;
                 }
-
-                .stat-card h3 {
-                    font-size: 2.25rem;
-                    font-weight: 700;
-                    color: var(--secondary-color);
-                    margin-bottom: 0.5rem;
-                }
-
-                .stat-card p {
-                    font-size: 1rem;
-                    color: var(--text-color);
-                    margin-bottom: 0;
-                }
-
-                /* World Services Section */
-                .world-services-modern {
-                    padding: 6rem 0;
-                }
-
-                .map-container-modern {
-                    position: relative;
-                    height: 500px;
-                    border-radius: 1rem;
-                    overflow: hidden;
-                    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-                }
-
-                .map-img-modern {
-                    width: 100%;
-                    height: 100%;
-                    object-fit: cover;
-                }
-
-                .operate-overlay {
-                    position: absolute;
-                    top: 120px;
-                    left: 20px;
-                    width: 200px;
-                    background: rgba(255, 255, 255, 0.95);
-                    padding: 20px;
-                    border-radius: 8px;
-                    z-index: 10;
-                    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
-                }
-
-                .dark-mode-active .operate-overlay {
-                    background: rgba(30, 41, 59, 0.95); /* Dark background with transparency */
-                    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-                }
-                
-                .operate-overlay h3 {
-                     color: var(--secondary-color); /* Ensure title is visible */
-                }
-
-                .country-grid {
-                    display: grid;
-                    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-                    gap: 10px;
-                }
-
-                .country-item {
-                    padding: 8px 12px;
-                    background-color: #f1f1f1;
-                    border-radius: 5px;
-                    text-align: center;
-                    font-weight: 500;
-                }
-                
-                .dark-mode-active .country-item {
-                    background-color: #4a5568; /* Darker background for items */
-                    color: #e2e8f0; /* Light text for items */
-                }
-                
-                .pill-badge {
-                    display: inline-block;
-                    padding: 0.5rem 1rem;
-                    background-color: var(--primary-light);
-                    color: var(--primary-color);
-                    border-radius: 9999px;
-                    font-weight: 500;
-                    font-size: 0.875rem;
-                    margin-bottom: 1rem;
-                }
-
-                .btn-modern {
-                    padding: 0.75rem 1.5rem;
-                    border-radius: 1.5rem;
-                    text-decoration: none;
-                    font-weight: 500;
-                    transition: all 0.3s;
-                    border: 1px solid transparent;
-                }
-
-                .btn-primary-modern {
-                    background-color: var(--primary-color);
-                    color: var(--white);
-                }
-                .btn-primary-modern:hover {
-                    background-color: #5B21B6;
-                    color: var(--white);
-                }
-                
-                .btn-secondary-modern {
-                    background-color: var(--white);
-                    color: var(--text-color);
-                    border: 1px solid var(--border-color);
-                }
-                .btn-secondary-modern:hover {
-                    background-color: var(--light-gray);
-                }
-
-                .hero-stats {
-                    display: flex;
-                    gap: 2rem;
-                    align-items: center;
-                    margin-left:80px;
-                }
-
-                .stat-item {
-                    display: flex;
-                    align-items: center;
-                    gap: 0.75rem;
-                }
-
-                .stat-item .icon {
-                    color: #f59e0b; /* yellow for star */
-                }
-
-                .stat-item .text strong {
-                    display: block;
-                    font-size: 1.25rem;
-                    font-weight: 600;
-                    color: var(--secondary-color);
-                }
-                .stat-item .text span {
-                    font-size: 0.875rem;
-                    color: var(--text-color);
-                }
-
-                /* Footer */
-                .footer-modern {
-                    text-align: center;
-                    padding: 2rem 0;
-                    background-color: var(--secondary-color);
-                    color: var(--light-gray);
-                }
-                .footer-modern a {
-                    color: var(--white);
-                    text-decoration: none;
-                    margin: 0 1rem;
-                    transition: color 0.3s;
-                }
-                .footer-modern a:hover {
-                    color: var(--primary-light);
-                }
-
-                /* --- General Dark Mode Overrides (for existing small styles) --- */
-                .dark-mode-active body { background-color: var(--white); color: var(--text-color); }
-                .dark-mode-active .section-title, .dark-mode-active .section-header h2 { color: var(--secondary-color); }
-                .dark-mode-active .section-subtitle { color: var(--text-color); }
-
-                /* Map Overlay adjustment for Dark Mode */
-                .map-overlay.light {
-                    background-color: rgba(0, 0, 0, 0.4); 
-                }
-                .dark-mode-active .map-overlay.light {
-                    /* Change overlay to a lighter color for better contrast with dark map tiles (if using dark tiles) 
-                       Keeping it dark for now as the tile layer is OSM default (light) */
-                     background-color: rgba(0, 0, 0, 0.6);
-                }
-
-                /* Fallback for the old map overlay class if still in use */
-                .map-overlay.dark {
-                     background-color: rgba(255, 255, 255, 0.3); /* Light overlay for dark mode */
-                }
-                
-                @keyframes slideInUp {
-                    from {
-                        opacity: 0;
-                        transform: translateY(20px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-                }
-
-                @keyframes zoomIn {
-                    from {
-                        opacity: 0;
-                        transform: scale(0.9);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: scale(1);
-                    }
-                }
-
-                /* Animation for the Active Carousel Slide Content */
-                .carousel-item.active .hero-carousel-text > * {
-                    /* Apply slide-up animation to all direct children of hero-carousel-text */
-                    animation: slideInUp 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; /* Ease-in-out curve */
-                }
-
-                /* Stagger the animation timing for text elements */
-                .carousel-item.active .pill-badge {
-                    animation-delay: 0.1s;
-                }
-                .carousel-item.active h1 {
-                    animation-delay: 0.2s;
-                }
-                .carousel-item.active p {
-                    animation-delay: 0.3s;
-                }
-                .carousel-item.active .feature-pills {
-                    animation-delay: 0.4s;
-                }
-                .carousel-item.active .hero-carousel-buttons {
-                    animation-delay: 0.5s;
-                }
-                .carousel-item.active .hero-stats {
-                    animation-delay: 0.6s;
-                }
-
-                /* Animation for the Image Wrapper */
-                .carousel-item.active .hero-carousel-image-wrapper {
-                    animation: zoomIn 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.3s both;
-                }
-
-                /* Global Section Animations (used by useInView hooks) */
-                /* The section itself fades in quickly */
-                .fade-up-section {
-                    animation: fadeUp 0.8s ease-out forwards;
-                }
-                @keyframes fadeUp {
-                    from { transform: translateY(40px); opacity: 0; }
-                    to { transform: translateY(0); opacity: 1; }
-                }
-
-                .slide-up-section {
-                    animation: slideUp 1s ease-out forwards;
-                }
-                @keyframes slideUp {
-                    from { transform: translateY(60px); opacity: 0; }
-                    to { transform: translateY(0); opacity: 1; }
-                }
-                /* End Global Section Animations */
-
-                /* --- NEW: Staggered Animation for Child Elements --- */
-                .fade-in-item {
-                    opacity: 0; /* Start invisible */
-                    /* Note: The animation itself is applied by the parent section and inline style */
-                }
-
-                /* Apply staggered animation to children of Services Section */
-                .services-section-modern.fade-up-section .fade-in-item {
-                    animation: fadeUp 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; /* Smoother curve */
-                    opacity: 0; /* Ensures animation runs every time */
-                }
-
-                /* Apply staggered animation to children of Global Stats Section */
-                .global-stats-section.fade-up-section .fade-in-item {
-                    animation: fadeUp 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-                    opacity: 0;
-                }
-                /* --- END NEW CSS --- */
-
-
-                /* Responsive Styles */
-                @media (max-width: 991px) {
-                    .carousel-slide-content {
-                        flex-direction: column;
-                        text-align: center;
-                    }
-                    .hero-carousel-text {
-                        margin-bottom: 3rem;
-                    }
-                    .hero-carousel-buttons, .feature-pills, .hero-stats, .description, .hero-stats {
-                        justify-content: center;
-                        margin-right:60px;
-                    }
-                     .hero-carousel-buttons {
-                       margin-left:60px;
-                     }   
-                    .hero-carousel-image-wrapper {
-                        order: -1;
-                    }
-                    .code-snippet-overlay {
-                        left: 50%;
-                        transform: translateX(-50%);
-                        top: -1rem;
-                    }
-                }
-                      @keyframes flipIn {
-    from {
-      opacity: 0;
-      transform: rotateY(-90deg) scale(0.8);
-      transform-origin: left center;
-    }
-    to {
-      opacity: 1;
-      transform: rotateY(0deg) scale(1);
-      transform-origin: left center;
-    }
-  }
-            `}</style>
+            }
+            @keyframes flipIn {
+                from { opacity: 0; transform: rotateY(-90deg) scale(0.8); transform-origin: left center; }
+                to { opacity: 1; transform: rotateY(0deg) scale(1); transform-origin: left center; }
+            }
+      `}</style>
+      
       <div className={`landing-page-modern ${isDarkMode ? 'dark-mode-active' : ''}`}>
-         <CustomNavbar />
+        <CustomNavbar />
+        
         {/* Hero Section */}
         <section className="hero-carousel-section">
           <Container>
@@ -1044,74 +821,67 @@ const LandingPage = () => {
                         </div>
                     <div className="hero-carousel-buttons">
                           {(() => {
-                            // Standardize the service name from the carousel item for a reliable comparison
                             const serviceToCheck = item.isJobSupport 
                               ? 'job supporting' 
                               : (item.service || '').trim().toLowerCase();
 
-                            // DEBUG: Check what service name is being compared on each slide
-
                             const isServiceActive = activeServices.includes(serviceToCheck);
 
                             if (isServiceActive) {
-                              // If the service is active, show "Your Dashboard"
                               return (
                                 <Link to="/clientdashboard" className="btn-modern btn-primary-modern" style={{
-      marginTop: '15px',
-      padding: '10px 15px',
-      borderRadius: '6px',
-      fontWeight: '600',
-      cursor: 'pointer',
-      transition: 'transform 0.2s',
-      alignSelf: 'flex-start',
-    }}>
+                                    marginTop: '15px',
+                                    padding: '10px 15px',
+                                    borderRadius: '6px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    transition: 'transform 0.2s',
+                                    alignSelf: 'flex-start',
+                                    }}>
                                   Your Dashboard
                                 </Link>
                               );
                             } else {
-                              // Otherwise, show "Book a Service"
                               return (
                                 <div onClick={() => handleBookServiceClick(item)} className="btn-modern btn-primary-modern" style={{
-      marginTop: '15px',
-      padding: '10px 15px',
-      borderRadius: '6px',
-      fontWeight: '600',
-      cursor: 'pointer',
-      transition: 'background-color 0.2s, color 0.2s',
-      alignSelf: 'flex-start',
-      // New styles for "Book a Service" button
-      background: 'linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%)', // Blue to Purple gradient
-      color: '#ffffff', // White text
-      border: 'none',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px',
-    }}  >
+                                    marginTop: '15px',
+                                    padding: '10px 15px',
+                                    borderRadius: '6px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    transition: 'background-color 0.2s, color 0.2s',
+                                    alignSelf: 'flex-start',
+                                    background: 'linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%)', 
+                                    color: '#ffffff', 
+                                    border: 'none',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    }}  >
                                   Book a Service
                                 </div>
                               );
                             }
                           })()}
                           <Link to={item.path} className="btn-modern btn-secondary-modern" style={{
-    marginTop: '15px',
-    padding: '10px 15px',
-    borderRadius: '6px',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'background-color 0.2s, color 0.2s',
-    alignSelf: 'flex-start',
-    // New styles for "Learn More" button
-    background: 'white',
-    color: '#6b7280', // Gray text
-    border: '1px solid #d1d5db', // Light gray border
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-  }}>
-     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M18 12L12 6v12z"></path>
-  </svg>
-    Learn More</Link>
+                                marginTop: '15px',
+                                padding: '10px 15px',
+                                borderRadius: '6px',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                transition: 'background-color 0.2s, color 0.2s',
+                                alignSelf: 'flex-start',
+                                background: 'white',
+                                color: '#6b7280', 
+                                border: '1px solid #d1d5db', 
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                            }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M18 12L12 6v12z"></path>
+                            </svg>
+                                Learn More</Link>
                         </div>
                         <div className="hero-stats">
                           <div className="stat-item"><div className="icon"><StarIcon /></div><div className="text"><strong>{item.stats.rating}</strong><span>Client Rating</span></div></div>
@@ -1134,99 +904,92 @@ const LandingPage = () => {
           </Container>
         </section>
 
-        {/* Services Section - ANIMATED with STAGGERED CARDS */}
+        {/* Services Section */}
         <section 
-  ref={servicesRef} 
-  className={`services-section-modern ${servicesInView ? 'fade-up-section' : ''}`}
-  // Initial opacity 0 prevents content from flashing before the animation starts
-  style={{ opacity: servicesInView ? 1 : 0 }} 
->
-  <Container>
-    <div className="section-header">
-      <span className="pill-badge">Our Services</span>
-      <h2 style={{fontSize:'30px'}}>Comprehensive Tech Solutions</h2>
-      <p>From idea to execution, we provide end-to-end technology services that fuel your growth and help you stay ahead of the curve.</p>
-    </div>
-    <Row className="gy-4">
-      {servicesData.map((service, index) => (
-        <Col lg={4} md={6} key={index}>
-          <div 
-            className={`service-card-modern fade-in-item`} // Apply new class
-            style={{ 
-                // Stagger the cards based on their index
-                animationDelay: servicesInView ? `${0.1 + index * 0.1}s` : '0s', 
-            }}
-          >
-            {/* Image */}
-            <img src={service.image} alt={service.title} className="service-card-img" />
-            {/* Icon Container (Top Left Corner) */}
-            <div className="icon-container">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                <circle cx="9" cy="7" r="4"></circle>
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-              </svg>
+          ref={servicesRef} 
+          className={`services-section-modern ${servicesInView ? 'fade-up-section' : ''}`}
+          style={{ opacity: servicesInView ? 1 : 0 }} 
+        >
+          <Container>
+            <div className="section-header">
+              <span className="pill-badge">Our Services</span>
+              <h2 style={{fontSize:'30px'}}>Comprehensive Tech Solutions</h2>
+              <p>From idea to execution, we provide end-to-end technology services that fuel your growth and help you stay ahead of the curve.</p>
             </div>
-            {/* Card Body */}
-            <div className="service-card-body">
-              <h3>{service.title}</h3>
-              <ul className="service-features">
-                <p>{service.description}</p>
-                {service.features.map((feature, fIndex) => (
-                  <li key={fIndex}><CheckCircleIcon /> {feature}</li>
-                ))}
-              </ul>
-              <Link to={service.path} className="learn-more-link">Learn More →</Link>
-            </div>
-          </div>
-        </Col>
-      ))}
-    </Row>
-  </Container>
-</section>
+            <Row className="gy-4">
+              {servicesData.map((service, index) => (
+                <Col lg={4} md={6} key={index}>
+                  <div 
+                    className={`service-card-modern fade-in-item`} 
+                    style={{ 
+                        animationDelay: servicesInView ? `${0.1 + index * 0.1}s` : '0s', 
+                    }}
+                  >
+                    <img src={service.image} alt={service.title} className="service-card-img" />
+                    <div className="icon-container">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                      </svg>
+                    </div>
+                    <div className="service-card-body">
+                      <h3>{service.title}</h3>
+                      <ul className="service-features">
+                        <p>{service.description}</p>
+                        {service.features.map((feature, fIndex) => (
+                          <li key={fIndex}><CheckCircleIcon /> {feature}</li>
+                        ))}
+                      </ul>
+                      <Link to={service.path} className="learn-more-link">Learn More →</Link>
+                    </div>
+                  </div>
+                </Col>
+              ))}
+            </Row>
+          </Container>
+        </section>
 
-        {/* Global Stats Section - ANIMATED with STAGGERED CARDS */}
+        {/* Global Stats Section */}
         <section 
           ref={globalStatsRef} 
           className={`global-stats-section ${globalStatsInView ? 'fade-up-section' : ''}`}
-          // Initial opacity 0 prevents content from flashing before the animation starts
           style={{ opacity: globalStatsInView ? 1 : 0 }}
         >
-                    <Container>
-                        <div className="section-header">
-                            <span className="pill-badge">Global Reach</span>
-                            <h2 style={{fontSize:'30px'}}>Delivering Services Across The Globe</h2>
-                            <p>With a worldwide presence and 24/7 support, we provide consistent, high-quality services to clients across all continents.</p>
-                        </div>
-                        <Row className="justify-content-center gy-4">
-                            {[
-                                { value: '1,900+', text: 'Global Clients', icon: UsersIcon },
-                                { value: '50+', text: 'Countries', icon: CountriesIcon },
-                                { value: '24/7', text: 'Support', icon: ClockIcon },
-                                { value: '6', text: 'Continents', icon: ContinentsIcon },
-                            ].map((stat, index) => (
-                                <Col md={3} sm={6} key={index} 
-                                    className={`fade-in-item`} // Apply new class
-                                    style={{
-                                        // Stagger the stat cards based on their index
-                                        animationDelay: globalStatsInView ? `${0.2 + index * 0.15}s` : '0s',
-                                    }}
-                                >
-                                    <div className="stat-card">
-                                        <div className="stat-icon-wrapper">
-                                            <stat.icon />
-                                        </div>
-                                        <h3>{stat.value}</h3>
-                                        <p>{stat.text}</p>
-                                    </div>
-                                </Col>
-                            ))}
-                        </Row>
-                    </Container>
-                </section>
+            <Container>
+                <div className="section-header">
+                    <span className="pill-badge">Global Reach</span>
+                    <h2 style={{fontSize:'30px'}}>Delivering Services Across The Globe</h2>
+                    <p>With a worldwide presence and 24/7 support, we provide consistent, high-quality services to clients across all continents.</p>
+                </div>
+                <Row className="justify-content-center gy-4">
+                    {[
+                        { value: '1,900+', text: 'Global Clients', icon: UsersIcon },
+                        { value: '50+', text: 'Countries', icon: CountriesIcon },
+                        { value: '24/7', text: 'Support', icon: ClockIcon },
+                        { value: '6', text: 'Continents', icon: ContinentsIcon },
+                    ].map((stat, index) => (
+                        <Col md={3} sm={6} key={index} 
+                            className={`fade-in-item`} 
+                            style={{
+                                animationDelay: globalStatsInView ? `${0.2 + index * 0.15}s` : '0s',
+                            }}
+                        >
+                            <div className="stat-card">
+                                <div className="stat-icon-wrapper">
+                                    <stat.icon />
+                                </div>
+                                <h3>{stat.value}</h3>
+                                <p>{stat.text}</p>
+                            </div>
+                        </Col>
+                    ))}
+                </Row>
+            </Container>
+        </section>
 
-        {/* World Services Section - ANIMATED (using existing ref) */}
+        {/* World Services Section */}
         <section
           ref={worldRef}
           className={`world-services-modern ${worldInView ? 'slide-up-section' : ''}`}
@@ -1241,14 +1004,10 @@ const LandingPage = () => {
                 scrollWheelZoom={false}
                 className="leaflet-map"
               >
-                {/* * MapRefresher is essential for correctly rendering the map when the section
-                  * animates into view (since the container's size might change during animation).
-                  */}
                 <MapRefresher worldInView={worldInView} />
 
                 <TileLayer
                   attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
-                  // Using dark tiles as per your current setup
                   url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.jpeg"
                 />
                 {offices.map((office, index) => (
@@ -1273,84 +1032,9 @@ const LandingPage = () => {
           </Container>
         </section>
 
-  {/* Footer - ANIMATED */}
-<footer 
-    ref={footerRef}
-    className={`py-5 ${footerInView ? 'fade-up-section' : ''}`}
-    style={{ 
-        // 1. Apply the exact background logic from Global Stats section
-        backgroundColor: 'var(--light-gray)',
-        backgroundImage: isDarkMode 
-            ? 'radial-gradient(circle at 10% 20%, rgba(76, 29, 149, 0.5), transparent 40%), radial-gradient(circle at 80% 90%, rgba(76, 29, 149, 0.5), transparent 50%)'
-            : 'radial-gradient(circle at 10% 20%, rgba(190, 182, 224, 0.5), transparent 40%), radial-gradient(circle at 80% 90%, rgba(184, 169, 250, 0.5), transparent 50%)',
-        opacity: footerInView ? 1 : 0, 
-        transitionDuration: '1s',
-        color: 'var(--text-color)' // Ensure base text color matches theme
-    }}
->
-  <Container>
-    <Row className="g-4">
-      <Col md={4}>
-        {/* Headings use secondary-color (Dark in light mode, White in dark mode) */}
-        <h5 style={{ color: 'var(--secondary-color)', fontWeight: 'bold' }}>TechXplorers</h5>
-        <p style={{ color: 'var(--text-color)', fontSize: '0.9rem' }}>
-          Empowering businesses through innovative technology solutions. We deliver excellence in web analytics, project planning, and technical support to help you achieve your digital transformation goals.
-        </p>
-        <div className="d-flex social-icons mt-3">
-            <a href="https://www.instagram.com/techxplorers.pvt.ltd/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-color)', fontSize: '1.2rem' }} className="me-3">
-            <FaInstagram />
-          </a>
-          <a href="https://www.facebook.com/profile.php?id=61571029190090" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-color)', fontSize: '1.2rem' }} className="me-3">
-            <FaFacebookF />
-          </a>
-            <a href="https://x.com/techXplorers_" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-color)', fontSize: '1.2rem' }} className="me-3">
-            <FaTwitter />
-          </a>
-           <a href="https://www.linkedin.com/company/techxplorers-private-limited/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-color)', fontSize: '1.2rem' }}>
-            <FaLinkedinIn />
-          </a>
-        </div>
-      </Col>
-      <Col md={2}>
-        <h5 style={{ color: 'var(--secondary-color)', fontWeight: 'bold' }}>Services</h5>
-        <ul className="list-unstyled" style={{ fontSize: '0.9rem' }}>
-          <li className="mb-2"><a href="/services/mobile-app-development" className="text-decoration-none" style={{ color: 'var(--text-color)' }}>Mobile App</a></li>
-          <li className="mb-2"><a href="/services/web-app-development" className="text-decoration-none" style={{ color: 'var(--text-color)' }}>Web App</a></li>
-          <li className="mb-2"><a href="/services/digital-marketing" className="text-decoration-none" style={{ color: 'var(--text-color)' }}>Digital Marketing</a></li>
-          <li className="mb-2"><a href="/services/it-talent-supply" className="text-decoration-none" style={{ color: 'var(--text-color)' }}>IT Talent Supply</a></li>
-          <li className="mb-2"><a href="/services/job-support" className="text-decoration-none" style={{ color: 'var(--text-color)' }}>Job Support & IT</a></li>
-          <li className="mb-2"><a href="/services/cyber-security" className="text-decoration-none" style={{ color: 'var(--text-color)' }}>Cyber Security</a></li>
-        </ul>
-      </Col>
-      <Col md={2}>
-        <h5 style={{ color: 'var(--secondary-color)', fontWeight: 'bold' }}>Company</h5>
-        <ul className="list-unstyled" style={{ fontSize: '0.9rem' }}>
-          <li className="mb-2"><a href="/aboutus" className="text-decoration-none" style={{ color: 'var(--text-color)' }}>About Us</a></li>
-          <li className="mb-2"><a href="/careers" className="text-decoration-none" style={{ color: 'var(--text-color)' }}>Career</a></li>
-          <li className="mb-2"><a href="/contactus" className="text-decoration-none" style={{ color: 'var(--text-color)' }}>Contact</a></li>
-          <li className="mb-2"><a href="/projects" className="text-decoration-none" style={{ color: 'var(--text-color)' }}>Our Projects</a></li>
-        </ul>
-      </Col>
-      <Col md={4}>
-        <h5 style={{ color: 'var(--secondary-color)', fontWeight: 'bold' }}>Contact</h5>
-        <p style={{ color: 'var(--text-color)', fontSize: '0.9rem' }}>2034 Masaka close Wuse zone 7 FCT Abuja</p>
-        <p style={{ color: 'var(--text-color)', fontSize: '0.9rem' }}>
-            Email: contact@techxplorers.com<br />
-            Phone: +2348188560032 <br/><br/>
-        </p>
-      </Col>
-    </Row>
-    <hr className="my-4" style={{ borderColor: 'var(--border-color)' }} />
-    <div className="d-flex justify-content-between align-items-center flex-wrap">
-      <p className="small mb-0" style={{ color: 'var(--text-color)' }}>© {new Date().getFullYear()} TechXplorers Pvt. Ltd. All rights reserved.</p>
-      <div className="small">
-        <a href="#" className="text-decoration-none me-3" style={{ color: 'var(--text-color)' }}>Privacy Policy</a>
-        <a href="#" className="text-decoration-none me-3" style={{ color: 'var(--text-color)' }}>Terms of Service</a>
-        <a href="#" className="text-decoration-none" style={{ color: 'var(--text-color)' }}>Cookie Policy</a>
-      </div>
-    </div>
-  </Container>
-</footer>
+        {/* Footer Component */}
+        <Footer />
+        
       </div>
     </>
   );
