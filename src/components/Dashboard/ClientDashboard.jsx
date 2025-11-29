@@ -2362,6 +2362,71 @@ const ClientDashboard = () => {
   const [clientData, setClientData] = useState(null);
   const [allFiles, setAllFiles] = useState([]);
 
+  const [welcomeCardData, setWelcomeCardData] = useState(null);
+    const [showWelcomeCardModal, setShowWelcomeCardModal] = useState(false);
+
+    const wasCardClosedToday = (cardKey) => {
+        const key = `closedCard_${cardKey}`;
+        const lastClosedDate = localStorage.getItem(key);
+        const today = new Date().toDateString();
+        return lastClosedDate === today;
+    };
+
+    // Helper function to mark the card as closed today
+    const markCardAsClosedToday = (cardKey) => {
+        const key = `closedCard_${cardKey}`;
+        localStorage.setItem(key, new Date().toDateString());
+    };
+
+    const handleCloseWelcomeModal = () => {
+        if (welcomeCardData?.key) {
+            markCardAsClosedToday(welcomeCardData.key);
+        }
+        setShowWelcomeCardModal(false);
+    };
+
+    useEffect(() => {
+        const database = getDatabase();
+        const cardRef = ref(database, 'welcomeCards');
+
+        // Query to get the latest card based on creation time, if possible
+        // For simplicity, we'll just listen to all and filter for today's date
+        const unsubscribe = onValue(cardRef, (snapshot) => {
+            if (snapshot.exists()) {
+                const cards = snapshot.val();
+                const cardKeys = Object.keys(cards);
+                const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+                let activeCard = null;
+                let activeCardKey = null;
+
+                // Find the latest card whose targetDate is today
+                // Loop through all cards and find the one matching today's date
+                for (const key of cardKeys) {
+                    const card = cards[key];
+                    if (card.targetDate === today) {
+                        // Found a card for today
+                        activeCard = card;
+                        activeCardKey = key;
+                        break; 
+                    }
+                }
+                
+                if (activeCard && !wasCardClosedToday(activeCardKey)) {
+                    setWelcomeCardData({ ...activeCard, key: activeCardKey });
+                    setShowWelcomeCardModal(true);
+                } else {
+                    setWelcomeCardData(null);
+                    setShowWelcomeCardModal(false);
+                }
+            } else {
+                setWelcomeCardData(null);
+            }
+        });
+
+        return () => unsubscribe();
+    }, []);
+
   // --- START: ADD NEW STATE FOR LEAVES ---
   const [employeeLeaves, setEmployeeLeaves] = useState([]);
   // --- END: ADD NEW STATE FOR LEAVES ---
@@ -5632,6 +5697,41 @@ html.dark-mode .notify-success-message {
           selectedPlanPrice={planToPayFor.price}
         />
       )}
+
+      {welcomeCardData && (
+                <Modal 
+                    show={showWelcomeCardModal} 
+                    onHide={handleCloseWelcomeModal} 
+                    centered
+                    // Prevent closing with backdrop click or escape key to force user acknowledgement
+                    backdrop="static" 
+                    keyboard={false}
+                >
+                    <Modal.Header>
+                        <Modal.Title style={{ color: '#007bff' }}>
+                            {welcomeCardData.title}
+                        </Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body className="text-center">
+                        {welcomeCardData.imageUrl && (
+                            <img 
+                                src={welcomeCardData.imageUrl} 
+                                alt="Welcome Card" 
+                                style={{ maxWidth: '100%', height: 'auto', marginBottom: '15px', borderRadius: '8px' }}
+                            />
+                        )}
+                        <p style={{ fontSize: '1.1rem', whiteSpace: 'pre-wrap' }}>
+                            {welcomeCardData.message}
+                        </p>
+                    </Modal.Body>
+                    <Modal.Footer>
+                        {/* The client can able to close that pop up modal. */}
+                        <Button variant="primary" onClick={handleCloseWelcomeModal}>
+                            Close
+                        </Button>
+                    </Modal.Footer>
+                </Modal>
+            )}
 
       <ClientServiceDetailsModal
         show={isServiceDetailsModalOpen}
