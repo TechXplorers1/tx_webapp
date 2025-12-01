@@ -5,59 +5,71 @@ import CustomNavbar from './Navbar';
 import { useTheme } from '../context/ThemeContext';
 import Footer from './Footer'; 
 import { database } from '../firebase'; // Import firebase db
-import { ref, onValue } from "firebase/database"; // Import methods
+import { ref, get } from "firebase/database";
 
 const Projects = () => {
   const { isDarkMode } = useTheme(); 
   const [filter, setFilter] = useState('All');
+  const [projectsData, setProjectsData] = useState([]);
+const [loading, setLoading] = useState(true);
+
   
   // --- OPTIMIZATION: Initialize state from Cache if available ---
-  const [projectsData, setProjectsData] = useState(() => {
-    const savedProjects = sessionStorage.getItem('projectsCache');
-    return savedProjects ? JSON.parse(savedProjects) : [];
-  });
-
-  // Only show loading spinner if we have NO data in cache
-  const [loading, setLoading] = useState(() => {
-    return !sessionStorage.getItem('projectsCache');
-  });
-
-  // --- FETCH DATA FROM FIREBASE (Real-time) ---
   useEffect(() => {
-    const projectsRef = ref(database, 'projects');
-    
-    // This listener stays active and detects changes immediately
-    const unsubscribe = onValue(projectsRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        // Convert Firebase object to Array
-        const projectList = Object.keys(data).map((key) => ({
-          id: key,
-          ...data[key]
-        }));
-        
-        // --- NEW: SORT BY ORDER FIELD ---
-        // This ensures the website matches your Admin arrangement
-        const sortedList = projectList.sort((a, b) => {
-            const orderA = a.order !== undefined ? a.order : 9999;
-            const orderB = b.order !== undefined ? b.order : 9999;
-            return orderA - orderB;
-        });
+  setLoading(true);
 
-        // Update State with the sorted list
-        setProjectsData(sortedList);
-        
-        // --- OPTIMIZATION: Save sorted list to Cache ---
-        sessionStorage.setItem('projectsCache', JSON.stringify(sortedList));
-      } else {
-        setProjectsData([]);
-        sessionStorage.removeItem('projectsCache');
+  // 1) Try session cache first (no DB hit)
+  const cached = sessionStorage.getItem("projectsCache");
+  if (cached) {
+    try {
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed)) {
+        setProjectsData(parsed);
+        setLoading(false);
+        return; // don’t hit Firebase if cache exists
       }
-      setLoading(false);
-    });
+    } catch (e) {
+      console.warn("Failed to parse projects cache:", e);
+    }
+  }
 
-    return () => unsubscribe();
-  }, []);
+  // 2) If no cache, fetch once from Firebase
+  const fetchProjectsOnce = async () => {
+    try {
+      const projectsRef = ref(database, "projects");
+      const snapshot = await get(projectsRef);
+
+      if (!snapshot.exists()) {
+        setProjectsData([]);
+        sessionStorage.removeItem("projectsCache");
+        return;
+      }
+
+      const data = snapshot.val() || {};
+      const projectList = Object.keys(data).map((key) => ({
+        id: key,
+        ...data[key],
+      }));
+
+      // keep whatever existing sort you had
+      const sortedProjects = projectList.sort((a, b) => {
+        const dateA = new Date(a.createdAt || 0);
+        const dateB = new Date(b.createdAt || 0);
+        return dateB - dateA;
+      });
+
+      setProjectsData(sortedProjects);
+      sessionStorage.setItem("projectsCache", JSON.stringify(sortedProjects));
+    } catch (error) {
+      console.error("Error fetching projects (one-time):", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchProjectsOnce();
+}, []);
+
 
   // Extract unique categories
   const categories = ['All', ...new Set(projectsData.map((item) => item.category))];

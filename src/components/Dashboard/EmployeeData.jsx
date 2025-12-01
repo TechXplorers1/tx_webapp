@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Modal, Spinner } from 'react-bootstrap'; // Using react-bootstrap Modal
-import { getDatabase, ref, onValue, query, orderByChild, equalTo, update, remove, set, push, get } from "firebase/database";
+import { ref, query, orderByChild, equalTo, update, remove, set, push, get } from "firebase/database";
 import { database } from '../../firebase'; // Import your Firebase config
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { utils, writeFile } from 'xlsx';
@@ -441,109 +441,149 @@ const EmployeeData = () => {
   // Update useEffect to get the full employee object from sessionStorage
   // In EmployeeData.jsx, replace the useEffect hook that starts with "// NEW: useEffect to get logged-in user data..."
 
-  useEffect(() => {
-    const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInEmployee'));
-    if (!loggedInUserData || !loggedInUserData.firebaseKey) {
-      setLeaveRequests([]);
-      navigate('/login');
-      return;
+useEffect(() => {
+  const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInEmployee'));
+
+  if (!loggedInUserData || !loggedInUserData.firebaseKey) {
+    setLeaveRequests([]);
+    navigate('/login');
+    return;
+  }
+
+  const employeeFirebaseKey = loggedInUserData.firebaseKey;
+
+  // 1) One-time fetch: employee profile
+  (async () => {
+    try {
+      const employeeSnap = await get(ref(database, `users/${employeeFirebaseKey}`));
+      if (employeeSnap.exists()) {
+        setEmployeeDetails(employeeSnap.val());
+      }
+    } catch (err) {
+      console.error('Failed to fetch employee profile:', err);
     }
-    const employeeFirebaseKey = loggedInUserData.firebaseKey;
+  })();
 
-    // Keep a small realtime listener only for the employee profile (small path)
-    const employeeRef = ref(database, `users/${employeeFirebaseKey}`);
-    const unsubscribeEmployee = onValue(employeeRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) setEmployeeDetails(data);
-    }, (err) => {
-      console.error('Employee listener error', err);
-    });
+  // 2) One-time fetch: this employee’s leave requests only
+  (async () => {
+    try {
+      const leaveQuery = query(
+        ref(database, 'leave_requests'),
+        orderByChild('employeeFirebaseKey'),
+        equalTo(employeeFirebaseKey)
+      );
 
-    // Keep a filtered realtime listener for leaves if you need live updates
-    const leaveRef = ref(database, 'leave_requests');
-    const employeeLeaveQuery = query(leaveRef, orderByChild('employeeFirebaseKey'), equalTo(employeeFirebaseKey));
-    const unsubscribeLeave = onValue(employeeLeaveQuery, (snapshot) => {
+      const snapshot = await get(leaveQuery);
       const requestsList = [];
+
       snapshot.forEach(childSnap => {
         const val = childSnap.val();
         requestsList.push({ id: childSnap.key, ...val });
       });
-      requestsList.sort((a, b) => new Date(b.requestedDate) - new Date(a.requestedDate));
+
+      requestsList.sort(
+        (a, b) => new Date(b.requestedDate || 0) - new Date(a.requestedDate || 0)
+      );
+
       setLeaveRequests(requestsList);
-    }, (err) => {
-      console.error('Leave listener error', err);
-    });
+    } catch (err) {
+      console.error('Failed to fetch leave requests:', err);
+    }
+  })();
 
-    // ONE-TIME fetch: users (managers/admins). Avoid streaming the whole /users node.
-    (async () => {
-      try {
-        const usersSnap = await get(ref(database, 'users'));
-        const usersData = usersSnap.exists() ? usersSnap.val() : null;
-        const managementList = [];
-        if (usersData) {
-          Object.keys(usersData).forEach(key => {
-            const user = usersData[key];
-            if (user && user.role && (String(user.role).toLowerCase() === 'manager' || String(user.role).toLowerCase() === 'admin')) {
-              managementList.push({
-                id: key,
-                name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
-                role: user.role,
-              });
-            }
-          });
-        }
-        setManagersAndAdmins(managementList);
-      } catch (err) {
-        console.error('Failed to fetch users once:', err);
+  // 3) ONE-TIME fetch: managers/admins (unchanged, still single read)
+  (async () => {
+    try {
+      const usersSnap = await get(ref(database, 'users'));
+      const usersData = usersSnap.exists() ? usersSnap.val() : null;
+      const managementList = [];
+
+      if (usersData) {
+        Object.keys(usersData).forEach(key => {
+          const user = usersData[key];
+          if (
+            user &&
+            user.role &&
+            (String(user.role).toLowerCase() === 'manager' ||
+              String(user.role).toLowerCase() === 'admin')
+          ) {
+            managementList.push({
+              id: key,
+              name:
+                `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
+                user.email,
+              role: user.role,
+            });
+          }
+        });
       }
-    })();
 
-    // ONE-TIME fetch: clients -> build registrations and set local client lists
-    (async () => {
-      try {
-        const clientsSnap = await get(ref(database, 'clients'));
-        const clientsData = clientsSnap.exists() ? clientsSnap.val() : null;
-        const allRegistrations = [];
+      setManagersAndAdmins(managementList);
+    } catch (err) {
+      console.error('Failed to fetch users once:', err);
+    }
+  })();
 
-        if (clientsData) {
-          Object.keys(clientsData).forEach(clientKey => {
-            const client = clientsData[clientKey];
-            if (client && client.serviceRegistrations) {
-              Object.keys(client.serviceRegistrations).forEach(regKey => {
-                const registration = client.serviceRegistrations[regKey];
-                const jobApplicationsArray = registration.jobApplications ? Object.values(registration.jobApplications) : [];
-                allRegistrations.push({
-                  ...registration,
-                  jobApplications: jobApplicationsArray,
-                  clientFirebaseKey: clientKey,
-                  registrationKey: regKey,
-                  email: client.email,
-                  mobile: client.mobile,
-                  firstName: registration.firstName || client.firstName,
-                  lastName: registration.lastName || client.lastName,
-                  name: `${(registration.firstName || client.firstName || '')} ${(registration.lastName || client.lastName || '')}`.trim(),
-                  initials: `${(registration.firstName || 'C').charAt(0)}${(registration.lastName || 'L').charAt(0)}`
-                });
+  // 4) ONE-TIME fetch: clients → build only this employee’s registrations
+  (async () => {
+    try {
+      const clientsSnap = await get(ref(database, 'clients'));
+      const clientsData = clientsSnap.exists() ? clientsSnap.val() : null;
+      const allRegistrations = [];
+
+      if (clientsData) {
+        Object.keys(clientsData).forEach(clientKey => {
+          const client = clientsData[clientKey];
+          if (client && client.serviceRegistrations) {
+            Object.keys(client.serviceRegistrations).forEach(regKey => {
+              const registration = client.serviceRegistrations[regKey];
+
+              // Flatten jobApplications into an array if present
+              const jobApplicationsArray = registration.jobApplications
+                ? Object.values(registration.jobApplications)
+                : [];
+
+              allRegistrations.push({
+                ...registration,
+                jobApplications: jobApplicationsArray,
+                clientFirebaseKey: clientKey,
+                registrationKey: regKey,
+                email: client.email,
+                mobile: client.mobile,
+                firstName: registration.firstName || client.firstName,
+                lastName: registration.lastName || client.lastName,
+                name: `${(registration.firstName || client.firstName || '')} ${
+                  (registration.lastName || client.lastName || '')
+                }`.trim(),
+                initials: `${(registration.firstName || 'C').charAt(0)}${(
+                  registration.lastName || 'L'
+                ).charAt(0)}`,
               });
-            }
-          });
-        }
-
-        const myRegistrations = allRegistrations.filter(reg => reg.assignedTo === employeeFirebaseKey);
-        setNewClients(myRegistrations.filter(c => c.assignmentStatus === 'pending_acceptance'));
-        setActiveClients(myRegistrations.filter(c => c.assignmentStatus === 'active'));
-        setInactiveClients(myRegistrations.filter(c => c.assignmentStatus === 'inactive'));
-      } catch (err) {
-        console.error('Failed to fetch clients once:', err);
+            });
+          }
+        });
       }
-    })();
 
-    // Cleanup — detach only the realtime listeners we attached
-    return () => {
-      try { if (typeof unsubscribeEmployee === 'function') unsubscribeEmployee(); } catch (e) { }
-      try { if (typeof unsubscribeLeave === 'function') unsubscribeLeave(); } catch (e) { }
-    };
-  }, [navigate]); // keep deps minimal
+      // Filter registrations so each employee only loads what they need
+      const myRegistrations = allRegistrations.filter(
+        reg => reg.assignedTo === employeeFirebaseKey
+      );
+
+      setNewClients(
+        myRegistrations.filter(c => c.assignmentStatus === 'pending_acceptance')
+      );
+      setActiveClients(
+        myRegistrations.filter(c => c.assignmentStatus === 'active')
+      );
+      setInactiveClients(
+        myRegistrations.filter(c => c.assignmentStatus === 'inactive')
+      );
+    } catch (err) {
+      console.error('Failed to fetch clients once:', err);
+    }
+  })();
+}, [navigate]);
+
 
 
 

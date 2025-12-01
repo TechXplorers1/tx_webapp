@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { database } from '../../firebase'; // Corrected import path
-import { ref, onValue, update, remove, off } from "firebase/database";
-
+import { ref, get, update, remove } from "firebase/database";
 const RequestManagement = () => {
   // --- Request Management States ---
   const [requestTab, setRequestTab] = useState('career');
@@ -21,41 +20,62 @@ const RequestManagement = () => {
   const [serviceRequests, setServiceRequests] = useState([]);
 
   // useEffect to fetch all submissions from Firebase in real-time
-  useEffect(() => {
-    // Reference to the main submissions node
-    const submissionsRef = ref(database, 'submissions');
+// AFTER – single read of the submissions tree
+useEffect(() => {
+  let cancelled = false;
 
-    // Listener for all submissions
-    const unsubscribe = onValue(submissionsRef, (snapshot) => {
-      const allSubmissions = snapshot.val();
-      if (allSubmissions) {
-        // Helper function to convert Firebase object to array
-        const formatData = (dataObject) => 
-          Object.keys(dataObject).map(key => ({
-            firebaseKey: key, // Keep the unique key from Firebase
-            ...dataObject[key]
-          }));
+  const fetchSubmissions = async () => {
+    try {
+      const submissionsRef = ref(database, "submissions");
+      const snapshot = await get(submissionsRef);
 
-        // Set state for each submission type
-        setCareerSubmissions(allSubmissions.career_submissions
- ? formatData(allSubmissions.career_submissions
-) : []);
-        setContactSubmissions(allSubmissions.contactMessages ? formatData(allSubmissions.contactMessages) : []);
-        setServiceRequests(allSubmissions.serviceRequests ? formatData(allSubmissions.serviceRequests) : []);
-      } else {
-        // If no submissions exist, set all to empty
-        setCareerSubmissions([]);
-        setContactSubmissions([]);
-        setServiceRequests([]);
+      if (!snapshot.exists() || cancelled) {
+        if (!cancelled) {
+          setCareerSubmissions([]);
+          setContactSubmissions([]);
+          setServiceRequests([]);
+        }
+        return;
       }
-    });
 
-    // Cleanup: Unsubscribe from the listener when the component unmounts
-    return () => {
-      unsubscribe();
-      off(submissionsRef);
+      const allSubmissions = snapshot.val();
+
+      const formatData = (obj = {}) =>
+        Object.keys(obj).map(key => ({
+          firebaseKey: key,
+          ...obj[key],
+        }));
+
+      if (!cancelled) {
+        setCareerSubmissions(
+          allSubmissions.career_submissions
+            ? formatData(allSubmissions.career_submissions)
+            : []
+        );
+        setContactSubmissions(
+          allSubmissions.contactMessages
+            ? formatData(allSubmissions.contactMessages)
+            : []
+        );
+        setServiceRequests(
+          allSubmissions.serviceRequests
+            ? formatData(allSubmissions.serviceRequests)
+            : []
+        );
+      }
+    } catch (err) {
+      if (!cancelled) {
+        console.error("Failed to load submissions:", err);
+      }
     }
-  }, []);
+  };
+
+  fetchSubmissions();
+  return () => {
+    cancelled = true;
+  };
+}, []);
+
 
   // Handler to download the resume file
   const handleDownloadResume = (submission) => {

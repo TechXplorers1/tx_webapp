@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { getDatabase, ref, onValue, query, orderByChild, equalTo, update, remove, set, get, push } from "firebase/database";
+import { getDatabase, ref, query, orderByChild, equalTo, update, remove, set, get, push } from "firebase/database";
 import { database, storage } from '../../firebase'; // Import your Firebase config
 import { getStorage, ref as storageRef, getDownloadURL } from "firebase/storage";
 import { useTheme } from '../../context/ThemeContext';
@@ -2368,54 +2368,48 @@ const ClientDashboard = () => {
   };
 
   useEffect(() => {
-    const database = getDatabase();
-    const adsRef = ref(database, 'welcomeCards');
+  const fetchTodayWelcomeCard = async () => {
+    try {
+      // use the shared database instance you already import
+      const cardRef = ref(database, 'welcomeCards');
+      const snapshot = await get(cardRef);
 
-    const unsubscribe = onValue(adsRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const data = snapshot.val();
-        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-
-        const banners = [];
-        const popups = [];
-
-        // Filter active ads for today
-        Object.keys(data).forEach(key => {
-          const ad = { ...data[key], id: key };
-          if (ad.targetDate === today) {
-            if (ad.type === 'banner') {
-              banners.push(ad);
-            } else {
-              // For popups, only add if NOT closed in local storage
-              if (!isAdClosed(ad.id)) {
-                popups.push(ad);
-              }
-            }
-          }
-        });
-
-        // Set Banners
-        setActiveBannerAds(banners);
-
-        // CHANGE 2: Set ALL valid popups to state, not just the first one
-        popups.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-
-        if (popups.length > 0) {
-          setActivePopupAds(popups);
-          setShowPopupModal(true);
-        } else {
-          setActivePopupAds([]);
-          setShowPopupModal(false);
-        }
-      } else {
-        setActiveBannerAds([]);
-        setActivePopupAds([]);
-        setShowPopupModal(false);
+      if (!snapshot.exists()) {
+        setWelcomeCardData(null);
+        setShowWelcomeCardModal(false);
+        return;
       }
-    });
 
-    return () => unsubscribe();
-  }, []);
+      const cards = snapshot.val();
+      const cardKeys = Object.keys(cards);
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+      let activeCard = null;
+      let activeCardKey = null;
+
+      for (const key of cardKeys) {
+        const card = cards[key];
+        if (card.targetDate === today) {
+          activeCard = card;
+          activeCardKey = key;
+          break;
+        }
+      }
+
+      if (activeCard && !wasCardClosedToday(activeCardKey)) {
+        setWelcomeCardData({ ...activeCard, key: activeCardKey });
+        setShowWelcomeCardModal(true);
+      } else {
+        setWelcomeCardData(null);
+        setShowWelcomeCardModal(false);
+      }
+    } catch (err) {
+      console.error('Failed to load welcome card:', err);
+    }
+  };
+
+  fetchTodayWelcomeCard();
+}, []);
 
   // CHANGE 3: Update close handler to mark ALL displayed popups as closed
   const handleClosePopup = () => {

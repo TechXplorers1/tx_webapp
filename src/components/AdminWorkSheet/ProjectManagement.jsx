@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { database, storage } from '../../firebase'; // Import storage
-import { ref, push, onValue, remove, update } from "firebase/database";
+import { ref, push, remove, update, get } from "firebase/database";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage"; // Storage methods
 import { Container, Form, Button, Table, Card, Row, Col, Badge, Modal, Spinner } from 'react-bootstrap';
 
@@ -30,32 +30,39 @@ const ProjectManagement = () => {
   const dragItem = useRef(null);
   const dragOverItem = useRef(null);
 
-  // Fetch Projects & Sort by 'order'
-  useEffect(() => {
-    const projectsRef = ref(database, 'projects');
-    const unsubscribe = onValue(projectsRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        const projectList = Object.keys(data).map((key) => ({
-          id: key,
-          ...data[key]
-        }));
+  const loadProjects = async () => {
+  try {
+    const projectsRef = ref(database, "projects");
+    const snapshot = await get(projectsRef);
 
-        // Sort by 'order'
-        const sortedList = projectList.sort((a, b) => {
-            const orderA = a.order !== undefined ? a.order : 9999;
-            const orderB = b.order !== undefined ? b.order : 9999;
-            return orderA - orderB;
-        });
-        
-        setProjects(sortedList);
-      } else {
-        setProjects([]);
-      }
+    if (!snapshot.exists()) {
+      setProjects([]);
+      return;
+    }
+
+    const data = snapshot.val();
+    const projectList = Object.keys(data).map(key => ({
+      id: key,
+      ...data[key],
+    }));
+
+    const sortedList = projectList.sort((a, b) => {
+      const orderA = a.order !== undefined ? a.order : 9999;
+      const orderB = b.order !== undefined ? b.order : 9999;
+      return orderA - orderB;
     });
 
-    return () => unsubscribe();
-  }, []);
+    setProjects(sortedList);
+  } catch (err) {
+    console.error("Error loading projects:", err);
+  }
+};
+
+
+  // Fetch Projects & Sort by 'order'
+useEffect(() => {
+  loadProjects();
+}, []);
 
   // --- DRAG AND DROP HANDLERS ---
   const handleSort = async () => {
@@ -146,6 +153,7 @@ const ProjectManagement = () => {
         const projectsRef = ref(database, 'projects');
         await push(projectsRef, payload);
       }
+      await loadProjects();
       handleClose();
 
     } catch (error) {
@@ -168,6 +176,7 @@ const ProjectManagement = () => {
     if (window.confirm("Are you sure you want to delete this project?")) {
       const projectRef = ref(database, `projects/${id}`);
       await remove(projectRef);
+      await loadProjects();
     }
   };
 

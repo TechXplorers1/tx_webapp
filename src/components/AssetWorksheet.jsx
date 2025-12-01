@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Bell, User, ChevronDown, Plus, Search, Info, X, Hash, Edit, Trash2, LogOut, CheckCircle, Wrench, DollarSign, FilterX } from 'lucide-react';
-import { ref, onValue, push, set, remove, update, get } from "firebase/database";
+import { ref, push, set, remove, update, get } from "firebase/database";
 // Make sure this path is correct for your project structure and that the file exports your initialized database.
 import { database } from '../firebase'; 
 
@@ -373,33 +373,62 @@ const AssetWorksheet = () => {
 
   const branchLocations = ['Branch 1', 'Branch 2', 'Head Office', 'Remote'];
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [assetsSnap, usersSnap] = await Promise.all([
-          get(ref(database, 'assets')),
-          get(ref(database, 'users')),
-        ]);
+ useEffect(() => {
+  const cached = sessionStorage.getItem('assetWorksheetCache');
 
-        const assetsData = assetsSnap.val() || {};
-        const usersData = usersSnap.val() || {};
-
-        setAssets(Object.entries(assetsData).map(([k, v]) => ({ firebaseKey: k, ...v })));
-        
-        const assignableUsers = Object.entries(usersData)
-          .map(([k, v]) => ({ firebaseKey: k, ...v }))
-          .filter(u => u.roles?.some(r => ['employee','manager','admin'].includes(r)));
-        
-        setUsers(assignableUsers);
-      } catch (err) {
-        console.error("Firebase read failed:", err);
-      } finally {
+  if (cached) {
+    try {
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed.assets) && Array.isArray(parsed.users)) {
+        setAssets(parsed.assets);
+        setUsers(parsed.users);
         setLoading(false);
+        return; // ✅ no DB call if cache is valid
       }
-    };
+    } catch (e) {
+      console.warn('Failed to parse assetWorksheet cache', e);
+    }
+  }
 
-    fetchData();
-  }, []);
+  const fetchData = async () => {
+    try {
+      const [assetsSnap, usersSnap] = await Promise.all([
+        get(ref(database, 'assets')),
+        get(ref(database, 'users')),
+      ]);
+
+      const assetsData = assetsSnap.val() || {};
+      const usersData = usersSnap.val() || {};
+
+      const mappedAssets = Object.entries(assetsData).map(([k, v]) => ({
+        firebaseKey: k,
+        ...v,
+      }));
+
+      const assignableUsers = Object.entries(usersData)
+        .map(([k, v]) => ({ firebaseKey: k, ...v }))
+        .filter((u) =>
+          u.roles?.some((r) =>
+            ['employee', 'manager', 'admin'].includes(r)
+          )
+        );
+
+      setAssets(mappedAssets);
+      setUsers(assignableUsers);
+
+      sessionStorage.setItem(
+        'assetWorksheetCache',
+        JSON.stringify({ assets: mappedAssets, users: assignableUsers })
+      );
+    } catch (err) {
+      console.error('Firebase read failed:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchData();
+}, []);
 
   // Helper to check if an asset should be considered available
   const isAssetConsideredAvailable = (asset) => {

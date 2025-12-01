@@ -10,13 +10,7 @@ import '../styles/LandingPage.css';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../components/AuthContext'; 
 import { database } from '../firebase';
-import {
-  ref,
-  onChildAdded,
-  onChildChanged,
-  onChildRemoved,
-  off,
-} from "firebase/database";
+import { ref, get } from "firebase/database";
 import { useInView } from 'react-intersection-observer'; 
 import L from 'leaflet';
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -82,29 +76,36 @@ const LandingPage = () => {
   const [worldRef, worldInView] = useInView({ triggerOnce: true, threshold: 0.1 });
   // Note: Footer ref is now inside the Footer component
 
-  useEffect(() => {
-    if (!isLoggedIn || !user?.firebaseKey) {
-      setServiceRegistrations(null);
-      return;
-    }
-    const clientRegRef = ref(database, `clients/${user.firebaseKey}/serviceRegistrations`);
-    
-    const handleAdd = onChildAdded(clientRegRef, (snapshot) => {
-      setServiceRegistrations(prev => ({ ...(prev || {}), [snapshot.key]: snapshot.val() }));
-    });
-    const handleChange = onChildChanged(clientRegRef, (snapshot) => {
-      setServiceRegistrations(prev => ({ ...(prev || {}), [snapshot.key]: snapshot.val() }));
-    });
-    const handleRemove = onChildRemoved(clientRegRef, (snapshot) => {
-      setServiceRegistrations(prev => {
-        const updated = { ...(prev || {}) };
-        delete updated[snapshot.key];
-        return updated;
-      });
-    });
+useEffect(() => {
+  // If the user isn’t logged in, clear state and exit
+  if (!isLoggedIn || !user?.firebaseKey) {
+    setServiceRegistrations(null);
+    return;
+  }
 
-    return () => off(clientRegRef);
-  }, [isLoggedIn, user?.firebaseKey]);
+  const fetchServiceRegistrationsOnce = async () => {
+    try {
+      const clientServiceRegistrationsRef = ref(
+        database,
+        `clients/${user.firebaseKey}/serviceRegistrations`
+      );
+
+      const snapshot = await get(clientServiceRegistrationsRef);
+
+      if (snapshot.exists()) {
+        setServiceRegistrations(snapshot.val());
+      } else {
+        setServiceRegistrations(null);
+      }
+    } catch (error) {
+      console.error("Error fetching service registrations:", error);
+      setServiceRegistrations(null);
+    }
+  };
+
+  fetchServiceRegistrationsOnce();
+}, [isLoggedIn, user?.firebaseKey]);
+
 
   const offices = [
     { name: 'USA', position: [40.7128, -74.006] },

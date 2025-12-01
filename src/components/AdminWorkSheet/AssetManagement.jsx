@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 // Import Firebase functions and the initialized database
 // Make sure the path to your firebase configuration file is correct.
-import { getDatabase, ref, onValue, update, off } from "firebase/database";
+import { ref, get, update } from "firebase/database";
 import { database } from '../../firebase'; 
 
 const AssetManagement = () => {
@@ -24,43 +24,50 @@ const AssetManagement = () => {
   // --- Data Fetching Effect ---
   // This useEffect hook runs once when the component mounts.
   // It establishes real-time listeners to the Firebase database.
-  useEffect(() => {
-    // Define references to the 'assets' and 'users' nodes in your database.
-    const assetsRef = ref(database, 'assets');
-    const usersRef = ref(database, 'users'); // Assuming your employees are stored under 'users'
+useEffect(() => {
+  let cancelled = false;
 
-    // Set up the listener for the 'assets' data.
-    const unsubscribeAssets = onValue(assetsRef, (snapshot) => {
-      const data = snapshot.val();
-      // Convert the Firebase object into an array, including the unique key.
-      const assetsArray = data ? Object.keys(data).map(key => ({ firebaseKey: key, ...data[key] })) : [];
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+
+      const [assetsSnap, usersSnap] = await Promise.all([
+        get(ref(database, "assets")),
+        get(ref(database, "users")),
+      ]);
+
+      if (cancelled) return;
+
+      const assetsData = assetsSnap.exists() ? assetsSnap.val() : {};
+      const assetsArray = Object.keys(assetsData).map(key => ({
+        firebaseKey: key,
+        ...assetsData[key],
+      }));
       setAssets(assetsArray);
-      setLoading(false); // Data has loaded, so stop the loading indicator.
-    }, (err) => {
-      console.error("Firebase asset read failed:", err);
-      setError(err.message);
-      setLoading(false);
-    });
 
-    // Set up the listener for the 'users' (employees) data.
-    const unsubscribeUsers = onValue(usersRef, (snapshot) => {
-      const data = snapshot.val();
-      const usersArray = data ? Object.keys(data).map(key => ({ firebaseKey: key, ...data[key] })) : [];
+      const usersData = usersSnap.exists() ? usersSnap.val() : {};
+      const usersArray = Object.keys(usersData).map(key => ({
+        firebaseKey: key,
+        ...usersData[key],
+      }));
       setEmployees(usersArray);
-    }, (err) => {
-      console.error("Firebase user read failed:", err);
-      setError(err.message);
-    });
 
-    // Cleanup function: This runs when the component unmounts.
-    // It's crucial for preventing memory leaks by detaching the listeners.
-    return () => {
-      unsubscribeAssets();
-      unsubscribeUsers();
-      off(assetsRef);
-      off(usersRef);
-    };
-  }, []); // The empty dependency array ensures this effect runs only once.
+      setError(null);
+    } catch (err) {
+      if (!cancelled) {
+        console.error("Firebase asset/user read failed:", err);
+        setError(err.message);
+      }
+    } finally {
+      if (!cancelled) setLoading(false);
+    }
+  };
+
+  fetchData();
+  return () => {
+    cancelled = true;
+  };
+}, []);
 
   // --- Derived Data ---
   // Instead of a separate state, derive the activity log directly from the 'assets' state.

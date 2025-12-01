@@ -531,37 +531,35 @@ if (!clientToDelete || !clientToDelete.clientFirebaseKey || !clientToDelete.regi
   const filteredClients = getFilteredRegistrations();
 
   // --- Client Details and Edit Client Modals Handlers ---
-  const handleViewClientDetails = (client) => {
-    setSelectedClientForDetails(client);
-    setActiveClientDetailsTab('Profile');
-    setIsClientDetailsModalOpen(true);
+const handleViewClientDetails = async (client) => {
+  setSelectedClientForDetails(client);
+  setActiveClientDetailsTab('Profile');
+  setIsClientDetailsModalOpen(true);
 
-    // --- Fetch Applications & Interviews ---
-    const applicationsRef = ref(
-      database,
-      `clients/${client.clientFirebaseKey}/serviceRegistrations/${client.registrationKey}/jobApplications`
-    );
+  try {
+    const applicationsRef = ref(database, `applications/${client.clientFirebaseKey}`);
+    const snapshot = await get(applicationsRef);
 
-    onValue(applicationsRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-               const applications = Object.keys(data).map(appKey => ({
-            appFirebaseKey: appKey, // <--- NEW: Unique key for the application
-            clientFirebaseKey: client.clientFirebaseKey, // Key for parent client
-            registrationKey: client.registrationKey, // Key for parent registration
-            ...data[appKey]
-        }));
-        setClientApplications(applications);
-        const interviews = applications.filter((app) =>
-          (app.status || '').toLowerCase().includes('interview')
-        );
-        setClientInterviews(interviews);
-      } else {
-        setClientApplications([]);
-        setClientInterviews([]);
-      }
-    });
-  };
+    if (!snapshot.exists()) {
+      setClientApplications([]);
+      setClientInterviews([]);
+      return;
+    }
+
+    const data = snapshot.val() || {};
+
+    const appsArray = Object.keys(data).map(key => ({
+      firebaseKey: key,
+      ...data[key],
+    }));
+
+    setClientApplications(appsArray.filter(a => a.type === 'application'));
+    setClientInterviews(appsArray.filter(a => a.type === 'interview'));
+  } catch (err) {
+    console.error("Failed to load client details:", err);
+  }
+};
+
 
 
   const handleCloseClientDetailsModal = () => {

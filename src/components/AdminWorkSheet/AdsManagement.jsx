@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getDatabase, ref, push, serverTimestamp, onValue, remove, update } from "firebase/database";
+import { getDatabase, ref, push, serverTimestamp, remove, update, get, query,orderByChild, limitToLast} from "firebase/database";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage"; // <--- NEW IMPORTS
 import { Modal, Button, Form, Card, Badge, Spinner, Container, Row, Col } from 'react-bootstrap';
 
@@ -34,22 +34,42 @@ const AdsManagement = () => {
 
     // --- DATA FETCHING ---
     useEffect(() => {
-        const adRef = ref(database, 'welcomeCards');
-        const unsubscribe = onValue(adRef, (snapshot) => {
-            const data = snapshot.val();
-            const list = [];
-            if (data) {
-                for (let key in data) {
-                    list.push({ id: key, ...data[key] });
-                }
-            }
-            // Sort by createdAt desc (Newest first)
-            list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-            setPostedAds(list);
-        });
-        return () => unsubscribe();
-    }, [database]);
+       let isMounted = true;
 
+        const loadAdsOnce = async () => {
+            try {
+                // Only fetch the latest 50 ads ordered by createdAt
+                const adsQuery = query(
+                    ref(database, "welcomeCards"),
+                    orderByChild("createdAt"),
+                    limitToLast(50)
+                );
+
+                const snapshot = await get(adsQuery);
+                if (!isMounted) return;
+
+                const data = snapshot.val();
+                const list = [];
+                if (data) {
+                    for (let key in data) {
+                        list.push({ id: key, ...data[key] });
+                    }
+                }
+
+                // Sort newest first (in case createdAt isn't perfect)
+                list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                setPostedAds(list);
+            } catch (err) {
+                console.error("Failed to load ads:", err);
+            }
+        };
+
+        loadAdsOnce();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [database]);
     // --- HANDLERS ---
     const handleChange = (e) => {
         const { name, value } = e.target;

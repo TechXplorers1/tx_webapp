@@ -3,15 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { Modal, Button, Spinner } from 'react-bootstrap'; // Using react-bootstrap Modal
 import {
   ref,
-  onValue,
   query,
   orderByChild,
   equalTo,
   get,
-  off,
-  onChildAdded,
-  onChildChanged,
-  onChildRemoved,
   set,
   update
 } from "firebase/database";
@@ -239,52 +234,55 @@ const ManagerWorkSheet = () => {
     }
   };
 
-  const handleDeleteApplication = async (applicationToDelete) => {
-    // Use the passed applicationToDelete object instead of relying on selectedApplication state
-    const clientFirebaseKey = applicationToDelete.clientFirebaseKey;
-    const registrationKey = applicationToDelete.registrationKey;
-    const applicationId = applicationToDelete.id; // Use 'id' for array-based lookups
+const handleDeleteApplication = async (applicationToDelete) => {
+  // Use the passed applicationToDelete object instead of relying on selectedApplication state
+  const clientFirebaseKey = applicationToDelete.clientFirebaseKey;
+  const registrationKey = applicationToDelete.registrationKey;
+  const applicationId = applicationToDelete.id; // Use 'id' for array-based lookups
 
-    if (!clientFirebaseKey || !registrationKey || !applicationId) {
-      alert("Error: Missing required application identifiers.");
-      return;
-    }
+  if (!clientFirebaseKey || !registrationKey || !applicationId) {
+    alert("Error: Missing required application identifiers.");
+    return;
+  }
 
-    if (!window.confirm(`Are you sure you want to delete the application: ${applicationToDelete.jobTitle} at ${applicationToDelete.company}?`)) {
-      return;
-    }
+  if (
+    !window.confirm(
+      `Are you sure you want to delete the application: ${applicationToDelete.jobTitle} at ${applicationToDelete.company}?`
+    )
+  ) {
+    return;
+  }
 
-    try {
-      // 1. Get a reference to the entire jobApplications array
-      const jobApplicationsRef = ref(database,
-        `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}/jobApplications`
-      );
+  try {
+    // 1. Get a reference to the entire jobApplications array
+    const jobApplicationsRef = ref(
+      database,
+      `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}/jobApplications`
+    );
 
-      // 2. Fetch the current array from the database
-      const snapshot = await new Promise(resolve => onValue(jobApplicationsRef, resolve, { onlyOnce: true }));
-      const currentApplications = snapshot.val() || [];
+    // 2. Fetch the current array from the database ONCE 
+    const snapshot = await get(jobApplicationsRef);
+    const currentApplications = snapshot.val() || [];
 
-      // 3. Filter out the deleted application to create a new array
-      const updatedApplications = currentApplications.filter(app =>
-        app.id !== applicationId
-      );
+    // 3. Filter out the deleted application to create a new array
+    const updatedApplications = currentApplications.filter(
+      (app) => app.id !== applicationId
+    );
 
-      // 4. Use 'set' to replace the entire array in the database
-      await set(jobApplicationsRef, updatedApplications);
+    // 4. Use 'set' to replace the entire array in the database
+    await set(jobApplicationsRef, updatedApplications);
 
-      // 5. Update local state
-      setApplicationData(prev => prev.filter(app =>
-        app.id !== applicationId
-      ));
+    // 5. Update local state
+    setApplicationData((prev) => prev.filter((app) => app.id !== applicationId));
 
-      setSuccessMessage("Application deleted successfully!");
-      setShowSuccessModal(true);
-      closeApplicationDetailModal(); // Close modal if open
-    } catch (error) {
-      console.error("Error deleting application:", error);
-      alert("Failed to delete application. Please try again.");
-    }
-  };
+    setSuccessMessage("Application deleted successfully!");
+    setShowSuccessModal(true);
+  } catch (error) {
+    console.error("Error deleting application:", error);
+    alert("Failed to delete application. Please try again.");
+  }
+};
+
 
   const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false);
   const [isEditEmployeeModalOpen, setIsEditEmployeeModalOpen] = useState(false);
@@ -431,56 +429,62 @@ const ManagerWorkSheet = () => {
   // In ManagerWorksheet.jsx, replace the entire useEffect hook
   // that fetches data from Firebase with the following corrected version.
   // ✅ First useEffect – setup manager key and manager listener
-  useEffect(() => {
-    const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInEmployee'));
-    const managerFirebaseKey = loggedInUserData ? loggedInUserData.firebaseKey : null;
-    setManagerFirebaseKey(managerFirebaseKey);
+// ✅ First useEffect – setup manager key and fetch manager + leave_requests once
+useEffect(() => {
+  const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInEmployee'));
+  const keyFromSession = loggedInUserData ? loggedInUserData.firebaseKey : null;
+  setManagerFirebaseKey(keyFromSession);
 
-    if (!managerFirebaseKey) {
-      setLoading(false);
-      return;
+  if (!keyFromSession) {
+    setLoading(false);
+    return;
+  }
+
+  const managerRef = ref(database, `users/${keyFromSession}`);
+  const leaveRequestsRef = ref(database, 'leave_requests');
+
+  let cancelled = false;
+
+  (async () => {
+    try {
+      // 🔹 Fetch manager profile once (no real-time listener)
+      const managerSnap = await get(managerRef);
+      if (!cancelled && managerSnap.exists()) {
+        const data = managerSnap.val();
+        const fullName = `${data.firstName || ''} ${data.lastName || ''}`.trim() || 'Manager';
+        const avatarLetter = fullName.charAt(0).toUpperCase();
+
+        setUserProfile({ ...data, fullName });
+        setUserName(fullName);
+        setUserAvatarLetter(avatarLetter);
+      }
+
+      // 🔹 Fetch leave requests once
+      const leaveSnap = await get(leaveRequestsRef);
+      if (!cancelled) {
+        const requestsData = leaveSnap.val() || {};
+        const allRequests = Object.entries(requestsData).map(([id, req]) => ({ id, ...req }));
+
+        const managerRequests = allRequests
+          .filter(req => req.applyTo?.includes(keyFromSession))
+          .sort((a, b) => new Date(b.requestedDate) - new Date(a.requestedDate));
+
+        setEmployeeLeaveRequests(managerRequests);
+      }
+    } catch (err) {
+      console.error("Failed to fetch manager/leave requests:", err);
+    } finally {
+      if (!cancelled) {
+        setLoading(false);
+      }
     }
+  })();
 
- const managerRef = ref(database, `users/${managerFirebaseKey}`);
-const unsubscribeManager = onValue(managerRef, (snapshot) => {
-  const data = snapshot.val();
-  if (data) {
-    const fullName = `${data.firstName || ''} ${data.lastName || ''}`.trim();
-    const avatarLetter = fullName.charAt(0).toUpperCase();
+  return () => {
+    cancelled = true;
+  };
+}, []);
 
-    setUserProfile({ ...data, fullName });
-    setUserName(fullName);
-    setUserAvatarLetter(avatarLetter);
-  }
-});
-
-const leaveRequestsRef = ref(database, 'leave_requests');
-let cancelledLeaveFetch = false;
-
-(async () => {
-  try {
-    const snapshot = await get(leaveRequestsRef);
-    if (cancelledLeaveFetch) return;
-
-    const requestsData = snapshot.val() || {};
-    const allRequests = Object.entries(requestsData).map(([id, req]) => ({ id, ...req }));
-
-    const managerRequests = allRequests
-      .filter(req => req.applyTo?.includes(managerFirebaseKey))
-      .sort((a, b) => new Date(b.requestedDate) - new Date(a.requestedDate));
-
-    setEmployeeLeaveRequests(managerRequests);
-  } catch (err) {
-    console.error("Failed to fetch leave requests once:", err);
-  }
-})();
-
-return () => {
-  cancelledLeaveFetch = true;
-  unsubscribeManager();   // ✅ important cleanup
-};
-
-  }, []); // Runs once when mounted
 
 
   // ✅ Second useEffect – depends on managerFirebaseKey

@@ -1,7 +1,7 @@
 // In EmployeeManagement.jsx, replace the entire file content with this code.
 import React, { useState, useEffect, useRef } from 'react';
 import { database, auth } from '../../firebase'; // Import your Firebase config
-import { ref, onValue, push, set, remove, update, off } from "firebase/database";
+import { ref, push, set, remove, update, off, get } from "firebase/database";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { Spinner } from 'react-bootstrap';
 
