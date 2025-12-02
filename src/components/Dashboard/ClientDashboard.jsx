@@ -2680,94 +2680,121 @@ const ClientDashboard = () => {
   // ClientDashboard.jsx
 
   // In ClientDashboard.jsx, replace the useEffect hook that fetches client data
-useEffect(() => {
-  // ✅ use the correct session key for client
-  const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInClient'));
-  if (!loggedInUserData || !loggedInUserData.firebaseKey) return;
+  useEffect(() => {
+    const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInEmployee'));
+    if (!loggedInUserData || !loggedInUserData.firebaseKey) return;
 
-  const clientRef = ref(database, `clients/${loggedInUserData.firebaseKey}`);
+    const employeeFirebaseKey = loggedInUserData.firebaseKey;
 
-  // ✅ one-time fetch instead of onValue listener
-  (async () => {
+    // --- 1) Leaves: small realtime query (kept realtime but properly unsubscribed) ---
+    const leaveRef = ref(database, 'leave_requests');
+    const employeeLeaveQuery = query(leaveRef, orderByChild('employeeFirebaseKey'), equalTo(employeeFirebaseKey));
+
+    let unsubscribeLeaves = null;
+
     try {
-      const snapshot = await get(clientRef);
-      const data = snapshot.exists() ? snapshot.val() : null;
-
-      if (!data) {
-        setClientData(null);
-        setAllFiles([]);
-        setApplicationsData({});
-        setScheduledInterviews([]);
-        setActiveServices([]);
-        setInactiveServices([]);
-        return;
-      }
-
-      setClientData(data);
-
-      const registrations = data.serviceRegistrations
-        ? Object.values(data.serviceRegistrations)
-        : [];
-
-      const generalFiles = registrations.flatMap(reg => reg.files || []);
-      const applicationAttachments = registrations
-        .flatMap(reg => reg.jobApplications || [])
-        .flatMap(app => app.attachments || []);
-
-      const allFilesMap = new Map();
-      [...generalFiles, ...applicationAttachments].forEach(file => {
-        if (file && file.downloadUrl) {
-          allFilesMap.set(file.downloadUrl, file);
-        }
+      unsubscribeLeaves = onValue(employeeLeaveQuery, (snapshot) => {
+        const leavesData = [];
+        snapshot.forEach((childSnapshot) => {
+          const leave = childSnapshot.val();
+          if (leave.status === 'Approved') {
+            leavesData.push(leave);
+          }
+        });
+        setEmployeeLeaves(leavesData);
+      }, (error) => {
+        console.error("Error fetching employee leaves:", error);
       });
-      setAllFiles(Array.from(allFilesMap.values()));
-
-      const allApplications = registrations.flatMap(
-        reg => reg.jobApplications || []
-      );
-      const interviews = allApplications.filter(
-        app => app.status === 'Interview'
-      );
-      setScheduledInterviews(interviews);
-
-      const groupedApplications = allApplications.reduce((acc, app) => {
-        const dateKey = formatDate(app.appliedDate);
-        const entry = {
-          id: app.id,
-          jobId: app.jobId,
-          website: app.jobBoards,
-          position: app.jobTitle,
-          company: app.company,
-          link: app.jobDescriptionUrl,
-          jobType: app.jobType || 'N/A',
-          dateAdded: dateKey,
-          jobDescription: app.jobDesc || app.jobTitle,
-          status: app.status,
-          role: app.role,
-        };
-        if (!acc[dateKey]) acc[dateKey] = [];
-        acc[dateKey].push(entry);
-        return acc;
-      }, {});
-      setApplicationsData(groupedApplications);
-
-      const registeredServiceNames = registrations.map(
-        reg => reg.service || ''
-      );
-      const active = allServices.filter(s =>
-        registeredServiceNames.includes(s.title)
-      );
-      const inactive = allServices.filter(
-        s => !registeredServiceNames.includes(s.title)
-      );
-      setActiveServices(active);
-      setInactiveServices(inactive);
     } catch (err) {
-      console.error('Error fetching client data (one-time):', err);
+      console.error('Failed to attach leave listener', err);
     }
-  })();
-}, [allServices]); // or [] if allServices never changes
 
+    // --- 2) Fetch client data ONCE instead of using onValue (prevents GB downloads!) ---
+    const clientRef = ref(database, `clients/${loggedInUserData.firebaseKey}`);
+
+    get(clientRef)
+      .then((snapshot) => {
+        const data = snapshot.exists() ? snapshot.val() : null;
+        if (!data) {
+          setClientData(null);
+          setAllFiles([]);
+          setApplicationsData({});
+          setScheduledInterviews([]);
+          setActiveServices([]);
+          setInactiveServices([]);
+          return;
+        }
+
+        setClientData(data);
+
+        const registrations = data.serviceRegistrations
+          ? Object.values(data.serviceRegistrations)
+          : [];
+
+        const generalFiles = registrations.flatMap(reg => reg.files || []);
+        const applicationAttachments = registrations
+          .flatMap(reg => reg.jobApplications || [])
+          .flatMap(app => app.attachments || []);
+
+        const allFilesMap = new Map();
+        [...generalFiles, ...applicationAttachments].forEach(file => {
+          if (file && file.downloadUrl) {
+            allFilesMap.set(file.downloadUrl, file);
+          }
+        });
+        setAllFiles(Array.from(allFilesMap.values()));
+
+        const allApplications = registrations.flatMap(reg => reg.jobApplications || []);
+        const interviews = allApplications.filter(app => app.status === 'Interview');
+        setScheduledInterviews(interviews);
+
+        const groupedApplications = allApplications.reduce((acc, app) => {
+          const dateKey = formatDate(app.appliedDate);
+          const applicationEntry = {
+            id: app.id,
+            jobId: app.jobId,
+            website: app.jobBoards,
+            position: app.jobTitle,
+            company: app.company,
+            link: app.jobDescriptionUrl,
+            jobType: app.jobType || 'N/A',
+            dateAdded: dateKey,
+            jobDescription: app.jobDesc || app.jobTitle,
+            status: app.status,
+            role: app.role,
+          };
+          if (!acc[dateKey]) acc[dateKey] = [];
+          acc[dateKey].push(applicationEntry);
+          return acc;
+        }, {});
+
+        setApplicationsData(groupedApplications);
+
+        const registeredServiceNames = registrations.map(reg => reg.service || '');
+
+        const active = allServices.filter(service =>
+          registeredServiceNames.includes(service.title)
+        );
+        const inactive = allServices.filter(service =>
+          !registeredServiceNames.includes(service.title)
+        );
+
+        setActiveServices(active);
+        setInactiveServices(inactive);
+      })
+      .catch(err => {
+        console.error('Error fetching client data (one-time):', err);
+      });
+
+    // --- Cleanup: detach ALL listeners ---
+    return () => {
+      try {
+        if (typeof unsubscribeLeaves === 'function') unsubscribeLeaves();
+      } catch (e) {
+        console.error("Cleanup error:", e);
+      }
+    };
+  }, []);
 
 
   const handleActiveServiceClick = (service) => {
