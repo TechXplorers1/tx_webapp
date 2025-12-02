@@ -6,7 +6,7 @@ import EmployeeManagement from './EmployeeManagement';
 import AssetManagement from './AssetManagement';
 import RequestManagement from './RequestManagement';
 import ProjectManagement from './ProjectManagement';
-// import AdsManagement from './AdsManagement';
+import AdsManagement from './AdsManagement';
 import { database } from '../../firebase'; // Import your Firebase config
 import { ref, update } from "firebase/database"; // Import update function
 
@@ -361,7 +361,7 @@ const AdminPage = () => {
             {currentView === 'assetManagement' && <AssetManagement />}
             {currentView === 'requestManagement' && <RequestManagement />}
             {currentView === 'projectManagement' && <ProjectManagement />}
-            {/* {currentView === 'adsManagement' && <AdsManagement />} */}
+            {currentView === 'adsManagement' && <AdsManagement />}
           </div>
         </div>
       </main>
