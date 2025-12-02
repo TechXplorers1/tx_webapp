@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { getDatabase, ref, query, orderByChild, equalTo, update, remove, set, get, push } from "firebase/database";
+import { getDatabase, ref, onValue, query, orderByChild, equalTo, update, remove, set, get, push } from "firebase/database";
 import { database, storage } from '../../firebase'; // Import your Firebase config
 import { getStorage, ref as storageRef, getDownloadURL } from "firebase/storage";
 import { useTheme } from '../../context/ThemeContext';
@@ -51,6 +51,27 @@ const convertDDMMYYYYtoYYYYMMDD = (dateString) => {
   return null; // Invalid format
 };
 
+// Helper function to check if a date is within a leave range
+const isDateOnLeave = (dateString, leaves) => {
+  // Convert the DD-MM-YYYY date string to a comparable Date object
+  const yyyyMmDd = convertDDMMYYYYtoYYYYMMDD(dateString);
+  if (!yyyyMmDd) return false;
+
+  const checkDate = new Date(yyyyMmDd);
+  checkDate.setHours(0, 0, 0, 0); // Normalize to day start
+
+  return leaves.some(leave => {
+    // leave.fromDate and leave.toDate are stored as YYYY-MM-DD
+    const fromDate = new Date(leave.fromDate);
+    const toDate = new Date(leave.toDate);
+
+    // Normalize to day start
+    fromDate.setHours(0, 0, 0, 0);
+    toDate.setHours(0, 0, 0, 0);
+
+    return checkDate >= fromDate && checkDate <= toDate;
+  });
+};
 
 // --- END: HELPER FUNCTIONS ---
 
@@ -247,7 +268,7 @@ const ClientHeader = ({
   }, [isServicesDropdownOpen]);
 
   return (
-    <div>
+    <>
       {/* Inline styles for ClientHeader */}
       <style>
         {`
@@ -689,7 +710,7 @@ const ClientHeader = ({
 
         {/* Removed the hamburger menu button */}
       </header>
-    </div>
+    </>
   );
 };
 
@@ -1384,15 +1405,6 @@ const generateDateRange = (centerDate) => {
     });
   }
   return dates;
-};
-
-const isDateOnLeave = (dateStr, leaves = []) => {
-  const checkDate = new Date(dateStr.split("-").reverse().join("-"));
-  return leaves.some(leave => {
-    const start = new Date(leave.fromDate.split("-").reverse().join("-"));
-    const end = new Date(leave.toDate.split("-").reverse().join("-"));
-    return checkDate >= start && checkDate <= end;
-  });
 };
 
 // --- SAMPLE APPLICATIONS DATA ---
@@ -2350,77 +2362,6 @@ const ClientDashboard = () => {
   const [clientData, setClientData] = useState(null);
   const [allFiles, setAllFiles] = useState([]);
 
-  // --- UPDATED ADS & BANNERS LOGIC ---
-  // const [activeBannerAds, setActiveBannerAds] = useState([]);
-  
-  // CHANGE 1: State is now an array, not a single object
-  // const [activePopupAds, setActivePopupAds] = useState([]); 
-  const [showPopupModal, setShowPopupModal] = useState(false);
-
-  // Helper to check if a specific ad ID was closed
-  const isAdClosed = (adId) => localStorage.getItem(`closed_ad_${adId}`) === 'true';
-
-  // Helper to close a specific ad ID
-  const markAdAsClosed = (adId) => {
-    if (adId) {
-      localStorage.setItem(`closed_ad_${adId}`, 'true');
-    }
-  };
-
-  useEffect(() => {
-  const fetchTodayWelcomeCard = async () => {
-    try {
-      // use the shared database instance you already import
-      const cardRef = ref(database, 'welcomeCards');
-      const snapshot = await get(cardRef);
-
-      if (!snapshot.exists()) {
-        setWelcomeCardData(null);
-        setShowWelcomeCardModal(false);
-        return;
-      }
-
-      const cards = snapshot.val();
-      const cardKeys = Object.keys(cards);
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-
-      let activeCard = null;
-      let activeCardKey = null;
-
-      for (const key of cardKeys) {
-        const card = cards[key];
-        if (card.targetDate === today) {
-          activeCard = card;
-          activeCardKey = key;
-          break;
-        }
-      }
-
-      if (activeCard && !wasCardClosedToday(activeCardKey)) {
-        setWelcomeCardData({ ...activeCard, key: activeCardKey });
-        setShowWelcomeCardModal(true);
-      } else {
-        setWelcomeCardData(null);
-        setShowWelcomeCardModal(false);
-      }
-    } catch (err) {
-      console.error('Failed to load welcome card:', err);
-    }
-  };
-
-  fetchTodayWelcomeCard();
-}, []);
-
-  // CHANGE 3: Update close handler to mark ALL displayed popups as closed
-  // const handleClosePopup = () => {
-  //   // Loop through all currently active popups and mark them as seen locally
-  //   // so they don't appear again on refresh
-  //   activePopupAds.forEach(ad => {
-  //     markAdAsClosed(ad.id);
-  //   });
-  //   setShowPopupModal(false);
-  // };
-  // --- END NEW ADS LOGIC ---
   // --- START: ADD NEW STATE FOR LEAVES ---
   const [employeeLeaves, setEmployeeLeaves] = useState([]);
   // --- END: ADD NEW STATE FOR LEAVES ---
@@ -2739,93 +2680,93 @@ const ClientDashboard = () => {
   // ClientDashboard.jsx
 
   // In ClientDashboard.jsx, replace the useEffect hook that fetches client data
-  useEffect(() => {
-    // ✅ use the correct session key for client
-    const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInClient'));
-    if (!loggedInUserData || !loggedInUserData.firebaseKey) return;
+useEffect(() => {
+  // ✅ use the correct session key for client
+  const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInClient'));
+  if (!loggedInUserData || !loggedInUserData.firebaseKey) return;
 
-    const clientRef = ref(database, `clients/${loggedInUserData.firebaseKey}`);
+  const clientRef = ref(database, `clients/${loggedInUserData.firebaseKey}`);
 
-    // ✅ one-time fetch instead of onValue listener
-    (async () => {
-      try {
-        const snapshot = await get(clientRef);
-        const data = snapshot.exists() ? snapshot.val() : null;
+  // ✅ one-time fetch instead of onValue listener
+  (async () => {
+    try {
+      const snapshot = await get(clientRef);
+      const data = snapshot.exists() ? snapshot.val() : null;
 
-        if (!data) {
-          setClientData(null);
-          setAllFiles([]);
-          setApplicationsData({});
-          setScheduledInterviews([]);
-          setActiveServices([]);
-          setInactiveServices([]);
-          return;
-        }
-
-        setClientData(data);
-
-        const registrations = data.serviceRegistrations
-          ? Object.values(data.serviceRegistrations)
-          : [];
-
-        const generalFiles = registrations.flatMap(reg => reg.files || []);
-        const applicationAttachments = registrations
-          .flatMap(reg => reg.jobApplications || [])
-          .flatMap(app => app.attachments || []);
-
-        const allFilesMap = new Map();
-        [...generalFiles, ...applicationAttachments].forEach(file => {
-          if (file && file.downloadUrl) {
-            allFilesMap.set(file.downloadUrl, file);
-          }
-        });
-        setAllFiles(Array.from(allFilesMap.values()));
-
-        const allApplications = registrations.flatMap(
-          reg => reg.jobApplications || []
-        );
-        const interviews = allApplications.filter(
-          app => app.status === 'Interview'
-        );
-        setScheduledInterviews(interviews);
-
-        const groupedApplications = allApplications.reduce((acc, app) => {
-          const dateKey = formatDate(app.appliedDate);
-          const entry = {
-            id: app.id,
-            jobId: app.jobId,
-            website: app.jobBoards,
-            position: app.jobTitle,
-            company: app.company,
-            link: app.jobDescriptionUrl,
-            jobType: app.jobType || 'N/A',
-            dateAdded: dateKey,
-            jobDescription: app.jobDesc || app.jobTitle,
-            status: app.status,
-            role: app.role,
-          };
-          if (!acc[dateKey]) acc[dateKey] = [];
-          acc[dateKey].push(entry);
-          return acc;
-        }, {});
-        setApplicationsData(groupedApplications);
-
-        const registeredServiceNames = registrations.map(
-          reg => reg.service || ''
-        );
-        const active = allServices.filter(s =>
-          registeredServiceNames.includes(s.title)
-        );
-        const inactive = allServices.filter(
-          s => !registeredServiceNames.includes(s.title)
-        );
-        setActiveServices(active);
-        setInactiveServices(inactive);
-      } catch (err) {
-        console.error('Error fetching client data (one-time):', err);
+      if (!data) {
+        setClientData(null);
+        setAllFiles([]);
+        setApplicationsData({});
+        setScheduledInterviews([]);
+        setActiveServices([]);
+        setInactiveServices([]);
+        return;
       }
-    })();
-  }, [allServices]); // or [] if allServices never changes
+
+      setClientData(data);
+
+      const registrations = data.serviceRegistrations
+        ? Object.values(data.serviceRegistrations)
+        : [];
+
+      const generalFiles = registrations.flatMap(reg => reg.files || []);
+      const applicationAttachments = registrations
+        .flatMap(reg => reg.jobApplications || [])
+        .flatMap(app => app.attachments || []);
+
+      const allFilesMap = new Map();
+      [...generalFiles, ...applicationAttachments].forEach(file => {
+        if (file && file.downloadUrl) {
+          allFilesMap.set(file.downloadUrl, file);
+        }
+      });
+      setAllFiles(Array.from(allFilesMap.values()));
+
+      const allApplications = registrations.flatMap(
+        reg => reg.jobApplications || []
+      );
+      const interviews = allApplications.filter(
+        app => app.status === 'Interview'
+      );
+      setScheduledInterviews(interviews);
+
+      const groupedApplications = allApplications.reduce((acc, app) => {
+        const dateKey = formatDate(app.appliedDate);
+        const entry = {
+          id: app.id,
+          jobId: app.jobId,
+          website: app.jobBoards,
+          position: app.jobTitle,
+          company: app.company,
+          link: app.jobDescriptionUrl,
+          jobType: app.jobType || 'N/A',
+          dateAdded: dateKey,
+          jobDescription: app.jobDesc || app.jobTitle,
+          status: app.status,
+          role: app.role,
+        };
+        if (!acc[dateKey]) acc[dateKey] = [];
+        acc[dateKey].push(entry);
+        return acc;
+      }, {});
+      setApplicationsData(groupedApplications);
+
+      const registeredServiceNames = registrations.map(
+        reg => reg.service || ''
+      );
+      const active = allServices.filter(s =>
+        registeredServiceNames.includes(s.title)
+      );
+      const inactive = allServices.filter(
+        s => !registeredServiceNames.includes(s.title)
+      );
+      setActiveServices(active);
+      setInactiveServices(inactive);
+    } catch (err) {
+      console.error('Error fetching client data (one-time):', err);
+    }
+  })();
+}, [allServices]); // or [] if allServices never changes
 
 
 
@@ -3350,8 +3291,9 @@ const ClientDashboard = () => {
   // In ClientDashboard.jsx, replace the existing handleViewDashboardClick function.
 
   const handleViewDashboardClick = (serviceName) => {
+    // Find the service from the master list to get its path for navigation
     const service = allServices.find(s => s.title === serviceName);
-      if (!service) {
+    if (!service) {
       if (serviceName === 'Job Application') {
         setIsInWorksheetView(true);
         setActiveWorksheetTab("Applications");
@@ -3362,16 +3304,18 @@ const ClientDashboard = () => {
     const isActive = activeServices.some(active => active.title === service.title);
 
     if (isActive) {
+      // If the active service is "Job Supporting", show the main worksheet view
       if (service.title === 'Job Supporting') {
         setIsInWorksheetView(true);
-        setActiveWorksheetTab("Applications");  // ⬅️ opens Job Support dashboard
+        setActiveWorksheetTab("Applications");
       } else {
+        // For all other active services, show the "under development" page
         setDevelopmentService(service.title);
         setShowUnderDevelopment(true);
       }
     } else {
-      setDevelopmentService(service.title);
-      setShowUnderDevelopment(true);
+      // If the service is inactive, navigate to its sign-up page
+      handleInactiveServiceClick(service.path);
     }
   };
 
@@ -3467,7 +3411,7 @@ const ClientDashboard = () => {
     const isSimpleService = simplifiedServices.includes(serviceDetails.service);
 
     const renderSimpleDetails = () => (
-      <div>
+      <>
         <h4 className="border-bottom pb-2 mb-3">Service Request Details</h4>
         <Row>
           <Col md={6} className="mb-3"><Form.Label>First Name</Form.Label><div className="previewValueDisplay">{serviceDetails.firstName || 'N/A'}</div></Col>
@@ -3486,11 +3430,11 @@ const ClientDashboard = () => {
         <Row>
           <Col className="mb-3"><Form.Label>User Type</Form.Label><div className="previewValueDisplay">{serviceDetails.userType || 'N/A'}</div></Col>
         </Row>
-      </div>
+      </>
     );
 
     const renderJobSupportDetails = () => (
-      <div>
+      <>
         <h4 className="border-bottom pb-2 mb-3">Personal Information</h4>
         <Row className="mb-3"><Col><Form.Label>First Name:</Form.Label><div className="previewValueDisplay">{combinedDetails.firstName}</div></Col><Col><Form.Label>Middle Name:</Form.Label><div className="previewValueDisplay">{combinedDetails.middleName}</div></Col><Col><Form.Label>Last Name:</Form.Label><div className="previewValueDisplay">{combinedDetails.lastName}</div></Col></Row>
         <Row className="mb-3"><Col><Form.Label>Date of Birth:</Form.Label><div className="previewValueDisplay">{combinedDetails.dob}</div></Col><Col><Form.Label>Gender:</Form.Label><div className="previewValueDisplay">{combinedDetails.gender}</div></Col><Col><Form.Label>Ethnicity:</Form.Label><div className="previewValueDisplay">{combinedDetails.ethnicity}</div></Col></Row>
@@ -3560,7 +3504,7 @@ const ClientDashboard = () => {
             {combinedDetails.coverLetterFileName ? <a href={combinedDetails.coverLetterUrl} target="_blank" rel="noopener noreferrer">{combinedDetails.coverLetterFileName}</a> : 'N/A'}
           </div>
         </Form.Group>
-      </div>
+      </>
     );
 
     return (
@@ -5689,82 +5633,6 @@ html.dark-mode .notify-success-message {
         />
       )}
 
-     {/* --- UPDATED ADS POPUP MODAL (AUTO-SLIDE ENABLED) --- */}
-      {activePopupAds.length > 0 && (
-        <Modal
-          show={showPopupModal}
-          onHide={handleClosePopup}
-          centered
-          backdrop="static"
-          keyboard={false}
-          size="lg"
-        >
-          <Modal.Header closeButton>
-            <Modal.Title style={{ color: '#007bff', fontWeight: '700' }}>
-              Welcome / Announcements
-            </Modal.Title>
-          </Modal.Header>
-          
-          <Modal.Body className="p-0">
-            <Carousel
-              interval={3000} // <--- CHANGED: Set to 3000ms (3 seconds) for auto-slide
-              pause="hover"   // Pauses sliding when the user hovers over the ad
-              indicators={activePopupAds.length > 1}
-              controls={activePopupAds.length > 1}
-              variant="dark"
-            >
-              {activePopupAds.map((ad) => (
-                <Carousel.Item key={ad.id}>
-                  <div style={{ padding: '20px', textAlign: 'center', minHeight: '350px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-                    
-                    {/* Title */}
-                    <h4 style={{ color: '#1e293b', fontWeight: '700', marginBottom: '15px' }}>
-                      {ad.title}
-                    </h4>
-
-                    {/* Image */}
-                    {ad.imageUrl && (
-                      <img
-                        src={ad.imageUrl}
-                        alt={ad.title}
-                        style={{ 
-                          maxWidth: '100%', 
-                          maxHeight: '250px', 
-                          borderRadius: '8px', 
-                          objectFit: 'contain',
-                          marginBottom: '15px'
-                        }}
-                      />
-                    )}
-
-                    {/* Message */}
-                    <p style={{ fontSize: '1.1rem', whiteSpace: 'pre-wrap', color: '#334155', marginBottom: '20px' }}>
-                      {ad.message}
-                    </p>
-
-                    {/* Button */}
-                    {ad.linkUrl && (
-                      <Button 
-                        variant="success" 
-                        onClick={() => window.open(ad.linkUrl, '_blank')}
-                        style={{ fontWeight: '600' }}
-                      >
-                        {ad.buttonText || 'Open Link'}
-                      </Button>
-                    )}
-                  </div>
-                </Carousel.Item>
-              ))}
-            </Carousel>
-          </Modal.Body>
-          
-          <Modal.Footer>
-            <Button variant="secondary" onClick={handleClosePopup}>
-              Close All
-            </Button>
-          </Modal.Footer>
-        </Modal>
-      )}
       <ClientServiceDetailsModal
         show={isServiceDetailsModalOpen}
         onHide={() => setIsServiceDetailsModalOpen(false)}
@@ -5918,7 +5786,7 @@ html.dark-mode .notify-success-message {
           </div>
         ) : (
           !isInWorksheetView ? (
-            <div>
+            <>
               <h2 className="dashboard-title">
                 {/* Client Module */}
               </h2>
@@ -5938,7 +5806,7 @@ html.dark-mode .notify-success-message {
 
               {/* Content for main dashboard tabs */}
               {activeTab === "Dashboard" && (
-                <div>
+                <>
                   <h1 style={{ textAlign: 'center', marginBottom: '32px' }} className="brand-full">Welcome, {clientUserName} </h1>
 
                   {/* <div style={{ textAlign: 'center', marginBottom: '32px' }}>
@@ -6151,124 +6019,41 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
                     </style>
 
                     {/* --- START CAROUSEL SECTION --- */}
-                    <div className="carousel-wrapper" style={{ maxWidth: '1200px', margin: '0 auto 20px auto', padding: '0 20px' }}>
+                    <div className="carousel-wrapper" style={{ maxWidth: '1200px', margin: '0 auto 40px auto', padding: '0 20px' }}>
                       <Carousel
                         className="client-dashboard-carousel"
-                        interval={5000}
+                        interval={5000} // Auto-advance every 5 seconds
                         indicators={true}
-                        controls={activeBannerAds.length > 0}
+                        controls={false} // Hide Prev/Next controls as in the video
                       >
-                        {activeBannerAds.length > 0 ? (
-                          // 1. SHOW DYNAMIC ADS FROM ADMIN (SPLIT LAYOUT)
-                          activeBannerAds.map((ad) => (
-                            <Carousel.Item key={ad.id} onClick={() => ad.linkUrl ? window.open(ad.linkUrl, '_blank') : null} style={{ cursor: ad.linkUrl ? 'pointer' : 'default' }}>
+                        <Carousel.Item>
+                          <img
+                            className="carousel-background-image"
+                            src="https://picsum.photos/seed/picsum/200" // Placeholder: Replace with actual image URL
+                            alt="First slide: Job Applications"
+                          />
+                          <div className="carousel-content-overlay">
+                            <div className="carousel-text-box">
 
-                              {/* Main Container: Flexbox for 50/50 split */}
-                              <div style={{ height: '320px', background: '#ffffff', borderRadius: '16px', overflow: 'hidden', display: 'flex', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
-
-                                {/* LEFT HALF: IMAGE (50%) */}
-                                <div style={{ width: '50%', position: 'relative', overflow: 'hidden' }}>
-                                  {ad.imageUrl ? (
-                                    <img src={ad.imageUrl} alt={ad.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                  ) : (
-                                    <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                      <span style={{ fontSize: '3rem', opacity: 0.3 }}>📢</span>
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* RIGHT HALF: CONTENT (50%) */}
-                                <div style={{
-                                  width: '50%',
-                                  padding: '40px',
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  justifyContent: 'flex-start', /* Aligns content to top */
-                                  alignItems: 'flex-start',
-                                  backgroundColor: '#fff'
-                                }}>
-
-                                  {/* Optional Badge */}
-                                  <span style={{
-                                    background: '#e0f2fe', color: '#0284c7', padding: '4px 12px', borderRadius: '20px',
-                                    fontSize: '0.75rem', fontWeight: '700', marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '0.5px'
-                                  }}>
-                                    Announcement
-                                  </span>
-
-                                  <h3 style={{ color: '#1e293b', fontWeight: '800', marginBottom: '12px', fontSize: '1.8rem', lineHeight: '1.2' }}>
-                                    {ad.title}
-                                  </h3>
-
-                                  <p style={{ color: '#64748b', fontSize: '1.05rem', marginBottom: '20px', lineHeight: '1.6', maxWidth: '95%' }}>
-                                    {ad.message}
-                                  </p>
-
-                                  {ad.linkUrl && (
-                                    <button style={{
-                                      background: '#3b82f6', border: 'none', color: 'white', padding: '12px 28px',
-                                      borderRadius: '10px', fontWeight: '600', fontSize: '0.95rem', cursor: 'pointer',
-                                      boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)', transition: 'transform 0.2s', display: 'flex', alignItems: 'center', gap: '8px',
-                                      marginTop: '5px' /* Changed from 'auto' to '5px' to keep it near text */
-                                    }}>
-                                      {ad.buttonText || 'Learn More'}
-                                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"></path><path d="M12 5l7 7-7 7"></path></svg>
-                                    </button>
-                                  )}
-                                </div>
-
-                              </div>
-                            </Carousel.Item>
-                          ))
-                        ) : (
-                          // 2. FALLBACK: SHOW DEFAULT CONTENT IF NO ADS
-                          <div>
-                            <Carousel.Item>
-                              <div style={{ height: '320px', background: '#ffffff', borderRadius: '16px', overflow: 'hidden', display: 'flex', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
-                                <div style={{ width: '50%', position: 'relative' }}>
-                                  <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <span style={{ fontSize: '4rem', opacity: 0.3 }}>👋</span>
-                                  </div>
-                                </div>
-                                <div style={{
-                                  width: '50%',
-                                  padding: '40px',
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  justifyContent: 'flex-start',
-                                  alignItems: 'flex-start'
-                                }}>
-                                  <h3 style={{ color: '#1e293b', fontWeight: '800', marginBottom: '15px', fontSize: '2rem' }}>Welcome to TechXplorers</h3>
-                                  <p style={{ color: '#64748b', fontSize: '1.1rem', lineHeight: '1.6', marginBottom: '20px' }}>Manage your services, track applications, and grow your business with our comprehensive dashboard.</p>
-                                </div>
-                              </div>
-                            </Carousel.Item>
-                            <Carousel.Item>
-                              <div style={{ height: '320px', background: '#ffffff', borderRadius: '16px', overflow: 'hidden', display: 'flex', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
-                                <div style={{ width: '50%', position: 'relative' }}>
-                                  <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <span style={{ fontSize: '4rem', opacity: 0.3 }}>🚀</span>
-                                  </div>
-                                </div>
-                                <div style={{
-                                  width: '50%',
-                                  padding: '40px',
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  justifyContent: 'flex-start',
-                                  alignItems: 'flex-start'
-                                }}>
-                                  <h3 style={{ color: '#1e293b', fontWeight: '800', marginBottom: '15px', fontSize: '2rem' }}>Explore Our Services</h3>
-                                  <p style={{ color: '#64748b', fontSize: '1.1rem', lineHeight: '1.6', marginBottom: '20px' }}>From Web Development to Cyber Security, check out what's new in our service catalog.</p>
-                                </div>
-                              </div>
-                            </Carousel.Item>
+                            </div>
                           </div>
-                        )}
+                        </Carousel.Item>
+                        <Carousel.Item>
+                          <img
+                            className="carousel-background-image"
+                            src="https://picsum.photos/200?grayscale" // Placeholder: Replace with actual image URL
+                            alt="Second slide: New Service Announcement"
+                          />
+                          <div className="carousel-content-overlay">
+                            <div className="carousel-text-box">
+
+                            </div>
+                          </div>
+                        </Carousel.Item>
+                        {/* Add more Carousel.Item components as needed */}
                       </Carousel>
                     </div>
                     {/* --- END CAROUSEL SECTION --- */}
-
 
 
                     {/* 1. All Services Grid */}
@@ -6408,7 +6193,7 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
                               {/* Conditional Content Based on Hover State */}
                               {isHovered ? (
                                 // Hovered State for any service
-                                <div>
+                                <>
                                   {/* Description */}
                                   <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', minHeight: '60px', flexGrow: 1 }}>
                                     {service.description}
@@ -6429,275 +6214,203 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
                                     }}
                                   >
                                     {/* Render metrics based on the service type */}
-{/* Render metrics based on the service type */}
-{service.key === 'Job Application' && serviceMetrics && (
-  <>
-    {/* Applied Today */}
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#60A5FA' }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.appliedToday}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Applied Today</div>
-    </div>
+                                    {service.key === 'Job Application' && serviceMetrics && (
+                                      <>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#60A5FA' }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.appliedToday}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Applied Today</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#3B82F6' }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.totalApplications}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Total Applications</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10B981' }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.interviewsScheduled}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Interviews Scheduled</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#93C5FD' }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.responseRate}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Response Rate</div>
+                                          </div>
+                                        </div>
+                                      </>
+                                    )}
 
-    {/* Total Applications */}
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#3B82F6' }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.totalApplications}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Total Applications</div>
-    </div>
+                                    {service.key === 'Mobile Development' && serviceMetrics && (
+                                      <>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[0] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.activeProjects}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Active Projects</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[1] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.appsDeployed}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Apps Deployed</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[2] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.clientsSatisfied}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Clients Satisfied</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[3] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.avgRating}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Avg Rating</div>
+                                          </div>
+                                        </div>
+                                      </>
+                                    )}
 
-    {/* Interviews Scheduled */}
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10B981' }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.interviewsScheduled}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Interviews Scheduled</div>
-    </div>
+                                    {service.key === 'Web Development' && serviceMetrics && (
+                                      <>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[0] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.sitesBuilt}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Sites Built</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[1] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.domainsManaged}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Domains Managed</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[2] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.uptime}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Uptime</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[3] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.performanceScore}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Performance Score</div>
+                                          </div>
+                                        </div>
+                                      </>
+                                    )}
 
-    {/* Response Rate */}
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#93C5FD' }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.responseRate}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Response Rate</div>
-    </div>
-  </>
-)}
+                                    {service.key === 'Digital Marketing' && serviceMetrics && (
+                                      <>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[0] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.activeCampaigns}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Active Campaigns</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[1] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.leadsGenerated}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Leads Generated</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[2] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.conversionRate}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Conversion Rate</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[3] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.roi}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>ROI</div>
+                                          </div>
+                                        </div>
+                                      </>
+                                    )}
 
-{service.key === 'Mobile Development' && serviceMetrics && (
-  <>
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[0] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.activeProjects}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Active Projects</div>
-    </div>
+                                    {service.key === 'IT Talent Supply' && serviceMetrics && (
+                                      <>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[0] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.candidatesPlaced}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Candidates Placed</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[1] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.interviewsToday}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Interviews Today</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[2] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.activePositions}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Active Positions</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[3] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.placementRate}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Placement Rate</div>
+                                          </div>
+                                        </div>
+                                      </>
+                                    )}
 
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[1] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.appsDeployed}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Apps Deployed</div>
-    </div>
-
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[2] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.clientsSatisfied}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Clients Satisfied</div>
-    </div>
-
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[3] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.avgRating}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Avg Rating</div>
-    </div>
-  </>
-)}
-
-{service.key === 'Web Development' && serviceMetrics && (
-  <>
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[0] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.sitesBuilt}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Sites Built</div>
-    </div>
-
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[1] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.domainsManaged}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Domains Managed</div>
-    </div>
-
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[2] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.uptime}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Uptime</div>
-    </div>
-
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[3] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.performanceScore}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Performance Score</div>
-    </div>
-  </>
-)}
-
-{service.key === 'Digital Marketing' && serviceMetrics && (
-  <>
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[0] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.activeCampaigns}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Active Campaigns</div>
-    </div>
-
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[1] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.leadsGenerated}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Leads Generated</div>
-    </div>
-
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[2] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.conversionRate}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Conversion Rate</div>
-    </div>
-
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[3] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.roi}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>ROI</div>
-    </div>
-  </>
-)}
-
-{service.key === 'IT Talent Supply' && serviceMetrics && (
-  <>
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[0] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.candidatesPlaced}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Candidates Placed</div>
-    </div>
-
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[1] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.interviewsToday}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Interviews Today</div>
-    </div>
-
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[2] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.activePositions}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Active Positions</div>
-    </div>
-
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[3] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.placementRate}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Placement Rate</div>
-    </div>
-  </>
-)}
-
-{service.key === 'Cyber Security' && serviceMetrics && (
-  <>
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[0] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.threatsBlocked}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Threats Blocked</div>
-    </div>
-
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[1] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.securityScans}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Security Scans</div>
-    </div>
-
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[2] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.vulnerabilitiesFixed}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Vulnerabilities Fixed</div>
-    </div>
-
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[3] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.systemsProtected}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Systems Protected</div>
-    </div>
-  </>
-)}
-
+                                    {service.key === 'Cyber Security' && serviceMetrics && (
+                                      <>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[0] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.threatsBlocked}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Threats Blocked</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[1] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.securityScans}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Security Scans</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[2] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.vulnerabilitiesFixed}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Vulnerabilities Fixed</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[3] }}></div>
+                                          <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{serviceMetrics.systemsProtected}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Systems Protected</div>
+                                          </div>
+                                        </div>
+                                      </>
+                                    )}
                                   </div>
 
                                   {/* Keep the button visible on hover */}
@@ -6775,10 +6488,10 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
                                       Featured
                                     </div>
                                   </div>
-                                </div>
+                                </>
                               ) : (
                                 // Default State (Not Hovered)
-                                <div>
+                                <>
                                   <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', minHeight: '60px', flexGrow: 1 }}>
                                     {service.description}
                                   </p>
@@ -6815,7 +6528,7 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
                                       Book Now
                                     </button>
                                   )}
-                                </div>
+                                </>
                               )}
                             </div>
                           );
@@ -7032,7 +6745,7 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
                   </div>
                   {/* --- END NEW SECTION --- */}
 
-                </div>
+                </>
               )}
 
               {/* If activeTab is 'Applications' or 'Documents' directly from the main tabs, render WorksheetView */}
@@ -7216,7 +6929,7 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
                   <img src={imageUrlToView} alt="Document Preview" style={{ maxWidth: '100%', maxHeight: '75vh', borderRadius: '8px' }} />
                 </Modal.Body>
               </Modal>
-            </div>
+            </>
           ) : (
             // Render the WorksheetView when isInWorksheetView is true
             <WorksheetView
