@@ -253,9 +253,9 @@ const CustomNavbar = () => {
               <NavLink to="/contactus" className={({ isActive }) => `nav-link-custom ${isActive ? 'active' : ''}`}>
                 Contact
               </NavLink>
-               <NavLink to="/projects" className={({ isActive }) => `nav-link-custom ${isActive ? 'active' : ''}`}>
+               {/* <NavLink to="/projects" className={({ isActive }) => `nav-link-custom ${isActive ? 'active' : ''}`}>
                 Our Projects
-              </NavLink>
+              </NavLink> */}
             </Nav>
 
             {/* 3. Right Side Actions (Theme + Login) */}
