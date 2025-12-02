@@ -2351,10 +2351,10 @@ const ClientDashboard = () => {
   const [allFiles, setAllFiles] = useState([]);
 
   // --- UPDATED ADS & BANNERS LOGIC ---
-  const [activeBannerAds, setActiveBannerAds] = useState([]);
+  // const [activeBannerAds, setActiveBannerAds] = useState([]);
   
   // CHANGE 1: State is now an array, not a single object
-  const [activePopupAds, setActivePopupAds] = useState([]); 
+  // const [activePopupAds, setActivePopupAds] = useState([]); 
   const [showPopupModal, setShowPopupModal] = useState(false);
 
   // Helper to check if a specific ad ID was closed
@@ -2412,14 +2412,14 @@ const ClientDashboard = () => {
 }, []);
 
   // CHANGE 3: Update close handler to mark ALL displayed popups as closed
-  const handleClosePopup = () => {
-    // Loop through all currently active popups and mark them as seen locally
-    // so they don't appear again on refresh
-    activePopupAds.forEach(ad => {
-      markAdAsClosed(ad.id);
-    });
-    setShowPopupModal(false);
-  };
+  // const handleClosePopup = () => {
+  //   // Loop through all currently active popups and mark them as seen locally
+  //   // so they don't appear again on refresh
+  //   activePopupAds.forEach(ad => {
+  //     markAdAsClosed(ad.id);
+  //   });
+  //   setShowPopupModal(false);
+  // };
   // --- END NEW ADS LOGIC ---
   // --- START: ADD NEW STATE FOR LEAVES ---
   const [employeeLeaves, setEmployeeLeaves] = useState([]);
