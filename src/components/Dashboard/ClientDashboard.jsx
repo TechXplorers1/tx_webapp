@@ -1415,8 +1415,62 @@ const Applications = ({
   handleWebsiteCheckboxChange, handlePositionCheckboxChange, handleCompanyCheckboxChange,
   isGlobalFilterActive, clearAllFilters, getApplicationsSectionTitle, filteredApplicationsForDisplay,
   downloadApplicationsData, applicationsData, allApplicationsFlattened,
-  activeWorksheetTab, setActiveWorksheetTab, employeeLeaves, // New prop to control worksheet tabs // --- 1. RECEIVE THE FUNCTION AS A PROP ---
+  activeWorksheetTab, setActiveWorksheetTab, employeeLeaves, totalPages,
+  currentPage,
+  handleNextPage,
+  handlePreviousPage, onPageChange, // New prop to control worksheet tabs // --- 1. RECEIVE THE FUNCTION AS A PROP ---
 }) => {
+
+  const renderPageButtons = () => {
+  const buttons = [];
+  const maxVisible = 5; // how many numbers to show in the middle
+  let start = 1;
+  let end = totalPages;
+
+  if (totalPages > maxVisible) {
+    const half = Math.floor(maxVisible / 2);
+    start = Math.max(1, currentPage - half);
+    end = start + maxVisible - 1;
+
+    if (end > totalPages) {
+      end = totalPages;
+      start = end - maxVisible + 1;
+    }
+  }
+
+  for (let page = start; page <= end; page++) {
+    buttons.push(
+      <Button
+        key={page}
+        variant={page === currentPage ? "primary" : "outline-secondary"}
+        onClick={() => handlePageChange(page)}
+        style={{ padding: '6px 12px', fontSize: '0.85rem' }}
+      >
+        {page}
+      </Button>
+    );
+  }
+
+  // If there are more pages beyond the visible range, show "..."
+  if (end < totalPages) {
+    buttons.push(
+      <span key="ellipsis" style={{ padding: '0 4px', color: '#666' }}>...</span>
+    );
+    buttons.push(
+      <Button
+        key={totalPages}
+        variant={currentPage === totalPages ? "primary" : "outline-secondary"}
+        onClick={() => handlePageChange(totalPages)}
+        style={{ padding: '6px 12px', fontSize: '0.85rem' }}
+      >
+        {totalPages}
+      </Button>
+    );
+  }
+
+  return buttons;
+};
+
 
 
   return (
@@ -1709,7 +1763,7 @@ const Applications = ({
                       backgroundColor: index % 2 === 0 ? '#fdfdfd' : '#f0f8ff' // Light alternating colors
                     }}
                   >
-                    <td style={{ padding: '12px' }}>{index + 1}</td>
+                    <td style={{ padding: '12px' }}>{(currentPage - 1) * 5 + index + 1}</td>
                     <td style={{ padding: '12px' }}>
                       {app.dateAdded} {/* Display Applied Date */}
                     </td>
@@ -1719,9 +1773,19 @@ const Applications = ({
                     <td style={{ padding: '12px' }}>{app.company}</td>
                     <td style={{ padding: '12px' }}>{app.jobType || 'N/A'}</td>
                     <td style={{ padding: '12px' }}>
-                      <a href={app.link} target="_blank" rel="noopener noreferrer" style={{ color: '#007bff', textDecoration: 'none' }}>
-                        Link
-                      </a>
+                      {/* FIX 4: Ensure the href attribute is using the correct, mapped property */}
+                      {app.link ? (
+                  <a
+                    href={app.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: '#007bff', textDecoration: 'none' }}
+                  >
+                    Link
+                  </a>
+                ) : (
+                  'N/A'
+                )}
                     </td>
                     {/* <td style={{ padding: '12px' }}>
                       <Button
@@ -1746,6 +1810,90 @@ const Applications = ({
             }
           </p>
         )}
+        {/* --- START: PAGINATION CONTROLS (Moved here from previous step for visual confirmation) --- */}
+        {totalPages > 1 && (
+  <div style={{
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: '20px',
+    padding: '10px 20px',
+    borderTop: '1px solid #eee',
+    backgroundColor: '#fff',
+    borderRadius: '0 0 8px 8px',
+    boxShadow: '0 -2px 4px rgba(0,0,0,0.05)'
+  }}>
+    <div style={{ color: '#666', fontSize: '0.9rem' }}>
+      Page {currentPage} of {totalPages}
+    </div>
+
+    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+      {/* Previous */}
+      <Button
+        variant="outline-primary"
+        onClick={handlePreviousPage}
+        disabled={currentPage === 1}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '5px',
+          padding: '6px 12px',
+          fontSize: '0.85rem',
+        }}
+      >
+        Previous
+      </Button>
+
+      {/* Numbered page buttons */}
+      {[...Array(totalPages)].map((_, index) => {
+        const page = index + 1;
+        const isActive = page === currentPage;
+
+        return (
+          <button
+            key={page}
+            type="button"
+                  onClick={() => {
+        if (!isActive && typeof onPageChange === 'function') {
+          onPageChange(page);      // ✅ safe call
+        }
+      }}
+            disabled={isActive}
+            style={{
+              minWidth: '32px',
+              padding: '6px 10px',
+              fontSize: '0.85rem',
+              borderRadius: '4px',
+              border: isActive ? '1px solid #007bff' : '1px solid #ddd',
+              backgroundColor: isActive ? '#007bff' : '#fff',
+              color: isActive ? '#fff' : '#333',
+              cursor: isActive ? 'default' : 'pointer',
+            }}
+          >
+            {page}
+          </button>
+        );
+      })}
+
+      {/* Next */}
+      <Button
+        variant="outline-primary"
+        onClick={handleNextPage}
+        disabled={currentPage === totalPages}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '5px',
+          padding: '6px 12px',
+          fontSize: '0.85rem',
+        }}
+      >
+        Next
+      </Button>
+    </div>
+  </div>
+)}
+        {/* --- END: PAGINATION CONTROLS --- */}
       </div>
 
       {/* --- Date Range Picker Modal --- */}
@@ -2142,7 +2290,10 @@ const WorksheetView = ({ setActiveTab, activeWorksheetTab, setActiveWorksheetTab
   activeSubTab, setActiveSubTab, clientData, // New prop to pass sub-tab state for Documents
   setIsInWorksheetView, onImageView, // New prop to allow WorksheetView to set its own visibility
   scheduledInterviews, handleAttachmentClick, closeAttachmentModal, currentAttachments, showAttachmentModal,
-  employeeLeaves // --- 1. RECEIVE isDateOnLeave PROP ---
+  employeeLeaves, totalPages,      
+    currentPage,       
+    handleNextPage,    
+    handlePreviousPage, handlePageChange,
 }) => {
   return (
     <div style={{
@@ -2318,6 +2469,11 @@ const WorksheetView = ({ setActiveTab, activeWorksheetTab, setActiveWorksheetTab
           activeWorksheetTab={activeWorksheetTab} // Pass down
           setActiveWorksheetTab={setActiveWorksheetTab} // Pass down
           employeeLeaves={employeeLeaves}
+          totalPages={totalPages}      
+        currentPage={currentPage}     
+        handleNextPage={handleNextPage}    
+        handlePreviousPage={handlePreviousPage}
+        onPageChange={handlePageChange}
         />
       )}
 
@@ -2653,6 +2809,9 @@ const ClientDashboard = () => {
   const [tempSelectedPositions, setTempSelectedPositions] = useState([]);
   const [tempSelectedCompanies, setTempSelectedCompanies] = useState([]);
 
+  const [currentPage, setCurrentPage] = useState(1); // Tracks the current page number
+  const applicationsPerPage = 5;
+
   // States for Documents tab
   const [activeSubTab, setActiveSubTab] = useState("Resumes");
 
@@ -2796,12 +2955,54 @@ const ClientDashboard = () => {
     // IMPORTANT: Move ALL data processing logic that previously followed 'setClientData(data)' 
     // into this callback, so it runs whenever the data is updated.
     
-    const registrations = data.serviceRegistrations ? Object.values(data.serviceRegistrations) : [];
-    const generalFiles = registrations.flatMap(reg => reg.files || []);
-    const applicationAttachments = registrations
-      .flatMap(reg => reg.jobApplications || [])
-      .flatMap(app => app.attachments || []);
+const registrations = data.serviceRegistrations ? Object.values(data.serviceRegistrations) : [];
+    
+    // B. Extract and group applications (Optimization: use a single loop)
+    let allApplications = [];
+    let interviews = [];
+    const groupedApplications = {};
+    let generalFiles = [];
+    let applicationAttachments = [];
 
+    registrations.forEach(reg => {
+        // Collect files attached to the service registration itself
+        generalFiles = generalFiles.concat(reg.files || []);
+
+        (reg.jobApplications || []).forEach(app => {
+            // Collect all applications for flattening
+            allApplications.push(app); 
+
+            // Collect attachments from applications
+            applicationAttachments = applicationAttachments.concat(app.attachments || []);
+
+            // Group applications by date for the ribbon
+            const dateKey = formatDate(app.appliedDate);
+            const entry = { 
+                id: app.id, 
+                jobId: app.jobId, 
+                website: app.jobBoards, 
+                position: app.jobTitle, 
+                company: app.company, 
+                // FIX: Ensure you are using the correct field name for the link
+                link: app.jobDescriptionUrl || app.link || '', // Use 'link' for display, fallback to 'jobDescriptionUrl' if name is inconsistent
+            };
+            
+            if (!groupedApplications[dateKey]) {
+                groupedApplications[dateKey] = [];
+            }
+            groupedApplications[dateKey].push(entry);
+
+            // Filter interviews directly
+            if (app.status === 'Interview') {
+                interviews.push(app);
+            }
+        });
+    });
+    
+    setScheduledInterviews(interviews);
+    setApplicationsData(groupedApplications); // Use the efficiently created map
+
+    // C. Combine and set all files
     const allFilesMap = new Map();
     [...generalFiles, ...applicationAttachments].forEach(file => {
       if (file && file.downloadUrl) {
@@ -2810,49 +3011,30 @@ const ClientDashboard = () => {
     });
     setAllFiles(Array.from(allFilesMap.values()));
 
-    const allApplications = registrations.flatMap(
-      reg => reg.jobApplications || []
-    );
-    const interviews = allApplications.filter(
-      app => app.status === 'Interview'
-    );
-    setScheduledInterviews(interviews);
-    
-    const groupedApplications = allApplications.reduce((acc, app) => {
-      const dateKey = formatDate(app.appliedDate);
-      const entry = { id: app.id, jobId: app.jobId, website: app.jobBoards, position: app.jobTitle, company: app.company, link: app.link };
-      // ... (Include all other application fields here)
-      if (!acc[dateKey]) {
-        acc[dateKey] = [];
-      }
-      acc[dateKey].push(entry);
-      return acc;
-    }, {});
-    setApplicationsData(groupedApplications);
-    
- const registeredServiceNames = registrations.map(
+    // D. Update Active/Inactive Services
+    const allServices = [
+        { title: "Mobile Development", path: "/services/mobile-app-development" },
+        { title: "Web Development", path: "/services/web-app-development" },
+        { title: "Digital Marketing", path: "/services/digital-marketing" },
+        { title: "IT Talent Supply", path: "/services/it-talent-supply" },
+        { title: "Job Supporting", path: "/services/job-contact-form" },
+        { title: "Cyber Security", path: "/services/cyber-security" },
+    ];
+    const registeredServiceNames = registrations.map(
           reg => reg.service || ''
         );
-        const active = allServices.filter(s =>
-          registeredServiceNames.includes(s.title)
-        );
-        const inactive = allServices.filter(
-          s => !registeredServiceNames.includes(s.title)
-        );
-        setActiveServices(active);
-        setInactiveServices(inactive);
+    setActiveServices(allServices.filter(s => registeredServiceNames.includes(s.title)));
+    setInactiveServices(allServices.filter(s => !registeredServiceNames.includes(s.title)));
+    
   }, (error) => {
     console.error("Firebase Read Error:", error);
-    // You may add logic to alert the user of a connection error
   });
 
-  // 3. Cleanup function: Detach the listener when the component unmounts
-  // This is crucial to prevent memory leaks and stop unnecessary connections.
   return () => {
     unsubscribe();
   };
   
-}, []); // Keep dependency array empty to run only on mount/unmount
+}, []);
 
   const handleActiveServiceClick = (service) => {
     if (clientData && clientData.serviceRegistrations) {
@@ -3244,7 +3426,7 @@ const ClientDashboard = () => {
       'Job ID': app.jobId,
       'Company': app.company,
       'Job Type': app.jobType || 'N/A',
-      'Link': app.jobDescriptionUrl,
+      'Link': app.link,
       // 'Job Description': app.jobDescription
     }));
 
@@ -3467,6 +3649,48 @@ const ClientDashboard = () => {
   }, [selectedDate, applicationsData, filterWebsites, filterPositions, filterCompanies, searchTerm, startDateFilter, endDateFilter, allApplicationsFlattened, isGlobalFilterActive]);
 
 
+    // ---------- PAGINATION FOR APPLICATIONS TABLE ----------
+  const totalPages = useMemo(() => {
+    if (!filteredApplicationsForDisplay || filteredApplicationsForDisplay.length === 0) return 1;
+    return Math.ceil(filteredApplicationsForDisplay.length / applicationsPerPage);
+  }, [filteredApplicationsForDisplay, applicationsPerPage]);
+
+  const paginatedApplications = useMemo(() => {
+    if (!filteredApplicationsForDisplay) return [];
+    const start = (currentPage - 1) * applicationsPerPage;
+    const end = start + applicationsPerPage;
+    return filteredApplicationsForDisplay.slice(start, end);
+  }, [filteredApplicationsForDisplay, currentPage, applicationsPerPage]);
+
+  const handleNextPage = () => {
+    setCurrentPage((prev) => (prev < totalPages ? prev + 1 : prev));
+  };
+
+  const handlePreviousPage = () => {
+    setCurrentPage((prev) => (prev > 1 ? prev - 1 : 1));
+  };
+
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  // Reset to first page whenever filters/search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [
+    searchTerm,
+    startDateFilter,
+    endDateFilter,
+    filterWebsites,
+    filterPositions,
+    filterCompanies,
+    filtereJobType,
+    selectedDate,
+  ]);
+
+
   // Determine if the overlay should be visible (for all modals and sidebar)
   const isOverlayVisible = useMemo(() => {
     return menuOpen || showResumeModal || showPaymentModal || showSubscriptionDetailsModal ||
@@ -3686,7 +3910,6 @@ const ClientDashboard = () => {
     };
     return metrics[serviceKey] || null;
   };
-
 
 
   // ... inside the ClientDashboard main component
@@ -7130,7 +7353,6 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
                   isGlobalFilterActive={isGlobalFilterActive}
                   clearAllFilters={clearAllFilters}
                   getApplicationsSectionTitle={getApplicationsSectionTitle}
-                  filteredApplicationsForDisplay={filteredApplicationsForDisplay}
                   downloadApplicationsData={downloadApplicationsData}
                   applicationsData={applicationsData}
                   allApplicationsFlattened={allApplicationsFlattened}
@@ -7144,6 +7366,13 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
                   currentAttachments={currentAttachments}
                   showAttachmentModal={showAttachmentModal}
                   employeeLeaves={employeeLeaves}
+                  filteredApplicationsForDisplay={paginatedApplications} // Use paginated data
+                  totalPages={totalPages}
+                  currentPage={currentPage}
+                  handleNextPage={handleNextPage}
+                  handlePreviousPage={handlePreviousPage}
+                  onPageChange={handlePageChange}
+
                 />
               )}
 
@@ -7216,7 +7445,6 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
                   isGlobalFilterActive={isGlobalFilterActive}
                   clearAllFilters={clearAllFilters}
                   getApplicationsSectionTitle={getApplicationsSectionTitle}
-                  filteredApplicationsForDisplay={filteredApplicationsForDisplay}
                   downloadApplicationsData={downloadApplicationsData}
                   applicationsData={applicationsData}
                   allApplicationsFlattened={allApplicationsFlattened}
@@ -7231,6 +7459,11 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
                   currentAttachments={currentAttachments}
                   showAttachmentModal={showAttachmentModal}
                   employeeLeaves={employeeLeaves}
+                  filteredApplicationsForDisplay={paginatedApplications} // Use paginated data
+                  totalPages={totalPages}
+                  currentPage={currentPage}
+                  handleNextPage={handleNextPage}
+                  handlePreviousPage={handlePreviousPage}
                 />
               )}
               <Modal show={showImageViewer} onHide={() => setShowImageViewer(false)} size="lg" centered>
@@ -7312,7 +7545,6 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
               isGlobalFilterActive={isGlobalFilterActive}
               clearAllFilters={clearAllFilters}
               getApplicationsSectionTitle={getApplicationsSectionTitle}
-              filteredApplicationsForDisplay={filteredApplicationsForDisplay}
               downloadApplicationsData={downloadApplicationsData}
               applicationsData={applicationsData}
               allApplicationsFlattened={allApplicationsFlattened}
@@ -7327,6 +7559,11 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
               currentAttachments={currentAttachments}
               showAttachmentModal={showAttachmentModal}
               employeeLeaves={employeeLeaves}
+              filteredApplicationsForDisplay={paginatedApplications} // Use paginated data
+              totalPages={totalPages}
+              currentPage={currentPage}
+              handleNextPage={handleNextPage}
+              handlePreviousPage={handlePreviousPage}
             />
           )
         )}
