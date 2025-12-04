@@ -41,8 +41,9 @@ export default function SignupPage() {
   };
 
   const processGoogleUser = async (user) => {
-    const dbRef = ref(database);
-    const snapshot = await get(child(dbRef, `users/${user.uid}`));
+    // FIX: Use specific path instead of root ref
+    const userRef = ref(database, `users/${user.uid}`);
+    const snapshot = await get(userRef);
     let userDataFromDb;
 
     if (snapshot.exists()) {
@@ -52,7 +53,7 @@ export default function SignupPage() {
             email: user.email,
             roles: ['client'],
         };
-        await set(ref(database, 'users/' + user.uid), userDataFromDb);
+        await set(userRef, userDataFromDb);
     }
     
     const finalUserData = {

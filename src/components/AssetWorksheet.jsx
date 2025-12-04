@@ -2,8 +2,45 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Bell, User, ChevronDown, Plus, Search, Info, X, Hash, Edit, Trash2, LogOut, CheckCircle, Wrench, DollarSign, FilterX } from 'lucide-react';
 import { ref, push, set, remove, update, get } from "firebase/database";
 // Make sure this path is correct for your project structure and that the file exports your initialized database.
-import { database } from '../firebase'; 
+import { database } from '../firebase';
 
+// --- IndexedDB Helper (Solves 5MB Limit & Reduces Downloads) ---
+const IDB_CONFIG = { name: 'AppCacheDB', version: 1, store: 'firebase_cache' };
+
+const openDB = () => {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(IDB_CONFIG.name, IDB_CONFIG.version);
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(IDB_CONFIG.store)) {
+        db.createObjectStore(IDB_CONFIG.store);
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+};
+
+const dbGet = async (key) => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(IDB_CONFIG.store, 'readonly');
+    const request = transaction.objectStore(IDB_CONFIG.store).get(key);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+};
+
+const dbSet = async (key, val) => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(IDB_CONFIG.store, 'readwrite');
+    const request = transaction.objectStore(IDB_CONFIG.store).put(val, key);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+};
+// -----------------------------------------------------------
 // --- Helper Functions ---
 const formatDateForInput = (dateStr) => {
   if (!dateStr || dateStr.split('/').length !== 3) return '';
@@ -18,19 +55,19 @@ const formatDateForState = (dateStr) => {
 };
 
 const isDateInPast = (dateStr) => {
-    if (!dateStr) return false;
-    try {
-        const [day, month, year] = dateStr.split('/').map(Number);
-        if (isNaN(day) || isNaN(month) || isNaN(year)) return false;
-        const returnDate = new Date(year, month - 1, day);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        returnDate.setHours(23, 59, 59, 999); // Consider the entire day as the return day
-        return returnDate < today;
-    } catch (e) {
-        console.error("Error parsing date for past check:", dateStr, e);
-        return false;
-    }
+  if (!dateStr) return false;
+  try {
+    const [day, month, year] = dateStr.split('/').map(Number);
+    if (isNaN(day) || isNaN(month) || isNaN(year)) return false;
+    const returnDate = new Date(year, month - 1, day);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    returnDate.setHours(23, 59, 59, 999); // Consider the entire day as the return day
+    return returnDate < today;
+  } catch (e) {
+    console.error("Error parsing date for past check:", dateStr, e);
+    return false;
+  }
 };
 
 // --- Reusable Modal Components ---
@@ -55,289 +92,289 @@ const ConfirmationModal = ({ show, title, message, onConfirm, onClose, confirmTe
 };
 
 const EditAssetModal = ({ show, onClose, asset, onUpdate, users, branchLocations, viewMode }) => {
-    const [formData, setFormData] = useState({});
-    const [otherType, setOtherType] = useState('');
+  const [formData, setFormData] = useState({});
+  const [otherType, setOtherType] = useState('');
 
-    useEffect(() => {
-        if (asset) {
-          let initialFormData = { ...asset };
-          // Automatically update status if the return date has passed
-          if (asset.status === 'assigned' && isDateInPast(asset.returnDate)) {
-              initialFormData.status = 'available';
-          }
-          setFormData(initialFormData);
-
-          if (!['Laptop', 'Monitor', 'Desktop', 'Mobile', 'Mouse'].includes(asset.type)) {
-              setOtherType(asset.type);
-              setFormData(prev => ({ ...prev, type: 'Other' }));
-          } else {
-              setOtherType('');
-          }
-        }
-    }, [asset]);
-
-    const handleChange = (e) => {
-      const { name, value } = e.target;
-      setFormData(prevData => ({ ...prevData, [name]: value }));
-    };
-    
-    const handleSubmit = (e) => {
-      e.preventDefault();
-      const finalData = { ...formData };
-      if (formData.type === 'Other') {
-        finalData.type = otherType;
+  useEffect(() => {
+    if (asset) {
+      let initialFormData = { ...asset };
+      // Automatically update status if the return date has passed
+      if (asset.status === 'assigned' && isDateInPast(asset.returnDate)) {
+        initialFormData.status = 'available';
       }
-      onUpdate(finalData);
-    };
+      setFormData(initialFormData);
 
-    if (!show || !formData) return null;
+      if (!['Laptop', 'Monitor', 'Desktop', 'Mobile', 'Mouse'].includes(asset.type)) {
+        setOtherType(asset.type);
+        setFormData(prev => ({ ...prev, type: 'Other' }));
+      } else {
+        setOtherType('');
+      }
+    }
+  }, [asset]);
 
-    const detailedViewForm = (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-            <div className="form-group">
-                <label className="form-label">Asset Name</label>
-                <input type="text" name="name" className="form-input" value={formData.name || ''} readOnly disabled />
-            </div>
-            <div className="form-group">
-                <label className="form-label">Assigned To</label>
-                <select name="assignedTo" className="form-select" value={formData.assignedTo || 'Unassigned'} onChange={handleChange}>
-                    <option value="Unassigned">Unassigned</option>
-                    {users.map(user => (
-                        <option key={user.firebaseKey} value={user.firebaseKey}>
-                            {`${user.firstName} ${user.lastName}`} ({user.email})
-                        </option>
-                    ))}
-                </select>
-            </div>
-            <div className="form-group">
-                <label className="form-label">Assigned Date</label>
-                <input type="text" name="assignedDate" className="form-input" value={formData.assignedDate || ''} readOnly disabled />
-            </div>
-            <div className="form-group">
-                <label className="form-label">Expected Return Date</label>
-                <input type="date" name="returnDate" className="form-input" value={formatDateForInput(formData.returnDate)} onChange={(e) => setFormData(prev => ({...prev, returnDate: formatDateForState(e.target.value)}))} />
-            </div>
-            <div className="form-group">
-                <label className="form-label">Assignment Reason</label>
-                <input type="text" name="assignmentReason" className="form-input" value={formData.assignmentReason || ''} onChange={handleChange} />
-            </div>
-        </div>
-    );
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prevData => ({ ...prevData, [name]: value }));
+  };
 
-    const simpleViewForm = (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-            <div className="form-group">
-                <label className="form-label">Asset Name *</label>
-                <input type="text" name="name" className="form-input" value={formData.name || ''} onChange={handleChange} required />
-            </div>
-            <div className="form-group">
-                <label className="form-label">Type *</label>
-                <select name="type" className="form-select" value={formData.type || ''} onChange={handleChange} required>
-                    <option>Laptop</option><option>Monitor</option><option>Desktop</option><option>Mobile</option><option>Mouse</option><option>Other</option>
-                </select>
-            </div>
-            {formData.type === 'Other' && (
-                <div className="form-group">
-                  <label className="form-label">Specify Type *</label>
-                  <input type="text" placeholder="e.g., Keyboard" className="form-input" value={otherType} onChange={(e) => setOtherType(e.target.value)} required />
-                </div>
-            )}
-            <div className="form-group">
-                <label className="form-label">Value</label>
-                <input type="text" name="value" className="form-input" value={formData.value || ''} onChange={handleChange} />
-            </div>
-            <div className="form-group">
-                <label className="form-label">Location (Branch)</label>
-                <select name="location" className="form-select" value={formData.location || ''} onChange={handleChange}>
-                  {branchLocations.map(loc => <option key={loc} value={loc}>{loc}</option>)}
-                </select>
-            </div>
-            <div className="form-group">
-                <label className="form-label">Status *</label>
-                <select name="status" className="form-select" value={formData.status || ''} onChange={handleChange} required>
-                  <option>available</option><option>assigned</option><option>in maintenance</option>
-                </select>
-            </div>
-        </div>
-    );
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const finalData = { ...formData };
+    if (formData.type === 'Other') {
+      finalData.type = otherType;
+    }
+    onUpdate(finalData);
+  };
 
-    return (
-      <div className="modal-overlay">
-        <div className="modal-content" style={{maxWidth: '800px'}}>
-          <div className="modal-header">
-            <h3 className="modal-title">Edit Asset</h3>
-            <button className="modal-close-button" onClick={onClose}><X size={20} /></button>
-          </div>
-          <p className="modal-description">
-            Modify any details for this asset.
-          </p>
-          <form onSubmit={handleSubmit}>
-            {viewMode === 'detailed' ? detailedViewForm : simpleViewForm}
-            <div className="modal-footer">
-              <button type="button" className="modal-button cancel" onClick={onClose}>Cancel</button>
-              <button type="submit" className="modal-button primary">Save Changes</button>
-            </div>
-          </form>
-        </div>
+  if (!show || !formData) return null;
+
+  const detailedViewForm = (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+      <div className="form-group">
+        <label className="form-label">Asset Name</label>
+        <input type="text" name="name" className="form-input" value={formData.name || ''} readOnly disabled />
       </div>
-    );
+      <div className="form-group">
+        <label className="form-label">Assigned To</label>
+        <select name="assignedTo" className="form-select" value={formData.assignedTo || 'Unassigned'} onChange={handleChange}>
+          <option value="Unassigned">Unassigned</option>
+          {users.map(user => (
+            <option key={user.firebaseKey} value={user.firebaseKey}>
+              {`${user.firstName} ${user.lastName}`} ({user.email})
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="form-group">
+        <label className="form-label">Assigned Date</label>
+        <input type="text" name="assignedDate" className="form-input" value={formData.assignedDate || ''} readOnly disabled />
+      </div>
+      <div className="form-group">
+        <label className="form-label">Expected Return Date</label>
+        <input type="date" name="returnDate" className="form-input" value={formatDateForInput(formData.returnDate)} onChange={(e) => setFormData(prev => ({ ...prev, returnDate: formatDateForState(e.target.value) }))} />
+      </div>
+      <div className="form-group">
+        <label className="form-label">Assignment Reason</label>
+        <input type="text" name="assignmentReason" className="form-input" value={formData.assignmentReason || ''} onChange={handleChange} />
+      </div>
+    </div>
+  );
+
+  const simpleViewForm = (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+      <div className="form-group">
+        <label className="form-label">Asset Name *</label>
+        <input type="text" name="name" className="form-input" value={formData.name || ''} onChange={handleChange} required />
+      </div>
+      <div className="form-group">
+        <label className="form-label">Type *</label>
+        <select name="type" className="form-select" value={formData.type || ''} onChange={handleChange} required>
+          <option>Laptop</option><option>Monitor</option><option>Desktop</option><option>Mobile</option><option>Mouse</option><option>Other</option>
+        </select>
+      </div>
+      {formData.type === 'Other' && (
+        <div className="form-group">
+          <label className="form-label">Specify Type *</label>
+          <input type="text" placeholder="e.g., Keyboard" className="form-input" value={otherType} onChange={(e) => setOtherType(e.target.value)} required />
+        </div>
+      )}
+      <div className="form-group">
+        <label className="form-label">Value</label>
+        <input type="text" name="value" className="form-input" value={formData.value || ''} onChange={handleChange} />
+      </div>
+      <div className="form-group">
+        <label className="form-label">Location (Branch)</label>
+        <select name="location" className="form-select" value={formData.location || ''} onChange={handleChange}>
+          {branchLocations.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+        </select>
+      </div>
+      <div className="form-group">
+        <label className="form-label">Status *</label>
+        <select name="status" className="form-select" value={formData.status || ''} onChange={handleChange} required>
+          <option>available</option><option>assigned</option><option>in maintenance</option>
+        </select>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content" style={{ maxWidth: '800px' }}>
+        <div className="modal-header">
+          <h3 className="modal-title">Edit Asset</h3>
+          <button className="modal-close-button" onClick={onClose}><X size={20} /></button>
+        </div>
+        <p className="modal-description">
+          Modify any details for this asset.
+        </p>
+        <form onSubmit={handleSubmit}>
+          {viewMode === 'detailed' ? detailedViewForm : simpleViewForm}
+          <div className="modal-footer">
+            <button type="button" className="modal-button cancel" onClick={onClose}>Cancel</button>
+            <button type="submit" className="modal-button primary">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
 };
 
 const AddAssetModal = ({ show, onClose, onAdd, branchLocations }) => {
-    const [formData, setFormData] = useState({ name: '', type: '', brand: '', value: '', purchaseDate: '', location: 'Branch 1', serialNumber: '', count: 1 });
-    const [otherType, setOtherType] = useState('');
+  const [formData, setFormData] = useState({ name: '', type: '', brand: '', value: '', purchaseDate: '', location: 'Branch 1', serialNumber: '', count: 1 });
+  const [otherType, setOtherType] = useState('');
 
-    const handleChange = (e) => {
-      const { name, value } = e.target;
-      setFormData(prev => ({ ...prev, [name]: value }));
-    };
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        const finalType = formData.type === 'Other' ? otherType : formData.type;
-        if (!finalType) {
-            alert('Please specify an asset type.');
-            return;
-        }
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const finalType = formData.type === 'Other' ? otherType : formData.type;
+    if (!finalType) {
+      alert('Please specify an asset type.');
+      return;
+    }
 
-        const newAssets = [];
-        const quantity = parseInt(formData.count, 10) || 1;
+    const newAssets = [];
+    const quantity = parseInt(formData.count, 10) || 1;
 
-        for (let i = 0; i < quantity; i++) {
-            const newAsset = {
-                status: 'available',
-                assignedTo: 'Unassigned',
-                assignedDate: null,
-                returnDate: null,
-                ...formData,
-                purchaseDate: formatDateForState(formData.purchaseDate),
-                serialNumber: finalType === 'Mouse' ? null : (formData.serialNumber ? `${formData.serialNumber}-${i + 1}` : `SN-${Date.now()}${i}`),
-                type: finalType,
-            };
-            delete newAsset.count;
-            newAssets.push(newAsset);
-        }
-        onAdd(newAssets);
-        setFormData({ name: '', type: '', brand: '', value: '', purchaseDate: '', location: 'Branch 1', serialNumber: '', count: 1 });
-        setOtherType('');
-    };
+    for (let i = 0; i < quantity; i++) {
+      const newAsset = {
+        status: 'available',
+        assignedTo: 'Unassigned',
+        assignedDate: null,
+        returnDate: null,
+        ...formData,
+        purchaseDate: formatDateForState(formData.purchaseDate),
+        serialNumber: finalType === 'Mouse' ? null : (formData.serialNumber ? `${formData.serialNumber}-${i + 1}` : `SN-${Date.now()}${i}`),
+        type: finalType,
+      };
+      delete newAsset.count;
+      newAssets.push(newAsset);
+    }
+    onAdd(newAssets);
+    setFormData({ name: '', type: '', brand: '', value: '', purchaseDate: '', location: 'Branch 1', serialNumber: '', count: 1 });
+    setOtherType('');
+  };
 
-    if (!show) return null;
+  if (!show) return null;
 
-    return (
-      <div className="modal-overlay">
-        <div className="modal-content">
-          <div className="modal-header">
-            <h3 className="modal-title">Add New Asset</h3>
-            <button className="modal-close-button" onClick={onClose}><X size={20} /></button>
-          </div>
-          <p className="modal-description">Create a new asset record in the system.</p>
-          <form onSubmit={handleSubmit}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-              <div className="form-group"><label className="form-label">Asset Name *</label><input type="text" name="name" placeholder="e.g., MacBook Pro 16" className="form-input" value={formData.name} onChange={handleChange} required /></div>
-              <div className="form-group">
-                <label className="form-label">Type *</label>
-                <select name="type" className="form-select" value={formData.type} onChange={handleChange} required>
-                    <option value="">Select type</option><option>Laptop</option><option>Monitor</option><option>Desktop</option><option>Mobile</option><option>Mouse</option><option>Other</option>
-                </select>
-              </div>
-              {formData.type === 'Other' && (
-                <div className="form-group">
-                  <label className="form-label">Specify Type *</label>
-                  <input type="text" placeholder="e.g., Keyboard" className="form-input" value={otherType} onChange={(e) => setOtherType(e.target.value)} required />
-                </div>
-              )}
-              <div className="form-group"><label className="form-label">Quantity *</label><input type="number" name="count" className="form-input" value={formData.count} onChange={handleChange} min="1" required /></div>
-              <div className="form-group"><label className="form-label">Vendor/Brand</label><input type="text" name="brand" placeholder="e.g., Apple, Dell, HP" className="form-input" value={formData.brand} onChange={handleChange} /></div>
-              <div className="form-group"><label className="form-label">Purchase Price</label><input type="text" name="value" placeholder="e.g., $2499" className="form-input" value={formData.value} onChange={handleChange} /></div>
-              <div className="form-group">
-                <label className="form-label">Purchase Date</label>
-                <input type="date" name="purchaseDate" className="form-input" value={formData.purchaseDate} onChange={handleChange} />
-              </div>
-              <div className="form-group"><label className="form-label">Branch</label><select name="location" className="form-select" value={formData.location} onChange={handleChange}>{branchLocations.map(loc => <option key={loc} value={loc}>{loc}</option>)}</select></div>
-              {formData.type !== 'Mouse' && <div className="form-group" style={{gridColumn: 'span 2'}}><label className="form-label">Serial Number (Base)</label><input type="text" name="serialNumber" placeholder="e.g., MBP-001-2024" className="form-input" value={formData.serialNumber} onChange={handleChange} /></div>}
-            </div>
-            <div className="modal-footer">
-              <button type="button" className="modal-button cancel" onClick={onClose}>Cancel</button>
-              <button type="submit" className="modal-button primary">Add Asset(s)</button>
-            </div>
-          </form>
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content">
+        <div className="modal-header">
+          <h3 className="modal-title">Add New Asset</h3>
+          <button className="modal-close-button" onClick={onClose}><X size={20} /></button>
         </div>
+        <p className="modal-description">Create a new asset record in the system.</p>
+        <form onSubmit={handleSubmit}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+            <div className="form-group"><label className="form-label">Asset Name *</label><input type="text" name="name" placeholder="e.g., MacBook Pro 16" className="form-input" value={formData.name} onChange={handleChange} required /></div>
+            <div className="form-group">
+              <label className="form-label">Type *</label>
+              <select name="type" className="form-select" value={formData.type} onChange={handleChange} required>
+                <option value="">Select type</option><option>Laptop</option><option>Monitor</option><option>Desktop</option><option>Mobile</option><option>Mouse</option><option>Other</option>
+              </select>
+            </div>
+            {formData.type === 'Other' && (
+              <div className="form-group">
+                <label className="form-label">Specify Type *</label>
+                <input type="text" placeholder="e.g., Keyboard" className="form-input" value={otherType} onChange={(e) => setOtherType(e.target.value)} required />
+              </div>
+            )}
+            <div className="form-group"><label className="form-label">Quantity *</label><input type="number" name="count" className="form-input" value={formData.count} onChange={handleChange} min="1" required /></div>
+            <div className="form-group"><label className="form-label">Vendor/Brand</label><input type="text" name="brand" placeholder="e.g., Apple, Dell, HP" className="form-input" value={formData.brand} onChange={handleChange} /></div>
+            <div className="form-group"><label className="form-label">Purchase Price</label><input type="text" name="value" placeholder="e.g., $2499" className="form-input" value={formData.value} onChange={handleChange} /></div>
+            <div className="form-group">
+              <label className="form-label">Purchase Date</label>
+              <input type="date" name="purchaseDate" className="form-input" value={formData.purchaseDate} onChange={handleChange} />
+            </div>
+            <div className="form-group"><label className="form-label">Branch</label><select name="location" className="form-select" value={formData.location} onChange={handleChange}>{branchLocations.map(loc => <option key={loc} value={loc}>{loc}</option>)}</select></div>
+            {formData.type !== 'Mouse' && <div className="form-group" style={{ gridColumn: 'span 2' }}><label className="form-label">Serial Number (Base)</label><input type="text" name="serialNumber" placeholder="e.g., MBP-001-2024" className="form-input" value={formData.serialNumber} onChange={handleChange} /></div>}
+          </div>
+          <div className="modal-footer">
+            <button type="button" className="modal-button cancel" onClick={onClose}>Cancel</button>
+            <button type="submit" className="modal-button primary">Add Asset(s)</button>
+          </div>
+        </form>
       </div>
-    );
+    </div>
+  );
 };
 
 const AssignAssetModal = ({ show, onClose, onAssign, availableAssets, users }) => {
-    const [selectedAssetId, setSelectedAssetId] = useState('');
-    const [assignedUser, setAssignedUser] = useState('');
-    const [assignmentReason, setAssignmentReason] = useState('');
-    const [assignedDate, setAssignedDate] = useState('');
+  const [selectedAssetId, setSelectedAssetId] = useState('');
+  const [assignedUser, setAssignedUser] = useState('');
+  const [assignmentReason, setAssignmentReason] = useState('');
+  const [assignedDate, setAssignedDate] = useState('');
 
-   const groupedAssets = useMemo(() => {
-  const byType = availableAssets.reduce((acc, asset) => {
-    if (!acc[asset.type]) acc[asset.type] = [];
-    acc[asset.type].push({
-      id: asset.id,
-      name: asset.name,
-      serialNumber: asset.serialNumber,
-    });
-    return acc;
-  }, {});
-  return byType;
-}, [availableAssets]);
+  const groupedAssets = useMemo(() => {
+    const byType = availableAssets.reduce((acc, asset) => {
+      if (!acc[asset.type]) acc[asset.type] = [];
+      acc[asset.type].push({
+        id: asset.id,
+        name: asset.name,
+        serialNumber: asset.serialNumber,
+      });
+      return acc;
+    }, {});
+    return byType;
+  }, [availableAssets]);
 
-    useEffect(() => {
-      if (show) {
-        const today = new Date();
-        const formattedDate = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
-        setAssignedDate(formattedDate);
-      }
-    }, [show]);
-
-    const handleSubmit = (e) => {
-      e.preventDefault();
-    if (selectedAssetId && assignedUser && assignmentReason && assignedDate) {
-   onAssign(selectedAssetId, assignedUser, assignmentReason, assignedDate);
-    onClose();
+  useEffect(() => {
+    if (show) {
+      const today = new Date();
+      const formattedDate = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
+      setAssignedDate(formattedDate);
     }
-    };
+  }, [show]);
 
-    if (!show) return null;
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (selectedAssetId && assignedUser && assignmentReason && assignedDate) {
+      onAssign(selectedAssetId, assignedUser, assignmentReason, assignedDate);
+      onClose();
+    }
+  };
 
-    return (
-      <div className="modal-overlay">
-        <div className="modal-content">
-          <div className="modal-header"><h3 className="modal-title">Assign Asset to Employee</h3><button className="modal-close-button" onClick={onClose}><X size={20} /></button></div>
-          <p className="modal-description">Select an available asset and assign it to an Employee.</p>
-          <form onSubmit={handleSubmit}>
-            <div className="form-group">
-                <label className="form-label">Select Asset *</label>
-                <select className="form-select" value={selectedAssetId}
-           onChange={(e) => setSelectedAssetId(e.target.value)} required>
-                    <option value="">Choose an available asset</option>
-                    {Object.entries(groupedAssets).map(([type, assets]) => (
-  <optgroup key={type} label={type}>
-    {assets.map(asset => (
-      <option key={asset.id} value={asset.id}>
-        {asset.name} - {asset.serialNumber || 'No Serial'}
-      </option>
-    ))}
-  </optgroup>
-))}
-                </select>
-            </div>
-            <div className="form-group" style={{marginTop: '16px'}}><label className="form-label">Assign to Employee *</label><select className="form-select" value={assignedUser} onChange={(e) => setAssignedUser(e.target.value)} required><option value="">Choose an Employee</option>{users.map(user => (
-                <option key={user.firebaseKey} value={user.firebaseKey}>
-                  {`${user.firstName} ${user.lastName}`} ({user.email})
-                </option>
-              ))}</select></div>
-            <div className="form-group" style={{marginTop: '16px'}}><label className="form-label">Assigned Date *</label><input type="text" value={assignedDate} className="form-input" readOnly /></div>
-            <div className="form-group" style={{marginTop: '16px'}}><label className="form-label">Assignment Reason *</label><textarea placeholder="Reason for assignment..." className="form-textarea" rows="3" value={assignmentReason} onChange={(e) => setAssignmentReason(e.target.value)} required></textarea></div>
-            <div className="modal-footer"><button type="button" className="modal-button cancel" onClick={onClose}>Cancel</button><button type="submit" className="modal-button primary">Assign Asset</button></div>
-          </form>
-        </div>
+  if (!show) return null;
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content">
+        <div className="modal-header"><h3 className="modal-title">Assign Asset to Employee</h3><button className="modal-close-button" onClick={onClose}><X size={20} /></button></div>
+        <p className="modal-description">Select an available asset and assign it to an Employee.</p>
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label className="form-label">Select Asset *</label>
+            <select className="form-select" value={selectedAssetId}
+              onChange={(e) => setSelectedAssetId(e.target.value)} required>
+              <option value="">Choose an available asset</option>
+              {Object.entries(groupedAssets).map(([type, assets]) => (
+                <optgroup key={type} label={type}>
+                  {assets.map(asset => (
+                    <option key={asset.id} value={asset.id}>
+                      {asset.name} - {asset.serialNumber || 'No Serial'}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </div>
+          <div className="form-group" style={{ marginTop: '16px' }}><label className="form-label">Assign to Employee *</label><select className="form-select" value={assignedUser} onChange={(e) => setAssignedUser(e.target.value)} required><option value="">Choose an Employee</option>{users.map(user => (
+            <option key={user.firebaseKey} value={user.firebaseKey}>
+              {`${user.firstName} ${user.lastName}`} ({user.email})
+            </option>
+          ))}</select></div>
+          <div className="form-group" style={{ marginTop: '16px' }}><label className="form-label">Assigned Date *</label><input type="text" value={assignedDate} className="form-input" readOnly /></div>
+          <div className="form-group" style={{ marginTop: '16px' }}><label className="form-label">Assignment Reason *</label><textarea placeholder="Reason for assignment..." className="form-textarea" rows="3" value={assignmentReason} onChange={(e) => setAssignmentReason(e.target.value)} required></textarea></div>
+          <div className="modal-footer"><button type="button" className="modal-button cancel" onClick={onClose}>Cancel</button><button type="submit" className="modal-button primary">Assign Asset</button></div>
+        </form>
       </div>
-    );
+    </div>
+  );
 };
 
 
@@ -350,8 +387,8 @@ const AssetWorksheet = () => {
   const [showAddAssetModal, setShowAddAssetModal] = useState(false);
   const [showEditAssetModal, setShowEditAssetModal] = useState(false);
   const [assetToEdit, setAssetToEdit] = useState(null);
-  const [confirmationModal, setConfirmationModal] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
-  
+  const [confirmationModal, setConfirmationModal] = useState({ isOpen: false, title: '', message: '', onConfirm: () => { } });
+
   const [filterStatus, setFilterStatus] = useState('All Statuses');
   const [searchTerm, setSearchTerm] = useState('');
   const [assignedAssetFilter, setAssignedAssetFilter] = useState('All Assets');
@@ -361,7 +398,62 @@ const AssetWorksheet = () => {
     { id: 1, message: 'Welcome to Asset Management Dashboard!', timestamp: new Date(Date.now() - 3600000) },
     { id: 2, message: 'New update available for system assets.', timestamp: new Date(Date.now() - 7200000) },
   ]);
+  // --- NEW: Helper to fetch/cache data ---
+  const getCachedData = async (dbPath, storageKey, durationMinutes = 60) => {
+    try {
+      const cached = await dbGet(storageKey);
+      if (cached) {
+        const { data, timestamp } = cached;
+        const isFresh = (new Date().getTime() - timestamp) < (durationMinutes * 60 * 1000);
+        if (isFresh) {
+          console.log(`Using cached data (IDB) for ${storageKey}`);
+          return data; // Returns the Raw Object from Firebase
+        }
+      }
 
+      console.log(`Fetching fresh data for ${dbPath}...`);
+      const snapshot = await get(ref(database, dbPath));
+      const data = snapshot.exists() ? snapshot.val() : {};
+
+      await dbSet(storageKey, {
+        data,
+        timestamp: new Date().getTime()
+      });
+      return data;
+    } catch (err) {
+      console.error("Cache Error:", err);
+      return {};
+    }
+  };
+
+  // --- NEW: Helper to update cache locally ---
+  const updateLocalAssetCache = async (action, assetData) => {
+    try {
+      const cachedWrapper = await dbGet('cache_assets_full');
+      if (!cachedWrapper || !cachedWrapper.data) return;
+
+      const currentData = cachedWrapper.data; // This is an Object { key: val }
+
+      if (action === 'add') {
+        // assetData is an array of new assets
+        assetData.forEach(item => {
+          currentData[item.firebaseKey || item.id] = item;
+        });
+      } else if (action === 'update') {
+        currentData[assetData.firebaseKey] = assetData;
+      } else if (action === 'delete') {
+        delete currentData[assetData.firebaseKey]; // assetData is just { firebaseKey: '...' }
+      }
+
+      await dbSet('cache_assets_full', {
+        data: currentData,
+        timestamp: new Date().getTime()
+      });
+      console.log(`Local Asset Cache Updated: ${action}`);
+    } catch (e) {
+      console.error("Error updating local asset cache:", e);
+    }
+  };
   // Refs for dropdowns
   const profileDropdownRef = useRef(null);
   const notificationsRef = useRef(null);
@@ -373,62 +465,38 @@ const AssetWorksheet = () => {
 
   const branchLocations = ['Branch 1', 'Branch 2', 'Head Office', 'Remote'];
 
- useEffect(() => {
-  const cached = sessionStorage.getItem('assetWorksheetCache');
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // 1. Fetch Assets (Cached 60 mins)
+        const assetsData = await getCachedData('assets', 'cache_assets_full', 60);
+        const mappedAssets = Object.entries(assetsData || {}).map(([k, v]) => ({
+          firebaseKey: k,
+          ...v,
+        }));
+        setAssets(mappedAssets);
 
-  if (cached) {
-    try {
-      const parsed = JSON.parse(cached);
-      if (Array.isArray(parsed.assets) && Array.isArray(parsed.users)) {
-        setAssets(parsed.assets);
-        setUsers(parsed.users);
+        // 2. Fetch Users (Cached 60 mins)
+        const usersData = await getCachedData('users', 'cache_users_full', 60);
+        const assignableUsers = Object.entries(usersData || {})
+          .map(([k, v]) => ({ firebaseKey: k, ...v }))
+          .filter((u) =>
+            u.roles?.some((r) =>
+              ['employee', 'manager', 'admin'].includes(r)
+            )
+          );
+        setUsers(assignableUsers);
+
+      } catch (err) {
+        console.error('Data load failed:', err);
+      } finally {
         setLoading(false);
-        return; // ✅ no DB call if cache is valid
       }
-    } catch (e) {
-      console.warn('Failed to parse assetWorksheet cache', e);
-    }
-  }
+    };
 
-  const fetchData = async () => {
-    try {
-      const [assetsSnap, usersSnap] = await Promise.all([
-        get(ref(database, 'assets')),
-        get(ref(database, 'users')),
-      ]);
-
-      const assetsData = assetsSnap.val() || {};
-      const usersData = usersSnap.val() || {};
-
-      const mappedAssets = Object.entries(assetsData).map(([k, v]) => ({
-        firebaseKey: k,
-        ...v,
-      }));
-
-      const assignableUsers = Object.entries(usersData)
-        .map(([k, v]) => ({ firebaseKey: k, ...v }))
-        .filter((u) =>
-          u.roles?.some((r) =>
-            ['employee', 'manager', 'admin'].includes(r)
-          )
-        );
-
-      setAssets(mappedAssets);
-      setUsers(assignableUsers);
-
-      sessionStorage.setItem(
-        'assetWorksheetCache',
-        JSON.stringify({ assets: mappedAssets, users: assignableUsers })
-      );
-    } catch (err) {
-      console.error('Firebase read failed:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  fetchData();
-}, []);
+    fetchData();
+  }, []);
 
   // Helper to check if an asset should be considered available
   const isAssetConsideredAvailable = (asset) => {
@@ -454,8 +522,8 @@ const AssetWorksheet = () => {
   const filteredAssets = assets.filter(asset => {
     const matchesStatus = filterStatus === 'All Statuses' || asset.status.toLowerCase() === filterStatus.toLowerCase();
     const matchesSearch = asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          (asset.id && asset.id.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                          (asset.serialNumber && asset.serialNumber.toLowerCase().includes(searchTerm.toLowerCase()));
+      (asset.id && asset.id.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (asset.serialNumber && asset.serialNumber.toLowerCase().includes(searchTerm.toLowerCase()));
     return matchesStatus && matchesSearch;
   });
 
@@ -467,7 +535,7 @@ const AssetWorksheet = () => {
     if (mice.length > 0) {
       const firstMouse = mice[0];
       const totalAvailableMice = assets.filter(a => a.type === 'Mouse' && isAssetConsideredAvailable(a)).length;
-      
+
       const mouseSummary = {
         ...firstMouse,
         id: 'mouse-summary-row',
@@ -477,14 +545,14 @@ const AssetWorksheet = () => {
       };
       return [mouseSummary, ...otherAssets];
     }
-    
+
     return otherAssets;
   }, [filteredAssets, assets]);
 
   const assignedAssets = assets.filter(asset => {
-      const isAssigned = asset.status === 'assigned' && !isDateInPast(asset.returnDate);
-      const matchesFilter = assignedAssetFilter === 'All Assets' || asset.id === assignedAssetFilter;
-      return isAssigned && matchesFilter;
+    const isAssigned = asset.status === 'assigned' && !isDateInPast(asset.returnDate);
+    const matchesFilter = assignedAssetFilter === 'All Assets' || asset.id === assignedAssetFilter;
+    return isAssigned && matchesFilter;
   });
 
   // Handlers
@@ -492,7 +560,7 @@ const AssetWorksheet = () => {
     setSearchTerm('');
     setFilterStatus('All Statuses');
   };
-  
+
   const formatTimestamp = (date) => {
     const now = new Date();
     const diffSeconds = Math.floor((now - date) / 1000);
@@ -512,39 +580,42 @@ const AssetWorksheet = () => {
   };
 
   const handleUpdateAsset = async (updatedAsset) => {
-    if (updatedAsset.isSummary) {
-        alert("Cannot edit a summary row.");
-        setShowEditAssetModal(false);
-        return;
-    }
-    
+    if (updatedAsset.isSummary) { /* ... keep existing check ... */ return; }
+
     const assetRef = ref(database, `assets/${updatedAsset.firebaseKey}`);
-    
     const dataToUpdate = { ...updatedAsset };
 
-    // If an asset is now available (either by date or manual status change), reset its assignment info
+    // ... keep your existing logic for resetting available status ...
     if (dataToUpdate.status === 'available') {
-        dataToUpdate.assignedTo = 'Unassigned';
-        dataToUpdate.assignedDate = null;
-        dataToUpdate.returnDate = null;
+      dataToUpdate.assignedTo = 'Unassigned';
+      dataToUpdate.assignedDate = null;
+      dataToUpdate.returnDate = null;
     }
 
-    delete dataToUpdate.firebaseKey;
-    delete dataToUpdate.isSummary;
-    delete dataToUpdate.availableCount;
+    // Clean up fields before sending to Firebase
+    const firebasePayload = { ...dataToUpdate };
+    delete firebasePayload.firebaseKey;
+    delete firebasePayload.isSummary;
+    delete firebasePayload.availableCount;
 
     try {
-        await update(assetRef, dataToUpdate);
-        setNotifications(prev => [{ id: Date.now(), message: `Asset "${updatedAsset.name}" was successfully updated.`, timestamp: new Date() }, ...prev]);
+      await update(assetRef, firebasePayload);
+
+      // --- NEW: Update Local Cache ---
+      await updateLocalAssetCache('update', dataToUpdate); // Pass the full object with firebaseKey
+
+      // Update State
+      setAssets(prev => prev.map(a => a.firebaseKey === updatedAsset.firebaseKey ? dataToUpdate : a));
+
+      setNotifications(prev => [{ id: Date.now(), message: `Asset "${updatedAsset.name}" was successfully updated.`, timestamp: new Date() }, ...prev]);
     } catch (error) {
-        console.error("Failed to update asset in Firebase:", error);
-        alert("Error updating asset. Please try again.");
+      console.error("Failed to update asset:", error);
+      alert("Error updating asset.");
     } finally {
-        setShowEditAssetModal(false);
-        setAssetToEdit(null);
+      setShowEditAssetModal(false);
+      setAssetToEdit(null);
     }
   };
-
   const handleDeleteAssetClick = (asset) => {
     setConfirmationModal({
       isOpen: true,
@@ -553,7 +624,7 @@ const AssetWorksheet = () => {
       onConfirm: () => handleDeleteAssetConfirm(asset.firebaseKey),
     });
   };
-  
+
   const handleUnassignAssetClick = (asset) => {
     setConfirmationModal({
       isOpen: true,
@@ -563,36 +634,46 @@ const AssetWorksheet = () => {
     });
   };
 
-  const handleDeleteAssetConfirm = async (firebaseKey) => {
+const handleDeleteAssetConfirm = async (firebaseKey) => {
     const assetRef = ref(database, `assets/${firebaseKey}`);
     try {
         await remove(assetRef);
+
+        // --- NEW: Update Local Cache ---
+        await updateLocalAssetCache('delete', { firebaseKey });
+
+        // Update State
+        setAssets(prev => prev.filter(a => a.firebaseKey !== firebaseKey));
+
         setNotifications(prev => [{ id: Date.now(), message: `Asset was deleted.`, timestamp: new Date() }, ...prev]);
-    } catch (error) {
-        console.error("Failed to delete asset:", error);
-        alert("Error deleting asset.");
-    } finally {
-        setConfirmationModal({ isOpen: false });
-    }
+    } catch (error) { /* ... error handling ... */ } 
+    finally { setConfirmationModal({ isOpen: false }); }
   };
-  
-  const handleUnassignAssetConfirm = async (firebaseKey, assetName) => {
+
+const handleUnassignAssetConfirm = async (firebaseKey, assetName) => {
     const assetRef = ref(database, `assets/${firebaseKey}`);
+    const updates = {
+       status: 'available',
+       assignedTo: 'Unassigned',
+       assignedDate: null,
+       assignmentReason: '',
+       returnDate: null
+    };
+
     try {
-   await update(assetRef, {
-     status: 'available',
-     assignedTo: 'Unassigned',
-     assignedDate: null,
-     assignmentReason: '',
-     returnDate: null
-   });
+        await update(assetRef, updates);
+
+        // --- NEW: Update Cache & State ---
+        // Find current asset to merge updates
+        const currentAsset = assets.find(a => a.firebaseKey === firebaseKey);
+        const updatedAsset = { ...currentAsset, ...updates };
+        
+        await updateLocalAssetCache('update', updatedAsset);
+        setAssets(prev => prev.map(a => a.firebaseKey === firebaseKey ? updatedAsset : a));
+
         setNotifications(prev => [{ id: Date.now(), message: `Asset "${assetName}" has been unassigned.`, timestamp: new Date() }, ...prev]);
-    } catch (error) {
-        console.error("Failed to unassign asset:", error);
-        alert("Error unassigning asset.");
-    } finally {
-        setConfirmationModal({ isOpen: false });
-    }
+    } catch (error) { /* ... error handling ... */ } 
+    finally { setConfirmationModal({ isOpen: false }); }
   };
 
   const toggleProfileDropdown = () => setShowProfileDropdown(prev => !prev);
@@ -603,50 +684,59 @@ const AssetWorksheet = () => {
     window.location.href = '/';
   };
 
-  const handleAssignAsset = async (assignedAssetId, assignedUserId, assignmentReason, assignedDate) => {
+const handleAssignAsset = async (assignedAssetId, assignedUserId, assignmentReason, assignedDate) => {
     const assetToAssign = assets.find(a => a.id === assignedAssetId);
-    if (!assetToAssign) {
-        console.error("Asset to assign not found");
-        return;
-    }
+    if (!assetToAssign) return;
 
     const assetRef = ref(database, `assets/${assetToAssign.firebaseKey}`);
     const assignedUserObject = users.find(u => u.firebaseKey === assignedUserId);
     const assignedUserName = assignedUserObject ? `${assignedUserObject.firstName} ${assignedUserObject.lastName}` : 'Unknown User';
 
+    const updates = {
+      status: 'assigned',
+      assignedTo: assignedUserId,
+      assignedDate: assignedDate,
+      assignmentReason: assignmentReason || '',
+      returnDate: null,
+    };
 
     try {
-       await update(assetRef, {
-    status: 'assigned',
-    assignedTo: assignedUserId,
-    assignedDate: assignedDate,
-    assignmentReason: assignmentReason || '',
-    returnDate: null,
-});
+        await update(assetRef, updates);
+
+        // --- NEW: Update Cache & State ---
+        const updatedAsset = { ...assetToAssign, ...updates };
+        await updateLocalAssetCache('update', updatedAsset);
+        setAssets(prev => prev.map(a => a.id === assignedAssetId ? updatedAsset : a));
+
         setShowAssignAssetModal(false);
         setNotifications(prev => [{ id: Date.now(), message: `Asset "${assetToAssign.name}" assigned to ${assignedUserName}.`, timestamp: new Date() }, ...prev]);
-    } catch (error) {
-        console.error("Failed to assign asset in Firebase:", error);
-        alert("Error assigning asset. Please try again.");
-    }
+    } catch (error) { /* ... error handling ... */ }
   };
-  
-  const handleAddAsset = async (newAssets) => {
+
+const handleAddAsset = async (newAssets) => {
     const assetsRef = ref(database, 'assets');
-    
+    const addedAssets = []; // Store them to update cache later
+
     for (const newAsset of newAssets) {
       try {
         const newAssetRef = push(assetsRef);
+        // We need the key for the cache
+        const assetWithKey = { ...newAsset, id: newAssetRef.key, firebaseKey: newAssetRef.key }; 
+        
         await set(newAssetRef, { ...newAsset, id: newAssetRef.key });
-      } catch (error) {
-        console.error("Failed to add new asset to Firebase:", error);
-        alert("There was an error adding the asset. Please try again.");
-        return;
-      }
+        addedAssets.push(assetWithKey);
+
+      } catch (error) { /* ... error handling ... */ return; }
     }
     
+    // --- NEW: Update Local Cache ---
+    await updateLocalAssetCache('add', addedAssets);
+
+    // Update State
+    setAssets(prev => [...prev, ...addedAssets]);
+
     setShowAddAssetModal(false);
-    setNotifications(prev => [{ id: Date.now(), message: `Added ${newAssets.length} new asset(s): "${newAssets[0].name}".`, timestamp: new Date() }, ...prev]);
+    setNotifications(prev => [{ id: Date.now(), message: `Added ${newAssets.length} new asset(s).`, timestamp: new Date() }, ...prev]);
     setActiveTab('Assets');
     setSearchTerm(newAssets[0].name);
   };
@@ -813,7 +903,7 @@ const AssetWorksheet = () => {
 
             <div className="profile-dropdown-container" ref={profileDropdownRef}>
               <div className="user-info" onClick={toggleProfileDropdown}>
-                <div style={{textAlign: 'right'}}>
+                <div style={{ textAlign: 'right' }}>
                   <span className="employee-tag"><User size={12} />Asset Manager</span>
                 </div>
                 <div className="user-avatar">AM</div>
@@ -862,26 +952,26 @@ const AssetWorksheet = () => {
                 <table className="asset-table">
                   <thead><tr><th>Asset</th><th>Type</th><th>Available</th><th>Status</th><th>Branch</th><th>Value</th><th>Actions</th></tr></thead>
                   <tbody>
-                    {loading ? (<tr><td colSpan="7" style={{textAlign: 'center', padding: '20px'}}>Loading assets...</td></tr>) :
-                    assetsForDisplay.map((asset) => (<tr key={asset.id}>
-                      <td>
-                        <div className="asset-table-asset-cell">
-                          <div>
-                            <div className="asset-table-asset-name-main">{asset.name}</div>
-                            <div className="asset-table-asset-serial">{asset.serialNumber || 'N/A'}</div>
+                    {loading ? (<tr><td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>Loading assets...</td></tr>) :
+                      assetsForDisplay.map((asset) => (<tr key={asset.id}>
+                        <td>
+                          <div className="asset-table-asset-cell">
+                            <div>
+                              <div className="asset-table-asset-name-main">{asset.name}</div>
+                              <div className="asset-table-asset-serial">{asset.serialNumber || 'N/A'}</div>
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td>{asset.type}</td>
-                      <td>{asset.isSummary ? asset.availableCount : (isAssetConsideredAvailable(asset) ? 1 : 0)}</td>
-                      <td><span className={`status-badge ${isAssetConsideredAvailable(asset) ? 'available' : asset.status.replace(/\s+/g, '-')}`}>{isAssetConsideredAvailable(asset) ? 'available' : asset.status}</span></td>
-                      <td>{asset.location}</td>
-                      <td>{asset.value}</td>
-                      <td className="actions-cell">
-                        <button className="action-icon-button" onClick={() => handleEditAssetClick(asset)}><Edit size={18} /></button>
-                        {!asset.isSummary && <button className="action-icon-button delete" onClick={() => handleDeleteAssetClick(asset)}><Trash2 size={18} /></button>}
-                      </td>
-                    </tr>))}
+                        </td>
+                        <td>{asset.type}</td>
+                        <td>{asset.isSummary ? asset.availableCount : (isAssetConsideredAvailable(asset) ? 1 : 0)}</td>
+                        <td><span className={`status-badge ${isAssetConsideredAvailable(asset) ? 'available' : asset.status.replace(/\s+/g, '-')}`}>{isAssetConsideredAvailable(asset) ? 'available' : asset.status}</span></td>
+                        <td>{asset.location}</td>
+                        <td>{asset.value}</td>
+                        <td className="actions-cell">
+                          <button className="action-icon-button" onClick={() => handleEditAssetClick(asset)}><Edit size={18} /></button>
+                          {!asset.isSummary && <button className="action-icon-button delete" onClick={() => handleDeleteAssetClick(asset)}><Trash2 size={18} /></button>}
+                        </td>
+                      </tr>))}
                   </tbody>
                 </table>
               </div>
@@ -914,8 +1004,8 @@ const AssetWorksheet = () => {
       <AssignAssetModal show={showAssignAssetModal} onClose={() => setShowAssignAssetModal(false)} onAssign={handleAssignAsset} availableAssets={assets.filter(isAssetConsideredAvailable)} users={users} />
       <AddAssetModal show={showAddAssetModal} onClose={() => setShowAddAssetModal(false)} onAdd={handleAddAsset} branchLocations={branchLocations} />
       <EditAssetModal show={showEditAssetModal} onClose={() => setShowEditAssetModal(false)} asset={assetToEdit} onUpdate={handleUpdateAsset} users={users} branchLocations={branchLocations} viewMode={activeTab === 'Assigned' ? 'detailed' : 'simple'} />
-      
-      <ConfirmationModal 
+
+      <ConfirmationModal
         show={confirmationModal.isOpen}
         title={confirmationModal.title}
         message={confirmationModal.message}

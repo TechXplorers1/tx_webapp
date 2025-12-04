@@ -4,71 +4,117 @@ import { Link } from 'react-router-dom';
 import CustomNavbar from './Navbar';
 import { useTheme } from '../context/ThemeContext';
 import Footer from './Footer'; 
-import { database } from '../firebase'; // Import firebase db
-import { ref, get } from "firebase/database";
+import { database } from '../firebase'; 
+import { ref, get, query, limitToLast } from "firebase/database";
+
+// --- IndexedDB Helper (Optimized Storage) ---
+const IDB_CONFIG = { name: 'AppCacheDB', version: 1, store: 'firebase_cache' };
+
+const openDB = () => {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(IDB_CONFIG.name, IDB_CONFIG.version);
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(IDB_CONFIG.store)) {
+        db.createObjectStore(IDB_CONFIG.store);
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+};
+
+const dbGet = async (key) => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(IDB_CONFIG.store, 'readonly');
+    const request = transaction.objectStore(IDB_CONFIG.store).get(key);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+};
+
+const dbSet = async (key, val) => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(IDB_CONFIG.store, 'readwrite');
+    const request = transaction.objectStore(IDB_CONFIG.store).put(val, key);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+};
+// -----------------------------------------------------------
 
 const Projects = () => {
   const { isDarkMode } = useTheme(); 
   const [filter, setFilter] = useState('All');
   const [projectsData, setProjectsData] = useState([]);
-const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
-  
-  // --- OPTIMIZATION: Initialize state from Cache if available ---
+  // --- OPTIMIZED LOAD LOGIC ---
   useEffect(() => {
-  setLoading(true);
+    const fetchProjects = async () => {
+      setLoading(true);
+      
+      // 1. Check IndexedDB Cache First (Better than sessionStorage for large JSON)
+      const cached = await dbGet('projectsCache');
+      
+      if (cached) {
+        const { data, timestamp } = cached;
+        // Cache valid for 60 minutes
+        const isFresh = (new Date().getTime() - timestamp) < (60 * 60 * 1000); 
+        
+        if (isFresh && Array.isArray(data) && data.length > 0) {
+          setProjectsData(data);
+          setLoading(false);
+          console.log("Loaded projects from IndexedDB cache");
+          return; 
+        }
+      }
 
-  // 1) Try session cache first (no DB hit)
-  const cached = sessionStorage.getItem("projectsCache");
-  if (cached) {
-    try {
-      const parsed = JSON.parse(cached);
-      if (Array.isArray(parsed)) {
-        setProjectsData(parsed);
+      // 2. If no cache, hit Firebase
+      try {
+        const projectsRef = query(ref(database, "projects"), limitToLast(50));
+        const snapshot = await get(projectsRef);
+
+        if (!snapshot.exists()) {
+          setProjectsData([]);
+          await dbSet('projectsCache', { data: [], timestamp: new Date().getTime() });
+          return;
+        }
+
+        const data = snapshot.val() || {};
+        const projectList = Object.keys(data).map((key) => ({
+          id: key,
+          ...data[key],
+        }));
+
+        const sortedProjects = projectList.sort((a, b) => {
+            if (a.order !== undefined && b.order !== undefined) {
+                return a.order - b.order;
+            }
+            const dateA = new Date(a.createdAt || 0);
+            const dateB = new Date(b.createdAt || 0);
+            return dateB - dateA;
+        });
+
+        setProjectsData(sortedProjects);
+        // Save to cache for next time
+        await dbSet('projectsCache', { 
+            data: sortedProjects, 
+            timestamp: new Date().getTime() 
+        });
+        console.log("Loaded projects from Firebase and cached them");
+
+      } catch (error) {
+        console.error("Error fetching projects:", error);
+      } finally {
         setLoading(false);
-        return; // don’t hit Firebase if cache exists
       }
-    } catch (e) {
-      console.warn("Failed to parse projects cache:", e);
-    }
-  }
+    };
 
-  // 2) If no cache, fetch once from Firebase
-  const fetchProjectsOnce = async () => {
-    try {
-      const projectsRef = ref(database, "projects");
-      const snapshot = await get(projectsRef);
-
-      if (!snapshot.exists()) {
-        setProjectsData([]);
-        sessionStorage.removeItem("projectsCache");
-        return;
-      }
-
-      const data = snapshot.val() || {};
-      const projectList = Object.keys(data).map((key) => ({
-        id: key,
-        ...data[key],
-      }));
-
-      // keep whatever existing sort you had
-      const sortedProjects = projectList.sort((a, b) => {
-        const dateA = new Date(a.createdAt || 0);
-        const dateB = new Date(b.createdAt || 0);
-        return dateB - dateA;
-      });
-
-      setProjectsData(sortedProjects);
-      sessionStorage.setItem("projectsCache", JSON.stringify(sortedProjects));
-    } catch (error) {
-      console.error("Error fetching projects (one-time):", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  fetchProjectsOnce();
-}, []);
+    fetchProjects();
+  }, []);
 
 
   // Extract unique categories
@@ -325,6 +371,7 @@ const [loading, setLoading] = useState(true);
                           <img
                             src={project.image}
                             alt={project.title}
+                            loading="lazy"
                             className="w-100 h-100 object-fit-cover"
                             style={{ transition: 'transform 0.3s' }}
                             onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
