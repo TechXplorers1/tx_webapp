@@ -5,70 +5,81 @@ import CustomNavbar from './Navbar';
 import { useTheme } from '../context/ThemeContext';
 import Footer from './Footer'; 
 import { database } from '../firebase'; // Import firebase db
-import { ref, get } from "firebase/database";
+import { ref, get, query, limitToLast } from "firebase/database";
+
+const CACHE_KEY = "projectsCache";
 
 const Projects = () => {
   const { isDarkMode } = useTheme(); 
   const [filter, setFilter] = useState('All');
   const [projectsData, setProjectsData] = useState([]);
-const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
-  
-  // --- OPTIMIZATION: Initialize state from Cache if available ---
+  // --- OPTIMIZED LOAD LOGIC ---
   useEffect(() => {
-  setLoading(true);
+    const fetchProjects = async () => {
+      setLoading(true);
+      
+      // 1. Check Session Cache First
+      const cached = sessionStorage.getItem(CACHE_KEY);
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setProjectsData(parsed);
+            setLoading(false);
+            console.log("Loaded projects from cache");
+            return; // EXIT FUNCTION: Do not hit DB
+          }
+        } catch (e) {
+          console.warn("Cache parse error, fetching fresh data...");
+        }
+      }
 
-  // 1) Try session cache first (no DB hit)
-  const cached = sessionStorage.getItem("projectsCache");
-  if (cached) {
-    try {
-      const parsed = JSON.parse(cached);
-      if (Array.isArray(parsed)) {
-        setProjectsData(parsed);
+      // 2. If no cache, hit Firebase
+      try {
+        // Optimization: Added limitToLast to prevent massive downloads if DB grows
+        const projectsRef = query(ref(database, "projects"), limitToLast(50));
+        const snapshot = await get(projectsRef);
+
+        if (!snapshot.exists()) {
+          setProjectsData([]);
+          sessionStorage.setItem(CACHE_KEY, JSON.stringify([]));
+          return;
+        }
+
+        const data = snapshot.val() || {};
+        const projectList = Object.keys(data).map((key) => ({
+          id: key,
+          ...data[key],
+        }));
+
+        // Use 'order' for sorting if available, else date, else default
+        const sortedProjects = projectList.sort((a, b) => {
+            // Priority 1: Sort by manual order if it exists
+            if (a.order !== undefined && b.order !== undefined) {
+                return a.order - b.order;
+            }
+            // Priority 2: CreatedAt if available
+            const dateA = new Date(a.createdAt || 0);
+            const dateB = new Date(b.createdAt || 0);
+            return dateB - dateA;
+        });
+
+        setProjectsData(sortedProjects);
+        // Save to cache for next time
+        sessionStorage.setItem(CACHE_KEY, JSON.stringify(sortedProjects));
+        console.log("Loaded projects from Firebase and cached them");
+
+      } catch (error) {
+        console.error("Error fetching projects:", error);
+      } finally {
         setLoading(false);
-        return; // don’t hit Firebase if cache exists
       }
-    } catch (e) {
-      console.warn("Failed to parse projects cache:", e);
-    }
-  }
+    };
 
-  // 2) If no cache, fetch once from Firebase
-  const fetchProjectsOnce = async () => {
-    try {
-      const projectsRef = ref(database, "projects");
-      const snapshot = await get(projectsRef);
-
-      if (!snapshot.exists()) {
-        setProjectsData([]);
-        sessionStorage.removeItem("projectsCache");
-        return;
-      }
-
-      const data = snapshot.val() || {};
-      const projectList = Object.keys(data).map((key) => ({
-        id: key,
-        ...data[key],
-      }));
-
-      // keep whatever existing sort you had
-      const sortedProjects = projectList.sort((a, b) => {
-        const dateA = new Date(a.createdAt || 0);
-        const dateB = new Date(b.createdAt || 0);
-        return dateB - dateA;
-      });
-
-      setProjectsData(sortedProjects);
-      sessionStorage.setItem("projectsCache", JSON.stringify(sortedProjects));
-    } catch (error) {
-      console.error("Error fetching projects (one-time):", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  fetchProjectsOnce();
-}, []);
+    fetchProjects();
+  }, []);
 
 
   // Extract unique categories
@@ -325,6 +336,7 @@ const [loading, setLoading] = useState(true);
                           <img
                             src={project.image}
                             alt={project.title}
+                            loading="lazy"
                             className="w-100 h-100 object-fit-cover"
                             style={{ transition: 'transform 0.3s' }}
                             onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}

@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { database, storage } from '../../firebase'; 
-import { ref, push, remove, update, get, query, limitToLast, orderByChild } from "firebase/database"; // CHANGED: Added query helpers
+import { ref, push, remove, update, get, query, limitToLast } from "firebase/database"; 
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Container, Form, Button, Table, Card, Row, Col, Badge, Modal, Spinner } from 'react-bootstrap';
+
+const CACHE_KEY = "admin_projects_cache";
 
 const ProjectManagement = () => {
   const [projects, setProjects] = useState([]);
@@ -30,55 +32,71 @@ const ProjectManagement = () => {
   const dragItem = useRef(null);
   const dragOverItem = useRef(null);
 
-  // --- SAFE LOAD FUNCTION ---
-  const loadProjects = async () => {
-  try {
-    // SAFETY FIX: Added limitToLast(50)
-    // This prevents the app from downloading thousands of items if your DB grows.
-    // It will fetch the 50 most recently added/updated items.
-    const projectsRef = query(ref(database, "projects"), limitToLast(50)); 
-    
-    const snapshot = await get(projectsRef);
+  // --- SAFE LOAD FUNCTION WITH CACHE ---
+  // forceRefresh: set to true ONLY when you Add/Edit/Delete to get fresh data
+  const loadProjects = async (forceRefresh = false) => {
+    try {
+      // 1. Check Cache first (if not forcing a refresh)
+      if (!forceRefresh) {
+        const cachedData = sessionStorage.getItem(CACHE_KEY);
+        if (cachedData) {
+          setProjects(JSON.parse(cachedData));
+          return; // STOP HERE - Do not hit Firebase
+        }
+      }
 
-    if (!snapshot.exists()) {
-      setProjects([]);
-      return;
+      // 2. Fetch from Firebase (Only if no cache or forceRefresh is true)
+      const projectsRef = query(ref(database, "projects"), limitToLast(50)); 
+      const snapshot = await get(projectsRef);
+
+      if (!snapshot.exists()) {
+        setProjects([]);
+        sessionStorage.setItem(CACHE_KEY, JSON.stringify([]));
+        return;
+      }
+
+      const data = snapshot.val();
+      const projectList = Object.keys(data).map(key => ({
+        id: key,
+        ...data[key],
+      }));
+
+      // Sort by 'order' locally after fetching
+      const sortedList = projectList.sort((a, b) => {
+        const orderA = a.order !== undefined ? a.order : 9999;
+        const orderB = b.order !== undefined ? b.order : 9999;
+        return orderA - orderB;
+      });
+
+      // 3. Update State and Cache
+      setProjects(sortedList);
+      sessionStorage.setItem(CACHE_KEY, JSON.stringify(sortedList));
+
+    } catch (err) {
+      console.error("Error loading projects:", err);
     }
-
-    const data = snapshot.val();
-    const projectList = Object.keys(data).map(key => ({
-      id: key,
-      ...data[key],
-    }));
-
-    // Sort by 'order' locally after fetching
-    const sortedList = projectList.sort((a, b) => {
-      const orderA = a.order !== undefined ? a.order : 9999;
-      const orderB = b.order !== undefined ? b.order : 9999;
-      return orderA - orderB;
-    });
-
-    setProjects(sortedList);
-  } catch (err) {
-    console.error("Error loading projects:", err);
-  }
-};
+  };
 
 
-  // Fetch Projects
-useEffect(() => {
-  loadProjects();
-}, []);
+  // Fetch Projects on Mount (Load from cache if available)
+  useEffect(() => {
+    loadProjects(false); 
+  }, []);
 
   // --- DRAG AND DROP HANDLERS ---
   const handleSort = async () => {
     let _projects = [...projects];
     const draggedItemContent = _projects.splice(dragItem.current, 1)[0];
     _projects.splice(dragOverItem.current, 0, draggedItemContent);
+    
     dragItem.current = null;
     dragOverItem.current = null;
+    
+    // Update State & Cache Immediately (No DB fetch needed for sort)
     setProjects(_projects);
+    sessionStorage.setItem(CACHE_KEY, JSON.stringify(_projects));
 
+    // Update Firebase in background
     const updates = {};
     _projects.forEach((project, index) => {
         updates[`projects/${project.id}/order`] = index;
@@ -139,7 +157,6 @@ useEffect(() => {
     try {
       // 1. If file is selected, upload it to Firebase Storage
       if (imageFile) {
-        // Optimization: Added explicit folder structure to keep storage organized
         const imageRef = storageRef(storage, `project_images/${Date.now()}_${imageFile.name}`);
         const snapshot = await uploadBytes(imageRef, imageFile);
         finalImageUrl = await getDownloadURL(snapshot.ref);
@@ -158,8 +175,8 @@ useEffect(() => {
         await push(projectsRef, payload);
       }
       
-      // Reloads list, but now limited to 50 items so it's cheap
-      await loadProjects(); 
+      // FORCE REFRESH: Because we added/edited, we must fetch fresh data from DB
+      await loadProjects(true); 
       handleClose();
 
     } catch (error) {
@@ -182,7 +199,8 @@ useEffect(() => {
     if (window.confirm("Are you sure you want to delete this project?")) {
       const projectRef = ref(database, `projects/${id}`);
       await remove(projectRef);
-      await loadProjects();
+      // FORCE REFRESH: Update list after delete
+      await loadProjects(true);
     }
   };
 
@@ -250,7 +268,6 @@ useEffect(() => {
 
                   <td>
                     <div style={{ width: '60px', height: '60px', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#f3f4f6' }}>
-                        {/* SAFETY FIX: Added loading="lazy" */}
                         <img 
                         src={project.image} 
                         alt={project.title} 
