@@ -8,7 +8,43 @@ import { utils, writeFile } from 'xlsx';
 
 
 const simplifiedServices = ['Mobile Development', 'Web Development', 'Digital Marketing', 'IT Talent Supply', 'Cyber Security'];
+// --- IndexedDB Helper (Solves the 5MB Quota Limit) ---
+const IDB_CONFIG = { name: 'AppCacheDB', version: 1, store: 'firebase_cache' };
 
+const openDB = () => {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(IDB_CONFIG.name, IDB_CONFIG.version);
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(IDB_CONFIG.store)) {
+        db.createObjectStore(IDB_CONFIG.store);
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+};
+
+const dbGet = async (key) => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(IDB_CONFIG.store, 'readonly');
+    const request = transaction.objectStore(IDB_CONFIG.store).get(key);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+};
+
+const dbSet = async (key, val) => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(IDB_CONFIG.store, 'readwrite');
+    const request = transaction.objectStore(IDB_CONFIG.store).put(val, key);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+};
+// -----------------------------------------------------------
 
 // AdminHeader Component - Provided by the user
 const AdminHeader = ({
@@ -392,7 +428,59 @@ const EmployeeData = () => {
     const savedTheme = localStorage.getItem('theme');
     return savedTheme ? savedTheme : 'light';
   });
+  // --- NEW: Helper function to handle caching with IndexedDB ---
+  const getCachedData = async (dbPath, storageKey, durationMinutes = 10) => {
+    try {
+      const cached = await dbGet(storageKey); // REPLACED sessionStorage
 
+      if (cached) {
+        const { data, timestamp } = cached;
+        const isFresh = (new Date().getTime() - timestamp) < (durationMinutes * 60 * 1000);
+        if (isFresh) {
+          console.log(`Using cached data (IDB) for ${storageKey}`);
+          return data;
+        }
+      }
+
+      // If no cache or expired, fetch from Firebase
+      const snapshot = await get(ref(database, dbPath));
+      const data = snapshot.exists() ? snapshot.val() : null;
+
+      if (data) {
+        // Save to IndexedDB (No 5MB limit)
+        await dbSet(storageKey, {
+          data,
+          timestamp: new Date().getTime()
+        });
+      }
+      return data;
+    } catch (err) {
+      console.error("Cache Error:", err);
+      return null;
+    }
+  };
+  // --- NEW: Helper to update cache locally (Async for IDB) ---
+  const updateLocalClientCache = async (clientKey, regKey, field, updatedData) => {
+    try {
+      const cachedWrapper = await dbGet('cache_clients_full'); // Fetch from IDB
+      if (cachedWrapper) {
+        // Navigate to the specific client and registration
+        if (cachedWrapper.data && cachedWrapper.data[clientKey] &&
+          cachedWrapper.data[clientKey].serviceRegistrations &&
+          cachedWrapper.data[clientKey].serviceRegistrations[regKey]) {
+
+          // Update the specific field
+          cachedWrapper.data[clientKey].serviceRegistrations[regKey][field] = updatedData;
+
+          // Save back to IDB
+          await dbSet('cache_clients_full', cachedWrapper);
+          console.log(`Local IDB cache updated for ${field}`);
+        }
+      }
+    } catch (e) {
+      console.error("Error updating local cache:", e);
+    }
+  };
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const profileDropdownRef = useRef(null);
@@ -441,151 +529,153 @@ const EmployeeData = () => {
   // Update useEffect to get the full employee object from sessionStorage
   // In EmployeeData.jsx, replace the useEffect hook that starts with "// NEW: useEffect to get logged-in user data..."
 
-useEffect(() => {
-  const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInEmployee'));
+  // ... Find the useEffect that starts around line 330 ...
 
-  if (!loggedInUserData || !loggedInUserData.firebaseKey) {
-    setLeaveRequests([]);
-    navigate('/login');
-    return;
-  }
+  useEffect(() => {
+    const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInEmployee'));
 
-  const employeeFirebaseKey = loggedInUserData.firebaseKey;
+    if (!loggedInUserData || !loggedInUserData.firebaseKey) {
+      setLeaveRequests([]);
+      navigate('/login');
+      return;
+    }
 
-  // 1) One-time fetch: employee profile
-  (async () => {
-    try {
-      const employeeSnap = await get(ref(database, `users/${employeeFirebaseKey}`));
-      if (employeeSnap.exists()) {
-        setEmployeeDetails(employeeSnap.val());
+    const employeeFirebaseKey = loggedInUserData.firebaseKey;
+
+    // 1) Fetch employee profile (Cached for 15 mins)
+    (async () => {
+      try {
+        // optimization: using cached data
+        const employeeData = await getCachedData(`users/${employeeFirebaseKey}`, `cache_user_${employeeFirebaseKey}`, 15);
+        if (employeeData) {
+          setEmployeeDetails(employeeData);
+        }
+      } catch (err) {
+        console.error('Failed to fetch employee profile:', err);
       }
-    } catch (err) {
-      console.error('Failed to fetch employee profile:', err);
-    }
-  })();
+    })();
 
-  // 2) One-time fetch: this employee’s leave requests only
-  (async () => {
-    try {
-      const leaveQuery = query(
-        ref(database, 'leave_requests'),
-        orderByChild('employeeFirebaseKey'),
-        equalTo(employeeFirebaseKey)
-      );
+    // 2) Fetch leave requests (Always fetch fresh or reduce cache time to 1 min)
+    (async () => {
+      try {
+        // Leaves change frequently, so we might pull fresh or use very short cache
+        const leaveQuery = query(
+          ref(database, 'leave_requests'),
+          orderByChild('employeeFirebaseKey'),
+          equalTo(employeeFirebaseKey)
+        );
 
-      const snapshot = await get(leaveQuery);
-      const requestsList = [];
+        const snapshot = await get(leaveQuery);
+        const requestsList = [];
 
-      snapshot.forEach(childSnap => {
-        const val = childSnap.val();
-        requestsList.push({ id: childSnap.key, ...val });
-      });
-
-      requestsList.sort(
-        (a, b) => new Date(b.requestedDate || 0) - new Date(a.requestedDate || 0)
-      );
-
-      setLeaveRequests(requestsList);
-    } catch (err) {
-      console.error('Failed to fetch leave requests:', err);
-    }
-  })();
-
-  // 3) ONE-TIME fetch: managers/admins (unchanged, still single read)
-  (async () => {
-    try {
-      const usersSnap = await get(ref(database, 'users'));
-      const usersData = usersSnap.exists() ? usersSnap.val() : null;
-      const managementList = [];
-
-      if (usersData) {
-        Object.keys(usersData).forEach(key => {
-          const user = usersData[key];
-          if (
-            user &&
-            user.role &&
-            (String(user.role).toLowerCase() === 'manager' ||
-              String(user.role).toLowerCase() === 'admin')
-          ) {
-            managementList.push({
-              id: key,
-              name:
-                `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
-                user.email,
-              role: user.role,
-            });
-          }
+        snapshot.forEach(childSnap => {
+          const val = childSnap.val();
+          requestsList.push({ id: childSnap.key, ...val });
         });
+
+        requestsList.sort(
+          (a, b) => new Date(b.requestedDate || 0) - new Date(a.requestedDate || 0)
+        );
+
+        setLeaveRequests(requestsList);
+      } catch (err) {
+        console.error('Failed to fetch leave requests:', err);
       }
+    })();
 
-      setManagersAndAdmins(managementList);
-    } catch (err) {
-      console.error('Failed to fetch users once:', err);
-    }
-  })();
+    // 3) Fetch Managers/Admins (Cached for 60 mins - this rarely changes)
+    (async () => {
+      try {
+        // optimization: using cached data
+        const usersData = await getCachedData('users', 'cache_all_users', 60);
+        const managementList = [];
 
-  // 4) ONE-TIME fetch: clients → build only this employee’s registrations
-  (async () => {
-    try {
-      const clientsSnap = await get(ref(database, 'clients'));
-      const clientsData = clientsSnap.exists() ? clientsSnap.val() : null;
-      const allRegistrations = [];
-
-      if (clientsData) {
-        Object.keys(clientsData).forEach(clientKey => {
-          const client = clientsData[clientKey];
-          if (client && client.serviceRegistrations) {
-            Object.keys(client.serviceRegistrations).forEach(regKey => {
-              const registration = client.serviceRegistrations[regKey];
-
-              // Flatten jobApplications into an array if present
-              const jobApplicationsArray = registration.jobApplications
-                ? Object.values(registration.jobApplications)
-                : [];
-
-              allRegistrations.push({
-                ...registration,
-                jobApplications: jobApplicationsArray,
-                clientFirebaseKey: clientKey,
-                registrationKey: regKey,
-                email: client.email,
-                mobile: client.mobile,
-                firstName: registration.firstName || client.firstName,
-                lastName: registration.lastName || client.lastName,
-                name: `${(registration.firstName || client.firstName || '')} ${
-                  (registration.lastName || client.lastName || '')
-                }`.trim(),
-                initials: `${(registration.firstName || 'C').charAt(0)}${(
-                  registration.lastName || 'L'
-                ).charAt(0)}`,
+        if (usersData) {
+          Object.keys(usersData).forEach(key => {
+            const user = usersData[key];
+            if (
+              user &&
+              user.role &&
+              (String(user.role).toLowerCase() === 'manager' ||
+                String(user.role).toLowerCase() === 'admin')
+            ) {
+              managementList.push({
+                id: key,
+                name:
+                  `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
+                  user.email,
+                role: user.role,
               });
-            });
-          }
-        });
+            }
+          });
+        }
+
+        setManagersAndAdmins(managementList);
+      } catch (err) {
+        console.error('Failed to fetch users once:', err);
       }
+    })();
 
-      // Filter registrations so each employee only loads what they need
-      const myRegistrations = allRegistrations.filter(
-        reg => reg.assignedTo === employeeFirebaseKey
-      );
+    // 4) Fetch Clients (Cached for 5 mins - The BIG culprit)
+    (async () => {
+      try {
+        // optimization: using cached data
+        // This prevents downloading the entire 'clients' node on every reload
+        const clientsData = await getCachedData('clients', 'cache_clients_full', 60);
 
-      setNewClients(
-        myRegistrations.filter(c => c.assignmentStatus === 'pending_acceptance')
-      );
-      setActiveClients(
-        myRegistrations.filter(c => c.assignmentStatus === 'active')
-      );
-      setInactiveClients(
-        myRegistrations.filter(c => c.assignmentStatus === 'inactive')
-      );
-    } catch (err) {
-      console.error('Failed to fetch clients once:', err);
-    }
-  })();
-}, [navigate]);
+        const allRegistrations = [];
 
+        if (clientsData) {
+          Object.keys(clientsData).forEach(clientKey => {
+            const client = clientsData[clientKey];
+            if (client && client.serviceRegistrations) {
+              Object.keys(client.serviceRegistrations).forEach(regKey => {
+                const registration = client.serviceRegistrations[regKey];
 
+                // Flatten jobApplications into an array if present
+                const jobApplicationsArray = registration.jobApplications
+                  ? Object.values(registration.jobApplications)
+                  : [];
 
+                allRegistrations.push({
+                  ...registration,
+                  jobApplications: jobApplicationsArray,
+                  clientFirebaseKey: clientKey,
+                  registrationKey: regKey,
+                  email: client.email,
+                  mobile: client.mobile,
+                  firstName: registration.firstName || client.firstName,
+                  lastName: registration.lastName || client.lastName,
+                  name: `${(registration.firstName || client.firstName || '')} ${(registration.lastName || client.lastName || '')
+                    }`.trim(),
+                  initials: `${(registration.firstName || 'C').charAt(0)}${(
+                    registration.lastName || 'L'
+                  ).charAt(0)}`,
+                });
+              });
+            }
+          });
+        }
+
+        // Filter registrations so each employee only loads what they need
+        const myRegistrations = allRegistrations.filter(
+          reg => reg.assignedTo === employeeFirebaseKey
+        );
+
+        setNewClients(
+          myRegistrations.filter(c => c.assignmentStatus === 'pending_acceptance')
+        );
+        setActiveClients(
+          myRegistrations.filter(c => c.assignmentStatus === 'active')
+        );
+        setInactiveClients(
+          myRegistrations.filter(c => c.assignmentStatus === 'inactive')
+        );
+      } catch (err) {
+        console.error('Failed to fetch clients once:', err);
+      }
+    })();
+  }, [navigate]);
 
   // NEW: Temporary state for editing profile
   const [editedEmployeeDetails, setEditedEmployeeDetails] = useState({});
@@ -686,28 +776,28 @@ useEffect(() => {
   };
 
 
- const handleOpenProfileModal = async () => {
-  try {
-    const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInEmployee'));
-    if (!loggedInUserData || !loggedInUserData.firebaseKey) {
-      console.error("No logged in user found in session.");
-      return;
+  const handleOpenProfileModal = async () => {
+    try {
+      const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInEmployee'));
+      if (!loggedInUserData || !loggedInUserData.firebaseKey) {
+        console.error("No logged in user found in session.");
+        return;
+      }
+      const employeeRef = ref(database, `users/${loggedInUserData.firebaseKey}`);
+      const snap = await get(employeeRef);   // ✅ one-time read
+      if (snap.exists()) {
+        const employee = snap.val();
+        setEmployeeDetails(employee);
+        setEditedEmployeeDetails({ ...employee });
+      } else {
+        console.warn("No employee data found in Firebase for this key.");
+      }
+      setIsEditingProfile(false);
+      setShowEmployeeProfileModal(true);
+    } catch (error) {
+      console.error("Error fetching employee details:", error);
     }
-    const employeeRef = ref(database, `users/${loggedInUserData.firebaseKey}`);
-    const snap = await get(employeeRef);   // ✅ one-time read
-    if (snap.exists()) {
-      const employee = snap.val();
-      setEmployeeDetails(employee);
-      setEditedEmployeeDetails({ ...employee });
-    } else {
-      console.warn("No employee data found in Firebase for this key.");
-    }
-    setIsEditingProfile(false);
-    setShowEmployeeProfileModal(true);
-  } catch (error) {
-    console.error("Error fetching employee details:", error);
-  }
-};
+  };
 
   // NEW: Handle changes in edit profile form
   const handleProfileFormChange = (e) => {
@@ -877,7 +967,7 @@ useEffect(() => {
       );
 
       await set(registrationRef, updatedApplications);
-
+      updateLocalClientCache(client.clientFirebaseKey, client.registrationKey, 'jobApplications', updatedApplications);
       // Update the local state to trigger a re-render
       const updatedClient = {
         ...client,
@@ -1095,81 +1185,81 @@ useEffect(() => {
   };
 
   // Find and replace the existing handleConfirmDeleteFile function
-const handleConfirmDeleteFile = async () => {
-  if (!fileToDelete) return;
+  const handleConfirmDeleteFile = async () => {
+    if (!fileToDelete) return;
 
-  setIsDeleting(true);
-  const { clientFirebaseKey, registrationKey, file } = fileToDelete;
+    setIsDeleting(true);
+    const { clientFirebaseKey, registrationKey, file } = fileToDelete;
 
-  try {
-    // 1) Delete from Firebase Storage (if URL exists)
-    if (file?.downloadUrl) {
-      const storage = getStorage();
-      const fileStorageRef = storageRef(storage, file.downloadUrl);
+    try {
+      // 1) Delete from Firebase Storage (if URL exists)
+      if (file?.downloadUrl) {
+        const storage = getStorage();
+        const fileStorageRef = storageRef(storage, file.downloadUrl);
 
-      try {
-        await deleteObject(fileStorageRef);
-      } catch (err) {
-        // Ignore "not found" in storage; still clean DB
-        if (err.code !== 'storage/object-not-found') {
-          throw err;
+        try {
+          await deleteObject(fileStorageRef);
+        } catch (err) {
+          // Ignore "not found" in storage; still clean DB
+          if (err.code !== 'storage/object-not-found') {
+            throw err;
+          }
         }
       }
+
+      // 2) One-time read of the registration from Realtime DB
+      const regRef = ref(
+        database,
+        `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}`
+      );
+      const regSnap = await get(regRef);
+      const registrationData = regSnap.exists() ? regSnap.val() : null;
+
+      const currentFiles = Array.isArray(registrationData?.files)
+        ? registrationData.files
+        : [];
+
+      // 3) Filter out the deleted file
+      const updatedFiles = currentFiles.filter(f => f.id !== file.id);
+
+      // 4) Write updated files list back to DB
+      const filesRef = ref(
+        database,
+        `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}/files`
+      );
+      await set(filesRef, updatedFiles);
+      updateLocalClientCache(clientFirebaseKey, registrationKey, 'files', updatedFiles);
+      // 5) Update local state (active / inactive / new clients)
+      const updateClientList = prevClients =>
+        prevClients.map(c => {
+          if (c.registrationKey !== registrationKey) return c;
+          const updatedClient = { ...c, files: updatedFiles };
+
+          // keep selectedClient in sync
+          setSelectedClient(prev =>
+            prev && prev.registrationKey === registrationKey
+              ? updatedClient
+              : prev
+          );
+
+          return updatedClient;
+        });
+
+      setActiveClients(updateClientList);
+      setInactiveClients(updateClientList);
+      setNewClients(updateClientList);
+
+      triggerNotification('File deleted successfully from storage and database!');
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      alert('Failed to delete file. Please check permissions or try again.');
+    } finally {
+      // 6) Close modal and reset state
+      setShowDeleteFileModal(false);
+      setFileToDelete(null);
+      setIsDeleting(false);
     }
-
-    // 2) One-time read of the registration from Realtime DB
-    const regRef = ref(
-      database,
-      `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}`
-    );
-    const regSnap = await get(regRef);
-    const registrationData = regSnap.exists() ? regSnap.val() : null;
-
-    const currentFiles = Array.isArray(registrationData?.files)
-      ? registrationData.files
-      : [];
-
-    // 3) Filter out the deleted file
-    const updatedFiles = currentFiles.filter(f => f.id !== file.id);
-
-    // 4) Write updated files list back to DB
-    const filesRef = ref(
-      database,
-      `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}/files`
-    );
-    await set(filesRef, updatedFiles);
-
-    // 5) Update local state (active / inactive / new clients)
-    const updateClientList = prevClients =>
-      prevClients.map(c => {
-        if (c.registrationKey !== registrationKey) return c;
-        const updatedClient = { ...c, files: updatedFiles };
-
-        // keep selectedClient in sync
-        setSelectedClient(prev =>
-          prev && prev.registrationKey === registrationKey
-            ? updatedClient
-            : prev
-        );
-
-        return updatedClient;
-      });
-
-    setActiveClients(updateClientList);
-    setInactiveClients(updateClientList);
-    setNewClients(updateClientList);
-
-    triggerNotification('File deleted successfully from storage and database!');
-  } catch (error) {
-    console.error('Error deleting file:', error);
-    alert('Failed to delete file. Please check permissions or try again.');
-  } finally {
-    // 6) Close modal and reset state
-    setShowDeleteFileModal(false);
-    setFileToDelete(null);
-    setIsDeleting(false);
-  }
-};
+  };
 
 
   const handleDownloadResume = (clientName) => {
@@ -1371,6 +1461,7 @@ const handleConfirmDeleteFile = async () => {
         jobTitle: '', company: '', jobType: '', jobBoards: '', jobDescriptionUrl: '', location: '', jobId: '', role: ''
       });
       setCurrentModalStep(1); // Reset step after successful save
+      updateLocalClientCache(selectedClient.clientFirebaseKey, selectedClient.registrationKey, 'jobApplications', updatedApplications);
       triggerNotification("Application added successfully!");
     } catch (error) {
       console.error("Failed to save new application:", error);
@@ -1438,7 +1529,8 @@ const handleConfirmDeleteFile = async () => {
       const updatedFiles = [...filesToAddToClient, ...currentFiles];
 
       await update(registrationRef, { jobApplications: updatedApplications, files: updatedFiles, });
-      const updatedClient = { ...selectedClient, jobApplications: updatedApplications, files: updatedFiles, };
+      updateLocalClientCache(selectedClient.clientFirebaseKey, selectedClient.registrationKey, 'jobApplications', updatedApplications);
+      updateLocalClientCache(selectedClient.clientFirebaseKey, selectedClient.registrationKey, 'files', updatedFiles); const updatedClient = { ...selectedClient, jobApplications: updatedApplications, files: updatedFiles, };
       setSelectedClient(updatedClient);
       const updateClientLists = (prevClients) => { return prevClients.map(c => c.registrationKey === updatedClient.registrationKey ? updatedClient : c); };
       setActiveClients(updateClientLists);
@@ -1691,6 +1783,7 @@ const handleConfirmDeleteFile = async () => {
       setShowUploadFileModal(false);
       setNewFilesToUpload([]); // FIX: Reset the files array
       setNewFileFormData({ fileType: '', fileName: '', notes: '' }); // Reset form data
+      updateLocalClientCache(selectedClientForFile.clientFirebaseKey, selectedClientForFile.registrationKey, 'files', updatedFiles);
       triggerNotification("File(s) uploaded successfully!");
 
     } catch (error) {
@@ -5954,7 +6047,7 @@ const handleConfirmDeleteFile = async () => {
               <thead>
                 <tr>
                   <th style={{ ...applicationTableHeaderCellStyle, width: '5%' }}>S.No</th>
-                  <th style={{ ...applicationTableHeaderCellStyle, width: '15%' }}>Status</th> {/* Replaced Apply To with Status for better info */}
+                  <th style={{ ...applicationTableHeaderCellStyle, width: '15%' }}>Status</th>
                   <th style={{ ...applicationTableHeaderCellStyle, width: '15%' }}>From Date - To Date</th>
                   <th style={{ ...applicationTableHeaderCellStyle, width: '5%' }}>Days</th>
                   <th style={{ ...applicationTableHeaderCellStyle, width: '12%' }}>Leave Type</th>
