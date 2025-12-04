@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { getDatabase, ref, query, orderByChild, equalTo, update, remove, set, get, push } from "firebase/database";
+import { getDatabase, ref, query, orderByChild, equalTo, update, remove, set, get, push, onValue } from "firebase/database";
 import { database, storage } from '../../firebase'; // Import your Firebase config
 import { getStorage, ref as storageRef, getDownloadURL } from "firebase/storage";
 import { useTheme } from '../../context/ThemeContext';
@@ -2766,79 +2766,71 @@ const ClientDashboard = () => {
 
   // ClientDashboard.jsx
 
-  // In ClientDashboard.jsx, replace the useEffect hook that fetches client data
+
   useEffect(() => {
-    // ✅ use the correct session key for client
-    const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInClient'));
-    if (!loggedInUserData || !loggedInUserData.firebaseKey) return;
+  const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInClient'));
+  if (!loggedInUserData || !loggedInUserData.firebaseKey) return;
+  const clientKey = loggedInUserData.firebaseKey;
+  const clientRef = ref(database, `clients/${clientKey}`);
 
-    const clientRef = ref(database, `clients/${loggedInUserData.firebaseKey}`);
+  // 1. Set up the real-time listener
+  // This listener acts as both the initial fetch and the real-time cache updater.
+  const unsubscribe = onValue(clientRef, (snapshot) => {
+    const data = snapshot.exists() ? snapshot.val() : null;
+    console.log("Client Data Fetched/Updated:", data);
 
-    // ✅ one-time fetch
-    (async () => {
-      try {
-        const snapshot = await get(clientRef);
-        const data = snapshot.exists() ? snapshot.val() : null;
+    if (!data) {
+      // Handle case where data is removed or non-existent
+      setClientData(null);
+      setAllFiles([]);
+      setApplicationsData({});
+      setScheduledInterviews([]);
+      setActiveServices([]);
+      setInactiveServices([]);
+      return;
+    }
 
-        if (!data) {
-          setClientData(null);
-          setAllFiles([]);
-          setApplicationsData({});
-          setScheduledInterviews([]);
-          setActiveServices([]);
-          setInactiveServices([]);
-          return;
-        }
+    // 2. Process and set the new data (This runs on initial fetch AND every update)
+    setClientData(data); // <-- Client data is 'cached' in component state
 
-        setClientData(data);
+    // IMPORTANT: Move ALL data processing logic that previously followed 'setClientData(data)' 
+    // into this callback, so it runs whenever the data is updated.
+    
+    const registrations = data.serviceRegistrations ? Object.values(data.serviceRegistrations) : [];
+    const generalFiles = registrations.flatMap(reg => reg.files || []);
+    const applicationAttachments = registrations
+      .flatMap(reg => reg.jobApplications || [])
+      .flatMap(app => app.attachments || []);
 
-        const registrations = data.serviceRegistrations
-          ? Object.values(data.serviceRegistrations)
-          : [];
+    const allFilesMap = new Map();
+    [...generalFiles, ...applicationAttachments].forEach(file => {
+      if (file && file.downloadUrl) {
+        allFilesMap.set(file.downloadUrl, file);
+      }
+    });
+    setAllFiles(Array.from(allFilesMap.values()));
 
-        const generalFiles = registrations.flatMap(reg => reg.files || []);
-        const applicationAttachments = registrations
-          .flatMap(reg => reg.jobApplications || [])
-          .flatMap(app => app.attachments || []);
-
-        const allFilesMap = new Map();
-        [...generalFiles, ...applicationAttachments].forEach(file => {
-          if (file && file.downloadUrl) {
-            allFilesMap.set(file.downloadUrl, file);
-          }
-        });
-        setAllFiles(Array.from(allFilesMap.values()));
-
-        const allApplications = registrations.flatMap(
-          reg => reg.jobApplications || []
-        );
-        const interviews = allApplications.filter(
-          app => app.status === 'Interview'
-        );
-        setScheduledInterviews(interviews);
-
-        const groupedApplications = allApplications.reduce((acc, app) => {
-          const dateKey = formatDate(app.appliedDate);
-          const entry = {
-            id: app.id,
-            jobId: app.jobId,
-            website: app.jobBoards,
-            position: app.jobTitle,
-            company: app.company,
-            link: app.jobDescriptionUrl,
-            jobType: app.jobType || 'N/A',
-            dateAdded: dateKey,
-            jobDescription: app.jobDesc || app.jobTitle,
-            status: app.status,
-            role: app.role,
-          };
-          if (!acc[dateKey]) acc[dateKey] = [];
-          acc[dateKey].push(entry);
-          return acc;
-        }, {});
-        setApplicationsData(groupedApplications);
-
-        const registeredServiceNames = registrations.map(
+    const allApplications = registrations.flatMap(
+      reg => reg.jobApplications || []
+    );
+    const interviews = allApplications.filter(
+      app => app.status === 'Interview'
+    );
+    setScheduledInterviews(interviews);
+    
+    const groupedApplications = allApplications.reduce((acc, app) => {
+      const dateKey = formatDate(app.appliedDate);
+      const entry = { id: app.id, jobId: app.jobId, website: app.jobBoards, position: app.jobTitle, company: app.company, link: app.link };
+      // ... (Include all other application fields here)
+      if (!acc[dateKey]) {
+        acc[dateKey] = [];
+      }
+      acc[dateKey].push(entry);
+      return acc;
+    }, {});
+    setApplicationsData(groupedApplications);
+    
+ const registeredServiceNames = registrations.map(
           reg => reg.service || ''
         );
         const active = allServices.filter(s =>
@@ -2849,13 +2841,18 @@ const ClientDashboard = () => {
         );
         setActiveServices(active);
         setInactiveServices(inactive);
-      } catch (err) {
-        console.error('Error fetching client data (one-time):', err);
-      }
-    })();
-  }, [allServices]); // or [] if allServices never changes
+  }, (error) => {
+    console.error("Firebase Read Error:", error);
+    // You may add logic to alert the user of a connection error
+  });
 
-
+  // 3. Cleanup function: Detach the listener when the component unmounts
+  // This is crucial to prevent memory leaks and stop unnecessary connections.
+  return () => {
+    unsubscribe();
+  };
+  
+}, []); // Keep dependency array empty to run only on mount/unmount
 
   const handleActiveServiceClick = (service) => {
     if (clientData && clientData.serviceRegistrations) {

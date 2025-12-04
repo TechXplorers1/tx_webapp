@@ -1,7 +1,22 @@
 // In EmployeeManagement.jsx, replace the entire file content with this code.
 import React, { useState, useEffect, useRef } from 'react';
 import { database, auth } from '../../firebase'; // Import your Firebase config
-import { ref, push, set, remove, update, off, get } from "firebase/database";
+import {
+  ref,
+  push,
+  set,
+  remove,
+  update,
+  off,
+  get,
+  query,
+  orderByKey,
+  limitToFirst,
+  startAt,
+  orderByChild,
+    equalTo,
+} from "firebase/database";
+
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { Spinner } from 'react-bootstrap';
 
@@ -12,6 +27,8 @@ const EmployeeManagement = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  // ... existing states
+  const [totalEmployees, setTotalEmployees] = useState(0);
   const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false);
   const [isEditEmployeeModalOpen, setIsEditEmployeeModalOpen] = useState(false);
   const [isDeleteConfirmModalOpen, setIsDeleteConfirmModalOpen] = useState(false);
@@ -68,6 +85,18 @@ const EmployeeManagement = () => {
     { id: 12, name: 'External', description: 'External clients and partners', head: 'Not assigned', employees: 0, status: 'active', createdDate: '15/01/2023' },
   ]);
 
+    // Pagination + caching
+  const PAGE_SIZE = 5;
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageCache, setPageCache] = useState({});       // { 1: [5 employees], 2: [5 employees], ... }
+  const [pageLastKeys, setPageLastKeys] = useState({}); // { 1: "lastFirebaseKeyOfPage1", ... }
+  const [hasMorePages, setHasMorePages] = useState(true);
+
+  // Search
+  const [searchResults, setSearchResults] = useState(null); // null => show normal pagination
+  const [isSearching, setIsSearching] = useState(false);
+
+
   const departmentOptions = departments.map(d => d.name);
   departmentOptions.unshift('No department assigned');
 
@@ -82,92 +111,24 @@ const EmployeeManagement = () => {
   const maritalStatusOptions = ['Single', 'Married', 'Divorced', 'Widowed'];
 
   // --- Employee Management Handlers ---
-  const handleSearchChange = (event) => {
-    setSearchTerm(event.target.value);
-  };
+   const handleSearchChange = (event) => {
+    const value = event.target.value;
+    setSearchTerm(value);
 
-  const filteredEmployees = employees.filter(employee =>
-    (employee.firstName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (employee.lastName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (employee.personalEmail || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (employee.roles || []).some(role => (role || '').toLowerCase().includes(searchTerm.toLowerCase()))
-  );
-
-
- // 1️⃣ LOAD USERS ONE-TIME FROM FIREBASE (CHEAP)
-useEffect(() => {
-  const fetchEmployees = async () => {
-    try {
-      setLoading(true);
-
-      const usersSnap = await get(ref(database, "users"));
-      const usersData = usersSnap.exists() ? usersSnap.val() : {};
-
-      const allUsersArray = Object.keys(usersData).map(key => ({
-        firebaseKey: key,
-        ...usersData[key],
-      }));
-
-      // Filter for employee/admin/manager roles
-      const filteredUsers = allUsersArray.filter(user =>
-        user.roles &&
-        Array.isArray(user.roles) &&
-        (
-          user.roles.includes("employee") ||
-          user.roles.includes("admin") ||
-          user.roles.includes("manager")
-        )
-      );
-
-      setEmployees(filteredUsers);
-      setError(null);
-    } catch (error) {
-      console.error("Error fetching employees:", error);
-
-      // 2️⃣ FALLBACK TO LOCAL DATA IF FIREBASE FAILS
-      const savedEmployees = localStorage.getItem("users");
-      if (savedEmployees) {
-        setEmployees(JSON.parse(savedEmployees));
-      } else {
-        // fallback to /employees.json only if required
-        try {
-          const response = await fetch("/employees.json");
-          const data = await response.json();
-          setEmployees(data);
-        } catch (err) {
-          console.error("Fallback file failed:", err);
-        }
-      }
-    } finally {
-      setLoading(false);
+    // If search box is cleared, go back to normal paginated view
+    if (!value.trim()) {
+      setSearchResults(null);
     }
   };
+const employeesToRender = searchResults && searchTerm.trim()
+    ? searchResults
+    : employees;
 
-  fetchEmployees();
-}, [database]);
 
-// 3️⃣ SAVE TO LOCALSTORAGE WHEN DATA IS LOADED
-useEffect(() => {
-  if (!loading && employees.length > 0) {
-    localStorage.setItem("users", JSON.stringify(employees));
-  }
-}, [employees, loading]);
 
-// 4️⃣ LISTEN TO OTHER TABS UPDATING LOCALSTORAGE
-useEffect(() => {
-  const handleStorageChange = (event) => {
-    if (event.key === "users" && event.newValue) {
-      try {
-        setEmployees(JSON.parse(event.newValue));
-      } catch (error) {
-        console.error("Storage sync failed:", error);
-      }
-    }
-  };
 
-  window.addEventListener("storage", handleStorageChange);
-  return () => window.removeEventListener("storage", handleStorageChange);
-}, []);
+
+
 
   const handleAddEmployeeClick = () => {
     setIsAddEmployeeModalOpen(true);
@@ -373,7 +334,13 @@ useEffect(() => {
     setIsConfirmUpdateModalOpen(true);
     setConfirmActionType('employeeUpdate');
   };
-
+// --- Calculation for Pagination Range ---
+  // Calculate the starting number (e.g., Page 1 starts at 1, Page 2 starts at 6)
+  const startRange = (currentPage - 1) * PAGE_SIZE + 1;
+  
+  // Calculate the ending number based on how many items are actually in the current list
+  const endRange = startRange + (employees.length > 0 ? employees.length - 1 : 0);
+  // ----------------------------------------
   const confirmEmployeeUpdate = async () => {
     if (!pendingEmployeeUpdate || !pendingEmployeeUpdate.firebaseKey) {
       console.error("Update failed: Employee data or Firebase key is missing.");
@@ -487,6 +454,232 @@ useEffect(() => {
       default: return '#f3f4f6';
     }
   };
+
+    const handleNextPage = () => {
+    // Don't go to next page while searching
+    if (hasMorePages && !searchResults) {
+      loadPage(currentPage + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    // Don't go to previous page while searching
+    if (currentPage > 1 && !searchResults) {
+      loadPage(currentPage - 1);
+    }
+  };
+
+
+    // Load one specific page (5 employees) from Firebase, with caching
+  const loadPage = async (pageNumber) => {
+  if (pageNumber < 1) return;
+
+  // Use cache if we already loaded this page
+  if (pageCache[pageNumber]) {
+    setEmployees(pageCache[pageNumber]);
+    setCurrentPage(pageNumber);
+    return;
+  }
+
+  // Don’t try to go forward if we already know there is no next page
+  if (!hasMorePages && pageNumber > currentPage) return;
+
+  setLoading(true);
+  setError(null);
+
+  try {
+    let employeesQuery;
+
+    if (pageNumber === 1) {
+      // First page -> first 5 users by key
+      employeesQuery = query(
+        ref(database, "users"),
+        orderByKey(),
+        limitToFirst(PAGE_SIZE) // PAGE_SIZE = 5
+      );
+    } else {
+      const prevLastKey = pageLastKeys[pageNumber - 1];
+
+      // If we have no cursor for previous page, bail out to page 1
+      if (!prevLastKey) {
+        employeesQuery = query(
+          ref(database, "users"),
+          orderByKey(),
+          limitToFirst(PAGE_SIZE)
+        );
+        pageNumber = 1;
+      } else {
+        employeesQuery = query(
+          ref(database, "users"),
+          orderByKey(),
+          startAt(prevLastKey),
+          limitToFirst(PAGE_SIZE + 1) // +1 so we can drop the duplicate
+        );
+      }
+    }
+
+    const snap = await get(employeesQuery);
+
+    if (!snap.exists()) {
+      // No more data at all
+      setHasMorePages(false);
+      return;
+    }
+
+    let raw = snap.val() || {};
+    let keys = Object.keys(raw);
+
+    // Convert to array of users
+    let users = keys.map((k) => ({
+      firebaseKey: k,
+      ...raw[k],
+    }));
+
+    // For page > 1, first record is duplicate of last record on previous page
+    if (pageNumber > 1) {
+      users = users.slice(1);
+      keys = keys.slice(1);
+    }
+    
+
+    // If there is literally no data after slicing, don’t move page forward
+    if (users.length === 0) {
+      setHasMorePages(false);
+      return;
+    }
+
+    // Limit to PAGE_SIZE
+    const pageSlice = users.slice(0, PAGE_SIZE);
+
+    // If fewer than we requested, we know this is the last page
+    const isLastPage = pageSlice.length < PAGE_SIZE;
+    setHasMorePages(!isLastPage);
+
+    // Save cursor for next page
+    const lastKey = keys[keys.length - 1];
+
+    setPageCache((prev) => ({
+      ...prev,
+      [pageNumber]: pageSlice,
+    }));
+
+    setPageLastKeys((prev) => ({
+      ...prev,
+      [pageNumber]: lastKey,
+    }));
+
+    setEmployees(pageSlice);
+    setCurrentPage(pageNumber);
+  } catch (err) {
+    console.error("Error fetching employees page:", err);
+    setError("Failed to load employees.");
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+  // On mount: only load the first 5 users
+  useEffect(() => {
+    loadPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const handleSearchClick = async () => {
+  const term = searchTerm.trim();
+  if (!term) {
+    // Empty search -> back to normal paginated view
+    setSearchResults(null);
+    return;
+  }
+
+  const lowered = term.toLowerCase();
+
+  // 1) First, search inside already loaded pages (no DB read)
+  const cachedEmployees = Object.values(pageCache).flat();
+  const localMatches = cachedEmployees.filter((employee) =>
+    (employee.firstName || "").toLowerCase().includes(lowered) ||
+    (employee.lastName || "").toLowerCase().includes(lowered) ||
+    (employee.workEmail || "").toLowerCase().includes(lowered) ||
+    (employee.personalEmail || "").toLowerCase().includes(lowered)
+  );
+
+  if (localMatches.length > 0) {
+    setSearchResults(localMatches);
+    return;
+  }
+
+  // 2) If not found locally, query ONLY matching users from DB
+  setIsSearching(true);
+  setError(null);
+
+  try {
+    const matches = [];
+
+    if (term.includes("@")) {
+      // Treat as email (work or personal)
+      const workEmailQuery = query(
+        ref(database, "users"),
+        orderByChild("workEmail"),
+        equalTo(term)
+      );
+      const personalEmailQuery = query(
+        ref(database, "users"),
+        orderByChild("personalEmail"),
+        equalTo(term)
+      );
+
+      const [workSnap, personalSnap] = await Promise.all([
+        get(workEmailQuery),
+        get(personalEmailQuery),
+      ]);
+
+      [workSnap, personalSnap].forEach((snap) => {
+        if (snap.exists()) {
+          const data = snap.val();
+          Object.keys(data).forEach((key) => {
+            matches.push({ firebaseKey: key, ...data[key] });
+          });
+        }
+      });
+    } else {
+      // Treat as exact firstName / lastName
+      const firstNameQuery = query(
+        ref(database, "users"),
+        orderByChild("firstName"),
+        equalTo(term)
+      );
+      const lastNameQuery = query(
+        ref(database, "users"),
+        orderByChild("lastName"),
+        equalTo(term)
+      );
+
+      const [firstSnap, lastSnap] = await Promise.all([
+        get(firstNameQuery),
+        get(lastNameQuery),
+      ]);
+
+      [firstSnap, lastSnap].forEach((snap) => {
+        if (snap.exists()) {
+          const data = snap.val();
+          Object.keys(data).forEach((key) => {
+            matches.push({ firebaseKey: key, ...data[key] });
+          });
+        }
+      });
+    }
+
+    // NO role filtering here – show whatever we found
+    setSearchResults(matches);
+  } catch (err) {
+    console.error("Error searching employee:", err);
+    setError("Failed to search employees.");
+  } finally {
+    setIsSearching(false);
+  }
+};
+
+
 
   const getRoleTagText = (role) => {
     switch (role.toLowerCase()) {
@@ -938,6 +1131,20 @@ useEffect(() => {
             background-color: #2e7d32;
             color: #fff;
         }
+
+                .pagination-controls {
+          margin-top: 1rem;
+          display: flex;
+          justify-content: flex-end;
+          align-items: center;
+          gap: 0.75rem;
+        }
+
+        .pagination-info {
+          font-size: 0.875rem;
+          color: var(--text-secondary);
+        }
+
       `}
       </style>
       <main>
@@ -945,42 +1152,121 @@ useEffect(() => {
           <div className="employee-management-box">
             <div className="employee-management-header">
               <h2 className="employee-management-title">Employee Management</h2>
-              <div className="employee-search-add">
-                <input type="text" placeholder="Search employees..." className="employee-search-input" value={searchTerm} onChange={handleSearchChange} />
-                <button className="add-employee-btn" onClick={handleAddEmployeeClick}>Add Employee</button>
-              </div>
+             <div className="employee-search-add">
+  <input
+    type="text"
+    placeholder="Search employees by name or email..."
+    className="employee-search-input"
+    value={searchTerm}
+    onChange={handleSearchChange}
+  />
+  <button
+    type="button"
+    className="action-btn"
+    onClick={handleSearchClick}
+    disabled={isSearching}
+  >
+    {isSearching ? "Searching..." : "Search"}
+  </button>
+  <button className="add-employee-btn" onClick={handleAddEmployeeClick}>
+    Add Employee
+  </button>
+</div>
+
             </div>
-            <div className="employee-list">
-              {filteredEmployees.map(employee => (
-                <div className="employee-card" key={employee.firebaseKey}>
-                  <div className="employee-card-left">
-                    <div className="employee-avatar">{getInitials(`${employee.firstName} ${employee.lastName}`)}</div>
-                    <div className="employee-info">
-                      <div className="employee-name">{`${employee.firstName} ${employee.lastName}`}</div>
-                      <div className="employee-email">{employee.workEmail}</div>
-                      <div className="employee-roles">
-                        {(employee.roles || []).map(role => (
-                          <span key={role} className="role-tag" style={{ backgroundColor: getRoleTagBg(role), color: getRoleTagText(role) }}>{role}</span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="employee-actions">
-                    <label className="toggle-switch" style={{top:"10px"}}>
-                      <input
-                        type="checkbox"
-                        checked={employee.accountStatus === 'Active'}
-                        onChange={() => handleStatusToggle(employee)}
-                      />
-                      <span className="toggle-slider"></span>
-                    </label>
-                    <button className="action-btn" onClick={() => handleEditEmployeeClick(employee.firebaseKey)}>Edit</button>
-                    
-                    <button className="action-btn delete-btn" onClick={() => handleDeleteEmployeeClick(employee.firebaseKey)}>Delete</button>
-                  </div>
-                </div>
+          <div className="employee-list">
+  {loading && !employeesToRender.length ? (
+    <div>Loading employees...</div>
+  ) : employeesToRender.length === 0 ? (
+    <div>No employees found.</div>
+  ) : (
+    employeesToRender.map((employee) => (
+      <div className="employee-card" key={employee.firebaseKey}>
+        <div className="employee-card-left">
+          <div className="employee-avatar">
+            {getInitials(`${employee.firstName} ${employee.lastName}`)}
+          </div>
+          <div className="employee-info">
+            <div className="employee-name">
+              {`${employee.firstName} ${employee.lastName}`}
+            </div>
+            <div className="employee-email">{employee.workEmail}</div>
+            <div className="employee-roles">
+              {(employee.roles || []).map((role) => (
+                <span
+                  key={role}
+                  className="role-tag"
+                  style={{
+                    backgroundColor: getRoleTagBg(role),
+                    color: getRoleTagText(role),
+                  }}
+                >
+                  {role}
+                </span>
               ))}
             </div>
+          </div>
+        </div>
+        <div className="employee-actions">
+          <label className="toggle-switch" style={{ top: "10px" }}>
+            <input
+              type="checkbox"
+              checked={employee.accountStatus === "Active"}
+              onChange={() => handleStatusToggle(employee)}
+            />
+            <span className="toggle-slider"></span>
+          </label>
+          <button
+            className="action-btn"
+            onClick={() => handleEditEmployeeClick(employee.firebaseKey)}
+          >
+            Edit
+          </button>
+
+          <button
+            className="action-btn delete-btn"
+            onClick={() => handleDeleteEmployeeClick(employee.firebaseKey)}
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    ))
+  )}
+</div>
+
+{/*! Pagination controls – only when not in search mode */}
+{!searchResults && (
+  <div className="pagination-controls">
+    {/* NEW: Range Indicator */}
+    <span className="pagination-info" style={{ marginRight: '1rem', fontWeight: '500' }}>
+      {employees.length > 0 
+        ? `Showing ${startRange}-${endRange}` 
+        : '0 employees'}
+    </span>
+
+    <button
+      type="button"
+      className="action-btn"
+      onClick={handlePrevPage}
+      disabled={currentPage === 1 || loading}
+    >
+      Previous
+    </button>
+    
+    <span className="pagination-info">Page {currentPage}</span>
+    
+    <button
+      type="button"
+      className="action-btn"
+      onClick={handleNextPage}
+      disabled={!hasMorePages || loading}
+    >
+      Next
+    </button>
+  </div>
+)}
+
           </div>
         </div>
       </main>
