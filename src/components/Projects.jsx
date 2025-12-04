@@ -4,10 +4,46 @@ import { Link } from 'react-router-dom';
 import CustomNavbar from './Navbar';
 import { useTheme } from '../context/ThemeContext';
 import Footer from './Footer'; 
-import { database } from '../firebase'; // Import firebase db
+import { database } from '../firebase'; 
 import { ref, get, query, limitToLast } from "firebase/database";
 
-const CACHE_KEY = "projectsCache";
+// --- IndexedDB Helper (Optimized Storage) ---
+const IDB_CONFIG = { name: 'AppCacheDB', version: 1, store: 'firebase_cache' };
+
+const openDB = () => {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(IDB_CONFIG.name, IDB_CONFIG.version);
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(IDB_CONFIG.store)) {
+        db.createObjectStore(IDB_CONFIG.store);
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+};
+
+const dbGet = async (key) => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(IDB_CONFIG.store, 'readonly');
+    const request = transaction.objectStore(IDB_CONFIG.store).get(key);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+};
+
+const dbSet = async (key, val) => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(IDB_CONFIG.store, 'readwrite');
+    const request = transaction.objectStore(IDB_CONFIG.store).put(val, key);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+};
+// -----------------------------------------------------------
 
 const Projects = () => {
   const { isDarkMode } = useTheme(); 
@@ -20,31 +56,30 @@ const Projects = () => {
     const fetchProjects = async () => {
       setLoading(true);
       
-      // 1. Check Session Cache First
-      const cached = sessionStorage.getItem(CACHE_KEY);
+      // 1. Check IndexedDB Cache First (Better than sessionStorage for large JSON)
+      const cached = await dbGet('projectsCache');
+      
       if (cached) {
-        try {
-          const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setProjectsData(parsed);
-            setLoading(false);
-            console.log("Loaded projects from cache");
-            return; // EXIT FUNCTION: Do not hit DB
-          }
-        } catch (e) {
-          console.warn("Cache parse error, fetching fresh data...");
+        const { data, timestamp } = cached;
+        // Cache valid for 60 minutes
+        const isFresh = (new Date().getTime() - timestamp) < (60 * 60 * 1000); 
+        
+        if (isFresh && Array.isArray(data) && data.length > 0) {
+          setProjectsData(data);
+          setLoading(false);
+          console.log("Loaded projects from IndexedDB cache");
+          return; 
         }
       }
 
       // 2. If no cache, hit Firebase
       try {
-        // Optimization: Added limitToLast to prevent massive downloads if DB grows
         const projectsRef = query(ref(database, "projects"), limitToLast(50));
         const snapshot = await get(projectsRef);
 
         if (!snapshot.exists()) {
           setProjectsData([]);
-          sessionStorage.setItem(CACHE_KEY, JSON.stringify([]));
+          await dbSet('projectsCache', { data: [], timestamp: new Date().getTime() });
           return;
         }
 
@@ -54,13 +89,10 @@ const Projects = () => {
           ...data[key],
         }));
 
-        // Use 'order' for sorting if available, else date, else default
         const sortedProjects = projectList.sort((a, b) => {
-            // Priority 1: Sort by manual order if it exists
             if (a.order !== undefined && b.order !== undefined) {
                 return a.order - b.order;
             }
-            // Priority 2: CreatedAt if available
             const dateA = new Date(a.createdAt || 0);
             const dateB = new Date(b.createdAt || 0);
             return dateB - dateA;
@@ -68,7 +100,10 @@ const Projects = () => {
 
         setProjectsData(sortedProjects);
         // Save to cache for next time
-        sessionStorage.setItem(CACHE_KEY, JSON.stringify(sortedProjects));
+        await dbSet('projectsCache', { 
+            data: sortedProjects, 
+            timestamp: new Date().getTime() 
+        });
         console.log("Loaded projects from Firebase and cached them");
 
       } catch (error) {

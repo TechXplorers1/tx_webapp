@@ -1,11 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Container, Row, Col, Carousel } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
-// Import useMap from react-leaflet
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'; 
 import 'leaflet/dist/leaflet.css';
 import CustomNavbar from './Navbar';
-import Footer from './Footer'; // --- IMPORT FOOTER ---
+import Footer from './Footer';
 import '../styles/LandingPage.css';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../components/AuthContext'; 
@@ -17,6 +16,44 @@ import icon from 'leaflet/dist/images/marker-icon.png';
 import iconRetina from 'leaflet/dist/images/marker-icon-2x.png';
 import shadow from 'leaflet/dist/images/marker-shadow.png';
 
+// --- IndexedDB Helper (Stops the 17MB Download) ---
+const IDB_CONFIG = { name: 'AppCacheDB', version: 1, store: 'firebase_cache' };
+
+const openDB = () => {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(IDB_CONFIG.name, IDB_CONFIG.version);
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(IDB_CONFIG.store)) {
+        db.createObjectStore(IDB_CONFIG.store);
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+};
+
+const dbGet = async (key) => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(IDB_CONFIG.store, 'readonly');
+    const request = transaction.objectStore(IDB_CONFIG.store).get(key);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+};
+
+const dbSet = async (key, val) => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(IDB_CONFIG.store, 'readwrite');
+    const request = transaction.objectStore(IDB_CONFIG.store).put(val, key);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+};
+// -----------------------------------------------------------
+
 // === Leaflet Icon Fix ===
 delete L.Icon.Default.prototype._getIconUrl;
 
@@ -25,21 +62,17 @@ L.Icon.Default.mergeOptions({
     iconUrl: icon,
     shadowUrl: shadow,
 });
-// ========================
 
 // --- Icon Components ---
 const StarIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="feather feather-star"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
 );
-
 const UsersIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="feather feather-users"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
 );
-
 const ClockIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="feather feather-clock"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
 );
-
 const CheckCircleIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="feather feather-check-circle"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
 );
@@ -50,10 +83,8 @@ const ContinentsIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
 );
 
-// Import images
 import Image1 from '../assets/MobileDev.jpeg';
 
-// --- COMPONENT FOR MAP REFRESH ---
 const MapRefresher = ({ worldInView }) => {
     const map = useMap();
     useEffect(() => {
@@ -70,42 +101,65 @@ const LandingPage = () => {
   const [serviceRegistrations, setServiceRegistrations] = useState(null);
   const { isDarkMode } = useTheme(); 
 
-  // --- Animation Hooks ---
   const [servicesRef, servicesInView] = useInView({ triggerOnce: true, threshold: 0.1 });
   const [globalStatsRef, globalStatsInView] = useInView({ triggerOnce: true, threshold: 0.1 });
   const [worldRef, worldInView] = useInView({ triggerOnce: true, threshold: 0.1 });
-  // Note: Footer ref is now inside the Footer component
 
-useEffect(() => {
-  // If the user isn’t logged in, clear state and exit
-  if (!isLoggedIn || !user?.firebaseKey) {
-    setServiceRegistrations(null);
-    return;
-  }
-
-  const fetchServiceRegistrationsOnce = async () => {
+  // --- NEW: Function to cache and fetch ---
+  const getCachedData = async (dbPath, storageKey, durationMinutes = 60) => {
     try {
-      const clientServiceRegistrationsRef = ref(
-        database,
-        `clients/${user.firebaseKey}/serviceRegistrations`
-      );
-
-      const snapshot = await get(clientServiceRegistrationsRef);
-
-      if (snapshot.exists()) {
-        setServiceRegistrations(snapshot.val());
-      } else {
-        setServiceRegistrations(null);
+      // 1. Check Cache
+      const cached = await dbGet(storageKey);
+      if (cached) {
+        const { data, timestamp } = cached;
+        const isFresh = (new Date().getTime() - timestamp) < (durationMinutes * 60 * 1000);
+        if (isFresh) {
+          console.log(`Using cached data (IDB) for ${storageKey}`);
+          return data;
+        }
       }
-    } catch (error) {
-      console.error("Error fetching service registrations:", error);
-      setServiceRegistrations(null);
+
+      // 2. Fetch Fresh if needed
+      const snapshot = await get(ref(database, dbPath));
+      const data = snapshot.exists() ? snapshot.val() : null;
+      
+      if (data) {
+        // 3. Save to Cache
+        await dbSet(storageKey, {
+          data,
+          timestamp: new Date().getTime()
+        });
+      }
+      return data;
+    } catch (err) {
+      console.error("Cache Error:", err);
+      return null;
     }
   };
 
-  fetchServiceRegistrationsOnce();
-}, [isLoggedIn, user?.firebaseKey]);
+  useEffect(() => {
+    if (!isLoggedIn || !user?.firebaseKey) {
+      setServiceRegistrations(null);
+      return;
+    }
 
+    const fetchServiceRegistrationsOnce = async () => {
+      // USE CACHE HERE:
+      const data = await getCachedData(
+        `clients/${user.firebaseKey}/serviceRegistrations`, 
+        `cache_registrations_${user.firebaseKey}`,
+        60 // 60 minutes cache
+      );
+      setServiceRegistrations(data);
+    };
+
+    fetchServiceRegistrationsOnce();
+  }, [isLoggedIn, user?.firebaseKey]);
+
+  // ... (REST OF YOUR CODE REMAINS EXACTLY THE SAME)
+  // Just make sure to keep the rest of the component (offices, servicesData, return statement, etc.)
+  // I will not repeat the huge static data arrays here to save space, 
+  // but ensure you keep the `return (...)` block exactly as it was.
 
   const offices = [
     { name: 'USA', position: [40.7128, -74.006] },
