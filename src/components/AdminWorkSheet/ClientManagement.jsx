@@ -5,6 +5,43 @@ import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "fire
 import { Spinner } from 'react-bootstrap';
 
 
+// --- ADD THIS BLOCK ---
+const IDB_CONFIG = { name: 'AppCacheDB', version: 1, store: 'firebase_cache' };
+
+const openDB = () => {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(IDB_CONFIG.name, IDB_CONFIG.version);
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(IDB_CONFIG.store)) {
+        db.createObjectStore(IDB_CONFIG.store);
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+};
+
+const dbGet = async (key) => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(IDB_CONFIG.store, 'readonly');
+    const request = transaction.objectStore(IDB_CONFIG.store).get(key);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+};
+
+const dbSet = async (key, val) => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(IDB_CONFIG.store, 'readwrite');
+    const request = transaction.objectStore(IDB_CONFIG.store).put(val, key);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+};
+
 const ClientManagement = () => {
   // --- Client Management States ---
   const [managerList, setManagerList] = useState([]);
@@ -57,12 +94,52 @@ const [isAppViewModalOpen, setIsAppViewModalOpen] = useState(false);
 const [isAppEditModalOpen, setIsAppEditModalOpen] = useState(false);
 const [isAppDeleteConfirmOpen, setIsAppDeleteConfirmOpen] = useState(false);
 const [selectedApplication, setSelectedApplication] = useState(null);
+// --- NEW: Helper to fetch/cache data ---
+  const getCachedData = async (dbPath, storageKey, durationMinutes = 60) => {
+    try {
+      const cached = await dbGet(storageKey);
+      if (cached) {
+        const { data, timestamp } = cached;
+        const isFresh = (new Date().getTime() - timestamp) < (durationMinutes * 60 * 1000);
+        if (isFresh) return data; // Return cached data if fresh
+      }
+      // If not fresh, fetch from Firebase
+      const snapshot = await get(ref(database, dbPath));
+      const data = snapshot.exists() ? snapshot.val() : {};
+      await dbSet(storageKey, { data, timestamp: new Date().getTime() });
+      return data;
+    } catch (err) {
+      console.error("Cache Error:", err);
+      return {};
+    }
+  };
 
+  // --- NEW: Helper to update cache locally ---
+  const updateLocalCache = async (clientKey, regKey, updates) => {
+    try {
+      const cachedWrapper = await dbGet('cache_clients_full');
+      if (cachedWrapper && cachedWrapper.data && cachedWrapper.data[clientKey]) {
+         // If modifying a registration inside the client
+         if(regKey && cachedWrapper.data[clientKey].serviceRegistrations?.[regKey]) {
+             cachedWrapper.data[clientKey].serviceRegistrations[regKey] = {
+                 ...cachedWrapper.data[clientKey].serviceRegistrations[regKey],
+                 ...updates
+             };
+         } 
+         // If modifying the root client profile (firstName, email, etc)
+         else if (!regKey) {
+             Object.assign(cachedWrapper.data[clientKey], updates);
+         }
+         await dbSet('cache_clients_full', cachedWrapper);
+      }
+    } catch(e) { console.error("Local update failed", e); }
+  };
 
 
 
 
 // 1) Load clients + users ONCE (no streaming)
+// 1) Load clients + users (Optimized with Cache)
 useEffect(() => {
   let cancelled = false;
 
@@ -70,19 +147,17 @@ useEffect(() => {
     try {
       setLoading(true);
 
-      // Fetch clients and users in parallel
-      const [clientsSnap, usersSnap] = await Promise.all([
-        get(ref(database, 'clients')),
-        get(ref(database, 'users')),
+      // OPTIMIZATION: Use getCachedData instead of get()
+      const [clientsData, usersData] = await Promise.all([
+        getCachedData('clients', 'cache_clients_full', 60),
+        getCachedData('users', 'cache_users_full', 60)
       ]);
 
       if (cancelled) return;
 
-      // ---- Clients → serviceRegistrations ----
-      const clientsData = clientsSnap.exists() ? clientsSnap.val() : {};
+      // ---- Process Clients ----
       const allRegistrations = [];
-
-      Object.keys(clientsData).forEach(clientKey => {
+      Object.keys(clientsData || {}).forEach(clientKey => {
         const client = clientsData[clientKey];
         if (!client || !client.serviceRegistrations) return;
 
@@ -99,24 +174,19 @@ useEffect(() => {
           });
         });
       });
-
       setServiceRegistrations(allRegistrations);
 
-      // ---- Users → managers list ----
-      const usersData = usersSnap.exists() ? usersSnap.val() : {};
-      const usersArray = Object.keys(usersData).map(key => ({
+      // ---- Process Managers ----
+      const usersArray = Object.keys(usersData || {}).map(key => ({
         firebaseKey: key,
         ...usersData[key],
       }));
-
-      const managers = usersArray.filter(
-        user => user.roles && user.roles.includes('manager')
-      );
+      const managers = usersArray.filter(u => u.roles && u.roles.includes('manager'));
       setManagerList(managers);
 
       setError(null);
     } catch (error) {
-      console.error('Firebase fetch error:', error);
+      console.error('Fetch error:', error);
       if (!cancelled) setError(error.message);
     } finally {
       if (!cancelled) setLoading(false);
@@ -124,11 +194,8 @@ useEffect(() => {
   };
 
   fetchData();
-
-  return () => {
-    cancelled = true; // just stop state updates if the effect is cleaned up
-  };
-}, [database]);
+  return () => { cancelled = true; };
+}, []);
 
 // 2) Compute today's applications COUNT from in-memory data (NO DB calls)
 useEffect(() => {
@@ -171,15 +238,15 @@ useEffect(() => {
     'Cyber Security'
   ];
 
-  const handleAcceptClient = async (registration) => {
-    const registrationRef = ref(database, `clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}`);
+ const handleAcceptClient = async (registration) => {
+    const refPath = `clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}`;
     try {
-      await update(registrationRef, {
-        assignmentStatus: 'pending_manager'
-      });
-    } catch (error) {
-      console.error("Failed to accept client registration:", error);
-    }
+      await update(ref(database, refPath), { assignmentStatus: 'pending_manager' });
+      
+      // Update Local Cache & State
+      await updateLocalCache(registration.clientFirebaseKey, registration.registrationKey, { assignmentStatus: 'pending_manager' });
+      setServiceRegistrations(prev => prev.map(r => r.registrationKey === registration.registrationKey ? { ...r, assignmentStatus: 'pending_manager' } : r));
+    } catch (error) { console.error(error); }
   };
 
   const handleResumeFileChange = (e, index) => {
@@ -190,24 +257,15 @@ useEffect(() => {
       }));
     }
   };
-  const handleDeclineClient = async (registration) => {
-    if (!registration || !registration.clientFirebaseKey || !registration.registrationKey) {
-      console.error("Missing registration details to decline client.");
-      return;
-    }
-    const registrationRef = ref(database, `clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}`);
+ const handleDeclineClient = async (registration) => {
+    const refPath = `clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}`;
     try {
-      await update(registrationRef, {
-        assignmentStatus: 'rejected'
-      });
-      console.log(`Client ${registration.firstName} declined and moved to rejected.`);
-      // OPTIMISTIC UPDATE: update local state immediately
-      setServiceRegistrations(prevRegistrations => prevRegistrations.map(reg =>
-        reg.registrationKey === registration.registrationKey ? { ...reg, assignmentStatus: 'rejected' } : reg
-      ));
-    } catch (error) {
-      console.error("Failed to decline client registration:", error);
-    }
+      await update(ref(database, refPath), { assignmentStatus: 'rejected' });
+
+      // Update Local Cache & State
+      await updateLocalCache(registration.clientFirebaseKey, registration.registrationKey, { assignmentStatus: 'rejected' });
+      setServiceRegistrations(prev => prev.map(r => r.registrationKey === registration.registrationKey ? { ...r, assignmentStatus: 'rejected' } : r));
+    } catch (error) { console.error(error); }
   };
 
 
@@ -222,24 +280,19 @@ useEffect(() => {
     setClientToUnaccept(null);
   };
 
-  const handleConfirmUnaccept = async () => {
+ const handleConfirmUnaccept = async () => {
     if (!clientToUnaccept) return;
-    const registrationRef = ref(database, `clients/${clientToUnaccept.clientFirebaseKey}/serviceRegistrations/${clientToUnaccept.registrationKey}`);
+    const refPath = `clients/${clientToUnaccept.clientFirebaseKey}/serviceRegistrations/${clientToUnaccept.registrationKey}`;
     try {
-      await update(registrationRef, {
-        assignmentStatus: 'registered' // Status for the 'Registered Clients' tab
-      });
-      // OPTIMISTIC UPDATE: update local state immediately
-      setServiceRegistrations(prevRegistrations => prevRegistrations.map(reg =>
-        reg.registrationKey === clientToUnaccept.registrationKey ? { ...reg, assignmentStatus: 'registered' } : reg
-      ));
+      await update(ref(database, refPath), { assignmentStatus: 'registered' });
+
+      // Update Local Cache & State
+      await updateLocalCache(clientToUnaccept.clientFirebaseKey, clientToUnaccept.registrationKey, { assignmentStatus: 'registered' });
+      setServiceRegistrations(prev => prev.map(r => r.registrationKey === clientToUnaccept.registrationKey ? { ...r, assignmentStatus: 'registered' } : r));
+      
       setIsUnacceptClientConfirmModalOpen(false);
       setClientToUnaccept(null);
-      console.log(`Client ${clientToUnaccept.firstName} unaccepted and moved back to registered.`);
-    } catch (error) {
-      console.error("Failed to unaccept client registration:", error);
-      alert("Error unaccepting client.");
-    }
+    } catch (error) { console.error(error); }
   };
 
 
@@ -353,36 +406,24 @@ useEffect(() => {
     setIsDeleteClientConfirmModalOpen(true);
   };
 
-  const handleConfirmClientDelete = async () => {
+ const handleConfirmClientDelete = async () => {
     if (!clientToDelete) return;
-if (!clientToDelete || !clientToDelete.clientFirebaseKey || !clientToDelete.registrationKey) {
-    console.error("Missing client or registration keys for deletion.");
-    return;
-  }
-  
-  // 🎯 FIX: Target the specific service registration path
-  const serviceRegistrationRef = ref(
-    database, 
-    `clients/${clientToDelete.clientFirebaseKey}/serviceRegistrations/${clientToDelete.registrationKey}`
-  );
-  
-  try {
-    // Use remove() on the specific service registration path
-    await remove(serviceRegistrationRef); 
+    const refPath = `clients/${clientToDelete.clientFirebaseKey}/serviceRegistrations/${clientToDelete.registrationKey}`;
     
-    console.log(`Successfully deleted service registration: ${clientToDelete.registrationKey}`);
+    try {
+      await remove(ref(database, refPath));
+      
+      // Remove from Local Cache Manually
+      const cachedWrapper = await dbGet('cache_clients_full');
+      if(cachedWrapper?.data?.[clientToDelete.clientFirebaseKey]?.serviceRegistrations) {
+          delete cachedWrapper.data[clientToDelete.clientFirebaseKey].serviceRegistrations[clientToDelete.registrationKey];
+          await dbSet('cache_clients_full', cachedWrapper);
+      }
 
-    // Clean up local state (Optional: also update the local clients list to remove the service instantly)
-    setIsDeleteClientConfirmModalOpen(false);
-    setClientToDelete(null);
-
-    // After successful deletion in Firebase, your real-time listener will 
-    // update the clients list, and only this single service will be gone.
-    
-  } catch (error) {
-    console.error("Failed to delete client service registration:", error);
-    alert("Error deleting service registration.");
-  }
+      setServiceRegistrations(prev => prev.filter(r => r.registrationKey !== clientToDelete.registrationKey));
+      setIsDeleteClientConfirmModalOpen(false);
+      setClientToDelete(null);
+    } catch (error) { console.error(error); }
   };
 
   const handleCancelClientDelete = () => {
@@ -462,7 +503,7 @@ if (!clientToDelete || !clientToDelete.clientFirebaseKey || !clientToDelete.regi
     setClientSearchTerm(event.target.value);
   };
 
-  const getFilteredRegistrations = () => {
+ const getFilteredRegistrations = () => {
     let filtered = serviceRegistrations;
 
     if (clientFilter === 'registered') {
@@ -478,7 +519,9 @@ if (!clientToDelete || !clientToDelete.clientFirebaseKey || !clientToDelete.regi
     if (selectedServiceFilter !== 'All') {
       filtered = filtered.filter(client => client.service === selectedServiceFilter);
     }
+    
     const searchTermLower = clientSearchTerm.toLowerCase();
+    
     return filtered.filter(client =>
       (client.firstName?.toLowerCase().includes(searchTermLower)) ||
       (client.lastName?.toLowerCase().includes(searchTermLower)) ||
@@ -488,7 +531,7 @@ if (!clientToDelete || !clientToDelete.clientFirebaseKey || !clientToDelete.regi
       (client.country?.toLowerCase().includes(searchTermLower)) ||
       (client.service?.toLowerCase().includes(searchTermLower))
     );
-  };
+  }; 
 
 
   const handleConfirmSelectManager = async () => {
@@ -580,19 +623,14 @@ const handleViewClientDetails = async (client) => {
     setNewCoverLetterFile(null);
   };
 
-  const handleEditClientChange = (e) => {
-    const { name, value, files } = e.target;
-    // Handle new file selection separately
-    if (name === "newResumeFile") {
-      setNewResumeFile(files[0]);
-    } else if (name === "newCoverLetterFile") {
-      setNewCoverLetterFile(files[0]);
-    } else {
-      setCurrentClientToEdit(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
+ const handleEditClientChange = (e) => {
+    const { name, value } = e.target;
+    // We handle files in specific handlers (handleResumeFileChange, etc.)
+    // to keep this generic handler clean.
+    setCurrentClientToEdit(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const handleCoverLetterFileChange = (e) => {
@@ -611,84 +649,91 @@ const handleViewClientDetails = async (client) => {
     setNewResumeFiles(prev => ({ ...prev, ...newFilesObject }));
   };
 
-  const handleSaveClientDetails = async (e) => {
+const handleSaveClientDetails = async (e) => {
     e.preventDefault();
-    if (!currentClientToEdit || !currentClientToEdit.clientFirebaseKey) {
-      alert("Error: No client selected or client is missing a key.");
-      return;
-    }
+    if (!currentClientToEdit) return;
     setIsSaving(true);
 
     try {
       const storage = getStorage();
-      const updatedResumes = [...(currentClientToEdit.resumes || [])];
-
-      // Separate files meant for updating vs. files that are newly added
-      const filesToUpdate = {};
-      const filesToAdd = [];
-      Object.entries(newResumeFiles).forEach(([key, file]) => {
-        if (String(key).startsWith('new_')) {
-          filesToAdd.push(file);
-        } else {
-          filesToUpdate[key] = file;
-        }
-      });
-
-      // --- Process UPDATES on existing resumes ---
-      const updatePromises = Object.entries(filesToUpdate).map(async ([indexStr, file]) => {
-        const index = parseInt(indexStr, 10);
-        const filePath = `resumes/${currentClientToEdit.clientFirebaseKey}/${currentClientToEdit.registrationKey}/${file.name}`;
-        const fileRef = storageRef(storage, filePath);
-        await uploadBytes(fileRef, file);
-        const downloadUrl = await getDownloadURL(fileRef);
-        return { index, data: { name: file.name, url: downloadUrl, size: file.size } };
-      });
-      const updateResults = await Promise.all(updatePromises);
-      updateResults.forEach(({ index, data }) => {
-        if (updatedResumes[index]) updatedResumes[index] = data;
-      });
-
-      // --- Process NEWLY ADDED resumes ---
-      const addPromises = filesToAdd.map(async (file) => {
-        const filePath = `resumes/${currentClientToEdit.clientFirebaseKey}/${currentClientToEdit.registrationKey}/${Date.now()}-${file.name}`;
-        const fileRef = storageRef(storage, filePath);
-        await uploadBytes(fileRef, file);
-        const downloadUrl = await getDownloadURL(fileRef);
-        return { name: file.name, url: downloadUrl, size: file.size };
-      });
-      const addResults = await Promise.all(addPromises);
-      updatedResumes.push(...addResults); // Append new resumes to the array
-
-      // --- Continue with the rest of the save logic ---
-      const updates = { ...currentClientToEdit, resumes: updatedResumes };
-
+      const updates = { ...currentClientToEdit };
+      
+      // 1. Handle Cover Letter Upload
       if (newCoverLetterFile) {
-        const filePath = `coverletters/${currentClientToEdit.clientFirebaseKey}/${currentClientToEdit.registrationKey}/${newCoverLetterFile.name}`;
-        const fileRef = storageRef(storage, filePath);
-        await uploadBytes(fileRef, newCoverLetterFile);
-        updates.coverLetterUrl = await getDownloadURL(fileRef);
+        const coverRef = storageRef(storage, `clients/${currentClientToEdit.clientFirebaseKey}/documents/cover_${Date.now()}_${newCoverLetterFile.name}`);
+        await uploadBytes(coverRef, newCoverLetterFile);
+        const coverUrl = await getDownloadURL(coverRef);
+        updates.coverLetterUrl = coverUrl;
         updates.coverLetterFileName = newCoverLetterFile.name;
       }
 
-      const { firstName, lastName, email, mobile, ...registrationUpdates } = updates;
-      const regRef = ref(database, `clients/${currentClientToEdit.clientFirebaseKey}/serviceRegistrations/${currentClientToEdit.registrationKey}`);
-      const clientProfileRef = ref(database, `clients/${currentClientToEdit.clientFirebaseKey}`);
+      // 2. Handle Resume Uploads
+      // We need to handle both replacing specific indexes and adding new ones
+      let updatedResumes = updates.resumes ? [...updates.resumes] : [];
 
-      await update(regRef, registrationUpdates);
-      await update(clientProfileRef, { firstName, lastName, email, mobile });
+      // Process newResumeFiles state object
+      const uploadPromises = Object.keys(newResumeFiles).map(async (key) => {
+        const file = newResumeFiles[key];
+        const fileRef = storageRef(storage, `clients/${currentClientToEdit.clientFirebaseKey}/documents/resume_${Date.now()}_${file.name}`);
+        
+        await uploadBytes(fileRef, file);
+        const downloadUrl = await getDownloadURL(fileRef);
+
+        if (key.startsWith('new_')) {
+          // This is a completely new resume (Appended)
+          updatedResumes.push({
+            name: file.name,
+            url: downloadUrl
+          });
+        } else {
+          // This is a replacement for an existing index
+          const index = parseInt(key, 10);
+          if (!isNaN(index) && updatedResumes[index]) {
+            updatedResumes[index] = {
+              name: file.name,
+              url: downloadUrl
+            };
+          }
+        }
+      });
+
+      await Promise.all(uploadPromises);
+      updates.resumes = updatedResumes;
+
+      // --- CORE DATABASE UPDATE ---
+      const { firstName, lastName, email, mobile, clientFirebaseKey, registrationKey, ...regUpdates } = updates;
+
+      const regRef = ref(database, `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}`);
+      const profileRef = ref(database, `clients/${clientFirebaseKey}`);
+
+      // Update Firebase
+      // We explicitly exclude keys that shouldn't be saved back to DB (like temp UI flags)
+      const cleanRegUpdates = { ...regUpdates };
+      delete cleanRegUpdates.clientFirebaseKey;
+      delete cleanRegUpdates.registrationKey;
+
+      await update(regRef, cleanRegUpdates);
+      await update(profileRef, { firstName, lastName, email, mobile });
+
+      // Update Local Cache
+      await updateLocalCache(clientFirebaseKey, registrationKey, cleanRegUpdates);
+      await updateLocalCache(clientFirebaseKey, null, { firstName, lastName, email, mobile });
+
+      // Update State
+      setServiceRegistrations(prev => prev.map(r => 
+        r.registrationKey === registrationKey ? { ...r, ...updates } : r
+      ));
 
       handleCloseEditClientModal();
       setShowSuccessModal(true);
       setTimeout(() => setShowSuccessModal(false), 3000);
-
-    } catch (error) {
-      console.error("Failed to update client details in Firebase:", error);
-      alert("An error occurred while saving the changes. Please try again.");
-    } finally {
-      setIsSaving(false);
+    } catch (error) { 
+      console.error("Error saving client details:", error); 
+      alert("Failed to save changes: " + error.message);
+    } finally { 
+      setIsSaving(false); 
     }
   };
-
   // --- Rendering Functions ---
   const renderClientTable = (registrationsToRender, serviceType, currentClientFilter, title = '') => {
     const headers = ['First Name', 'Last Name', 'Mobile', 'Email', serviceType === 'Job Supporting' ? 'Jobs Apply For' : 'Service', 'Registered Date', 'Country'];
@@ -2922,45 +2967,40 @@ const scrollToTop = () => {
         <div style={{ textAlign: 'right' }}>
      <button
   className="save-btn"
-  onClick={async () => {
-    try {
-      const clientKey = selectedClientForDetails.clientFirebaseKey;
-      const regKey = selectedClientForDetails.registrationKey;
+onClick={async () => {
+  try {
+    const clientKey = selectedClientForDetails.clientFirebaseKey;
+    const regKey = selectedClientForDetails.registrationKey;
+    
+    // 1. Find the specific key for this application ID
+    const jobAppsRef = ref(database, `clients/${clientKey}/serviceRegistrations/${regKey}/jobApplications`);
+    const snapshot = await get(jobAppsRef);
+    
+    if (snapshot.exists()) {
+      const apps = snapshot.val();
+      const targetFirebaseKey = Object.keys(apps).find(key => apps[key].id === selectedApplication.id);
 
-      const jobApplicationsRef = ref(
-        database,
-        `clients/${clientKey}/serviceRegistrations/${regKey}/jobApplications`
-      );
-
-      const snapshot = await get(jobApplicationsRef);
-      const applicationsObj = snapshot.val();
-
-      if (!applicationsObj) {
-        console.error("❌ No applications found");
-        return;
+      if (targetFirebaseKey) {
+        // 2. Update ONLY this specific application
+        const specificAppRef = ref(database, `clients/${clientKey}/serviceRegistrations/${regKey}/jobApplications/${targetFirebaseKey}`);
+        await update(specificAppRef, selectedApplication);
+        
+        // Update local state (Optimistic update)
+        setClientApplications(prev => prev.map(app => 
+          app.id === selectedApplication.id ? selectedApplication : app
+        ));
+        
+        console.log("✅ Application updated safely");
+        setIsAppEditModalOpen(false);
+      } else {
+        alert("Error: Could not find original application record.");
       }
-
-      // Convert object → array of { key, ...data }
-      const entries = Object.entries(applicationsObj); // [[key1, {...}], [key2, {...}]]
-      const updatedEntries = entries.map(([key, value]) => {
-        if (value.id === selectedApplication.id) {
-          return [key, selectedApplication]; // replace updated one
-        }
-        return [key, value];
-      });
-
-      // Convert back to object
-      const updatedObj = Object.fromEntries(updatedEntries);
-
-      // Push updated object back to Firebase
-      await set(jobApplicationsRef, updatedObj);
-
-      console.log("✅ Application updated successfully");
-      setIsAppEditModalOpen(false);
-    } catch (error) {
-      console.error("Error updating application:", error);
     }
-  }}
+  } catch (error) {
+    console.error("Error updating application:", error);
+    alert("Update failed: " + error.message);
+  }
+}}
 >
   Save Changes
 </button>
@@ -3146,7 +3186,7 @@ const scrollToTop = () => {
                 <div className="modal-footer modal-form-full-width">
                   <button type="button" className="confirm-cancel-btn" onClick={handleClosePaymentModal}>Cancel</button>
 
-                  <button type="submit" className="create-employee-btn">
+                  <button type="submit" className="pay-now-btn" style={{ width: 'auto', padding: '0.75rem 1.5rem' }}>
 
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '0.9rem', height: '0.9rem' }}>
                       <path d="M12 4H10C7.79086 4 6 5.79086 6 8C6 10.2091 7.79086 12 10 12H12V14H10C6.68629 14 4 11.3137 4 8C4 4.68629 6.68629 2 10 2H12V4ZM14 10H12C9.79086 10 8 11.7909 8 14C8 16.2091 9.79086 18 12 18H14V20H12C8.68629 20 6 17.3137 6 14C6 10.6863 8.68629 8 12 8H14V10ZM18 6H16V8H18C21.3137 8 24 10.6863 24 14C24 17.3137 21.3137 20 18 20H16V18H18C20.2091 18 22 16.2091 22 14C22 11.7909 20.2091 10 18 10H16V6Z" />
