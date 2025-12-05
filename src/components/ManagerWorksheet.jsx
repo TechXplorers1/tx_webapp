@@ -2011,17 +2011,96 @@ Please provide a summary no longer than 150 words.`;
 
     const [expandedRowKey, setExpandedRowKey] = useState(null);
 
+        const groupedByEmployeeAndClient = useMemo(() => {
+      const employeeMap = new Map(employees.map(emp => [emp.firebaseKey, emp]));
+
+      // First, group all applications by a composite key: "employeeKey_clientName"
+      const applicationsByGroup = applicationData.reduce((acc, app) => {
+        const key = `${app.assignedTo}_${app.clientName}`;
+        if (!acc[key]) {
+          acc[key] = [];
+        }
+        acc[key].push(app);
+        return acc;
+      }, {});
+
+      // Now, transform the grouped object into an array with all the details we need
+      const finalGroupedData = Object.entries(applicationsByGroup).map(([key, apps]) => {
+        const [employeeKey, clientName] = key.split('_');
+        const employee = employeeMap.get(employeeKey) || {};
+        const mostRecentApp = apps.sort((a, b) => new Date(b.appliedDate) - new Date(a.appliedDate))[0];
+
+        return {
+          key: key,
+          employeeKey: employeeKey,
+          employeeName: `${employee.firstName || ''} ${employee.lastName || ''}`.trim(),
+          employeeInitials: getInitials(`${employee.firstName || ''} ${employee.lastName || ''}`),
+          clientName: clientName,
+          applications: apps,
+          applicationCount: apps.length,
+          mostRecentApp: mostRecentApp
+        };
+      });
+
+      return finalGroupedData.sort((a, b) => new Date(b.mostRecentApp.appliedDate) - new Date(a.mostRecentApp.appliedDate));
+
+    }, [applicationData, employees]);
+
+    const [currentPage, setCurrentPage] = useState(1);
+const groupsPerPage = 5; // 5 rows per page
+
+// Total pages based on grouped rows
+const totalPages = useMemo(() => {
+  if (!groupedByEmployeeAndClient || groupedByEmployeeAndClient.length === 0) return 1;
+  return Math.ceil(groupedByEmployeeAndClient.length / groupsPerPage);
+}, [groupedByEmployeeAndClient, groupsPerPage]);
+
+const paginatedGroups = useMemo(() => {
+  if (!groupedByEmployeeAndClient) return [];
+  const startIndex = (currentPage - 1) * groupsPerPage;
+  const endIndex = startIndex + groupsPerPage;
+  return groupedByEmployeeAndClient.slice(startIndex, endIndex);
+}, [groupedByEmployeeAndClient, currentPage, groupsPerPage]);
+
+const handleNextPage = () => {
+  setCurrentPage(prev => (prev < totalPages ? prev + 1 : prev));
+};
+
+const handlePreviousPage = () => {
+  setCurrentPage(prev => (prev > 1 ? prev - 1 : 1));
+};
+
+const handlePageChange = (page) => {
+  if (page >= 1 && page <= totalPages) {
+    setCurrentPage(page);
+  }
+};
+
+// Reset to first page when filters/search change
+useEffect(() => {
+  setCurrentPage(1);
+}, [
+  localSearchQuery,
+  applicationFilterEmployee,
+  applicationFilterClient,
+  applicationFilterDateRange,
+  sortOrder,
+  quickFilter,
+  applicationData
+]);
+
+
     const handleLocalSearchChange = (e) => {
       setLocalSearchQuery(e.target.value);
     };
     const [expandedDate, setExpandedDate] = useState(null);
 
-    const getInitials = (name) => {
-      if (!name) return '';
-      const parts = name.split(' ');
-      if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
-      return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
-    };
+    // const getInitials = (name) => {
+    //   if (!name) return '';
+    //   const parts = name.split(' ');
+    //   if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+    //   return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
+    // };
 
     const filteredBySearch = useMemo(() => {
       const lowerCaseSearch = localSearchQuery.toLowerCase();
@@ -2068,40 +2147,7 @@ Please provide a summary no longer than 150 words.`;
 
     const sortedDates = Object.keys(groupedByDate).sort((a, b) => new Date(b) - new Date(a));
 
-    const groupedByEmployeeAndClient = useMemo(() => {
-      const employeeMap = new Map(employees.map(emp => [emp.firebaseKey, emp]));
 
-      // First, group all applications by a composite key: "employeeKey_clientName"
-      const applicationsByGroup = applicationData.reduce((acc, app) => {
-        const key = `${app.assignedTo}_${app.clientName}`;
-        if (!acc[key]) {
-          acc[key] = [];
-        }
-        acc[key].push(app);
-        return acc;
-      }, {});
-
-      // Now, transform the grouped object into an array with all the details we need
-      const finalGroupedData = Object.entries(applicationsByGroup).map(([key, apps]) => {
-        const [employeeKey, clientName] = key.split('_');
-        const employee = employeeMap.get(employeeKey) || {};
-        const mostRecentApp = apps.sort((a, b) => new Date(b.appliedDate) - new Date(a.appliedDate))[0];
-
-        return {
-          key: key,
-          employeeKey: employeeKey,
-          employeeName: `${employee.firstName || ''} ${employee.lastName || ''}`.trim(),
-          employeeInitials: getInitials(`${employee.firstName || ''} ${employee.lastName || ''}`),
-          clientName: clientName,
-          applications: apps,
-          applicationCount: apps.length,
-          mostRecentApp: mostRecentApp
-        };
-      });
-
-      return finalGroupedData.sort((a, b) => new Date(b.mostRecentApp.appliedDate) - new Date(a.mostRecentApp.appliedDate));
-
-    }, [applicationData, employees]);
 
 
     return (
@@ -2212,7 +2258,7 @@ Please provide a summary no longer than 150 words.`;
             </thead>
             <tbody>
               {groupedByEmployeeAndClient.length > 0 ? (
-                groupedByEmployeeAndClient.map(group => {
+                paginatedGroups.map(group => {
                   const isExpanded = expandedRowKey === group.key;
 
                   return (
@@ -2318,6 +2364,68 @@ Please provide a summary no longer than 150 words.`;
                                   ))}
                                 </tbody>
                               </table>
+                              {groupedByEmployeeAndClient.length > 0 && (
+  <div
+    style={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: '8px',
+      marginTop: '16px',
+      flexWrap: 'wrap',
+    }}
+  >
+    {/* Previous Button */}
+    <button
+      onClick={handlePreviousPage}
+      disabled={currentPage === 1}
+      style={{
+        padding: '6px 10px',
+        borderRadius: '4px',
+        border: '1px solid var(--header-border-color)',
+        backgroundColor: currentPage === 1 ? '#e5e7eb' : '#ffffff',
+        cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+      }}
+    >
+      Previous
+    </button>
+
+    {/* Page Numbers */}
+    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+      <button
+        key={page}
+        onClick={() => handlePageChange(page)}
+        style={{
+          padding: '6px 10px',
+          borderRadius: '4px',
+          border: '1px solid var(--header-border-color)',
+          backgroundColor: page === currentPage ? '#2563eb' : '#ffffff',
+          color: page === currentPage ? '#ffffff' : 'var(--text-color)',
+          fontWeight: page === currentPage ? '600' : '400',
+          cursor: 'pointer',
+        }}
+      >
+        {page}
+      </button>
+    ))}
+
+    {/* Next Button */}
+    <button
+      onClick={handleNextPage}
+      disabled={currentPage === totalPages}
+      style={{
+        padding: '6px 10px',
+        borderRadius: '4px',
+        border: '1px solid var(--header-border-color)',
+        backgroundColor: currentPage === totalPages ? '#e5e7eb' : '#ffffff',
+        cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+      }}
+    >
+      Next
+    </button>
+  </div>
+)}
+
                             </div>
                           </td>
                         </tr>

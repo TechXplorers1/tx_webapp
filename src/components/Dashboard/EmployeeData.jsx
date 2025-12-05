@@ -1992,16 +1992,63 @@ const EmployeeData = () => {
     return filtered;
   };
 
-  const handleAcceptClient = async (clientToAccept) => {
-    const registrationRef = ref(database, `clients/${clientToAccept.clientFirebaseKey}/serviceRegistrations/${clientToAccept.registrationKey}`);
-    try {
-      await update(registrationRef, { assignmentStatus: 'active' });
-      triggerNotification(`Client ${clientToAccept.name} has been moved to Active Clients!`);
-    } catch (error) {
-      console.error("Failed to accept client:", error);
-      alert("Error accepting client.");
+// In EmployeeData.jsx (around line 980)
+
+const handleAcceptClient = async (clientToAccept) => {
+    // Ensure the client has the necessary keys
+    const { clientFirebaseKey, registrationKey } = clientToAccept;
+
+    if (!clientFirebaseKey || !registrationKey) {
+        alert("Error: Missing client keys for acceptance.");
+        return;
     }
-  };
+
+    const registrationRef = ref(database, `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}`);
+    
+    // Create the updated client object for local state (must be done before Firebase update)
+    const updatedClient = {
+        ...clientToAccept,
+        assignmentStatus: 'active', // The new status
+    };
+
+    try {
+        // 1. Update status in Firebase Realtime Database
+        await update(registrationRef, { assignmentStatus: 'active' });
+
+        // 2. Update the local IndexedDB cache immediately (crucial for cost/performance)
+        await updateLocalClientCache(
+            clientFirebaseKey,
+            registrationKey,
+            'assignmentStatus',
+            'active'
+        );
+
+        // 3. Update local state arrays for immediate UI refresh
+        setNewClients(prev =>
+            prev.filter(c => c.registrationKey !== registrationKey) // Remove from New Clients
+        );
+        
+        setActiveClients(prev =>
+            // Add the new client to Active Clients (ensuring no duplicates, though unlikely here)
+            [...prev.filter(c => c.registrationKey !== registrationKey), updatedClient] 
+        );
+
+        // No need to update inactiveClients as they were not inactive before
+
+        // 4. Set the newly accepted client as the selected one (optional, for convenience)
+        setSelectedClient(updatedClient);
+
+        // 5. Provide feedback
+        triggerNotification(`Client ${clientToAccept.name} has been moved to Active Clients!`);
+
+        // OPTIONAL: Switch tab to Active Clients immediately
+        setActiveTab('Active Clients');
+
+    } catch (error) {
+        console.error("Failed to accept client:", error);
+        alert("Error accepting client. Please check your network connection or Firebase rules.");
+    }
+};
 
   const formatDateTime = (timestamp) => {
     if (!timestamp) return { date: 'N/A', time: 'N/A' };
