@@ -1531,6 +1531,45 @@ const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false); // 
     });
   }, [interviewData, interviewSearchQuery, interviewFilterRound, interviewFilterDateRange, sortOrder, allEmployees]);
 
+  // --- Interviews pagination (5 per page) ---
+const INTERVIEWS_PAGE_SIZE = 5;
+const [interviewsPage, setInterviewsPage] = useState(0);
+
+const totalInterviewPages = useMemo(() => {
+  return Math.max(
+    1,
+    Math.ceil(filteredInterviewData.length / INTERVIEWS_PAGE_SIZE)
+  );
+}, [filteredInterviewData.length]);
+
+const paginatedInterviewData = useMemo(() => {
+  const start = interviewsPage * INTERVIEWS_PAGE_SIZE;
+  const end = start + INTERVIEWS_PAGE_SIZE;
+  return filteredInterviewData.slice(start, end);
+}, [filteredInterviewData, interviewsPage]);
+
+const handleNextInterviewsPage = () => {
+  setInterviewsPage(prev =>
+    prev + 1 < totalInterviewPages ? prev + 1 : prev
+  );
+};
+
+const handlePrevInterviewsPage = () => {
+  setInterviewsPage(prev => (prev > 0 ? prev - 1 : 0));
+};
+
+// Reset to first page whenever filters/search change
+useEffect(() => {
+  setInterviewsPage(0);
+}, [
+  interviewSearchQuery,
+  interviewFilterRound,
+  interviewFilterDateRange.startDate,
+  interviewFilterDateRange.endDate,
+  sortOrder,
+]);
+
+
 
   // Handlers for Applications tab search and filter
   const handleApplicationSearchChange = (event) => {
@@ -2073,6 +2112,7 @@ Please provide a summary no longer than 150 words.`;
 const CHILD_APPLICATIONS_PAGE_SIZE = 5;
 const [childPagesByGroup, setChildPagesByGroup] = useState({});
 
+
     const handleLocalSearchChange = (e) => {
       setLocalSearchQuery(e.target.value);
     };
@@ -2188,6 +2228,8 @@ const [childPagesByGroup, setChildPagesByGroup] = useState({});
     return groupedByEmployeeAndClient.slice(start, end);
   }, [groupedByEmployeeAndClient, applicationsPage]);
 
+
+
   // Reset to first page when filters/search change
   useEffect(() => {
     setApplicationsPage(0);
@@ -2228,7 +2270,6 @@ const handleChildPrevPage = (groupKey) => {
     return { ...prev, [groupKey]: current - 1 };
   });
 };
-
 
 
 
@@ -5686,7 +5727,7 @@ const handleChildPrevPage = (groupKey) => {
                   <option value="All Rounds">All Rounds</option>
                   <option value="1st Round">Round 1</option>
                   <option value="2st Round">Round 2</option>
-                  <option value="3rd Round">ROund 3</option>
+                  <option value="3rd Round">Round 3</option>
                   {/* Add more rounds as needed based on your data */}
                 </select>
                 <i className="fas fa-chevron-down"></i>
@@ -5706,75 +5747,145 @@ const handleChildPrevPage = (groupKey) => {
                   <th>DATE</th>
                   <th>STATUS</th>
                 </tr></thead>
-                <tbody>
-                  {filteredInterviewData.map((interview) => {
-                    // FIX: Find the assigned employee object using the 'assignedTo' key
-                    const assignedEmployee = allEmployees.find(
-                      (emp) => emp.firebaseKey === interview.assignedTo
-                    );
+<tbody>
+  {paginatedInterviewData.map((interview) => {
+    // Find the assigned employee object using the 'assignedTo' key
+    const assignedEmployee = allEmployees.find(
+      (emp) => emp.firebaseKey === interview.assignedTo
+    );
 
-                    // FIX: Safely get the employee's name and initials, providing a fallback
-                    const employeeName = assignedEmployee
-                      ? `${assignedEmployee.firstName} ${assignedEmployee.lastName}`
-                      : 'N/A';
-                    const employeeInitials = assignedEmployee
-                      ? getInitials(employeeName)
-                      : '??';
+    // Safely get the employee's name and initials, providing a fallback
+    const employeeName = assignedEmployee
+      ? `${assignedEmployee.firstName} ${assignedEmployee.lastName}`
+      : 'N/A';
+    const employeeInitials = assignedEmployee
+      ? getInitials(employeeName)
+      : '??';
 
-                    return (
-                      <tr key={interview.id}>
-                        <td className="employee-cell">
-                          <div className="employee-avatar">{interview.employeeInitials}</div>
-                          {employeeName}
-                        </td>
-                        <td>{interview.clientName}</td>
-                        <td>{interview.jobTitle}</td>
-                        <td>{interview.company}</td>
-                        <td>
-                          <span className="round-badge">{interview.round}</span>
-                        </td>
-                        <td className="action-buttons">
-                          {interview.attachments && interview.attachments.length > 0 ? (
-                            <button
-                              onClick={() => handleAttachmentClick(interview.attachments)}
-                              className="action-button"
-                              title="View Attachments"
-                            >
-                              <i className="fas fa-paperclip"></i> ({interview.attachments.length})
-                            </button>
-                          ) : (
-                            <span style={{ color: 'var(--text-color)', opacity: 0.6 }}>N/A</span>
-                          )}
-                        </td>
-                        <td className="date-cell">
-                          {formatDateToDDMMYYYY(interview.interviewTime)}
-                        </td>
-                        <td className="date-cell">
-                          {formatDateToDDMMYYYY(interview.interviewDate)}
-                        </td>
+    return (
+      <tr key={interview.id}>
+        <td className="employee-cell">
+          <div className="employee-avatar">{employeeInitials}</div>
+          {employeeName}
+        </td>
+        <td>{interview.clientName}</td>
+        <td>{interview.jobTitle}</td>
+        <td>{interview.company}</td>
+        <td>
+          <span className="round-badge">{interview.round}</span>
+        </td>
+        <td className="action-buttons">
+          {interview.attachments && interview.attachments.length > 0 ? (
+            <button
+              onClick={() => handleAttachmentClick(interview.attachments)}
+              className="action-button"
+              title="View Attachments"
+            >
+              <i className="fas fa-paperclip"></i> ({interview.attachments.length})
+            </button>
+          ) : (
+            <span style={{ color: 'var(--text-color)', opacity: 0.6 }}>N/A</span>
+          )}
+        </td>
+        <td className="date-cell">
+          {formatDateToDDMMYYYY(interview.interviewTime)}
+        </td>
+        <td className="date-cell">
+          {formatDateToDDMMYYYY(interview.interviewDate)}
+        </td>
+        <td>
+          {interview.status}
+        </td>
+      </tr>
+    );
+  })}
 
-                        <td>
-                          {interview.status} {/* Display the new status */}
-                        </td>
-                        {/* REMOVED:
-                      <td className="action-buttons">
-                        <button className="action-button" onClick={() => openEditClientModal(interview.clientName)}>
-                          <i className="fas fa-eye"></i>
-                        </button>
-                      </td>
-                      */}
-                      </tr>
-                    );
-                  })}
-                  {filteredInterviewData.length === 0 && (
-                    <tr>
-                      <td colSpan="7" style={{ textAlign: 'center', color: 'var(--text-color)' }}> {/* Updated colspan */}
-                        No interviews to display matching your criteria.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
+  {filteredInterviewData.length === 0 && (
+    <tr>
+      <td
+        colSpan="9"
+        style={{ textAlign: 'center', color: 'var(--text-color)' }}
+      >
+        No interviews to display matching your criteria.
+      </td>
+    </tr>
+  )}
+</tbody>
+
               </table>
+              {filteredInterviewData.length > INTERVIEWS_PAGE_SIZE && (
+  <div
+    style={{
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: '12px',
+    }}
+  >
+    <span
+      style={{
+        fontSize: '0.85rem',
+        color: '#64748b',
+      }}
+    >
+      Showing{' '}
+      {interviewsPage * INTERVIEWS_PAGE_SIZE + 1}
+      {' - '}
+      {Math.min(
+        (interviewsPage + 1) * INTERVIEWS_PAGE_SIZE,
+        filteredInterviewData.length
+      )}{' '}
+      of {filteredInterviewData.length} interviews
+    </span>
+
+    <div
+      style={{
+        display: 'flex',
+        gap: '8px',
+      }}
+    >
+      <button
+        type="button"
+        onClick={handlePrevInterviewsPage}
+        disabled={interviewsPage === 0}
+        style={{
+          padding: '6px 10px',
+          borderRadius: '6px',
+          border: '1px solid #cbd5e1',
+          backgroundColor:
+            interviewsPage === 0 ? '#e2e8f0' : '#ffffff',
+          cursor:
+            interviewsPage === 0 ? 'not-allowed' : 'pointer',
+          fontSize: '0.85rem',
+        }}
+      >
+        Prev
+      </button>
+      <button
+        type="button"
+        onClick={handleNextInterviewsPage}
+        disabled={interviewsPage + 1 >= totalInterviewPages}
+        style={{
+          padding: '6px 10px',
+          borderRadius: '6px',
+          border: '1px solid #cbd5e1',
+          backgroundColor:
+            interviewsPage + 1 >= totalInterviewPages
+              ? '#e2e8f0'
+              : '#ffffff',
+          cursor:
+            interviewsPage + 1 >= totalInterviewPages
+              ? 'not-allowed'
+              : 'pointer',
+          fontSize: '0.85rem',
+        }}
+      >
+        Next
+      </button>
+    </div>
+  </div>
+)}
+
             </div>
           </section>
         )}
