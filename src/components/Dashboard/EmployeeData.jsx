@@ -1992,16 +1992,63 @@ const EmployeeData = () => {
     return filtered;
   };
 
-  const handleAcceptClient = async (clientToAccept) => {
-    const registrationRef = ref(database, `clients/${clientToAccept.clientFirebaseKey}/serviceRegistrations/${clientToAccept.registrationKey}`);
-    try {
-      await update(registrationRef, { assignmentStatus: 'active' });
-      triggerNotification(`Client ${clientToAccept.name} has been moved to Active Clients!`);
-    } catch (error) {
-      console.error("Failed to accept client:", error);
-      alert("Error accepting client.");
+// In EmployeeData.jsx (around line 980)
+
+const handleAcceptClient = async (clientToAccept) => {
+    // Ensure the client has the necessary keys
+    const { clientFirebaseKey, registrationKey } = clientToAccept;
+
+    if (!clientFirebaseKey || !registrationKey) {
+        alert("Error: Missing client keys for acceptance.");
+        return;
     }
-  };
+
+    const registrationRef = ref(database, `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}`);
+    
+    // Create the updated client object for local state (must be done before Firebase update)
+    const updatedClient = {
+        ...clientToAccept,
+        assignmentStatus: 'active', // The new status
+    };
+
+    try {
+        // 1. Update status in Firebase Realtime Database
+        await update(registrationRef, { assignmentStatus: 'active' });
+
+        // 2. Update the local IndexedDB cache immediately (crucial for cost/performance)
+        await updateLocalClientCache(
+            clientFirebaseKey,
+            registrationKey,
+            'assignmentStatus',
+            'active'
+        );
+
+        // 3. Update local state arrays for immediate UI refresh
+        setNewClients(prev =>
+            prev.filter(c => c.registrationKey !== registrationKey) // Remove from New Clients
+        );
+        
+        setActiveClients(prev =>
+            // Add the new client to Active Clients (ensuring no duplicates, though unlikely here)
+            [...prev.filter(c => c.registrationKey !== registrationKey), updatedClient] 
+        );
+
+        // No need to update inactiveClients as they were not inactive before
+
+        // 4. Set the newly accepted client as the selected one (optional, for convenience)
+        setSelectedClient(updatedClient);
+
+        // 5. Provide feedback
+        triggerNotification(`Client ${clientToAccept.name} has been moved to Active Clients!`);
+
+        // OPTIONAL: Switch tab to Active Clients immediately
+        setActiveTab('Active Clients');
+
+    } catch (error) {
+        console.error("Failed to accept client:", error);
+        alert("Error accepting client. Please check your network connection or Firebase rules.");
+    }
+};
 
   const formatDateTime = (timestamp) => {
     if (!timestamp) return { date: 'N/A', time: 'N/A' };
@@ -2423,6 +2470,51 @@ const EmployeeData = () => {
       return matchesSearch && matchesDateRange;
     }).sort((a, b) => new Date(b.requestedDate) - new Date(a.requestedDate)); // Keep sorting by newest first
   }, [leaveRequests, searchQuery, filterFromDate, filterToDate]);
+
+      // --- Applications pagination (page size = 5) ---
+  const APPLICATIONS_PAGE_SIZE = 5;
+  const [applicationsPage, setApplicationsPage] = useState(0);
+
+  // All filtered + sorted apps for the selected client
+  const allFilteredApplications = useMemo(() => {
+    if (!selectedClient) return [];
+    // reuse the existing filter/sort function so behaviour stays same
+    return getFilteredAndSortedApplications(selectedClient.jobApplications || []);
+  }, [selectedClient, searchTerm, statusFilter, filterDateRange, sortOrder]);
+
+  const totalApplicationPages = Math.max(
+    1,
+    Math.ceil(allFilteredApplications.length / APPLICATIONS_PAGE_SIZE)
+  );
+
+  // Apps for the current page only
+  const paginatedApplications = useMemo(() => {
+    const start = applicationsPage * APPLICATIONS_PAGE_SIZE;
+    const end = start + APPLICATIONS_PAGE_SIZE;
+    return allFilteredApplications.slice(start, end);
+  }, [allFilteredApplications, applicationsPage]);
+
+  // Reset to first page whenever client or filters/search change
+  useEffect(() => {
+    setApplicationsPage(0);
+  }, [
+    selectedClient,
+    searchTerm,
+    statusFilter,
+    filterDateRange.startDate,
+    filterDateRange.endDate,
+    sortOrder,
+  ]);
+
+  const handleNextApplicationsPage = () => {
+    setApplicationsPage(prev =>
+      prev + 1 < totalApplicationPages ? prev + 1 : prev
+    );
+  };
+
+  const handlePrevApplicationsPage = () => {
+    setApplicationsPage(prev => (prev > 0 ? prev - 1 : 0));
+  };
 
 
 
@@ -3262,60 +3354,227 @@ const EmployeeData = () => {
                                   <th style={applicationTableHeaderCellStyle}>Actions</th>
                                 </tr>
                               </thead>
-                              <tbody>
-                                {getFilteredAndSortedApplications(selectedClient.jobApplications || []).filter(app => app.appliedDate === dateKey).length === 0 ? (
-                                  <tr>
-                                    <td colSpan="8" style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>
-                                      No applications found for this client on {dateKey}.
-                                    </td>
-                                  </tr>
-                                ) : (
-                                  getFilteredAndSortedApplications(selectedClient.jobApplications || []).filter(app => app.appliedDate === dateKey)
-                                    .map((app) => (
-                                      <tr key={app.id}>
-                                        <td style={applicationTableDataCellStyle}>{app.jobTitle}</td>
-                                        <td style={applicationTableDataCellStyle}>{app.company}</td>
-                                        <td style={applicationTableDataCellStyle}>{app.jobBoards}</td>
-                                        <td style={applicationTableDataCellStyle}>{app.jobId || '-'}</td>
-                                        <td style={applicationTableDataCellStyle}>
-                                          {app.jobDescriptionUrl && (
-                                            <a href={app.jobDescriptionUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>Description Link </a>
-                                          )}
-                                        </td>
-                                        <td style={applicationTableDataCellStyle}>{app.appliedDate}</td>
-                                        <td style={applicationTableDataCellStyle}>
-                                          {app.attachments && app.attachments.length > 0 ? (
-                                            <button
-                                              onClick={() => {
-                                                setViewedApplication(app);
-                                                setShowViewApplicationModal(true);
-                                              }}
-                                              style={{
-                                                background: 'none', border: 'none', color: '#3b82f6', textDecoration: 'underline',
-                                                cursor: 'pointer'
-                                              }}
-                                            >
-                                              View ({app.attachments.length})
-                                            </button>
-                                          ) : 'N/A'}
-                                        </td>
-                                        <td style={applicationTableDataCellStyle}>
-                                          <button onClick={() => handleViewApplication(app)} style={actionButtonAppStyle}>
-                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                                          </button>
-                                          <button onClick={() => handleEditApplication(app)} style={actionButtonAppStyle}>
-                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path></svg>
-                                          </button>
-                                          <button onClick={() => handleRequestDeleteApplication(selectedClient, app)} style={deleteButtonAppStyle}>
-                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                                          </button>
-                                        </td>
-                                      </tr>
-                                    ))
-                                )}
-                              </tbody>
-                            </table>
+                                                      <tbody>
+                          {allFilteredApplications.length === 0 ? (
+                            <tr>
+                              <td
+                                colSpan="9"
+                                style={{
+                                  textAlign: 'center',
+                                  padding: '20px',
+                                  color: '#64748b',
+                                }}
+                              >
+                                No applications found for this client.
+                              </td>
+                            </tr>
+                          ) : (
+                            paginatedApplications.map((app, index) => {
+                              // Global S.No (descending across all pages)
+                              const globalIndex =
+                                allFilteredApplications.length -
+                                (applicationsPage * APPLICATIONS_PAGE_SIZE + index);
+
+                              return (
+                                <tr key={app.id}>
+                                  <td style={applicationTableDataCellStyle}>
+                                    {globalIndex}
+                                  </td>
+                                  <td style={applicationTableDataCellStyle}>
+                                    {app.jobTitle}
+                                  </td>
+                                  <td style={applicationTableDataCellStyle}>
+                                    {app.company}
+                                  </td>
+                                  <td style={applicationTableDataCellStyle}>
+                                    {app.jobBoards}
+                                  </td>
+                                  <td style={applicationTableDataCellStyle}>
+                                    {app.jobId || '-'}
+                                  </td>
+                                  <td style={applicationTableDataCellStyle}>
+                                    {app.jobDescriptionUrl && (
+                                      <a
+                                        href={app.jobDescriptionUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        style={{
+                                          color: '#3b82f6',
+                                          textDecoration: 'underline',
+                                        }}
+                                      >
+                                        Description Link
+                                      </a>
+                                    )}
+                                  </td>
+                                  <td style={applicationTableDataCellStyle}>
+                                    {app.appliedDate}
+                                  </td>
+                                  <td style={applicationTableDataCellStyle}>
+                                    {app.attachments && app.attachments.length > 0 ? (
+                                      <button
+                                        onClick={() => {
+                                          setViewedApplication(app);
+                                          setShowViewApplicationModal(true);
+                                        }}
+                                        style={{
+                                          background: 'none',
+                                          border: 'none',
+                                          color: '#3b82f6',
+                                          textDecoration: 'underline',
+                                          cursor: 'pointer',
+                                        }}
+                                      >
+                                        View ({app.attachments.length})
+                                      </button>
+                                    ) : (
+                                      'N/A'
+                                    )}
+                                  </td>
+                                  <td style={applicationTableDataCellStyle}>
+                                    <button
+                                      onClick={() => handleViewApplication(app)}
+                                      style={actionButtonAppStyle}
+                                    >
+                                      {/* existing view icon */}
+                                      <svg
+                                        width="18"
+                                        height="18"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                      >
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                        <circle cx="12" cy="12" r="3"></circle>
+                                      </svg>
+                                    </button>
+                                    <button
+                                      onClick={() => handleEditApplication(app)}
+                                      style={actionButtonSecondaryStyle}
+                                    >
+                                      {/* existing edit icon */}
+                                      <svg
+                                        width="18"
+                                        height="18"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                      >
+                                        <path d="M12 20h9"></path>
+                                        <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z"></path>
+                                      </svg>
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteApplication(app)}
+                                      style={deleteButtonStyle}
+                                    >
+                                      {/* existing delete icon */}
+                                      <svg
+                                        width="18"
+                                        height="18"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                      >
+                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                        <line x1="10" y1="11" x2="10" y2="17"></line>
+                                        <line x1="14" y1="11" x2="14" y2="17"></line>
+                                      </svg>
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+
+                      {/* Pagination controls for applications */}
+                      {allFilteredApplications.length > APPLICATIONS_PAGE_SIZE && (
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginTop: '12px',
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: '0.85rem',
+                              color: '#64748b',
+                            }}
+                          >
+                            Showing{' '}
+                            {applicationsPage * APPLICATIONS_PAGE_SIZE + 1}
+                            {' - '}
+                            {Math.min(
+                              (applicationsPage + 1) * APPLICATIONS_PAGE_SIZE,
+                              allFilteredApplications.length
+                            )}{' '}
+                            of {allFilteredApplications.length} applications
+                          </span>
+
+                          <div
+                            style={{
+                              display: 'flex',
+                              gap: '8px',
+                            }}
+                          >
+                            <button
+                              type="button"
+                              onClick={handlePrevApplicationsPage}
+                              disabled={applicationsPage === 0}
+                              style={{
+                                padding: '6px 10px',
+                                borderRadius: '6px',
+                                border: '1px solid #cbd5e1',
+                                backgroundColor:
+                                  applicationsPage === 0 ? '#e2e8f0' : '#ffffff',
+                                cursor:
+                                  applicationsPage === 0
+                                    ? 'not-allowed'
+                                    : 'pointer',
+                                fontSize: '0.85rem',
+                              }}
+                            >
+                              Prev
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleNextApplicationsPage}
+                              disabled={applicationsPage + 1 >= totalApplicationPages}
+                              style={{
+                                padding: '6px 10px',
+                                borderRadius: '6px',
+                                border: '1px solid #cbd5e1',
+                                backgroundColor:
+                                  applicationsPage + 1 >= totalApplicationPages
+                                    ? '#e2e8f0'
+                                    : '#ffffff',
+                                cursor:
+                                  applicationsPage + 1 >= totalApplicationPages
+                                    ? 'not-allowed'
+                                    : 'pointer',
+                                fontSize: '0.85rem',
+                              }}
+                            >
+                              Next
+                            </button>
                           </div>
+                        </div>
+                      )}
+                    </div>
                         ))}
 
                       {selectedClient.jobApplications && selectedClient.jobApplications.length === 0 && (
@@ -4161,84 +4420,228 @@ const EmployeeData = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {getFilteredAndSortedApplications(selectedClient.jobApplications || []).length === 0 ? (
+                          {allFilteredApplications.length === 0 ? (
                             <tr>
-                              <td colSpan="9" style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>
+                              <td
+                                colSpan="9"
+                                style={{
+                                  textAlign: 'center',
+                                  padding: '20px',
+                                  color: '#64748b',
+                                }}
+                              >
                                 No applications found for this client.
                               </td>
                             </tr>
                           ) : (
-                            getFilteredAndSortedApplications(selectedClient.jobApplications || []).map((app, index) => (
-                              <tr key={app.id}>
-                                <td style={applicationTableDataCellStyle}>
-                                  {getFilteredAndSortedApplications(selectedClient.jobApplications).length - index}
-                                </td>
-                                <td style={applicationTableDataCellStyle}>{app.jobTitle}</td>
-                                <td style={applicationTableDataCellStyle}>{app.company}</td>
-                                <td style={applicationTableDataCellStyle}>{app.jobBoards}</td>
-                                <td style={applicationTableDataCellStyle}>{app.jobId || '-'}</td>
-                                <td style={applicationTableDataCellStyle}>
-                                  {app.jobDescriptionUrl && (
-                                    <a href={app.jobDescriptionUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>
-                                      Description Link
-                                    </a>
-                                  )}
-                                </td>
-                                <td style={applicationTableDataCellStyle}>{app.appliedDate}</td>
+                            paginatedApplications.map((app, index) => {
+                              // Global S.No (descending across all pages)
+                              const globalIndex =
+                                allFilteredApplications.length -
+                                (applicationsPage * APPLICATIONS_PAGE_SIZE + index);
 
-                                <td style={applicationTableDataCellStyle}>
-                                  {app.attachments && app.attachments.length > 0 ? (
+                              return (
+                                <tr key={app.id}>
+                                  <td style={applicationTableDataCellStyle}>
+                                    {globalIndex}
+                                  </td>
+                                  <td style={applicationTableDataCellStyle}>
+                                    {app.jobTitle}
+                                  </td>
+                                  <td style={applicationTableDataCellStyle}>
+                                    {app.company}
+                                  </td>
+                                  <td style={applicationTableDataCellStyle}>
+                                    {app.jobBoards}
+                                  </td>
+                                  <td style={applicationTableDataCellStyle}>
+                                    {app.jobId || '-'}
+                                  </td>
+                                  <td style={applicationTableDataCellStyle}>
+                                    {app.jobDescriptionUrl && (
+                                      <a
+                                        href={app.jobDescriptionUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        style={{
+                                          color: '#3b82f6',
+                                          textDecoration: 'underline',
+                                        }}
+                                      >
+                                        Description Link
+                                      </a>
+                                    )}
+                                  </td>
+                                  <td style={applicationTableDataCellStyle}>
+                                    {app.appliedDate}
+                                  </td>
+                                  <td style={applicationTableDataCellStyle}>
+                                    {app.attachments && app.attachments.length > 0 ? (
+                                      <button
+                                        onClick={() => {
+                                          setViewedApplication(app);
+                                          setShowViewApplicationModal(true);
+                                        }}
+                                        style={{
+                                          background: 'none',
+                                          border: 'none',
+                                          color: '#3b82f6',
+                                          textDecoration: 'underline',
+                                          cursor: 'pointer',
+                                        }}
+                                      >
+                                        View ({app.attachments.length})
+                                      </button>
+                                    ) : (
+                                      'N/A'
+                                    )}
+                                  </td>
+                                  <td style={applicationTableDataCellStyle}>
                                     <button
-                                      onClick={() => {
-                                        setViewedApplication(app);
-                                        setShowViewApplicationModal(true);
-                                      }}
-                                      style={{
-                                        background: 'none',
-                                        border: 'none',
-                                        color: '#3b82f6',
-                                        textDecoration: 'underline',
-                                        cursor: 'pointer'
-                                      }}
+                                      onClick={() => handleViewApplication(app)}
+                                      style={actionButtonAppStyle}
                                     >
-                                      View ({app.attachments.length})
+                                      {/* existing view icon */}
+                                      <svg
+                                        width="18"
+                                        height="18"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                      >
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                        <circle cx="12" cy="12" r="3"></circle>
+                                      </svg>
                                     </button>
-                                  ) : 'N/A'}
-                                </td>
-
-
-                                <td style={applicationTableDataCellStyle}>
-                                  <button onClick={() => handleViewApplication(app)} style={actionButtonAppStyle}>
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                      <circle cx="12" cy="12" r="3"></circle>
-                                    </svg>
-                                  </button>
-                                  <button onClick={() => handleEditApplication(app)} style={actionButtonAppStyle}>
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-                                      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                      <path d="M12 20h9"></path>
-                                      <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
-                                    </svg>
-                                  </button>
-                                  <button onClick={() => handleRequestDeleteApplication(selectedClient, app)} style={deleteButtonAppStyle}>
-                                    {/* FIX: Replaced malformed SVG with a standard trash icon */}
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                      <polyline points="3 6 21 6"></polyline>
-                                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                      <line x1="10" y1="11" x2="10" y2="17"></line>
-                                      <line x1="14" y1="11" x2="14" y2="17"></line>
-                                    </svg>
-                                  </button>
-                                </td>
-                              </tr>
-                            ))
+                                    <button
+                                      onClick={() => handleEditApplication(app)}
+                                      style={actionButtonSecondaryStyle}
+                                    >
+                                      {/* existing edit icon */}
+                                      <svg
+                                        width="18"
+                                        height="18"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                      >
+                                        <path d="M12 20h9"></path>
+                                        <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z"></path>
+                                      </svg>
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteApplication(app)}
+                                      style={deleteButtonStyle}
+                                    >
+                                      {/* existing delete icon */}
+                                      <svg
+                                        width="18"
+                                        height="18"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                      >
+                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                        <line x1="10" y1="11" x2="10" y2="17"></line>
+                                        <line x1="14" y1="11" x2="14" y2="17"></line>
+                                      </svg>
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })
                           )}
                         </tbody>
                       </table>
+
+                      {/* Pagination controls for applications */}
+                      {allFilteredApplications.length > APPLICATIONS_PAGE_SIZE && (
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginTop: '12px',
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: '0.85rem',
+                              color: '#64748b',
+                            }}
+                          >
+                            Showing{' '}
+                            {applicationsPage * APPLICATIONS_PAGE_SIZE + 1}
+                            {' - '}
+                            {Math.min(
+                              (applicationsPage + 1) * APPLICATIONS_PAGE_SIZE,
+                              allFilteredApplications.length
+                            )}{' '}
+                            of {allFilteredApplications.length} applications
+                          </span>
+
+                          <div
+                            style={{
+                              display: 'flex',
+                              gap: '8px',
+                            }}
+                          >
+                            <button
+                              type="button"
+                              onClick={handlePrevApplicationsPage}
+                              disabled={applicationsPage === 0}
+                              style={{
+                                padding: '6px 10px',
+                                borderRadius: '6px',
+                                border: '1px solid #cbd5e1',
+                                backgroundColor:
+                                  applicationsPage === 0 ? '#e2e8f0' : '#ffffff',
+                                cursor:
+                                  applicationsPage === 0
+                                    ? 'not-allowed'
+                                    : 'pointer',
+                                fontSize: '0.85rem',
+                              }}
+                            >
+                              Prev
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleNextApplicationsPage}
+                              disabled={applicationsPage + 1 >= totalApplicationPages}
+                              style={{
+                                padding: '6px 10px',
+                                borderRadius: '6px',
+                                border: '1px solid #cbd5e1',
+                                backgroundColor:
+                                  applicationsPage + 1 >= totalApplicationPages
+                                    ? '#e2e8f0'
+                                    : '#ffffff',
+                                cursor:
+                                  applicationsPage + 1 >= totalApplicationPages
+                                    ? 'not-allowed'
+                                    : 'pointer',
+                                fontSize: '0.85rem',
+                              }}
+                            >
+                              Next
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                     </div>
                   </div>
-                </div>
               )}
 
               {/* Files Tab Content for Inactive Clients */}
@@ -7313,6 +7716,28 @@ const selectClientButtonStyle = {
   justifyContent: 'space-between',
   minWidth: '250px',
 };
+
+const actionButtonSecondaryStyle = {
+  background: 'none',
+  border: 'none',
+  color: '#2563eb',
+  cursor: 'pointer',
+  padding: '4px',
+  marginRight: '4px',
+  display: 'flex',
+  alignItems: 'center'
+};
+const deleteButtonStyle = {
+  background: 'none',
+  border: 'none',
+  color: '#ef4444', // red color for delete action
+  cursor: 'pointer',
+  padding: '4px',
+  marginLeft: '4px',
+  display: 'flex',
+  alignItems: 'center'
+};
+
 
 
 

@@ -63,7 +63,7 @@ const ManagerWorkSheet = () => {
 
       if (cached) {
         const { data, timestamp } = cached;
-        const isFresh = (new Date().getTime() - timestamp) < (durationMinutes * 60 * 1000);
+        const isFresh = (new Date().getTime() - timestamp) < (durationMinutes * 5 * 1000);
         if (isFresh) {
           console.log(`Using cached data (IDB) for ${storageKey}`);
           return data;
@@ -2011,6 +2011,15 @@ Please provide a summary no longer than 150 words.`;
 
     const [expandedRowKey, setExpandedRowKey] = useState(null);
 
+    const [isInternalClick, setIsInternalClick] = useState(false);
+
+   const APPLICATIONS_PAGE_SIZE = 5;
+   const [applicationsPage, setApplicationsPage] = useState(0);
+
+   // NEW: child pagination (per employee+client group)
+const CHILD_APPLICATIONS_PAGE_SIZE = 5;
+const [childPagesByGroup, setChildPagesByGroup] = useState({});
+
     const handleLocalSearchChange = (e) => {
       setLocalSearchQuery(e.target.value);
     };
@@ -2023,85 +2032,151 @@ Please provide a summary no longer than 150 words.`;
       return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
     };
 
-    const filteredBySearch = useMemo(() => {
-      const lowerCaseSearch = localSearchQuery.toLowerCase();
+  // Map employees for quick lookup
+  const employeeMap = useMemo(
+    () => new Map(employees.map(emp => [emp.firebaseKey, emp])),
+    [employees]
+  );
 
-      // Create an employee map for efficient lookup
-      const employeeMap = new Map(employees.map(emp => [emp.firebaseKey, emp]));
+  // USE GLOBAL SEARCH from parent (applicationSearchQuery)
+  const filteredBySearch = useMemo(() => {
+    const lowerCaseSearch = (applicationSearchQuery || '').toLowerCase();
 
-      return applicationData.filter(app => {
-        // Find the employee's name for search
-        const employee = employeeMap.get(app.assignedTo);
-        const employeeName = employee ? `${employee.firstName} ${employee.lastName}`.toLowerCase() : '';
+    return applicationData.filter(app => {
+      const employee = employeeMap.get(app.assignedTo);
+      const employeeName = employee
+        ? `${employee.firstName} ${employee.lastName}`.toLowerCase()
+        : '';
 
-        const matchesSearch =
-          employeeName.includes(lowerCaseSearch) ||
-          (app.clientName || '').toLowerCase().includes(lowerCaseSearch) ||
-          (app.jobTitle || '').toLowerCase().includes(lowerCaseSearch) ||
-          (app.company || '').toLowerCase().includes(lowerCaseSearch);
+      return (
+        employeeName.includes(lowerCaseSearch) ||
+        (app.clientName || '').toLowerCase().includes(lowerCaseSearch) ||
+        (app.jobTitle || '').toLowerCase().includes(lowerCaseSearch) ||
+        (app.company || '').toLowerCase().includes(lowerCaseSearch) ||
+        (app.jobId || '').toLowerCase().includes(lowerCaseSearch)
+      );
+    });
+  }, [applicationData, applicationSearchQuery, employeeMap]);
 
-        return matchesSearch;
-      });
-    }, [applicationData, localSearchQuery, employees]);
-
-    const groupedByClient = filteredBySearch.reduce((acc, app) => {
+  // Group by client (for the expanded rows)
+  const groupedByClient = useMemo(() => {
+    return filteredBySearch.reduce((acc, app) => {
       if (!acc[app.clientName]) {
         acc[app.clientName] = {
           apps: [],
-          employeeKey: app.assignedTo, // Use employeeKey to store the firebaseKey
+          employeeKey: app.assignedTo,
         };
       }
       acc[app.clientName].apps.push(app);
       return acc;
     }, {});
+  }, [filteredBySearch]);
 
-    const groupedByDate = useMemo(() => {
-      return applicationData.reduce((acc, app) => {
-        const dateKey = getLocalDateString(new Date(app.appliedDate));
-        if (!acc[dateKey]) {
-          acc[dateKey] = [];
-        }
-        acc[dateKey].push(app);
-        return acc;
-      }, {});
-    }, [applicationData]);
+  // Group by employee + client for the main table rows
+  const groupedByEmployeeAndClient = useMemo(() => {
+    const result = [];
 
-    const sortedDates = Object.keys(groupedByDate).sort((a, b) => new Date(b) - new Date(a));
+    Object.keys(groupedByClient).forEach(clientName => {
+      const group = groupedByClient[clientName];
+      const employee = employeeMap.get(group.employeeKey);
 
-    const groupedByEmployeeAndClient = useMemo(() => {
-      const employeeMap = new Map(employees.map(emp => [emp.firebaseKey, emp]));
+      if (!employee) return;
 
-      // First, group all applications by a composite key: "employeeKey_clientName"
-      const applicationsByGroup = applicationData.reduce((acc, app) => {
-        const key = `${app.assignedTo}_${app.clientName}`;
-        if (!acc[key]) {
-          acc[key] = [];
-        }
-        acc[key].push(app);
-        return acc;
-      }, {});
+      const employeeName = `${employee.firstName || ''} ${employee.lastName || ''}`.trim();
 
-      // Now, transform the grouped object into an array with all the details we need
-      const finalGroupedData = Object.entries(applicationsByGroup).map(([key, apps]) => {
-        const [employeeKey, clientName] = key.split('_');
-        const employee = employeeMap.get(employeeKey) || {};
-        const mostRecentApp = apps.sort((a, b) => new Date(b.appliedDate) - new Date(a.appliedDate))[0];
+      // derive a representative applied date (latest)
+      const latestApp = [...group.apps].sort(
+        (a, b) => new Date(b.appliedDate || 0) - new Date(a.appliedDate || 0)
+      )[0];
 
-        return {
-          key: key,
-          employeeKey: employeeKey,
-          employeeName: `${employee.firstName || ''} ${employee.lastName || ''}`.trim(),
-          employeeInitials: getInitials(`${employee.firstName || ''} ${employee.lastName || ''}`),
-          clientName: clientName,
-          applications: apps,
-          applicationCount: apps.length,
-          mostRecentApp: mostRecentApp
-        };
+      result.push({
+        key: `${group.employeeKey}-${clientName}`,
+        employeeKey: group.employeeKey,
+        employeeName,
+        clientName,
+        appliedDate: latestApp?.appliedDate || '',
+        applicationsCount: group.apps.length,
+        apps: group.apps,
       });
+    });
 
-      return finalGroupedData.sort((a, b) => new Date(b.mostRecentApp.appliedDate) - new Date(a.mostRecentApp.appliedDate));
+    // (Optional) further filtering by employee/client/status/date/quickFilter can
+    // be applied here if you already had such logic elsewhere.
+    // For now we assume that existing filters were applied before building applicationData.
 
-    }, [applicationData, employees]);
+    return result;
+  }, [groupedByClient, employeeMap]);
+
+  // Group by date (for the small date cards on top, if you are using them)
+  const groupedByDate = useMemo(() => {
+    return applicationData.reduce((acc, app) => {
+      const dateKey = getLocalDateString(new Date(app.appliedDate));
+      if (!acc[dateKey]) {
+        acc[dateKey] = [];
+      }
+      acc[dateKey].push(app);
+      return acc;
+    }, {});
+  }, [applicationData]);
+
+  const sortedDates = Object.keys(groupedByDate).sort(
+    (a, b) => new Date(b) - new Date(a)
+  );
+
+  // --- Pagination derived from groupedByEmployeeAndClient ---
+  const totalApplicationPages = Math.max(
+    1,
+    Math.ceil(groupedByEmployeeAndClient.length / APPLICATIONS_PAGE_SIZE)
+  );
+
+  const paginatedGroups = useMemo(() => {
+    const start = applicationsPage * APPLICATIONS_PAGE_SIZE;
+    const end = start + APPLICATIONS_PAGE_SIZE;
+    return groupedByEmployeeAndClient.slice(start, end);
+  }, [groupedByEmployeeAndClient, applicationsPage]);
+
+  // Reset to first page when filters/search change
+  useEffect(() => {
+    setApplicationsPage(0);
+    setChildPagesByGroup({});
+  }, [
+    applicationSearchQuery,
+    applicationFilterEmployee,
+    applicationFilterClient,
+    clientStatusFilter,
+    filterDateRange?.startDate,
+    filterDateRange?.endDate,
+    sortOrder,
+    quickFilter,
+  ]);
+
+  const handleNextApplicationsPage = () => {
+    setApplicationsPage(prev =>
+      prev + 1 < totalApplicationPages ? prev + 1 : prev
+    );
+  };
+
+  const handlePrevApplicationsPage = () => {
+    setApplicationsPage(prev => (prev > 0 ? prev - 1 : prev));
+  };
+
+  const handleChildNextPage = (groupKey, totalPages) => {
+  setChildPagesByGroup(prev => {
+    const current = prev[groupKey] ?? 0;
+    if (current + 1 >= totalPages) return prev;
+    return { ...prev, [groupKey]: current + 1 };
+  });
+};
+
+const handleChildPrevPage = (groupKey) => {
+  setChildPagesByGroup(prev => {
+    const current = prev[groupKey] ?? 0;
+    if (current <= 0) return prev;
+    return { ...prev, [groupKey]: current - 1 };
+  });
+};
+
+
 
 
     return (
@@ -2210,131 +2285,338 @@ Please provide a summary no longer than 150 words.`;
                 <th>Details</th>
               </tr>
             </thead>
-            <tbody>
-              {groupedByEmployeeAndClient.length > 0 ? (
-                groupedByEmployeeAndClient.map(group => {
-                  const isExpanded = expandedRowKey === group.key;
+               <tbody>
+       {paginatedGroups.length > 0 ? (
+        paginatedGroups.map(group => {
+          const isExpanded = expandedRowKey === group.key;
 
-                  return (
-                    <React.Fragment key={group.key}>
-                      {/* Parent Row - Toggles expansion */}
-                      <tr
-                        onClick={() => {
-                          // If an action button was just clicked, ignore this event.
-                          if (isInternalClick) {
-                            setIsInternalClick(false); // Reset the flag immediately
-                            return;
-                          }
+                // NEW: child pagination per group
+      const childPage = childPagesByGroup[group.key] ?? 0;
+      const totalChildPages = Math.max(
+        1,
+        Math.ceil(group.apps.length / CHILD_APPLICATIONS_PAGE_SIZE)
+      );
+      const childStart = childPage * CHILD_APPLICATIONS_PAGE_SIZE;
+      const childEnd = childStart + CHILD_APPLICATIONS_PAGE_SIZE;
+      const paginatedChildApps = group.apps.slice(childStart, childEnd);
 
-                          setExpandedRowKey(isExpanded ? null : group.key);
-                        }}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <td className="employee-cell">
-                          <div className="employee-avatar">{group.employeeInitials}</div>
-                          {group.employeeName}
-                        </td>
-                        <td>{group.clientName}</td>
-                        <td style={{ textAlign: 'center' }}>{formatDateToDDMMYYYY(group.mostRecentApp.appliedDate)}</td>
-                        <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{group.applicationCount}</td>
-                        <td style={{ textAlign: 'center' }}>
-                          <span style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', display: 'inline-block', transition: 'transform 0.2s' }}>
-                            <i className="fas fa-chevron-down"></i>
-                          </span>
-                        </td>
+          return (
+            <React.Fragment key={group.key}>
+              {/* Parent Row - Toggles expansion */}
+              <tr
+                onClick={() => {
+                  // If an action button was just clicked, ignore this event.
+                  if (isInternalClick) {
+                    setIsInternalClick(false); // Reset the flag immediately
+                    return;
+                  }
+
+                  setExpandedRowKey(isExpanded ? null : group.key);
+                }}
+              >
+                <td>
+                  {/* Employee avatar + name (same as your existing code) */}
+                  {/* use getInitials(group.employeeName) etc */}
+                  {group.employeeName}
+                </td>
+                <td>{group.clientName}</td>
+                <td>{group.appliedDate || 'N/A'}</td>
+                <td>{group.applicationsCount}</td>
+                <td>
+                  {/* whatever action buttons you already had; 
+                      when you click them, remember to call setIsInternalClick(true)
+                      before doing the actual action so the row doesn’t toggle */}
+                  {/* Example:
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsInternalClick(true);
+                      // your existing logic (e.g. openApplicationDetailModal)
+                    }}
+                  >
+                    View
+                  </button>
+                  */}
+                </td>
+              </tr>
+
+          {/* Expanded row for the child applications table (now paginated) */}
+          {isExpanded && (
+            <tr>
+              <td
+                colSpan="5"
+                style={{ padding: '0 15px', backgroundColor: 'var(--bg-color)' }}
+              >
+                <div
+                  style={{
+                    padding: '15px',
+                    border: '1px solid var(--header-border-color)',
+                    borderRadius: '8px',
+                    margin: '10px 0',
+                  }}
+                >
+                  <table className="applications-table" style={{ minWidth: 'auto' }}>
+                    <thead>
+                      <tr>
+                        <th>Company</th>
+                        <th>Job Title</th>
+                        <th>Job ID</th>
+                        <th>Job Boards</th>
+                        <th>Job Type</th>
+                        <th>Description Link</th>
+                        <th>Applied Date</th>
+                        <th>Applied Time</th>
+                        <th>Status</th>
+                        <th>Actions</th>
                       </tr>
-                      {isExpanded && (
-                        <tr>
-                          <td colSpan="6" style={{ padding: '0 15px', backgroundColor: 'var(--bg-color)' }}>
-                            <div style={{ padding: '15px', border: '1px solid var(--header-border-color)', borderRadius: '8px', margin: '10px 0' }}>
-                              <table className="applications-table" style={{ minWidth: 'auto' }}>
-                                <thead>
-                                  <tr>
-                                    <th>Company</th>
-                                    <th>Job Title</th>
-                                    <th>Job ID</th>
-                                    <th>Job Boards</th>
-                                    <th>Job Type</th>
-                                    <th>Description Link</th>
-                                    <th>Applied Date</th>
-                                    <th>Applied Time</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {group.applications.map(app => (
-                                    <tr key={app.id}>
-                                      <td>{app.company}</td>
-                                      <td>{app.jobTitle}</td>
-                                      <td>{app.jobId}</td>
-                                      <td>{app.jobBoards}</td>
-                                      <td>{app.jobType}</td>
-                                      <td><a href={app.jobDescriptionUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'Blue', textAlign: "center" }}>Link</a></td>
-                                      <td>{formatDateToDDMMYYYY(app.appliedDate)}</td>
-                                      <td>{formatDateTime(app.timestamp).time}</td>
-                                      <td><span className={`status-badge status-${app.status?.toLowerCase()}`}>{app.status}</span></td>
+                    </thead>
+                    <tbody>
+                      {paginatedChildApps.map((app, index) => {
+                        const { date, time } = formatDateTime(app.appliedTimestamp);
 
-                                      {/* ACTIONS CELL - THIS IS THE PROBLEM AREA */}
-                                      <td onClick={(e) => e.stopPropagation()}>
-                                        <div className="action-buttons">
-                                          <button
-                                            className="action-button"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setIsInternalClick(true); // <--- SET FLAG
-                                              openApplicationDetailModal(app);
-                                            }}
-                                            title="View Details"
-                                          >
-                                            <i className="fas fa-eye"></i>
-                                          </button>
-                                          <button
-                                            className="action-button"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setIsInternalClick(true); // <--- SET FLAG
-                                              openEditApplicationModal(app);
-                                            }}
-                                            title="Edit"
-                                          >
-                                            <i className="fas fa-edit"></i>
-                                          </button>
-                                          <button
-                                            className="action-button"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setIsInternalClick(true);
-                                              // FIX: Pass the application object directly
-                                              handleDeleteApplication(app);
-                                            }}
-                                            title="Delete"
-                                          >
-                                            <i className="fas fa-trash"></i>
-                                          </button>
-                                        </div>
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
+                        return (
+                          <tr key={app.id || index}>
+                            <td>{app.company}</td>
+                            <td>{app.jobTitle}</td>
+                            <td>{app.jobId}</td>
+                            <td>{app.jobBoards}</td>
+                            <td>{app.jobType}</td>
+                            <td>
+                              {app.jobDescriptionUrl ? (
+                                <a
+                                  href={app.jobDescriptionUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  View
+                                </a>
+                              ) : (
+                                'N/A'
+                              )}
+                            </td>
+                            <td>{formatDateToDDMMYYYY(app.appliedDate)}</td>
+                            <td>{formatDateTime(app.timestamp).time}</td>
+                            <td>{app.status}</td>
+                            {/* ACTIONS CELL */}
+                            <td
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <div className="action-buttons">
+                                <button
+                                  className="action-button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsInternalClick(true);
+                                    openApplicationDetailModal(app);
+                                  }}
+                                  title="View Details"
+                                >
+                                  <i className="fas fa-eye"></i>
+                                </button>
+                                <button
+                                  className="action-button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsInternalClick(true);
+                                    openEditApplicationModal(app);
+                                  }}
+                                  title="Edit"
+                                >
+                                  <i className="fas fa-edit"></i>
+                                </button>
+                                <button
+                                  className="action-button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsInternalClick(true);
+                                    handleDeleteApplication(app);
+                                  }}
+                                  title="Delete"
+                                >
+                                  <i className="fas fa-trash"></i>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+
+                  {/* NEW: Child pagination controls (per client) */}
+                  {group.apps.length > CHILD_APPLICATIONS_PAGE_SIZE && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginTop: '12px',
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: '0.85rem',
+                          color: '#64748b',
+                        }}
+                      >
+                        Showing{' '}
+                        {childPage * CHILD_APPLICATIONS_PAGE_SIZE + 1}
+                        {' - '}
+                        {Math.min(
+                          (childPage + 1) * CHILD_APPLICATIONS_PAGE_SIZE,
+                          group.apps.length
+                        )}{' '}
+                        of {group.apps.length} applications
+                      </span>
+
+                      <div
+                        style={{
+                          display: 'flex',
+                          gap: '8px',
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleChildPrevPage(group.key);
+                          }}
+                          disabled={childPage === 0}
+                          style={{
+                            padding: '6px 10px',
+                            borderRadius: '6px',
+                            border: '1px solid #cbd5e1',
+                            backgroundColor:
+                              childPage === 0 ? '#e2e8f0' : '#ffffff',
+                            cursor:
+                              childPage === 0 ? 'not-allowed' : 'pointer',
+                            fontSize: '0.85rem',
+                          }}
+                        >
+                          Prev
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleChildNextPage(group.key, totalChildPages);
+                          }}
+                          disabled={childPage + 1 >= totalChildPages}
+                          style={{
+                            padding: '6px 10px',
+                            borderRadius: '6px',
+                            border: '1px solid #cbd5e1',
+                            backgroundColor:
+                              childPage + 1 >= totalChildPages
+                                ? '#e2e8f0'
+                                : '#ffffff',
+                            cursor:
+                              childPage + 1 >= totalChildPages
+                                ? 'not-allowed'
+                                : 'pointer',
+                            fontSize: '0.85rem',
+                          }}
+                        >
+                          Next
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </td>
+            </tr>
+          )}
+        </React.Fragment>
+      );
+    })
+  ) : (
+    <tr>
+      <td
+        colSpan="5"
+        style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}
+      >
+        No applications found for the selected filters.
+      </td>
+    </tr>
+  )}
+</tbody>
+
+
                               </table>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-color)' }}>
-                    No applications found matching your criteria.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                                    {groupedByEmployeeAndClient.length > APPLICATIONS_PAGE_SIZE && (
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginTop: '12px',
+          }}
+        >
+          <span
+            style={{
+              fontSize: '0.85rem',
+              color: '#64748b',
+            }}
+          >
+            Showing{' '}
+            {applicationsPage * APPLICATIONS_PAGE_SIZE + 1}
+            {' - '}
+            {Math.min(
+              (applicationsPage + 1) * APPLICATIONS_PAGE_SIZE,
+              groupedByEmployeeAndClient.length
+            )}{' '}
+            of {groupedByEmployeeAndClient.length} application groups
+          </span>
+
+          <div
+            style={{
+              display: 'flex',
+              gap: '8px',
+            }}
+          >
+            <button
+              type="button"
+              onClick={handlePrevApplicationsPage}
+              disabled={applicationsPage === 0}
+              style={{
+                padding: '6px 10px',
+                borderRadius: '6px',
+                border: '1px solid #cbd5e1',
+                backgroundColor:
+                  applicationsPage === 0 ? '#e2e8f0' : '#ffffff',
+                cursor:
+                  applicationsPage === 0 ? 'not-allowed' : 'pointer',
+                fontSize: '0.85rem',
+              }}
+            >
+              Prev
+            </button>
+            <button
+              type="button"
+              onClick={handleNextApplicationsPage}
+              disabled={applicationsPage + 1 >= totalApplicationPages}
+              style={{
+                padding: '6px 10px',
+                borderRadius: '6px',
+                border: '1px solid #cbd5e1',
+                backgroundColor:
+                  applicationsPage + 1 >= totalApplicationPages
+                    ? '#e2e8f0'
+                    : '#ffffff',
+                cursor:
+                  applicationsPage + 1 >= totalApplicationPages
+                    ? 'not-allowed'
+                    : 'pointer',
+                fontSize: '0.85rem',
+              }}
+            >
+              Next
+            </button>
+          </div>
         </div>
+      )}
+
+               </div>
       </section>
     );
   };

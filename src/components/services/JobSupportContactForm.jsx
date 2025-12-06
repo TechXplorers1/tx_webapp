@@ -217,12 +217,12 @@ const handleChange = (e, index, fieldName) => {
     }
 
     // Validation for Step 5
-    if (step === 5) {
-      if (!resumeFile) {
-        errors.resume = "Please upload your resume.";
-        isValid = false;
-      }
-    }
+    // if (step === 5) {
+    //   if (!resumeFile) {
+    //     errors.resume = "Please upload your resume.";
+    //     isValid = false;
+    //   }
+    // }
 
     setValidationErrors(errors);
     return isValid;
@@ -931,12 +931,11 @@ const keyframes = `
                 </Form.Group>
                 <Row className="mb-3">
                 <Form.Group as={Col} controlId="formResume" className="mb-3 mt-4">
-                  <Form.Label>Upload Your Resume <span className="text-danger">*</span></Form.Label>
+                  <Form.Label>Upload Your Resume </Form.Label>
                   <Form.Control
                     type="file"
                     name="resume"
                     onChange={handleChange}
-                    required
                     accept=".pdf,.doc,.docx"
                     isInvalid={!!validationErrors.resume}
                     multiple
