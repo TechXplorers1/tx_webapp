@@ -141,9 +141,9 @@ const AdminPage = () => {
     { value: 'adsManagement', label: 'Ads Management' },
 
   ];
-  // // --- MIGRATION TOOL ---
+ // --- MIGRATION TOOL (UPDATED FOR MANAGERS) ---
   // const runOneTimeMigration = async () => {
-  //   if (!window.confirm("This will scan all clients and build the optimized index. Run this only once. Continue?")) return;
+  //   if (!window.confirm("This will index BOTH Employees and Managers. Run this once to optimize database. Continue?")) return;
 
   //   try {
   //     const allClientsSnap = await get(ref(database, 'clients'));
@@ -151,34 +151,47 @@ const AdminPage = () => {
 
   //     const allClients = allClientsSnap.val();
   //     const updates = {};
-  //     let count = 0;
+  //     let empCount = 0;
+  //     let mgrCount = 0;
 
   //     Object.keys(allClients).forEach(clientKey => {
   //       const regs = allClients[clientKey].serviceRegistrations;
   //       if (regs) {
   //         Object.keys(regs).forEach(regKey => {
   //           const reg = regs[regKey];
-  //           // If assigned to an employee, add to the index
-  //           if (reg.assignedTo) {
-  //             const employeeId = reg.assignedTo;
-  //             const assignmentKey = `${clientKey}_${regKey}`;
-  //             const path = `employee_assignments/${employeeId}/${assignmentKey}`;
+  //           const assignmentKey = `${clientKey}_${regKey}`;
+  //           const clientName = `${reg.firstName} ${reg.lastName}`;
 
+  //           // 1. Index for Employee (Existing logic)
+  //           if (reg.assignedTo) {
+  //             const path = `employee_assignments/${reg.assignedTo}/${assignmentKey}`;
   //             updates[path] = {
   //               clientFirebaseKey: clientKey,
   //               registrationKey: regKey,
-  //               clientName: `${reg.firstName} ${reg.lastName}`,
+  //               clientName: clientName,
   //               status: reg.assignmentStatus || 'active'
   //             };
-  //             count++;
+  //             empCount++;
+  //           }
+
+  //           // 2. NEW: Index for Manager
+  //           if (reg.assignedManager) {
+  //             const path = `manager_assignments/${reg.assignedManager}/${assignmentKey}`;
+  //             updates[path] = {
+  //               clientFirebaseKey: clientKey,
+  //               registrationKey: regKey,
+  //               clientName: clientName,
+  //               status: reg.assignmentStatus || 'active'
+  //             };
+  //             mgrCount++;
   //           }
   //         });
   //       }
   //     });
 
-  //     if (count > 0) {
+  //     if (Object.keys(updates).length > 0) {
   //       await update(ref(database), updates);
-  //       alert(`Migration Successful! Indexed ${count} assignments.`);
+  //       alert(`Migration Successful!\nIndexed ${empCount} Employee assignments.\nIndexed ${mgrCount} Manager assignments.`);
   //     } else {
   //       alert("No assignments found to migrate.");
   //     }
@@ -390,8 +403,8 @@ const AdminPage = () => {
 
               <h2 className="ad-title">Admin Worksheet</h2>
               <p className="ad-subtitle">System administration and Employee management</p>
-              {/* Add this inside your <div className="ad-dashboard-header"> or near it */}
-              {/* <button
+              {/* Add this inside your <div className="ad-dashboard-header"> or near it
+              <button
                 onClick={runOneTimeMigration}
                 style={{ padding: '10px', background: '#dc3545', color: 'white', border: 'none', borderRadius: '5px', marginBottom: '20px', cursor: 'pointer' }}
               >

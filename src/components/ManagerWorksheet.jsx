@@ -638,6 +638,9 @@ const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false); // 
 
 
   // ✅ Second useEffect – depends on managerFirebaseKey
+// In ManagerWorksheet.jsx
+
+  // ✅ Second useEffect – Fetch ONLY Assigned Clients (Reverse Indexing Optimized)
   useEffect(() => {
     if (!managerFirebaseKey) return;
 
@@ -645,46 +648,77 @@ const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false); // 
 
     (async () => {
       try {
-        // OPTIMIZATION: Use getCachedData instead of get()
-        // Cache clients for 60 minutes
-        const clientsData = await getCachedData('clients', 'cache_clients_full', 60);
+        setLoading(true); // Ensure loading state is active
+
+        // 1. Fetch the lightweight list of clients assigned to this Manager
+        // This download is TINY (~2KB)
+        const indexRef = ref(database, `manager_assignments/${managerFirebaseKey}`);
+        const indexSnapshot = await get(indexRef);
 
         if (cancelledClientsFetch) return;
 
-        const allRegistrations = [];
-
-        if (clientsData) {
-          Object.entries(clientsData).forEach(([clientKey, client]) => {
-            const registrations = client.serviceRegistrations || {};
-            Object.entries(registrations).forEach(([regKey, reg]) => {
-              // Ensure we only show clients assigned to this Manager
-              if (reg.assignedManager === managerFirebaseKey) {
-                const jobApplicationsArray = Array.isArray(reg.jobApplications)
-                  ? reg.jobApplications
-                  : Object.values(reg.jobApplications || {});
-
-                allRegistrations.push({
-                  ...reg,
-                  jobApplications: jobApplicationsArray,
-                  clientFirebaseKey: clientKey,
-                  registrationKey: regKey,
-                  email: client.email,
-                  mobile: client.mobile,
-                  firstName: reg.firstName || client.firstName,
-                  lastName: reg.lastName || client.lastName,
-                  name: reg.name || `${reg.firstName || ''} ${reg.lastName || ''}`.trim(),
-                });
-              }
-            });
-          });
+        if (!indexSnapshot.exists()) {
+          // No clients assigned
+          setUnassignedClients([]);
+          setAssignedClients([]);
+          setInactiveAssignedClients([]);
+          setApplicationData([]);
+          setInterviewData([]);
+          setLoading(false);
+          return;
         }
 
-        // Separate data buckets
+        const assignments = indexSnapshot.val();
+        const promises = [];
+
+        // 2. Loop through the index and fetch specific client data (Parallel Fetch)
+        Object.values(assignments).forEach(item => {
+            const clientRef = ref(database, `clients/${item.clientFirebaseKey}`);
+            
+            // We fetch the root client node to ensure we get email/mobile + registrations
+            // Fetching one specific client node is small (~5KB).
+            promises.push(get(clientRef).then(snap => {
+                if(snap.exists()) {
+                    const clientRoot = snap.val();
+                    const reg = clientRoot.serviceRegistrations?.[item.registrationKey];
+                    
+                    if(reg) {
+                        // Flatten job applications
+                        const jobApplicationsArray = Array.isArray(reg.jobApplications)
+                        ? reg.jobApplications
+                        : Object.values(reg.jobApplications || {});
+
+                        return {
+                            ...reg,
+                            jobApplications: jobApplicationsArray,
+                            clientFirebaseKey: item.clientFirebaseKey,
+                            registrationKey: item.registrationKey,
+                            // Ensure we have root profile data
+                            email: clientRoot.email,
+                            mobile: clientRoot.mobile,
+                            firstName: reg.firstName || clientRoot.firstName,
+                            lastName: reg.lastName || clientRoot.lastName,
+                            name: `${reg.firstName || ''} ${reg.lastName || ''}`.trim()
+                        };
+                    }
+                }
+                return null;
+            }));
+        });
+
+        // 3. Resolve all data
+        const results = await Promise.all(promises);
+        const allRegistrations = results.filter(r => r !== null);
+
+        // 4. Sort into buckets (Same logic as before)
         const unassigned = [];
         const assigned = [];
         const inactive = [];
 
         for (const reg of allRegistrations) {
+          // Double check assignment matches (sanity check)
+          if (reg.assignedManager !== managerFirebaseKey) continue;
+
           switch (reg.assignmentStatus) {
             case "pending_employee":
               unassigned.push(reg);
@@ -696,6 +730,10 @@ const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false); // 
             case "inactive":
               inactive.push(reg);
               break;
+            default:
+              // Fallback for weird statuses, usually goes to active or unassigned
+              if(!reg.assignedTo) unassigned.push(reg);
+              else assigned.push(reg);
           }
         }
 
@@ -703,6 +741,7 @@ const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false); // 
         setAssignedClients(assigned);
         setInactiveAssignedClients(inactive);
 
+        // 5. Aggregate Applications & Interviews
         const allAssignedClients = [...assigned, ...inactive];
         const appData = [];
         const interviewData = [];
@@ -713,7 +752,7 @@ const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false); // 
               ...app,
               clientFirebaseKey: clientReg.clientFirebaseKey,
               registrationKey: clientReg.registrationKey,
-              clientName: `${clientReg.firstName} ${clientReg.lastName}`,
+              clientName: clientReg.name,
               assignedTo: clientReg.assignedTo,
             };
             appData.push(enriched);
@@ -723,22 +762,20 @@ const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false); // 
 
         setApplicationData(appData);
         setInterviewData(interviewData);
-        setLoading(false);
+        
       } catch (err) {
-        console.error("Failed to fetch clients once:", err);
-        setLoading(false);
+        console.error("Failed to fetch clients:", err);
+      } finally {
+        if (!cancelledClientsFetch) setLoading(false);
       }
     })();
 
+    // User/Employee Fetch (Keep existing logic, it's fine)
     let cancelledUsersFetch = false;
-
     (async () => {
       try {
-        // OPTIMIZATION: Cache users for 60 minutes (User list rarely changes)
         const usersData = await getCachedData('users', 'cache_all_users', 60);
-
         if (cancelledUsersFetch) return;
-
         if (usersData) {
           const employees = Object.entries(usersData)
             .filter(([_, user]) => user.roles && user.roles.includes('employee'))
@@ -751,9 +788,7 @@ const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false); // 
           setEmployeesForAssignment(employees);
           setFirebaseEmployees(Object.fromEntries(employees.map(emp => [emp.firebaseKey, emp])));
         }
-      } catch (err) {
-        console.error("Failed to fetch users once:", err);
-      }
+      } catch (err) { console.error(err); }
     })();
 
     return () => {

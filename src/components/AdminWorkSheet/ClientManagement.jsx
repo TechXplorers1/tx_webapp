@@ -749,34 +749,61 @@ const ClientManagement = () => {
   };
 
 
+// In ClientManagement.jsx
+
   const handleConfirmSelectManager = async () => {
     if (!managerToConfirm || !registrationForManager) return;
 
+    const clientKey = registrationForManager.clientFirebaseKey;
+    const regKey = registrationForManager.registrationKey;
+    const oldManagerId = registrationForManager.assignedManager; // Check if replacing
+    const newManagerId = managerToConfirm.firebaseKey;
+    const assignmentKey = `${clientKey}_${regKey}`;
+
     const updatedManagerInfo = {
       manager: `${managerToConfirm.firstName} ${managerToConfirm.lastName}`,
-      assignedManager: managerToConfirm.firebaseKey,
+      assignedManager: newManagerId,
     };
 
     const registrationRef = ref(
       database,
-      `clients/${registrationForManager.clientFirebaseKey}/serviceRegistrations/${registrationForManager.registrationKey}`
+      `clients/${clientKey}/serviceRegistrations/${regKey}`
     );
 
     try {
-      await update(registrationRef, {
-        ...updatedManagerInfo,
-        assignmentStatus: 'pending_employee',
-      });
+      // 1. Update the main Client Record
+      const updates = {};
+      // Path to update main record
+      updates[`clients/${clientKey}/serviceRegistrations/${regKey}/manager`] = updatedManagerInfo.manager;
+      updates[`clients/${clientKey}/serviceRegistrations/${regKey}/assignedManager`] = updatedManagerInfo.assignedManager;
+      updates[`clients/${clientKey}/serviceRegistrations/${regKey}/assignmentStatus`] = 'pending_employee';
 
+      // 2. Add to New Manager's Index
+      updates[`manager_assignments/${newManagerId}/${assignmentKey}`] = {
+        clientFirebaseKey: clientKey,
+        registrationKey: regKey,
+        clientName: `${registrationForManager.firstName} ${registrationForManager.lastName}`,
+        status: 'pending_employee'
+      };
+
+      // 3. Remove from Old Manager's Index (if exists)
+      if (oldManagerId) {
+        updates[`manager_assignments/${oldManagerId}/${assignmentKey}`] = null;
+      }
+
+      await update(ref(database), updates);
+
+      // Local State Update
       setServiceRegistrations((prev) =>
         prev.map((reg) =>
-          reg.registrationKey === registrationForManager.registrationKey
+          reg.registrationKey === regKey
             ? { ...reg, ...updatedManagerInfo, assignmentStatus: 'pending_employee' }
             : reg
         )
       );
     } catch (error) {
       console.error('Failed to assign manager:', error);
+      alert("Failed to assign manager.");
     } finally {
       setIsConfirmManagerModalOpen(false);
       setIsManagerModalOpen(false);
@@ -784,7 +811,6 @@ const ClientManagement = () => {
       setRegistrationForManager(null);
     }
   };
-
 
   const filteredClients = getFilteredRegistrations();
 
