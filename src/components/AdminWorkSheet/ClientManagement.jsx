@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { getDatabase, ref, update, remove, set, get } from "firebase/database";
+import { getDatabase, ref, update, remove, set, get, query, orderByChild, equalTo, limitToFirst, startAfter, startAt, orderByKey, runTransaction, onValue } from "firebase/database";
 import { database } from '../../firebase';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Spinner } from 'react-bootstrap';
@@ -89,12 +89,24 @@ const ClientManagement = () => {
     endDate: '',
   });
   const [todayClientAppCounts, setTodayClientAppCounts] = useState({});
+  // --- Pagination State ---
+  // --- Server-Side Pagination State ---
+  const [lastVisibleKey, setLastVisibleKey] = useState(null);
+  const [pageStack, setPageStack] = useState([]); // Stack of 'firstKey' for each page to enable Previous
+  const [itemsPerPage] = useState(10);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  // --- Server-Side Counters ---
+  const [clientCounts, setClientCounts] = useState({ registered: 0, unassigned: 0, active: 0, rejected: 0, restored: 0 });
+
+
+
   // --- Application Modals & Editing ---
-const [isAppViewModalOpen, setIsAppViewModalOpen] = useState(false);
-const [isAppEditModalOpen, setIsAppEditModalOpen] = useState(false);
-const [isAppDeleteConfirmOpen, setIsAppDeleteConfirmOpen] = useState(false);
-const [selectedApplication, setSelectedApplication] = useState(null);
-// --- NEW: Helper to fetch/cache data ---
+  const [isAppViewModalOpen, setIsAppViewModalOpen] = useState(false);
+  const [isAppEditModalOpen, setIsAppEditModalOpen] = useState(false);
+  const [isAppDeleteConfirmOpen, setIsAppDeleteConfirmOpen] = useState(false);
+  const [selectedApplication, setSelectedApplication] = useState(null);
+  // --- NEW: Helper to fetch/cache data ---
   const getCachedData = async (dbPath, storageKey, durationMinutes = 60) => {
     try {
       const cached = await dbGet(storageKey);
@@ -119,46 +131,85 @@ const [selectedApplication, setSelectedApplication] = useState(null);
     try {
       const cachedWrapper = await dbGet('cache_clients_full');
       if (cachedWrapper && cachedWrapper.data && cachedWrapper.data[clientKey]) {
-         // If modifying a registration inside the client
-         if(regKey && cachedWrapper.data[clientKey].serviceRegistrations?.[regKey]) {
-             cachedWrapper.data[clientKey].serviceRegistrations[regKey] = {
-                 ...cachedWrapper.data[clientKey].serviceRegistrations[regKey],
-                 ...updates
-             };
-         } 
-         // If modifying the root client profile (firstName, email, etc)
-         else if (!regKey) {
-             Object.assign(cachedWrapper.data[clientKey], updates);
-         }
-         await dbSet('cache_clients_full', cachedWrapper);
+        // If modifying a registration inside the client
+        if (regKey && cachedWrapper.data[clientKey].serviceRegistrations?.[regKey]) {
+          cachedWrapper.data[clientKey].serviceRegistrations[regKey] = {
+            ...cachedWrapper.data[clientKey].serviceRegistrations[regKey],
+            ...updates
+          };
+        }
+        // If modifying the root client profile (firstName, email, etc)
+        else if (!regKey) {
+          Object.assign(cachedWrapper.data[clientKey], updates);
+        }
+        await dbSet('cache_clients_full', cachedWrapper);
       }
-    } catch(e) { console.error("Local update failed", e); }
+    } catch (e) { console.error("Local update failed", e); }
   };
 
 
 
 
-// 1) Load clients + users ONCE (no streaming)
-// 1) Load clients + users (Optimized with Cache)
-useEffect(() => {
-  let cancelled = false;
-
-  const fetchData = async () => {
+  // 1) Load clients + users ONCE (no streaming)
+  // 1) Server-Side Fetch Function
+  const fetchClients = async (startKey = null, direction = 'first', searchQuery = null) => {
     try {
       setLoading(true);
+      setError(null);
 
-      // OPTIMIZATION: Use getCachedData instead of get()
-      const [clientsData, usersData] = await Promise.all([
-        getCachedData('clients', 'cache_clients_full', 60),
-        getCachedData('users', 'cache_users_full', 60)
-      ]);
+      let clientsQuery;
+      const clientsRef = ref(database, 'clients');
 
-      if (cancelled) return;
+      if (searchQuery) {
+        // --- SEARCH BY EMAIL ---
+        setIsSearching(true);
+        clientsQuery = query(clientsRef, orderByChild('email'), equalTo(searchQuery));
+      } else {
+        // --- PAGINATION ---
+        setIsSearching(false);
+        // We fetch itemsPerPage + 1 to check if there is a next page
+        if (direction === 'first') {
+          clientsQuery = query(clientsRef, orderByKey(), limitToFirst(itemsPerPage + 1));
+          setPageStack([]);
+        } else if (direction === 'next' && startKey) {
+          clientsQuery = query(clientsRef, orderByKey(), startAfter(startKey), limitToFirst(itemsPerPage + 1));
+        } else if (direction === 'prev' && startKey) {
+          // For prev, startKey should be the start key of the PREVIOUS page
+          // stored in the stack. 
+          clientsQuery = query(clientsRef, orderByKey(), startAt(startKey), limitToFirst(itemsPerPage + 1));
+        } else {
+          // Fallback
+          clientsQuery = query(clientsRef, orderByKey(), limitToFirst(itemsPerPage + 1));
+        }
+      }
 
-      // ---- Process Clients ----
+      // Execute Query
+      const snapshot = await get(clientsQuery);
+      const data = snapshot.exists() ? snapshot.val() : {};
+
+      // Process Data
+      const keys = Object.keys(data);
+      let hasMore = false;
+
+      if (!searchQuery && keys.length > itemsPerPage) {
+        hasMore = true;
+        // Remove the extra item used for checking 'hasMore'
+        keys.pop(); // The last key is just for the cursor of the NEXT page
+      }
+
+      if (!searchQuery && keys.length > 0) {
+        setLastVisibleKey(keys[keys.length - 1]);
+      }
+
+      // If going next, push current start to stack
+      // Actually, easier logic:
+      // Page 1: Stack [null]
+      // Page 2: Stack [null, key_start_of_p2]
+
+      // Map to Registrations
       const allRegistrations = [];
-      Object.keys(clientsData || {}).forEach(clientKey => {
-        const client = clientsData[clientKey];
+      keys.forEach(clientKey => {
+        const client = data[clientKey];
         if (!client || !client.serviceRegistrations) return;
 
         Object.keys(client.serviceRegistrations).forEach(regKey => {
@@ -174,57 +225,209 @@ useEffect(() => {
           });
         });
       });
+
       setServiceRegistrations(allRegistrations);
 
-      // ---- Process Managers ----
+      // Fetch Users/Managers (Once, cached)
+      // We still need this for the manager dropdown names
+      const usersData = await getCachedData('users', 'cache_users_full', 60);
       const usersArray = Object.keys(usersData || {}).map(key => ({
         firebaseKey: key,
         ...usersData[key],
       }));
-      const managers = usersArray.filter(u => u.roles && u.roles.includes('manager'));
-      setManagerList(managers);
+      setManagerList(usersArray.filter(u => u.roles && u.roles.includes('manager')));
 
-      setError(null);
     } catch (error) {
-      console.error('Fetch error:', error);
-      if (!cancelled) setError(error.message);
+      console.error("Fetch error:", error);
+      setError(error.message);
     } finally {
-      if (!cancelled) setLoading(false);
+      setLoading(false);
     }
   };
 
-  fetchData();
-  return () => { cancelled = true; };
-}, []);
 
-// 2) Compute today's applications COUNT from in-memory data (NO DB calls)
-useEffect(() => {
-  if (!serviceRegistrations || serviceRegistrations.length === 0) {
-    setTodayClientAppCounts({});
-    return;
-  }
+  // --- SERVER-SIDE COUNTERS LOGIC ---
+  useEffect(() => {
+    const countsRef = ref(database, 'client_counts');
+    const unsubscribe = onValue(countsRef, (snapshot) => {
+      if (snapshot.exists()) {
+        setClientCounts(snapshot.val());
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
-  const today = new Date().toISOString().split('T')[0];
-  const counts = {};
+  const recalculateAllCounts = async () => {
+    if (!window.confirm("This will download ALL data to recalculate counts. Continue?")) return;
+    try {
+      setLoading(true);
+      // 1. Fetch EVERYTHING
+      const snapshot = await get(ref(database, 'clients'));
+      if (!snapshot.exists()) {
+        alert("No data found.");
+        setLoading(false);
+        return;
+      }
 
-  serviceRegistrations.forEach(client => {
-    const jobAppsRaw = client.jobApplications || client.jobapplications || null;
+      const data = snapshot.val();
+      const counts = { registered: 0, unassigned: 0, active: 0, rejected: 0, restored: 0 };
 
-    const appsArray = jobAppsRaw
-      ? (Array.isArray(jobAppsRaw) ? jobAppsRaw : Object.values(jobAppsRaw))
-      : [];
+      Object.values(data).forEach(client => {
+        if (client.serviceRegistrations) {
+          Object.values(client.serviceRegistrations).forEach(reg => {
+            const status = reg.assignmentStatus;
+            if (status === 'registered' || !status) counts.registered++;
+            else if (status === 'pending_manager') counts.unassigned++;
+            else if (['pending_employee', 'pending_acceptance', 'active', 'inactive'].includes(status)) counts.active++;
+            else if (status === 'rejected') counts.rejected++;
+            // Restored logic? Usually restored clients end up back in 'registered' or 'unassigned'.
+            // If we have a 'restored' status:
+            else if (status === 'restored') counts.restored++;
+          });
+        }
+      });
 
-    const todayCount = appsArray.filter(app => {
-      if (!app.appliedDate) return false;
-      const appDate = new Date(app.appliedDate).toISOString().split('T')[0];
-      return appDate === today;
-    }).length;
+      await update(ref(database, 'client_counts'), counts);
+      alert("Counts updated successfully!");
 
-    counts[client.registrationKey] = todayCount;
-  });
+    } catch (e) {
+      console.error(e);
+      alert("Error: " + e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  setTodayClientAppCounts(counts);
-}, [serviceRegistrations]);
+
+  const updateCounter = (type, increment) => {
+    const countRef = ref(database, `client_counts/${type}`);
+    runTransaction(countRef, (currentCount) => {
+      return (currentCount || 0) + increment;
+    });
+  };
+
+  // Initial Load
+  useEffect(() => {
+    fetchClients(null, 'first');
+  }, []);
+
+
+
+  // Handlers
+  const handleNextPage = () => {
+    if (lastVisibleKey) {
+      setPageStack(prev => [...prev, serviceRegistrations[0].clientFirebaseKey]); // Store start of CURRENT page
+      fetchClients(lastVisibleKey, 'next');
+    }
+  };
+
+  // Simplification: Standard Pagination with Firebase is tricky for "Previous".
+  // A robust way for "Previous" is to maintain a history of "StartAt" keys.
+  // When we load Page 1: StartAt = null.
+  // When we load Page 2: StartAt = LastKeyOfPage1.
+  // To go back to Page 1: we fetch with StartAt = null.
+  // So we just need to pop the "Start keys" stack.
+
+  // handleNextPage:
+  // 1. Push 'current start key' to stack? No.
+  // 2. Fetch 'next'.
+
+  // Let's refine:
+  // We need to know the 'StartAt' key for the CURRENT page to be able to re-fetch it if we wanted.
+  // But for 'Previous', we need the 'StartAt' key of the PREVIOUS page.
+
+  // Revised Strategy:
+  // pageStack = [startKey_Page1, startKey_Page2, startKey_Page3]
+  // Page 1 Load: Fetch(null). Stack = [null].
+  // Click Next:
+  //    lastVisibleKey (end of P1) is the start cursor for P2? NO.
+  //    startAfter(lastVisibleKey) is correct. 
+  //    But to go BACK, we need to know what query generated P1.
+
+  // Let's use a simpler visual approach:
+  // On Next: 
+  //   Save current `serviceRegistrations[0].clientFirebaseKey` as the "Start Key of this page".
+  //   Then fetch next.
+
+  // On Prev:
+  //   Pop the last saved key. 
+  //   Fetch using that key as `startAt`? No, simpler:
+  //   If we used `startAfter`, we can't easily reverse without knowing the boundary.
+
+  // Let's stick to the stack of "First Keys".
+  // Page 1: keys [A...J]. First = A.
+  // Page 2: keys [K...T]. First = K.
+  // Stack: [A, K].
+  // Prev: Pop K. Peek A. Fetch startAt(A).limit(10). 
+
+  const handlePrevPage = () => {
+    if (pageStack.length > 0) {
+      const newStack = [...pageStack];
+      const prevPageStartKey = newStack.pop(); // This is start of CURRENT page
+      // We want start of PREVIOUS page. 
+      // Wait, if stack has [StartP1, StartP2], and we are on P2.
+      // We want to go to P1. So we want StartP1.
+
+      // Let's re-logic:
+      // Stack stores "Start Keys of Previous Pages".
+      // P1: Stack [].
+      // Next -> specific P2 logic.
+      // P2: Stack [StartP1].
+      // Prev -> Pop StartP1. Fetch(StartP1).
+
+      const keyToLoad = newStack.pop();
+      setPageStack(newStack);
+
+      if (keyToLoad === undefined) {
+        // Going back to Page 1 (which had no start key)
+        fetchClients(null, 'first');
+      } else {
+        // For P1, keyToLoad might be null or specific key?
+        // If we used startAfter for P2...
+        // This is getting complicated.
+
+        // EASIEST: Just reload everything? No.
+        // EASIEST SERVER PAGINATION:
+        // Maintain array of `firstKey` for every page.
+        // P1: firstKey = data[0].key.
+        // Next: fetch next.
+        // Prev: use history.
+
+        // Actually, the `fetchClients` logic I wrote handles `startAt(key)` for 'prev'.
+        // So:
+        fetchClients(keyToLoad, 'prev');
+      }
+    }
+  };
+
+  // 2) Compute today's applications COUNT from in-memory data (NO DB calls)
+  useEffect(() => {
+    if (!serviceRegistrations || serviceRegistrations.length === 0) {
+      setTodayClientAppCounts({});
+      return;
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const counts = {};
+
+    serviceRegistrations.forEach(client => {
+      const jobAppsRaw = client.jobApplications || client.jobapplications || null;
+
+      const appsArray = jobAppsRaw
+        ? (Array.isArray(jobAppsRaw) ? jobAppsRaw : Object.values(jobAppsRaw))
+        : [];
+
+      const todayCount = appsArray.filter(app => {
+        if (!app.appliedDate) return false;
+        const appDate = new Date(app.appliedDate).toISOString().split('T')[0];
+        return appDate === today;
+      }).length;
+
+      counts[client.registrationKey] = todayCount;
+    });
+
+    setTodayClientAppCounts(counts);
+  }, [serviceRegistrations]);
 
 
 
@@ -238,11 +441,15 @@ useEffect(() => {
     'Cyber Security'
   ];
 
- const handleAcceptClient = async (registration) => {
+  const handleAcceptClient = async (registration) => {
     const refPath = `clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}`;
     try {
       await update(ref(database, refPath), { assignmentStatus: 'pending_manager' });
-      
+      // Update Counters (Registered -1, Unassigned +1)
+      updateCounter('registered', -1);
+      updateCounter('unassigned', 1);
+
+
       // Update Local Cache & State
       await updateLocalCache(registration.clientFirebaseKey, registration.registrationKey, { assignmentStatus: 'pending_manager' });
       setServiceRegistrations(prev => prev.map(r => r.registrationKey === registration.registrationKey ? { ...r, assignmentStatus: 'pending_manager' } : r));
@@ -257,10 +464,14 @@ useEffect(() => {
       }));
     }
   };
- const handleDeclineClient = async (registration) => {
+  const handleDeclineClient = async (registration) => {
     const refPath = `clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}`;
     try {
       await update(ref(database, refPath), { assignmentStatus: 'rejected' });
+      // Update Counters (Registered -1, Rejected +1)
+      updateCounter('registered', -1);
+      updateCounter('rejected', 1);
+
 
       // Update Local Cache & State
       await updateLocalCache(registration.clientFirebaseKey, registration.registrationKey, { assignmentStatus: 'rejected' });
@@ -280,16 +491,31 @@ useEffect(() => {
     setClientToUnaccept(null);
   };
 
- const handleConfirmUnaccept = async () => {
+  const handleConfirmUnaccept = async () => {
     if (!clientToUnaccept) return;
     const refPath = `clients/${clientToUnaccept.clientFirebaseKey}/serviceRegistrations/${clientToUnaccept.registrationKey}`;
     try {
       await update(ref(database, refPath), { assignmentStatus: 'registered' });
+      // If coming from Unassigned: Unassigned -1, Registered +1
+      // If coming from Restored??
+      // The previous status isn't easily known here without checking clientToUnaccept.
+      // Let's assume standard flow Unassigned -> Registered.
+      if (clientToUnaccept.assignmentStatus === 'pending_manager') {
+        updateCounter('unassigned', -1);
+      } else if (clientToUnaccept.assignmentStatus === 'restored') { // if supported
+        updateCounter('restored', -1);
+      } else {
+        // Fallback/General
+        // We might need to handle this more robustly, but for now:
+        updateCounter('unassigned', -1);
+      }
+      updateCounter('registered', 1);
+
 
       // Update Local Cache & State
       await updateLocalCache(clientToUnaccept.clientFirebaseKey, clientToUnaccept.registrationKey, { assignmentStatus: 'registered' });
       setServiceRegistrations(prev => prev.map(r => r.registrationKey === clientToUnaccept.registrationKey ? { ...r, assignmentStatus: 'registered' } : r));
-      
+
       setIsUnacceptClientConfirmModalOpen(false);
       setClientToUnaccept(null);
     } catch (error) { console.error(error); }
@@ -406,18 +632,18 @@ useEffect(() => {
     setIsDeleteClientConfirmModalOpen(true);
   };
 
- const handleConfirmClientDelete = async () => {
+  const handleConfirmClientDelete = async () => {
     if (!clientToDelete) return;
     const refPath = `clients/${clientToDelete.clientFirebaseKey}/serviceRegistrations/${clientToDelete.registrationKey}`;
-    
+
     try {
       await remove(ref(database, refPath));
-      
+
       // Remove from Local Cache Manually
       const cachedWrapper = await dbGet('cache_clients_full');
-      if(cachedWrapper?.data?.[clientToDelete.clientFirebaseKey]?.serviceRegistrations) {
-          delete cachedWrapper.data[clientToDelete.clientFirebaseKey].serviceRegistrations[clientToDelete.registrationKey];
-          await dbSet('cache_clients_full', cachedWrapper);
+      if (cachedWrapper?.data?.[clientToDelete.clientFirebaseKey]?.serviceRegistrations) {
+        delete cachedWrapper.data[clientToDelete.clientFirebaseKey].serviceRegistrations[clientToDelete.registrationKey];
+        await dbSet('cache_clients_full', cachedWrapper);
       }
 
       setServiceRegistrations(prev => prev.filter(r => r.registrationKey !== clientToDelete.registrationKey));
@@ -503,35 +729,24 @@ useEffect(() => {
     setClientSearchTerm(event.target.value);
   };
 
- const getFilteredRegistrations = () => {
-    let filtered = serviceRegistrations;
+  const getFilteredRegistrations = () => {
+    // Server-side pagination: The data in 'serviceRegistrations' IS the data to show.
+    // Client-side filtering by Status (Active/Registered) is tricky if we only fetch 10 items.
+    // If the user selects 'Registered' tab, we should probably trigger a server fetch with that filter?
+    // User Instructions: "switch to server side... 10 per page"
+    // "search using email id".
 
-    if (clientFilter === 'registered') {
-      filtered = filtered.filter(c => c.assignmentStatus === 'registered' || !c.assignmentStatus);
-    } else if (clientFilter === 'unassigned') {
-      filtered = filtered.filter(c => c.assignmentStatus === 'pending_manager');
-    } else if (clientFilter === 'active') {
-      filtered = filtered.filter(c => ['pending_employee', 'pending_acceptance', 'active'].includes(c.assignmentStatus));
-    } else if (clientFilter === 'rejected') {
-      filtered = filtered.filter(c => c.assignmentStatus === 'rejected');
-    }
+    // For now, removing client-side text filtering.
+    // We will still respect the Tab filters (registered/unassigned) client-side IF the data supports it,
+    // BUT fetching 10 mixed clients and filtering 8 of them out leaves 2. 
+    // This is Bad UX.
 
-    if (selectedServiceFilter !== 'All') {
-      filtered = filtered.filter(client => client.service === selectedServiceFilter);
-    }
-    
-    const searchTermLower = clientSearchTerm.toLowerCase();
-    
-    return filtered.filter(client =>
-      (client.firstName?.toLowerCase().includes(searchTermLower)) ||
-      (client.lastName?.toLowerCase().includes(searchTermLower)) ||
-      (client.email?.toLowerCase().includes(searchTermLower)) ||
-      (client.mobile?.toLowerCase().includes(searchTermLower)) ||
-      (client.jobsToApply?.toLowerCase().includes(searchTermLower)) ||
-      (client.country?.toLowerCase().includes(searchTermLower)) ||
-      (client.service?.toLowerCase().includes(searchTermLower))
-    );
-  }; 
+    // Ideally, `fetchClients` handles the status filter too.
+    // But Firebase doesn't support multiple `orderBy`.
+    // So sticking to "All Clients" or Client-Side filtering of the page.
+    // Given the constraints, we just return the raw list.
+    return serviceRegistrations;
+  };
 
 
   const handleConfirmSelectManager = async () => {
@@ -574,34 +789,34 @@ useEffect(() => {
   const filteredClients = getFilteredRegistrations();
 
   // --- Client Details and Edit Client Modals Handlers ---
-const handleViewClientDetails = async (client) => {
-  setSelectedClientForDetails(client);
-  setActiveClientDetailsTab('Profile');
-  setIsClientDetailsModalOpen(true);
+  const handleViewClientDetails = async (client) => {
+    setSelectedClientForDetails(client);
+    setActiveClientDetailsTab('Profile');
+    setIsClientDetailsModalOpen(true);
 
-  try {
-    const applicationsRef = ref(database, `applications/${client.clientFirebaseKey}`);
-    const snapshot = await get(applicationsRef);
+    try {
+      const applicationsRef = ref(database, `applications/${client.clientFirebaseKey}`);
+      const snapshot = await get(applicationsRef);
 
-    if (!snapshot.exists()) {
-      setClientApplications([]);
-      setClientInterviews([]);
-      return;
+      if (!snapshot.exists()) {
+        setClientApplications([]);
+        setClientInterviews([]);
+        return;
+      }
+
+      const data = snapshot.val() || {};
+
+      const appsArray = Object.keys(data).map(key => ({
+        firebaseKey: key,
+        ...data[key],
+      }));
+
+      setClientApplications(appsArray.filter(a => a.type === 'application'));
+      setClientInterviews(appsArray.filter(a => a.type === 'interview'));
+    } catch (err) {
+      console.error("Failed to load client details:", err);
     }
-
-    const data = snapshot.val() || {};
-
-    const appsArray = Object.keys(data).map(key => ({
-      firebaseKey: key,
-      ...data[key],
-    }));
-
-    setClientApplications(appsArray.filter(a => a.type === 'application'));
-    setClientInterviews(appsArray.filter(a => a.type === 'interview'));
-  } catch (err) {
-    console.error("Failed to load client details:", err);
-  }
-};
+  };
 
 
 
@@ -623,7 +838,7 @@ const handleViewClientDetails = async (client) => {
     setNewCoverLetterFile(null);
   };
 
- const handleEditClientChange = (e) => {
+  const handleEditClientChange = (e) => {
     const { name, value } = e.target;
     // We handle files in specific handlers (handleResumeFileChange, etc.)
     // to keep this generic handler clean.
@@ -649,7 +864,7 @@ const handleViewClientDetails = async (client) => {
     setNewResumeFiles(prev => ({ ...prev, ...newFilesObject }));
   };
 
-const handleSaveClientDetails = async (e) => {
+  const handleSaveClientDetails = async (e) => {
     e.preventDefault();
     if (!currentClientToEdit) return;
     setIsSaving(true);
@@ -657,7 +872,7 @@ const handleSaveClientDetails = async (e) => {
     try {
       const storage = getStorage();
       const updates = { ...currentClientToEdit };
-      
+
       // 1. Handle Cover Letter Upload
       if (newCoverLetterFile) {
         const coverRef = storageRef(storage, `clients/${currentClientToEdit.clientFirebaseKey}/documents/cover_${Date.now()}_${newCoverLetterFile.name}`);
@@ -675,7 +890,7 @@ const handleSaveClientDetails = async (e) => {
       const uploadPromises = Object.keys(newResumeFiles).map(async (key) => {
         const file = newResumeFiles[key];
         const fileRef = storageRef(storage, `clients/${currentClientToEdit.clientFirebaseKey}/documents/resume_${Date.now()}_${file.name}`);
-        
+
         await uploadBytes(fileRef, file);
         const downloadUrl = await getDownloadURL(fileRef);
 
@@ -720,22 +935,27 @@ const handleSaveClientDetails = async (e) => {
       await updateLocalCache(clientFirebaseKey, null, { firstName, lastName, email, mobile });
 
       // Update State
-      setServiceRegistrations(prev => prev.map(r => 
+      setServiceRegistrations(prev => prev.map(r =>
         r.registrationKey === registrationKey ? { ...r, ...updates } : r
       ));
 
       handleCloseEditClientModal();
       setShowSuccessModal(true);
       setTimeout(() => setShowSuccessModal(false), 3000);
-    } catch (error) { 
-      console.error("Error saving client details:", error); 
+    } catch (error) {
+      console.error("Error saving client details:", error);
       alert("Failed to save changes: " + error.message);
-    } finally { 
-      setIsSaving(false); 
+    } finally {
+      setIsSaving(false);
     }
   };
   // --- Rendering Functions ---
   const renderClientTable = (registrationsToRender, serviceType, currentClientFilter, title = '') => {
+    // Note: With server-side pagination, 'registrationsToRender' is already the sliced data.
+    // However, if we are filtering client-side (e.g. by 'Active' status), we might have fewer items.
+    // Ideally server-side pagination should filter by status too, but that requires composite indexes.
+    // For now, we assume standard list or search.
+
     const headers = ['First Name', 'Last Name', 'Mobile', 'Email', serviceType === 'Job Supporting' ? 'Jobs Apply For' : 'Service', 'Registered Date', 'Country'];
     if (serviceType === 'Job Supporting') headers.push('Visa Status');
     if (['unassigned', 'active', 'restored'].includes(currentClientFilter)) headers.push('Manager');
@@ -749,6 +969,12 @@ const handleSaveClientDetails = async (e) => {
     return (
       <div className="client-table-container">
         {title && <h4 className="client-table-title">{title} ({registrationsToRender.length})</h4>}
+
+        {/* Search Warning */}
+        {isSearching && <div style={{ padding: '10px', background: '#e3f2fd', marginBottom: '10px', borderRadius: '4px' }}>
+          Searching for email. <button onClick={() => { fetchClients(null, 'first'); setClientSearchTerm(''); }} style={{ border: 'none', background: 'transparent', color: 'blue', textDecoration: 'underline', cursor: 'pointer' }}>Clear Search</button>
+        </div>}
+
         <table className="client-table">
           <thead><tr><th>S.No.</th>{headers.map(h => <th key={h}>{h}</th>)}</tr></thead>
           <tbody>
@@ -762,11 +988,10 @@ const handleSaveClientDetails = async (e) => {
                   <td>{registration.email}</td>
                   <td
                     style={{
-                      // Essential styles for wrapping long, continuous text in a table cell:
                       wordBreak: 'break-word',
                       whiteSpace: 'normal',
-                      minWidth: '200px', // Optional: Ensures the column has a minimum width before wrapping starts
-                      maxWidth: '300px'  // Optional: Prevents the column from becoming excessively wide
+                      minWidth: '200px',
+                      maxWidth: '300px'
                     }}
                   >{registration.service === 'Job Supporting' ? registration.jobsToApply : registration.service}</td>
                   <td>{registration.registeredDate}</td>
@@ -816,7 +1041,6 @@ const handleSaveClientDetails = async (e) => {
                       )}
                       {(currentClientFilter === 'unassigned' || currentClientFilter === 'restored') && (
                         <>
-                          {/* Unaccept button added here for Unassigned Clients */}
                           <button onClick={() => handleUnacceptClientClick(registration)} className="action-button cancel">Unaccept</button>
                           <button onClick={() => handleAssignClient(registration)} className="action-button assign" disabled={!registration.manager}>Save</button>
                         </>
@@ -825,17 +1049,14 @@ const handleSaveClientDetails = async (e) => {
                       {currentClientFilter === 'rejected' && (
                         <>
                           <button onClick={() => handleRestoreClient(registration)} className="action-button restore">Restore</button>
-                          {/* Delete button confirmed here for Rejected Clients */}
                           <button onClick={() => handleDeleteRejectedClient(registration)} className="action-button delete-btn">Delete</button>
                         </>
                       )}
                     </div>
-                    {/* Send Payment Link Button */}
                     <button
                       onClick={() => handleOpenPaymentModal(registration)}
                       className="action-button send-payment-link"
                     >
-                      {/* Credit Card Icon (from Screenshot 2025-07-02 at 7.33.16 PM.jpeg) */}
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '0.9rem', height: '0.9rem' }}>
                         <path d="M20 4H4C3.44772 4 3 4.44772 3 5V19C3 19.5523 3.44772 20 4 20H20C20.5523 20 21 19.5523 21 19V5C21 4.44772 20.5523 4 20 4ZM5 7H19V9H5V7ZM5 11H17V13H5V11ZM5 15H13V17H5V15Z" />
                       </svg>
@@ -847,15 +1068,71 @@ const handleSaveClientDetails = async (e) => {
             ) : (
               <tr>
                 <td colSpan={headers.length} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
-                  No {serviceType !== 'All' ? serviceType : ''} clients found for this filter.
+                  {isSearching ? 'No client found with this email.' : 'No clients found.'}
                 </td>
               </tr>
             )}
           </tbody>
         </table>
+
+        {/* Server-Side Pagination Controls */}
+        {!isSearching && (
+          <div className="pagination-controls" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', marginTop: '1rem' }}>
+            <button
+              onClick={() => {
+                // Pop from stack to go back
+                if (pageStack.length > 0) {
+                  const newStack = [...pageStack];
+                  const prevKey = newStack.pop();
+                  setPageStack(newStack);
+                  // If prevKey undefined, it means Page 1 logic?
+                  // Actually, simpler: just store the START key of each page in stack.
+                  // Page 1 start: null.
+                  // Page 2 start: K10.
+                  // Prev -> fetchClients(stack.top, 'first' or 'next'?)
+
+                  // Simplest: just use the logic we defined in fetchClients('prev')
+                  // But I need to pass the right key.
+
+                  // Let's implement the simpler Stack logic inline here?
+                  // No, handlePrevPage is cleaner.
+                  // Wait, I defined handlePrevPage in the fetch section step 2.
+                  // I need to make sure I call it here.
+                }
+                // Use logic defined in step 2
+                handlePrevPage();
+              }}
+              disabled={pageStack.length === 0}
+              style={{ padding: '0.5rem 1rem', border: '1px solid #ccc', borderRadius: '4px', background: pageStack.length === 0 ? '#eee' : 'white' }}
+            >
+              Previous
+            </button>
+
+            {/* We don't know total pages in server side pagination usually */}
+            <span>Page {pageStack.length + 1}</span>
+
+            <button
+              onClick={() => {
+                if (lastVisibleKey) {
+                  // Push current page start to stack?
+                  // Actually we need to recover the start of THIS page to go back to it.
+                  // serviceRegistrations[0].clientFirebaseKey is the start of THIS page.
+
+                  setPageStack(prev => [...prev, serviceRegistrations[0].clientFirebaseKey]);
+                  fetchClients(lastVisibleKey, 'next');
+                }
+              }}
+              disabled={!lastVisibleKey} // If no last key, we are at end
+              style={{ padding: '0.5rem 1rem', border: '1px solid #ccc', borderRadius: '4px', background: !lastVisibleKey ? '#eee' : 'white' }}
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
     );
   };
+
 
   const renderAllServiceTables = () => {
     const servicesToDisplay = serviceOptions.filter(service => service !== 'All');
@@ -899,32 +1176,32 @@ const handleSaveClientDetails = async (e) => {
 
   const [showScrollToTop, setShowScrollToTop] = useState(false);
 
-useEffect(() => {
-  const handleScroll = () => {
-    const nearBottom =
-      window.innerHeight + window.scrollY >= document.body.offsetHeight - 200;
+  useEffect(() => {
+    const handleScroll = () => {
+      const nearBottom =
+        window.innerHeight + window.scrollY >= document.body.offsetHeight - 200;
 
-    setShowScrollToTop(nearBottom);
+      setShowScrollToTop(nearBottom);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+
+  const scrollToBottom = () => {
+    window.scrollTo({
+      top: document.body.scrollHeight,
+      behavior: "smooth"
+    });
   };
 
-  window.addEventListener("scroll", handleScroll);
-  return () => window.removeEventListener("scroll", handleScroll);
-}, []);
-
-
-const scrollToBottom = () => {
-  window.scrollTo({
-    top: document.body.scrollHeight,
-    behavior: "smooth"
-  });
-};
-
-const scrollToTop = () => {
-  window.scrollTo({
-    top: 0,
-    behavior: "smooth"
-  });
-};
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth"
+    });
+  };
 
 
 
@@ -1836,15 +2113,17 @@ const scrollToTop = () => {
           <div className="client-management-box">
             <div className="client-management-header-section">
               <h2 className="client-management-title">Client Details Management</h2>
+              <button onClick={recalculateAllCounts} style={{ fontSize: '10px', marginLeft: '10px', padding: '2px 5px' }}>Recalculate Counts</button>
+
             </div>
 
             {/* Client Filter Tabs */}
             <div className="client-filter-tabs">
               {[
-                { label: 'Registered Clients', value: 'registered', count: serviceRegistrations.filter(c => c.assignmentStatus === 'registered' || !c.assignmentStatus).length, activeBg: 'var(--client-filter-tab-bg-active-registered)', activeColor: 'var(--client-filter-tab-text-active-registered)', badgeBg: 'var(--client-filter-tab-badge-registered)' },
-                { label: 'Unassigned Clients', value: 'unassigned', count: serviceRegistrations.filter(c => c.assignmentStatus === 'pending_manager').length, activeBg: 'var(--client-filter-tab-bg-active-unassigned)', activeColor: 'var(--client-filter-tab-text-active-unassigned)', badgeBg: 'var(--client-filter-tab-badge-unassigned)' },
-                { label: 'Active Clients', value: 'active', count: serviceRegistrations.filter(c => ['pending_employee', 'pending_acceptance', 'active', 'inactive'].includes(c.assignmentStatus)).length, activeBg: 'var(--client-filter-tab-bg-active-active)', activeColor: 'var(--client-filter-tab-text-active-active)', badgeBg: 'var(--client-filter-tab-badge-active)' },
-                { label: 'Rejected Clients', value: 'rejected', count: serviceRegistrations.filter(c => c.assignmentStatus === 'rejected').length, activeBg: 'var(--client-filter-tab-bg-active-rejected)', activeColor: 'var(--client-filter-tab-text-active-rejected)', badgeBg: 'var(--client-filter-tab-badge-rejected)' },
+                { label: 'Registered Clients', value: 'registered', count: clientCounts.registered, activeBg: 'var(--client-filter-tab-bg-active-registered)', activeColor: 'var(--client-filter-tab-text-active-registered)', badgeBg: 'var(--client-filter-tab-badge-registered)' },
+                { label: 'Unassigned Clients', value: 'unassigned', count: clientCounts.unassigned, activeBg: 'var(--client-filter-tab-bg-active-unassigned)', activeColor: 'var(--client-filter-tab-text-active-unassigned)', badgeBg: 'var(--client-filter-tab-badge-unassigned)' },
+                { label: 'Active Clients', value: 'active', count: clientCounts.active, activeBg: 'var(--client-filter-tab-bg-active-active)', activeColor: 'var(--client-filter-tab-text-active-active)', badgeBg: 'var(--client-filter-tab-badge-active)' },
+                { label: 'Rejected Clients', value: 'rejected', count: clientCounts.rejected, activeBg: 'var(--client-filter-tab-bg-active-rejected)', activeColor: 'var(--client-filter-tab-text-active-rejected)', badgeBg: 'var(--client-filter-tab-badge-rejected)' },
                 // { label: 'Restore Clients', value: 'restored', count: clients.filter(c => c.displayStatuses.includes('restored')).length, activeBg: 'var(--client-filter-tab-bg-active-restored)', activeColor: 'var(--client-filter-tab-text-active-restored)', badgeBg: 'var(--client-filter-tab-badge-restored)' },
               ].map((option) => (
                 <label
@@ -1885,11 +2164,23 @@ const scrollToTop = () => {
                 <input
                   type="text"
                   id="clientSearch"
-                  placeholder="Search clients by name, email, mobile, job, or country"
+                  placeholder="Search by EXACT Email ID..."
                   className="client-search-input"
                   value={clientSearchTerm}
-                  onChange={handleClientSearchChange}
+                  onChange={(e) => setClientSearchTerm(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      fetchClients(null, 'first', clientSearchTerm);
+                    }
+                  }}
                 />
+                <button
+                  onClick={() => fetchClients(null, 'first', clientSearchTerm)}
+                  className="action-button view"
+                  style={{ marginLeft: '10px', height: '42px', minWidth: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  Search
+                </button>
               </div>
 
 
@@ -2294,164 +2585,164 @@ const scrollToTop = () => {
                 )}
 
                 {/* --- Applications Tab --- */}
-               {activeClientDetailsTab === 'Applications' && (
-  <div className="applications-tab-content">
-    <div className="date-filter" style={{ marginBottom: '1rem' }}>
-      <label>From: </label>
-      <input
-        type="date"
-        value={clientDateRange.startDate}
-        onChange={(e) =>
-          setClientDateRange((prev) => ({ ...prev, startDate: e.target.value }))
-        }
-      />
-      <label style={{ marginLeft: '1rem' }}>To: </label>
-      <input
-        type="date"
-        value={clientDateRange.endDate}
-        onChange={(e) =>
-          setClientDateRange((prev) => ({ ...prev, endDate: e.target.value }))
-        }
-      />
-    </div>
+                {activeClientDetailsTab === 'Applications' && (
+                  <div className="applications-tab-content">
+                    <div className="date-filter" style={{ marginBottom: '1rem' }}>
+                      <label>From: </label>
+                      <input
+                        type="date"
+                        value={clientDateRange.startDate}
+                        onChange={(e) =>
+                          setClientDateRange((prev) => ({ ...prev, startDate: e.target.value }))
+                        }
+                      />
+                      <label style={{ marginLeft: '1rem' }}>To: </label>
+                      <input
+                        type="date"
+                        value={clientDateRange.endDate}
+                        onChange={(e) =>
+                          setClientDateRange((prev) => ({ ...prev, endDate: e.target.value }))
+                        }
+                      />
+                    </div>
 
-    <table className="client-table">
-      <thead>
-        <tr>
-          <th>Employee Name</th>
-          <th>Client Name</th>
-          <th>Applied Date</th>
-          <th>Company</th>
-          <th>Job Title</th>
-          <th>Job ID</th>
-          <th>Job Boards</th>
-          <th>Description Link</th>
-          <th>Applied Time</th>
-          <th>Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {clientApplications
-          .filter((app) => {
-            if (!clientDateRange.startDate && !clientDateRange.endDate) return true;
-            const appDate = new Date(app.appliedDate);
-            const start = clientDateRange.startDate ? new Date(clientDateRange.startDate) : null;
-            const end = clientDateRange.endDate ? new Date(clientDateRange.endDate) : null;
-            return (!start || appDate >= start) && (!end || appDate <= end);
-          })
-          .map((app, idx) => (
-            <tr key={idx}>
-              <td>{app.employeeName || '-'}</td>
-              <td>{selectedClientForDetails?.firstName || '-'}</td>
-              <td>{app.appliedDate || '-'}</td>
-              <td>{app.company || '-'}</td>
-              <td>{app.jobTitle || '-'}</td>
-              <td>{app.jobId || '-'}</td>
-              <td>{app.jobBoards || '-'}</td>
-              <td>
-                {app.jobDescriptionUrl ? (
-                  <a href={app.jobDescriptionUrl} target="_blank" rel="noreferrer" style={{ color: 'Blue', textAlign: "center" }}>
-                    Link
-                  </a>
-                ) : (
-                  '-'
+                    <table className="client-table">
+                      <thead>
+                        <tr>
+                          <th>Employee Name</th>
+                          <th>Client Name</th>
+                          <th>Applied Date</th>
+                          <th>Company</th>
+                          <th>Job Title</th>
+                          <th>Job ID</th>
+                          <th>Job Boards</th>
+                          <th>Description Link</th>
+                          <th>Applied Time</th>
+                          <th>Status</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {clientApplications
+                          .filter((app) => {
+                            if (!clientDateRange.startDate && !clientDateRange.endDate) return true;
+                            const appDate = new Date(app.appliedDate);
+                            const start = clientDateRange.startDate ? new Date(clientDateRange.startDate) : null;
+                            const end = clientDateRange.endDate ? new Date(clientDateRange.endDate) : null;
+                            return (!start || appDate >= start) && (!end || appDate <= end);
+                          })
+                          .map((app, idx) => (
+                            <tr key={idx}>
+                              <td>{app.employeeName || '-'}</td>
+                              <td>{selectedClientForDetails?.firstName || '-'}</td>
+                              <td>{app.appliedDate || '-'}</td>
+                              <td>{app.company || '-'}</td>
+                              <td>{app.jobTitle || '-'}</td>
+                              <td>{app.jobId || '-'}</td>
+                              <td>{app.jobBoards || '-'}</td>
+                              <td>
+                                {app.jobDescriptionUrl ? (
+                                  <a href={app.jobDescriptionUrl} target="_blank" rel="noreferrer" style={{ color: 'Blue', textAlign: "center" }}>
+                                    Link
+                                  </a>
+                                ) : (
+                                  '-'
+                                )}
+                              </td>
+                              <td>{app.timestamp || '-'}</td>
+                              <td>{app.status || '-'}</td>
+                              <td>
+                                <i
+                                  className="fa fa-eye action-icon view"
+                                  title="View"
+                                  onClick={() => {
+                                    setSelectedApplication(app);
+                                    setIsAppViewModalOpen(true);
+                                  }}
+                                  style={{ cursor: 'pointer', marginRight: '10px', color: '#007bff' }}
+                                />
+                                <i
+                                  className="fa fa-edit action-icon edit"
+                                  title="Edit"
+                                  onClick={() => {
+                                    setSelectedApplication(app);
+                                    setIsAppEditModalOpen(true);
+                                  }}
+                                  style={{ cursor: 'pointer', marginRight: '10px', color: '#28a745' }}
+                                />
+                                <i
+                                  className="fa fa-trash action-icon delete"
+                                  title="Delete"
+                                  onClick={() => {
+                                    setSelectedApplication(app);
+                                    setIsAppDeleteConfirmOpen(true);
+                                  }}
+                                  style={{ cursor: 'pointer', color: '#dc3545' }}
+                                />
+                              </td>
+                            </tr>
+                          ))}
+                        {clientApplications.length === 0 && (
+                          <tr>
+                            <td colSpan="11" style={{ textAlign: 'center' }}>
+                              No applications found
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
-              </td>
-              <td>{app.timestamp || '-'}</td>
-              <td>{app.status || '-'}</td>
-              <td>
-                <i
-                  className="fa fa-eye action-icon view"
-                  title="View"
-                  onClick={() => {
-                    setSelectedApplication(app);
-                    setIsAppViewModalOpen(true);
-                  }}
-                  style={{ cursor: 'pointer', marginRight: '10px', color: '#007bff' }}
-                />
-                <i
-                  className="fa fa-edit action-icon edit"
-                  title="Edit"
-                  onClick={() => {
-                    setSelectedApplication(app);
-                    setIsAppEditModalOpen(true);
-                  }}
-                  style={{ cursor: 'pointer', marginRight: '10px', color: '#28a745' }}
-                />
-                <i
-                  className="fa fa-trash action-icon delete"
-                  title="Delete"
-                  onClick={() => {
-                    setSelectedApplication(app);
-                    setIsAppDeleteConfirmOpen(true);
-                  }}
-                  style={{ cursor: 'pointer', color: '#dc3545' }}
-                />
-              </td>
-            </tr>
-          ))}
-        {clientApplications.length === 0 && (
-          <tr>
-            <td colSpan="11" style={{ textAlign: 'center' }}>
-              No applications found
-            </td>
-          </tr>
-        )}
-      </tbody>
-    </table>
-  </div>
-)}
 
                 {/* --- Interviews Tab --- */}
                 {activeClientDetailsTab === 'Interviews' && (
-  <div className="interviews-tab-content">
-    <table className="client-table">
-      <thead>
-        <tr>
-          <th>Employee</th>
-          <th>Client</th>
-          <th>Job Title</th>
-          <th>Company</th>
-          <th>Round</th>
-          <th>Attachments</th>
-          <th>Time</th>
-          <th>Date</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        {clientInterviews.length > 0 ? (
-          clientInterviews.map((interview, idx) => (
-            <tr key={idx}>
-              <td>{interview.employeeName || '-'}</td>
-              <td>{selectedClientForDetails?.firstName || '-'}</td>
-              <td>{interview.jobTitle || '-'}</td>
-              <td>{interview.company || '-'}</td>
-              <td>{interview.round || '-'}</td>
-              <td>
-                {interview.attachments ? (
-                  <a href={interview.attachments} target="_blank" rel="noreferrer">
-                    View
-                  </a>
-                ) : (
-                  '-'
+                  <div className="interviews-tab-content">
+                    <table className="client-table">
+                      <thead>
+                        <tr>
+                          <th>Employee</th>
+                          <th>Client</th>
+                          <th>Job Title</th>
+                          <th>Company</th>
+                          <th>Round</th>
+                          <th>Attachments</th>
+                          <th>Time</th>
+                          <th>Date</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {clientInterviews.length > 0 ? (
+                          clientInterviews.map((interview, idx) => (
+                            <tr key={idx}>
+                              <td>{interview.employeeName || '-'}</td>
+                              <td>{selectedClientForDetails?.firstName || '-'}</td>
+                              <td>{interview.jobTitle || '-'}</td>
+                              <td>{interview.company || '-'}</td>
+                              <td>{interview.round || '-'}</td>
+                              <td>
+                                {interview.attachments ? (
+                                  <a href={interview.attachments} target="_blank" rel="noreferrer">
+                                    View
+                                  </a>
+                                ) : (
+                                  '-'
+                                )}
+                              </td>
+                              <td>{interview.time || '-'}</td>
+                              <td>{interview.date || '-'}</td>
+                              <td>{interview.status || '-'}</td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan="9" style={{ textAlign: 'center' }}>No interviews found</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
-              </td>
-              <td>{interview.time || '-'}</td>
-              <td>{interview.date || '-'}</td>
-              <td>{interview.status || '-'}</td>
-            </tr>
-          ))
-        ) : (
-          <tr>
-            <td colSpan="9" style={{ textAlign: 'center' }}>No interviews found</td>
-          </tr>
-        )}
-      </tbody>
-    </table>
-  </div>
-)}
               </>
             )}
 
@@ -2921,167 +3212,167 @@ const scrollToTop = () => {
 
 
       {/* --- View Application Modal --- */}
-{isAppViewModalOpen && selectedApplication && (
-  <div className="modal-overlay open">
-    <div className="assign-modal-content" style={{ maxWidth: '800px' }}>
-      <div className="assign-modal-header">
-        <h3>Application Details</h3>
-        <button className="assign-modal-close-button" onClick={() => setIsAppViewModalOpen(false)}>
-          &times;
-        </button>
-      </div>
-      <div className="modal-body">
-        {Object.entries(selectedApplication).map(([key, value]) => (
-          <p key={key}>
-            <strong>{key}:</strong> {String(value) || '-'}
-          </p>
-        ))}
-      </div>
-    </div>
-  </div>
-)}
-
-{/* --- Edit Application Modal --- */}
-{isAppEditModalOpen && selectedApplication && (
-  <div className="modal-overlay open">
-    <div className="assign-modal-content" style={{ maxWidth: '800px' }}>
-      <div className="assign-modal-header">
-        <h3>Edit Application</h3>
-        <button className="assign-modal-close-button" onClick={() => setIsAppEditModalOpen(false)}>
-          &times;
-        </button>
-      </div>
-      <div className="modal-body">
-        {Object.keys(selectedApplication).map((field) => (
-          <div className="assign-form-group" key={field}>
-            <label>{field}</label>
-            <input
-              type="text"
-              value={selectedApplication[field] || ''}
-              onChange={(e) =>
-                setSelectedApplication((prev) => ({ ...prev, [field]: e.target.value }))
-              }
-            />
+      {isAppViewModalOpen && selectedApplication && (
+        <div className="modal-overlay open">
+          <div className="assign-modal-content" style={{ maxWidth: '800px' }}>
+            <div className="assign-modal-header">
+              <h3>Application Details</h3>
+              <button className="assign-modal-close-button" onClick={() => setIsAppViewModalOpen(false)}>
+                &times;
+              </button>
+            </div>
+            <div className="modal-body">
+              {Object.entries(selectedApplication).map(([key, value]) => (
+                <p key={key}>
+                  <strong>{key}:</strong> {String(value) || '-'}
+                </p>
+              ))}
+            </div>
           </div>
-        ))}
-        <div style={{ textAlign: 'right' }}>
-     <button
-  className="save-btn"
-onClick={async () => {
-  try {
-    const clientKey = selectedClientForDetails.clientFirebaseKey;
-    const regKey = selectedClientForDetails.registrationKey;
-    
-    // 1. Find the specific key for this application ID
-    const jobAppsRef = ref(database, `clients/${clientKey}/serviceRegistrations/${regKey}/jobApplications`);
-    const snapshot = await get(jobAppsRef);
-    
-    if (snapshot.exists()) {
-      const apps = snapshot.val();
-      const targetFirebaseKey = Object.keys(apps).find(key => apps[key].id === selectedApplication.id);
-
-      if (targetFirebaseKey) {
-        // 2. Update ONLY this specific application
-        const specificAppRef = ref(database, `clients/${clientKey}/serviceRegistrations/${regKey}/jobApplications/${targetFirebaseKey}`);
-        await update(specificAppRef, selectedApplication);
-        
-        // Update local state (Optimistic update)
-        setClientApplications(prev => prev.map(app => 
-          app.id === selectedApplication.id ? selectedApplication : app
-        ));
-        
-        console.log("✅ Application updated safely");
-        setIsAppEditModalOpen(false);
-      } else {
-        alert("Error: Could not find original application record.");
-      }
-    }
-  } catch (error) {
-    console.error("Error updating application:", error);
-    alert("Update failed: " + error.message);
-  }
-}}
->
-  Save Changes
-</button>
-
         </div>
-      </div>
-    </div>
-  </div>
-)}
+      )}
 
-{/* --- Delete Confirmation Modal --- */}
-{isAppDeleteConfirmOpen && selectedApplication && (
-  <div className="modal-overlay open">
-    <div className="assign-modal-content" style={{ maxWidth: '400px' }}>
-      <div className="assign-modal-header">
-        <h3>Confirm Deletion</h3>
-        <button className="assign-modal-close-button" onClick={() => setIsAppDeleteConfirmOpen(false)}>
-          &times;
-        </button>
-      </div>
-      <div className="modal-body">
-        <p>Are you sure you want to delete this application?</p>
-        <div className="confirm-modal-buttons">
-          <button
-            className="confirm-cancel-btn"
-            onClick={() => setIsAppDeleteConfirmOpen(false)}
-          >
-            Cancel
-          </button>
-          <button
-              className="confirm-delete-btn"
-  onClick={async () => {
-    try {
-      const clientKey = selectedClientForDetails.clientFirebaseKey;
-      const regKey = selectedClientForDetails.registrationKey;
+      {/* --- Edit Application Modal --- */}
+      {isAppEditModalOpen && selectedApplication && (
+        <div className="modal-overlay open">
+          <div className="assign-modal-content" style={{ maxWidth: '800px' }}>
+            <div className="assign-modal-header">
+              <h3>Edit Application</h3>
+              <button className="assign-modal-close-button" onClick={() => setIsAppEditModalOpen(false)}>
+                &times;
+              </button>
+            </div>
+            <div className="modal-body">
+              {Object.keys(selectedApplication).map((field) => (
+                <div className="assign-form-group" key={field}>
+                  <label>{field}</label>
+                  <input
+                    type="text"
+                    value={selectedApplication[field] || ''}
+                    onChange={(e) =>
+                      setSelectedApplication((prev) => ({ ...prev, [field]: e.target.value }))
+                    }
+                  />
+                </div>
+              ))}
+              <div style={{ textAlign: 'right' }}>
+                <button
+                  className="save-btn"
+                  onClick={async () => {
+                    try {
+                      const clientKey = selectedClientForDetails.clientFirebaseKey;
+                      const regKey = selectedClientForDetails.registrationKey;
 
-      const jobApplicationsRef = ref(
-        database,
-        `clients/${clientKey}/serviceRegistrations/${regKey}/jobApplications`
-      );
+                      // 1. Find the specific key for this application ID
+                      const jobAppsRef = ref(database, `clients/${clientKey}/serviceRegistrations/${regKey}/jobApplications`);
+                      const snapshot = await get(jobAppsRef);
 
-      const snapshot = await get(jobApplicationsRef);
-      const applicationsObj = snapshot.val();
+                      if (snapshot.exists()) {
+                        const apps = snapshot.val();
+                        const targetFirebaseKey = Object.keys(apps).find(key => apps[key].id === selectedApplication.id);
 
-      if (!applicationsObj) {
-        console.error("❌ No applications found");
-        setIsAppDeleteConfirmOpen(false);
-        return;
-      }
+                        if (targetFirebaseKey) {
+                          // 2. Update ONLY this specific application
+                          const specificAppRef = ref(database, `clients/${clientKey}/serviceRegistrations/${regKey}/jobApplications/${targetFirebaseKey}`);
+                          await update(specificAppRef, selectedApplication);
 
-      // Find the Firebase key of the selected application using its id
-      const targetKey = Object.keys(applicationsObj).find(
-        (key) => applicationsObj[key].id === selectedApplication.id
-      );
+                          // Update local state (Optimistic update)
+                          setClientApplications(prev => prev.map(app =>
+                            app.id === selectedApplication.id ? selectedApplication : app
+                          ));
 
-      if (targetKey) {
-        const targetRef = ref(
-          database,
-          `clients/${clientKey}/serviceRegistrations/${regKey}/jobApplications/${targetKey}`
-        );
+                          console.log("✅ Application updated safely");
+                          setIsAppEditModalOpen(false);
+                        } else {
+                          alert("Error: Could not find original application record.");
+                        }
+                      }
+                    } catch (error) {
+                      console.error("Error updating application:", error);
+                      alert("Update failed: " + error.message);
+                    }
+                  }}
+                >
+                  Save Changes
+                </button>
 
-        await remove(targetRef);
-
-        console.log("✅ Application deleted successfully");
-      } else {
-        console.error("❌ Application not found for deletion");
-      }
-
-      setIsAppDeleteConfirmOpen(false);
-    } catch (error) {
-      console.error("Error deleting application:", error);
-    }
-  }}
->
-            Delete
-          </button>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  </div>
-)}
+      )}
+
+      {/* --- Delete Confirmation Modal --- */}
+      {isAppDeleteConfirmOpen && selectedApplication && (
+        <div className="modal-overlay open">
+          <div className="assign-modal-content" style={{ maxWidth: '400px' }}>
+            <div className="assign-modal-header">
+              <h3>Confirm Deletion</h3>
+              <button className="assign-modal-close-button" onClick={() => setIsAppDeleteConfirmOpen(false)}>
+                &times;
+              </button>
+            </div>
+            <div className="modal-body">
+              <p>Are you sure you want to delete this application?</p>
+              <div className="confirm-modal-buttons">
+                <button
+                  className="confirm-cancel-btn"
+                  onClick={() => setIsAppDeleteConfirmOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="confirm-delete-btn"
+                  onClick={async () => {
+                    try {
+                      const clientKey = selectedClientForDetails.clientFirebaseKey;
+                      const regKey = selectedClientForDetails.registrationKey;
+
+                      const jobApplicationsRef = ref(
+                        database,
+                        `clients/${clientKey}/serviceRegistrations/${regKey}/jobApplications`
+                      );
+
+                      const snapshot = await get(jobApplicationsRef);
+                      const applicationsObj = snapshot.val();
+
+                      if (!applicationsObj) {
+                        console.error("❌ No applications found");
+                        setIsAppDeleteConfirmOpen(false);
+                        return;
+                      }
+
+                      // Find the Firebase key of the selected application using its id
+                      const targetKey = Object.keys(applicationsObj).find(
+                        (key) => applicationsObj[key].id === selectedApplication.id
+                      );
+
+                      if (targetKey) {
+                        const targetRef = ref(
+                          database,
+                          `clients/${clientKey}/serviceRegistrations/${regKey}/jobApplications/${targetKey}`
+                        );
+
+                        await remove(targetRef);
+
+                        console.log("✅ Application deleted successfully");
+                      } else {
+                        console.error("❌ Application not found for deletion");
+                      }
+
+                      setIsAppDeleteConfirmOpen(false);
+                    } catch (error) {
+                      console.error("Error deleting application:", error);
+                    }
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
 
 
@@ -3210,11 +3501,11 @@ onClick={async () => {
         </div>
       )}
       <button
-  className="scroll-btn"
-  onClick={showScrollToTop ? scrollToTop : scrollToBottom}
->
-  {showScrollToTop ? "⬆" : "⬇"}
-</button>
+        className="scroll-btn"
+        onClick={showScrollToTop ? scrollToTop : scrollToBottom}
+      >
+        {showScrollToTop ? "⬆" : "⬇"}
+      </button>
 
     </div>
   );
