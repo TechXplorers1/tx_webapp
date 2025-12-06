@@ -207,9 +207,10 @@ const ContactPage = () => {
         .email-card {
             background: linear-gradient(45deg, #007bff, #0056b3);
             color: white;
-            padding: 1.5rem;
+            padding: 2.5rem;
             border-radius: 1rem;
-            margin-bottom: 1rem;
+            margin-top: 2rem;
+            margin-bottom: 2rem;
             text-align: center;
             transition: transform 0.3s ease;
         }
@@ -315,21 +316,21 @@ const ContactPage = () => {
                                 <div className="contact-card" data-aos="fade-left">
                                     <h3>Contact Information</h3>
                                     <div>
-                                        <div className="email-card" style={{background: 'linear-gradient(45deg, #1a75ff, #3399ff)'}}>
+                                        <div className="email-card" style={{background: 'linear-gradient(45deg, #28a745, #20c997)'}}>
+                                            <div className="icon"><FontAwesomeIcon icon={faEnvelope} /></div>
+                                            <div className="email-label">Inquiries</div>
+                                            <a href="mailto:inquiries@techxplorers.in" className="email-address">inquiries@techxplorers.in</a>
+                                        </div>
+                                            <div className="email-card" style={{background: 'linear-gradient(45deg, #6f42c1, #8a63d2)'}}>
                                             <div className="icon"><FontAwesomeIcon icon={faEnvelope} /></div>
                                             <div className="email-label">HR Department</div>
                                             <a href="mailto:txhr@techxplores.in" className="email-address">txhr@techxplores.in</a>
                                         </div>
-                                        <div className="email-card" style={{background: 'linear-gradient(45deg, #28a745, #20c997)'}}>
-                                            <div className="icon"><FontAwesomeIcon icon={faEnvelope} /></div>
-                                            <div className="email-label">Sales Inquiries</div>
-                                            <a href="mailto:sales@techxplores.in" className="email-address">sales@techxplores.in</a>
-                                        </div>
-                                        <div className="email-card" style={{background: 'linear-gradient(45deg, #6f42c1, #8a63d2)'}}>
+                                        {/* <div className="email-card" style={{background: 'linear-gradient(45deg, #6f42c1, #8a63d2)'}}>
                                             <div className="icon"><FontAwesomeIcon icon={faEnvelope} /></div>
                                             <div className="email-label">General Support</div>
                                             <a href="mailto:support@techxplores.in" className="email-address">support@techxplores.in</a>
-                                        </div>
+                                        </div> */}
                                     </div>
                                 </div>
                             </Col>
