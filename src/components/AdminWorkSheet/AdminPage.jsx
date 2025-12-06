@@ -8,7 +8,7 @@ import RequestManagement from './RequestManagement';
 import ProjectManagement from './ProjectManagement';
 import AdsManagement from './AdsManagement';
 import { database } from '../../firebase'; // Import your Firebase config
-import { ref, update } from "firebase/database"; // Import update function
+import { ref, update , get} from "firebase/database"; // Import update function
 
 const AdminPage = () => {
   const navigate = useNavigate();
@@ -23,7 +23,7 @@ const AdminPage = () => {
     email: 'admin@techxplorers.com',
     mobile: '+91 99999 88888',
     lastLogin: new Date().toLocaleString(),
-        // Add default values for all profile fields
+    // Add default values for all profile fields
     firstName: 'Admin',
     lastName: 'User',
     dateOfBirth: '',
@@ -43,7 +43,7 @@ const AdminPage = () => {
     const loggedInUserData = sessionStorage.getItem('loggedInEmployee');
     if (loggedInUserData) {
       const userData = JSON.parse(loggedInUserData);
-        // Ensure all profile fields have values
+      // Ensure all profile fields have values
       // Set the full user object to state
       const completeUserData = {
         ...userProfile, // Use defaults as fallback
@@ -51,7 +51,7 @@ const AdminPage = () => {
         // Make sure name is properly split if needed
         firstName: userData.firstName || (userData.name ? userData.name.split(' ')[0] : 'Admin'),
         lastName: userData.lastName || (userData.name && userData.name.split(' ').length > 1
-                  ? userData.name.split(' ').slice(1).join(' ') : 'User')
+          ? userData.name.split(' ').slice(1).join(' ') : 'User')
       };
       setUserProfile(completeUserData);
     }
@@ -64,7 +64,7 @@ const AdminPage = () => {
     return nameParts[0]?.charAt(0).toUpperCase() || '';
   };
 
-// In AdminPage.jsx, ADD this new useEffect hook
+  // In AdminPage.jsx, ADD this new useEffect hook
 
   // This effect handles the setup when the profile modal is opened.
   useEffect(() => {
@@ -97,17 +97,17 @@ const AdminPage = () => {
         ...editableProfile,
         name: `${editableProfile.firstName} ${editableProfile.lastName}`.trim()
       };
-      
+
       // If we have a firebaseKey, update in Firebase
       if (userProfile.firebaseKey) {
         const userRef = ref(database, `users/${userProfile.firebaseKey}`);
         await update(userRef, updatedProfile);
       }
-      
+
       // Update local state and session storage to reflect changes immediately
       setUserProfile(updatedProfile);
       sessionStorage.setItem('loggedInEmployee', JSON.stringify(updatedProfile));
-      
+
       setIsEditingUserProfile(false);
       alert('Profile updated successfully!');
     } catch (error) {
@@ -139,8 +139,54 @@ const AdminPage = () => {
     { value: 'requestManagement', label: 'Request Management' },
     { value: 'projectManagement', label: 'Project Management' },
     { value: 'adsManagement', label: 'Ads Management' },
-    
+
   ];
+  // // --- MIGRATION TOOL ---
+  // const runOneTimeMigration = async () => {
+  //   if (!window.confirm("This will scan all clients and build the optimized index. Run this only once. Continue?")) return;
+
+  //   try {
+  //     const allClientsSnap = await get(ref(database, 'clients'));
+  //     if (!allClientsSnap.exists()) return alert("No clients found.");
+
+  //     const allClients = allClientsSnap.val();
+  //     const updates = {};
+  //     let count = 0;
+
+  //     Object.keys(allClients).forEach(clientKey => {
+  //       const regs = allClients[clientKey].serviceRegistrations;
+  //       if (regs) {
+  //         Object.keys(regs).forEach(regKey => {
+  //           const reg = regs[regKey];
+  //           // If assigned to an employee, add to the index
+  //           if (reg.assignedTo) {
+  //             const employeeId = reg.assignedTo;
+  //             const assignmentKey = `${clientKey}_${regKey}`;
+  //             const path = `employee_assignments/${employeeId}/${assignmentKey}`;
+
+  //             updates[path] = {
+  //               clientFirebaseKey: clientKey,
+  //               registrationKey: regKey,
+  //               clientName: `${reg.firstName} ${reg.lastName}`,
+  //               status: reg.assignmentStatus || 'active'
+  //             };
+  //             count++;
+  //           }
+  //         });
+  //       }
+  //     });
+
+  //     if (count > 0) {
+  //       await update(ref(database), updates);
+  //       alert(`Migration Successful! Indexed ${count} assignments.`);
+  //     } else {
+  //       alert("No assignments found to migrate.");
+  //     }
+  //   } catch (e) {
+  //     console.error(e);
+  //     alert("Migration failed: " + e.message);
+  //   }
+  // };
 
   return (
     <div className="ad-body-container">
@@ -311,7 +357,7 @@ const AdminPage = () => {
       </style>
       <header className="ad-header">
         <div className="ad-header-left">
-          <div className="ad-logo" style={{cursor:'pointer'}} onClick={() => navigate('/')}>
+          <div className="ad-logo" style={{ cursor: 'pointer' }} onClick={() => navigate('/')}>
             <span>Tech</span><span className="ad-logo-x">X</span><span>plorers</span>
           </div>
         </div>
@@ -326,7 +372,7 @@ const AdminPage = () => {
             </div>
             {isProfileDropdownOpen && (
               <ul className="profile-dropdown-menu">
-<li className="profile-dropdown-item" onClick={() => setIsUserProfileModalOpen(true)}>
+                <li className="profile-dropdown-item" onClick={() => setIsUserProfileModalOpen(true)}>
                   Profile
                 </li>
                 {/* <li className="profile-dropdown-item logout" onClick={() => navigate('/')}>
@@ -344,6 +390,13 @@ const AdminPage = () => {
 
               <h2 className="ad-title">Admin Worksheet</h2>
               <p className="ad-subtitle">System administration and Employee management</p>
+              {/* Add this inside your <div className="ad-dashboard-header"> or near it */}
+              {/* <button
+                onClick={runOneTimeMigration}
+                style={{ padding: '10px', background: '#dc3545', color: 'white', border: 'none', borderRadius: '5px', marginBottom: '20px', cursor: 'pointer' }}
+              >
+                ⚠️ Run DB Optimization Migration
+              </button> */}
             </div>
           </div>
           <div className="custom-radio-group-container">
@@ -412,7 +465,7 @@ const AdminPage = () => {
                 <label className="profile-detail-label" htmlFor="address">Address:</label>
                 <input type="text" id="address" name="address" value={editableProfile.address || ''} onChange={handleProfileChange} readOnly={!isEditingUserProfile} />
               </div>
-                 {/* Work Info Section (Read-only) */}
+              {/* Work Info Section (Read-only) */}
               <div style={{ gridColumn: '1 / -1', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px', margin: '15px 0' }}>
                 <h5 style={{ fontWeight: 600, color: '#2563eb' }}>Work Information</h5>
               </div>
@@ -435,20 +488,20 @@ const AdminPage = () => {
             </div>
             <div className="profile-actions">
               {isEditingUserProfile ? (
-                  <>
-                <button className="edit-button" onClick={handleSaveProfile}>
-                  Save Changes
-                </button>
-                 <button className="close-button" onClick={() => setIsEditingUserProfile(false)}>
+                <>
+                  <button className="edit-button" onClick={handleSaveProfile}>
+                    Save Changes
+                  </button>
+                  <button className="close-button" onClick={() => setIsEditingUserProfile(false)}>
                     Cancel
                   </button>
                 </>
               ) : (
                 <>
-                <button className="edit-button" onClick={() => setIsEditingUserProfile(true)}>
-                  Edit Profile
-                </button>
-                <button className="close-button" onClick={closeUserProfileModal}>
+                  <button className="edit-button" onClick={() => setIsEditingUserProfile(true)}>
+                    Edit Profile
+                  </button>
+                  <button className="close-button" onClick={closeUserProfileModal}>
                     Close
                   </button>
                 </>

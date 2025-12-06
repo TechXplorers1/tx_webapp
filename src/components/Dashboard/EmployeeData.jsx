@@ -616,63 +616,66 @@ const EmployeeData = () => {
       }
     })();
 
-    // 4) Fetch Clients (Cached for 5 mins - The BIG culprit)
+  // 4) Fetch ONLY Assigned Clients (Optimized Reverse Indexing)
     (async () => {
       try {
-        // optimization: using cached data
-        // This prevents downloading the entire 'clients' node on every reload
-        const clientsData = await getCachedData('clients', 'cache_clients_full', 60);
+        if (!employeeFirebaseKey) return;
 
-        const allRegistrations = [];
+        // A. Fetch the lightweight list of IDs assigned to this employee
+        const assignmentsRef = ref(database, `employee_assignments/${employeeFirebaseKey}`);
+        const assignmentsSnapshot = await get(assignmentsRef);
 
-        if (clientsData) {
-          Object.keys(clientsData).forEach(clientKey => {
-            const client = clientsData[clientKey];
-            if (client && client.serviceRegistrations) {
-              Object.keys(client.serviceRegistrations).forEach(regKey => {
-                const registration = client.serviceRegistrations[regKey];
-
-                // Flatten jobApplications into an array if present
-                const jobApplicationsArray = registration.jobApplications
-                  ? Object.values(registration.jobApplications)
-                  : [];
-
-                allRegistrations.push({
-                  ...registration,
-                  jobApplications: jobApplicationsArray,
-                  clientFirebaseKey: clientKey,
-                  registrationKey: regKey,
-                  email: client.email,
-                  mobile: client.mobile,
-                  firstName: registration.firstName || client.firstName,
-                  lastName: registration.lastName || client.lastName,
-                  name: `${(registration.firstName || client.firstName || '')} ${(registration.lastName || client.lastName || '')
-                    }`.trim(),
-                  initials: `${(registration.firstName || 'C').charAt(0)}${(
-                    registration.lastName || 'L'
-                  ).charAt(0)}`,
-                });
-              });
-            }
-          });
+        if (!assignmentsSnapshot.exists()) {
+            setNewClients([]);
+            setActiveClients([]);
+            setInactiveClients([]);
+            return;
         }
 
-        // Filter registrations so each employee only loads what they need
-        const myRegistrations = allRegistrations.filter(
-          reg => reg.assignedTo === employeeFirebaseKey
-        );
+        const assignments = assignmentsSnapshot.val();
+        const promises = [];
 
-        setNewClients(
-          myRegistrations.filter(c => c.assignmentStatus === 'pending_acceptance')
-        );
-        setActiveClients(
-          myRegistrations.filter(c => c.assignmentStatus === 'active')
-        );
-        setInactiveClients(
-          myRegistrations.filter(c => c.assignmentStatus === 'inactive')
-        );
+        // B. Fetch ONLY the specific client records needed (Parallel Fetch)
+        Object.values(assignments).forEach(assignment => {
+            const specificClientRef = ref(database, `clients/${assignment.clientFirebaseKey}/serviceRegistrations/${assignment.registrationKey}`);
+            
+            promises.push(get(specificClientRef).then(snap => {
+                if(snap.exists()) {
+                    const registration = snap.val();
+                    
+                    // Flatten jobApplications
+                    const jobApplicationsArray = registration.jobApplications
+                    ? Object.values(registration.jobApplications)
+                    : [];
+
+                    // Reconstruct the data structure the UI expects
+                    return { 
+                        ...registration,
+                        jobApplications: jobApplicationsArray,
+                        clientFirebaseKey: assignment.clientFirebaseKey, 
+                        registrationKey: assignment.registrationKey,
+                        // Ensure names and initials are generated correctly
+                        firstName: registration.firstName,
+                        lastName: registration.lastName,
+                        name: `${(registration.firstName || '')} ${(registration.lastName || '')}`.trim(),
+                        initials: `${(registration.firstName || 'C').charAt(0)}${(registration.lastName || 'L').charAt(0)}`
+                    };
+                }
+                return null;
+            }));
+        });
+
+        // C. Resolve all promises
+        const results = await Promise.all(promises);
+        const myRegistrations = results.filter(item => item !== null);
+
+        // D. Sort into buckets
+        setNewClients(myRegistrations.filter(c => c.assignmentStatus === 'pending_acceptance'));
+        setActiveClients(myRegistrations.filter(c => c.assignmentStatus === 'active'));
+        setInactiveClients(myRegistrations.filter(c => c.assignmentStatus === 'inactive'));
+
       } catch (err) {
-        console.error('Failed to fetch clients once:', err);
+        console.error('Failed to fetch assigned clients:', err);
       }
     })();
   }, [navigate]);

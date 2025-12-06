@@ -89,7 +89,11 @@ const ManagerWorkSheet = () => {
   // --- ADD THESE MISSING STATES & FUNCTIONS ---
 
   // 1. Missing State for Editing Employee
-  const [currentEmployeeToEdit, setCurrentEmployeeToEdit] = useState(null);
+// ✅ KEEP THIS ONE (At the top)
+const [currentEmployeeToEdit, setCurrentEmployeeToEdit] = useState(null);
+// Note: You might need to add isAddEmployeeModalOpen here if you deleted it below and it wasn't at the top
+const [isEditEmployeeModalOpen, setIsEditEmployeeModalOpen] = useState(false); 
+const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false); // Ensure this is here too
 
   // 2. Missing Function to Close Edit Modal
   const handleCloseEditEmployeeModal = () => {
@@ -431,8 +435,6 @@ const ManagerWorkSheet = () => {
   };
 
 
-  const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false);
-  const [isEditEmployeeModalOpen, setIsEditEmployeeModalOpen] = useState(false);
   const [newEmployee, setNewEmployee] = useState({
     workEmail: '',
     role: 'employee',
@@ -1323,6 +1325,7 @@ const ManagerWorkSheet = () => {
 
 
   // Handler for "Assign Client" or "Reassign Client" button submission
+ // Handler for "Assign Client" or "Reassign Client" button submission
   const handleAssignmentSubmit = async () => {
     const clientToProcess = clientToReassign || selectedClientToAssign;
 
@@ -1337,6 +1340,7 @@ const ManagerWorkSheet = () => {
       return;
     }
 
+    // 1. Reference to the main Client Data
     const registrationRef = ref(database, `clients/${clientToProcess.clientFirebaseKey}/serviceRegistrations/${clientToProcess.registrationKey}`);
 
     const updates = {
@@ -1347,27 +1351,40 @@ const ManagerWorkSheet = () => {
     };
 
     try {
+      // 2. Update the main Client Record
       await update(registrationRef, updates);
 
+      // ---------------------------------------------------------
+      // 3. NEW: Update the "Reverse Index" for the Employee
+      // This creates a lightweight list of IDs specific to this employee
+      // ---------------------------------------------------------
+      const assignmentKey = `${clientToProcess.clientFirebaseKey}_${clientToProcess.registrationKey}`;
+      const employeeAssignmentRef = ref(database, `employee_assignments/${employeeInfo.firebaseKey}/${assignmentKey}`);
+      
+      await set(employeeAssignmentRef, {
+          clientFirebaseKey: clientToProcess.clientFirebaseKey,
+          registrationKey: clientToProcess.registrationKey,
+          clientName: clientToProcess.name || clientToProcess.firstName,
+          status: 'pending_acceptance'
+      });
+      // ---------------------------------------------------------
+
+      // Update local cache
       await updateLocalClientCache(
         clientToProcess.clientFirebaseKey,
         clientToProcess.registrationKey,
-        null, // passing null to merge 'updates' into the registration object
+        null, 
         updates
       );
+      
       const updatedClient = { ...clientToProcess, ...updates };
-
-      // Check if the client is being reassigned or newly assigned.
       const isReassigning = !!clientToReassign;
 
-      // Atomically update both the assigned and unassigned client lists.
       if (isReassigning) {
-        // For a reassignment, just update the client in the assigned list.
         setAssignedClients(prevAssigned =>
           prevAssigned.map(c => c.registrationKey === updatedClient.registrationKey ? updatedClient : c)
         );
       } else {
-        // For a new assignment, remove from unassigned and add to assigned without duplication.
         setUnassignedClients(prevUnassigned =>
           prevUnassigned.filter(c => c.registrationKey !== updatedClient.registrationKey)
         );
