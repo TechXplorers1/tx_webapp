@@ -902,37 +902,77 @@ const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false); // 
     setClientToChangeStatus(null);
   };
 
-  const handleUpdateClientStatus = async () => {
-    if (!clientToChangeStatus) return;
+ const handleUpdateClientStatus = async () => {
+  if (!clientToChangeStatus) return;
 
-    // Determine the target status
-    const targetStatus = clientToChangeStatus.assignmentStatus === 'active' ? 'inactive' : 'active';
-    const client = clientToChangeStatus;
+  const client = clientToChangeStatus;
+  const targetStatus =
+    client.assignmentStatus === 'active' ? 'inactive' : 'active';
 
-    const registrationRef = ref(
-      database,
-      `clients/${client.clientFirebaseKey}/serviceRegistrations/${client.registrationKey}`
+  const registrationRef = ref(
+    database,
+    `clients/${client.clientFirebaseKey}/serviceRegistrations/${client.registrationKey}`
+  );
+
+  try {
+    // 1. Update in Firebase
+    await update(registrationRef, {
+      assignmentStatus: targetStatus,
+    });
+
+    // 2. Update local IndexedDB cache as well (so future reads are consistent)
+    await updateLocalClientCache(
+      client.clientFirebaseKey,
+      client.registrationKey,
+      null, // null => merge object
+      { assignmentStatus: targetStatus }
     );
 
-    try {
-      await update(registrationRef, {
-        assignmentStatus: targetStatus,
-      });
+    // 3. Optimistically update local React state
+    const matcher = (c) =>
+      c.clientFirebaseKey === client.clientFirebaseKey &&
+      c.registrationKey === client.registrationKey;
 
-      // 2. OPTIMISTIC UI UPDATE
-      setClientToChangeStatus(null); // Clear the modal object
+    const updatedClient = { ...client, assignmentStatus: targetStatus };
 
-      // The main useEffect will handle the list update via Firebase listener.
-      setSuccessMessage(`Client ${client.name} successfully moved to ${targetStatus === 'active' ? 'Assigned' : 'Inactive'} Clients.`);
-      setShowSuccessModal(true);
+    // Move between assignedClients and inactiveAssignedClients
+    setAssignedClients((prev) => {
+      const without = prev.filter((c) => !matcher(c));
 
-    } catch (error) {
-      console.error(`Failed to update client status to ${targetStatus}:`, error);
-      alert(`Error updating client status.`);
-    } finally {
-      handleCloseStatusConfirmModal();
-    }
-  };
+      // assignedClients should contain 'pending_acceptance' + 'active'
+      if (targetStatus === 'active' || targetStatus === 'pending_acceptance') {
+        return [...without, updatedClient];
+      }
+      // if made inactive, just remove from this list
+      return without;
+    });
+
+    setInactiveAssignedClients((prev) => {
+      const without = prev.filter((c) => !matcher(c));
+
+      if (targetStatus === 'inactive') {
+        return [...without, updatedClient];
+      }
+      // if made active, just ensure it's removed from inactive
+      return without;
+    });
+
+    setClientToChangeStatus(null);
+
+    setSuccessMessage(
+      `Client ${client.name} successfully moved to ${
+        targetStatus === 'active' ? 'Assigned' : 'Inactive'
+      } Clients.`
+    );
+    setShowSuccessModal(true);
+  } catch (error) {
+    console.error(`Failed to update client status to ${targetStatus}:`, error);
+    alert(`Error updating client status.`);
+  } finally {
+    handleCloseStatusConfirmModal();
+  }
+};
+
 
 
   // ... (rest of the state declarations)

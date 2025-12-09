@@ -1598,37 +1598,15 @@ const EmployeeData = () => {
     };
   }, [handlePasteAttachment]);
 
-  const handleDeleteApplication = (clientId, appId) => {
-    const updateClientList = (prevClients) => {
-      return prevClients.map(client =>
-        client.id === clientId
-          ? {
-            ...client,
-            jobApplications: client.jobApplications.filter(app => app.id !== appId),
-          }
-          : client
-      );
-    };
+// Use this to open the confirmation modal for a specific application
+const handleDeleteApplication = (app) => {
+  // We need the parent client as well – that's the currently selected client
+  if (!selectedClient) return;
 
-    // Determine which client list to update
-    const targetClient = [...activeClients, ...inactiveClients].find(c => c.id === clientId);
-    if (targetClient && targetClient.status === 'active') {
-      setActiveClients(updateClientList);
-    } else if (targetClient && targetClient.status === 'inactive') {
-      setInactiveClients(updateClientList);
-    }
+  // This will set applicationToDelete and open the confirmation modal
+  handleRequestDeleteApplication(selectedClient, app);
+};
 
-    // Update selectedClient to reference the newly updated client object
-    setSelectedClient(prevSelected => {
-      if (prevSelected && prevSelected.id === clientId) {
-        const updatedClient = updateClientList([prevSelected]).find(c => c.id === prevSelected.id);
-        return updatedClient || null; // If the client itself is removed, clear selectedClient
-      }
-      return prevSelected;
-    });
-
-    triggerNotification("Application deleted successfully!"); // Trigger notification
-  };
 
   // Function to filter and sort job applications
   const getFilteredAndSortedApplications = (applications) => {
