@@ -81,11 +81,7 @@ function Careers() {
   const handleFormSubmit = async (e) => {
     e.preventDefault(); // Prevent default form submission behavior
 
-    // Ensure a job is selected and a resume file is provided
-    if (!selectedJob) {
-      alert("No job selected for application.");
-      return;
-    }
+    // FIX: Removed strict check for selectedJob to allow General Applications
     if (!formData.resume) {
       alert("Please select a resume file to upload.");
       return;
@@ -96,7 +92,6 @@ function Careers() {
       const file = formData.resume; // The resume file from state
 
       // 1. Upload file to Firebase Storage with a unique name
-      // Appending timestamp to file name ensures uniqueness
       const resumeFileName = file.name;
       const fileRef = storageRef(storage, `resumes/${new Date().getTime()}_${resumeFileName}`);
       
@@ -105,27 +100,30 @@ function Careers() {
       // 2. Get the public download URL for the uploaded file
       const resumeURL = await getDownloadURL(uploadTask.ref);
 
+      // FIX: Determine role based on whether a job was selected or it's a general upload
+      const appliedRole = selectedJob ? selectedJob.title : "General Application";
+
       // 3. Create the submission object with all form data and the resume URL/filename
       const newSubmission = {
-        id: Date.now(), // Unique ID for the submission
+        id: Date.now(), 
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
         mobile: formData.mobile,
-        role: selectedJob.title, // Job title from the selected job
+        role: appliedRole, // Use the determined role
         experience: Number(formData.experience),
         currentSalary: formData.currentSalary,
         expectedSalary: formData.expectedSalary,
-        resume: resumeFileName, // Original name of the resume file
-        resumeURL: resumeURL, // Public download URL of the resume
-        status: 'Pending', // Initial status of the application
-        receivedDate: new Date().toISOString().split('T')[0], // Current date
-        userId: currentUser ? currentUser.uid : "guest" // User ID or "guest"
+        resume: resumeFileName, 
+        resumeURL: resumeURL, 
+        status: 'Pending', 
+        receivedDate: new Date().toISOString().split('T')[0], 
+        userId: currentUser ? currentUser.uid : "guest" 
       };
 
       // 4. Save the submission data to the Realtime Database
       const careerSubmissionsRef = dbRef(database, 'submissions/career_submissions');
-      await push(careerSubmissionsRef, newSubmission); // Push new submission to database
+      await push(careerSubmissionsRef, newSubmission); 
 
       // Close the application modal and show success modal
       setShowModal(false);
@@ -156,16 +154,15 @@ function Careers() {
 
   // Handler for closing the main application modal
   const handleModalClose = () => {
-    setShowModal(false); // Close the modal
-    setSelectedJob(null); // Clear selected job
-    // Optionally reset form data when modal closes
+    setShowModal(false); 
+    setSelectedJob(null); 
     setFormData({
       firstName: '', lastName: '', email: '', mobile: '',
       currentSalary: '', expectedSalary: '', experience: '', resume: null,
     });
   };
 
-  // --- Inline CSS Styles for a Modern Look ---
+  // --- Inline CSS Styles ---
   const styles = `
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     @import url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css");
@@ -199,7 +196,7 @@ function Careers() {
     }
 
     .careers-page-container {
-      padding-top: 80px; /* Space for navbar */
+      padding-top: 80px; 
       padding-bottom: 4rem;
     }
 
@@ -309,7 +306,7 @@ function Careers() {
       overflow: hidden;
       display: flex;
       flex-direction: column;
-      height: 100%; /* Ensures cards in the same row have the same height */
+      height: 100%; 
     }
     .dark-mode .job-card {
       background-color: var(--dark-surface);
@@ -412,7 +409,6 @@ function Careers() {
       color: var(--dark-text-secondary);
     }
     
-    /* --- SCROLLABLE MARQUEE STYLES --- */
     .job-marquee-wrapper {
         width: 100%;
         overflow: hidden;
@@ -454,8 +450,8 @@ function Careers() {
     
     .job-item {
         flex-shrink: 0;
-        width: 350px; /* Width of each card container */
-        padding: 0 1rem; /* Space between cards */
+        width: 350px; 
+        padding: 0 1rem; 
     }
 
     @keyframes marquee-scroll {
@@ -463,7 +459,6 @@ function Careers() {
         100% { transform: translateX(-50%); }
     }
 
-    /* --- MODERN MODAL STYLES --- */
     .modal-modern .modal-content {
       background-color: var(--light-surface);
       border: none;
@@ -598,7 +593,7 @@ function Careers() {
                 <Button
                   variant="outline-primary"
                   className="upload-resume-btn"
-                  onClick={() => setShowModal(true)} // Changed to open main modal directly
+                  onClick={() => setShowModal(true)} 
                 >
                   Upload Your Resume
                 </Button>

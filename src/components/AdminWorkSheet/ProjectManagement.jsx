@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { database, storage } from '../../firebase'; 
-import { ref, push, remove, update, get, query, limitToLast } from "firebase/database"; 
+import { ref, push, remove, update, get, query, limitToLast, set } from "firebase/database"; 
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Container, Form, Button, Table, Card, Row, Col, Badge, Modal, Spinner } from 'react-bootstrap';
 
@@ -21,31 +21,36 @@ const ProjectManagement = () => {
     order: 0
   });
 
-  // Image Upload State
   const [imageFile, setImageFile] = useState(null);
   const [uploading, setUploading] = useState(false);
-
   const [isEditing, setIsEditing] = useState(false);
   const [editId, setEditId] = useState(null);
 
-  // Refs for Drag and Drop
   const dragItem = useRef(null);
   const dragOverItem = useRef(null);
 
-  // --- SAFE LOAD FUNCTION WITH CACHE ---
-  // forceRefresh: set to true ONLY when you Add/Edit/Delete to get fresh data
+  // --- HELPER: Update Global Timestamp ---
+  // This tells the public page "Hey, data changed!"
+  const updateGlobalTimestamp = async () => {
+    try {
+      const metaRef = ref(database, "metadata/projects_last_updated");
+      await set(metaRef, Date.now());
+    } catch (e) {
+      console.error("Failed to update timestamp", e);
+    }
+  };
+
+  // --- LOAD FUNCTION ---
   const loadProjects = async (forceRefresh = false) => {
     try {
-      // 1. Check Cache first (if not forcing a refresh)
       if (!forceRefresh) {
         const cachedData = sessionStorage.getItem(CACHE_KEY);
         if (cachedData) {
           setProjects(JSON.parse(cachedData));
-          return; // STOP HERE - Do not hit Firebase
+          return;
         }
       }
 
-      // 2. Fetch from Firebase (Only if no cache or forceRefresh is true)
       const projectsRef = query(ref(database, "projects"), limitToLast(50)); 
       const snapshot = await get(projectsRef);
 
@@ -61,14 +66,12 @@ const ProjectManagement = () => {
         ...data[key],
       }));
 
-      // Sort by 'order' locally after fetching
       const sortedList = projectList.sort((a, b) => {
         const orderA = a.order !== undefined ? a.order : 9999;
         const orderB = b.order !== undefined ? b.order : 9999;
         return orderA - orderB;
       });
 
-      // 3. Update State and Cache
       setProjects(sortedList);
       sessionStorage.setItem(CACHE_KEY, JSON.stringify(sortedList));
 
@@ -77,8 +80,6 @@ const ProjectManagement = () => {
     }
   };
 
-
-  // Fetch Projects on Mount (Load from cache if available)
   useEffect(() => {
     loadProjects(false); 
   }, []);
@@ -92,11 +93,9 @@ const ProjectManagement = () => {
     dragItem.current = null;
     dragOverItem.current = null;
     
-    // Update State & Cache Immediately (No DB fetch needed for sort)
     setProjects(_projects);
     sessionStorage.setItem(CACHE_KEY, JSON.stringify(_projects));
 
-    // Update Firebase in background
     const updates = {};
     _projects.forEach((project, index) => {
         updates[`projects/${project.id}/order`] = index;
@@ -104,6 +103,7 @@ const ProjectManagement = () => {
 
     try {
         await update(ref(database), updates);
+        await updateGlobalTimestamp(); // <--- CRITICAL UPDATE
     } catch (error) {
         console.error("Error reordering:", error);
     }
@@ -155,7 +155,6 @@ const ProjectManagement = () => {
     let finalImageUrl = formData.image;
 
     try {
-      // 1. If file is selected, upload it to Firebase Storage
       if (imageFile) {
         const imageRef = storageRef(storage, `project_images/${Date.now()}_${imageFile.name}`);
         const snapshot = await uploadBytes(imageRef, imageFile);
@@ -175,7 +174,7 @@ const ProjectManagement = () => {
         await push(projectsRef, payload);
       }
       
-      // FORCE REFRESH: Because we added/edited, we must fetch fresh data from DB
+      await updateGlobalTimestamp(); // <--- CRITICAL UPDATE
       await loadProjects(true); 
       handleClose();
 
@@ -199,7 +198,8 @@ const ProjectManagement = () => {
     if (window.confirm("Are you sure you want to delete this project?")) {
       const projectRef = ref(database, `projects/${id}`);
       await remove(projectRef);
-      // FORCE REFRESH: Update list after delete
+      
+      await updateGlobalTimestamp(); // <--- CRITICAL UPDATE
       await loadProjects(true);
     }
   };
@@ -216,8 +216,6 @@ const ProjectManagement = () => {
 
   return (
     <Container fluid className="p-0">
-      
-      {/* HEADER */}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h3 className="mb-1" style={{ color: '#1f2937', fontWeight: '700' }}>Project Management</h3>
@@ -233,7 +231,6 @@ const ProjectManagement = () => {
         </Button>
       </div>
 
-      {/* LIST CARD */}
       <Card className="shadow-sm border-0" style={{ borderRadius: '12px', overflow: 'hidden' }}>
         <Table responsive hover className="mb-0 align-middle">
           <thead className="bg-light text-secondary">
@@ -258,14 +255,9 @@ const ProjectManagement = () => {
                     onDragEnd={handleSort}
                     onDragOver={(e) => e.preventDefault()}
                 >
-                  
-                  {/* --- DRAG HANDLE --- */}
                   <td className="ps-4 text-center">
-                    <div className="text-muted" style={{ fontSize: '1.2rem', cursor: 'grab' }} title="Drag to reorder">
-                        ⋮⋮
-                    </div>
+                    <div className="text-muted" style={{ fontSize: '1.2rem', cursor: 'grab' }} title="Drag to reorder">⋮⋮</div>
                   </td>
-
                   <td>
                     <div style={{ width: '60px', height: '60px', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#f3f4f6' }}>
                         <img 
@@ -282,57 +274,39 @@ const ProjectManagement = () => {
                     <small className="text-muted">{project.client || 'No Client Listed'}</small>
                   </td>
                   <td>
-                    <Badge bg={getBadgeColor(project.category)} pill className="px-3 py-2 fw-normal">
-                        {project.category}
-                    </Badge>
+                    <Badge bg={getBadgeColor(project.category)} pill className="px-3 py-2 fw-normal">{project.category}</Badge>
                   </td>
                   <td>
                      {project.link ? (
-                        <a href={project.link} target="_blank" rel="noreferrer" className="text-decoration-none text-primary small">
-                            Link &#8599;
-                        </a>
+                        <a href={project.link} target="_blank" rel="noreferrer" className="text-decoration-none text-primary small">Link &#8599;</a>
                      ) : <span className="text-muted small">-</span>}
                   </td>
                   <td className="text-end pe-4">
                     <Button 
-                        variant="light" 
-                        size="sm" 
-                        className="me-2 text-primary fw-bold" 
+                        variant="light" size="sm" className="me-2 text-primary fw-bold" 
                         onClick={() => handleEdit(project)}
                         style={{ backgroundColor: '#eff6ff', border: 'none' }}
-                    >
-                      Edit
-                    </Button>
+                    >Edit</Button>
                     <Button 
-                        variant="light" 
-                        size="sm" 
-                        className="text-danger fw-bold" 
+                        variant="light" size="sm" className="text-danger fw-bold" 
                         onClick={() => handleDelete(project.id)}
                         style={{ backgroundColor: '#fef2f2', border: 'none' }}
-                    >
-                      Delete
-                    </Button>
+                    >Delete</Button>
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="6" className="text-center py-5 text-muted">
-                  <div className="mb-2" style={{ fontSize: '2rem', opacity: '0.3' }}>📂</div>
-                  No projects added yet. Click "Add New Project" to start.
-                </td>
+                <td colSpan="6" className="text-center py-5 text-muted">No projects added yet.</td>
               </tr>
             )}
           </tbody>
         </Table>
       </Card>
 
-      {/* MODAL */}
       <Modal show={showModal} onHide={handleClose} centered size="lg" backdrop="static">
         <Modal.Header closeButton className="border-0 pb-0">
-            <Modal.Title className="fw-bold">
-                {isEditing ? 'Edit Project Details' : 'Add New Project'}
-            </Modal.Title>
+            <Modal.Title className="fw-bold">{isEditing ? 'Edit Project Details' : 'Add New Project'}</Modal.Title>
         </Modal.Header>
         <Modal.Body className="pt-4">
           <Form onSubmit={handleSubmit}>
@@ -347,55 +321,34 @@ const ProjectManagement = () => {
                 <Form.Group className="mb-3">
                   <Form.Label className="fw-semibold small text-secondary">CATEGORY</Form.Label>
                   <Form.Select name="category" value={formData.category} onChange={handleChange} className="py-2">
-                    <option>Website</option>
-                    <option>Web App</option>
-                    <option>Mobile App</option>
-                    <option>Portfolio</option>
-                    <option>Digital Marketing</option>
-                    <option>Cyber Security</option>
+                    <option>Web App</option><option>Website</option><option>Mobile App</option><option>Portfolio</option><option>Digital Marketing</option><option>Cyber Security</option>
                   </Form.Select>
                 </Form.Group>
               </Col>
             </Row>
-
             <Row>
               <Col md={6}>
                 <Form.Group className="mb-3">
                   <Form.Label className="fw-semibold small text-secondary">IMAGE (URL)</Form.Label>
-                  <Form.Control 
-                    type="text" 
-                    name="image" 
-                    value={formData.image} 
-                    onChange={handleChange} 
-                    placeholder="https://..."
-                    disabled={!!imageFile} 
-                    className="py-2"
-                  />
+                  <Form.Control type="text" name="image" value={formData.image} onChange={handleChange} placeholder="https://..." disabled={!!imageFile} className="py-2"/>
                 </Form.Group>
               </Col>
               <Col md={6}>
                 <Form.Group className="mb-3">
                   <Form.Label className="fw-semibold small text-secondary">OR UPLOAD IMAGE</Form.Label>
-                  <Form.Control 
-                    type="file" 
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="py-2"
-                  />
+                  <Form.Control type="file" accept="image/*" onChange={handleFileChange} className="py-2"/>
                   {imageFile && <Form.Text className="text-success">File selected: {imageFile.name}</Form.Text>}
                 </Form.Group>
               </Col>
             </Row>
-
             <Row>
               <Col md={12}>
                 <Form.Group className="mb-3">
                   <Form.Label className="fw-semibold small text-secondary">PROJECT LINK</Form.Label>
-                  <Form.Control type="text" name="link" value={formData.link} onChange={handleChange} placeholder="https://play.google.com/..." className="py-2"/>
+                  <Form.Control type="text" name="link" value={formData.link} onChange={handleChange} placeholder="https://..." className="py-2"/>
                 </Form.Group>
               </Col>
             </Row>
-
              <Row>
               <Col md={12}>
                 <Form.Group className="mb-3">
@@ -415,24 +368,14 @@ const ProjectManagement = () => {
             <Form.Control type="hidden" name="order" value={formData.order} />
 
             <div className="d-flex justify-content-end gap-2 border-top pt-3">
-              <Button variant="light" onClick={handleClose} disabled={uploading} className="px-4 fw-semibold text-secondary">
-                ← Go Back
-              </Button>
+              <Button variant="light" onClick={handleClose} disabled={uploading} className="px-4 fw-semibold text-secondary">← Go Back</Button>
               <Button variant="primary" type="submit" disabled={uploading} className="px-4 fw-bold">
-                {uploading ? (
-                    <>
-                    <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2"/>
-                    Uploading...
-                    </>
-                ) : (
-                    isEditing ? 'Save Changes' : 'Publish Project'
-                )}
+                {uploading ? (<><Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2"/>Uploading...</>) : (isEditing ? 'Save Changes' : 'Publish Project')}
               </Button>
             </div>
           </Form>
         </Modal.Body>
       </Modal>
-
     </Container>
   );
 };

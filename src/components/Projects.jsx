@@ -51,35 +51,46 @@ const Projects = () => {
   const [projectsData, setProjectsData] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // --- OPTIMIZED LOAD LOGIC ---
+  // --- SMART SYNC LOGIC ---
   useEffect(() => {
     const fetchProjects = async () => {
       setLoading(true);
       
-      // 1. Check IndexedDB Cache First (Better than sessionStorage for large JSON)
-      const cached = await dbGet('projectsCache');
-      
-      if (cached) {
-        const { data, timestamp } = cached;
-        // Cache valid for 60 minutes
-        const isFresh = (new Date().getTime() - timestamp) < (60 * 60 * 1000); 
-        
-        if (isFresh && Array.isArray(data) && data.length > 0) {
-          setProjectsData(data);
+      try {
+        // 1. Fetch "Last Updated" timestamp from Firebase (Tiny cost: ~10 bytes)
+        const metaRef = ref(database, "metadata/projects_last_updated");
+        const metaSnap = await get(metaRef);
+        const remoteTimestamp = metaSnap.exists() ? metaSnap.val() : 0;
+
+        // 2. Check Local Cache
+        const cached = await dbGet('projectsCache');
+        let useCache = false;
+
+        if (cached) {
+          const { data, timestamp: localTimestamp } = cached;
+          
+          // If remote timestamp is SAME or OLDER than local, cache is valid
+          // (Also fallback: if cache is very fresh (< 2 mins), skip check to prevent spamming)
+          if (remoteTimestamp <= localTimestamp) {
+             useCache = true;
+          }
+        }
+
+        if (useCache && cached.data.length > 0) {
+          setProjectsData(cached.data);
+          console.log("Loaded projects from Cache (Version Match)");
           setLoading(false);
-          console.log("Loaded projects from IndexedDB cache");
           return; 
         }
-      }
 
-      // 2. If no cache, hit Firebase
-      try {
+        // 3. If versions mismatch, Fetch Full Data from Firebase
+        console.log("Cache stale or missing. Fetching fresh data...");
         const projectsRef = query(ref(database, "projects"), limitToLast(50));
         const snapshot = await get(projectsRef);
 
         if (!snapshot.exists()) {
           setProjectsData([]);
-          await dbSet('projectsCache', { data: [], timestamp: new Date().getTime() });
+          await dbSet('projectsCache', { data: [], timestamp: Date.now() });
           return;
         }
 
@@ -99,12 +110,12 @@ const Projects = () => {
         });
 
         setProjectsData(sortedProjects);
-        // Save to cache for next time
+        
+        // Save new data with the CURRENT time (or remoteTimestamp if you want strict sync)
         await dbSet('projectsCache', { 
             data: sortedProjects, 
-            timestamp: new Date().getTime() 
+            timestamp: Date.now() 
         });
-        console.log("Loaded projects from Firebase and cached them");
 
       } catch (error) {
         console.error("Error fetching projects:", error);
@@ -149,7 +160,6 @@ const Projects = () => {
       --shadow-hover-dark: 0 15px 40px rgba(0, 0, 0, 0.3);
     }
 
-    /* Main Container Background */
     .projects-container {
       background-color: var(--light-bg);
       font-family: 'Inter', sans-serif;
@@ -162,7 +172,6 @@ const Projects = () => {
       color: var(--dark-text-primary);
     }
 
-    /* Hero Section */
     .hero-section {
       background-color: var(--light-surface);
       padding: 2rem 1rem;
@@ -198,14 +207,12 @@ const Projects = () => {
       color: var(--dark-text-secondary);
     }
 
-    /* Filter Buttons */
     .btn-filter-custom {
       font-weight: 500;
       font-family: 'Inter', sans-serif;
       transition: all 0.3s ease;
     }
 
-    /* Card Styles */
     .project-card {
       background-color: var(--light-surface);
       border: 1px solid var(--light-border);
@@ -230,7 +237,6 @@ const Projects = () => {
       box-shadow: var(--shadow-hover-dark);
     }
 
-    /* Card Typography */
     .project-title {
       color: var(--light-text-primary);
       transition: color 0.3s ease;
@@ -248,14 +254,6 @@ const Projects = () => {
       color: var(--dark-text-secondary);
     }
 
-    .project-meta {
-      color: var(--light-text-secondary);
-      transition: color 0.3s ease;
-    }
-    .dark-mode .project-meta {
-      color: var(--dark-text-secondary);
-    }
-
     .project-divider {
       border-top: 1px solid var(--light-border);
       transition: border-color 0.3s ease;
@@ -264,7 +262,6 @@ const Projects = () => {
       border-top-color: var(--dark-border);
     }
 
-    /* Call To Action Section */
     .cta-section {
       background-color: var(--light-surface);
       border-top: 1px solid var(--light-border);
@@ -279,9 +276,8 @@ const Projects = () => {
       box-shadow: 0 -10px 40px rgba(0,0,0,0.2);
     }
     
-    /* Adaptive Button Logic */
     .btn-adaptive {
-      background-color: #212529; /* Default: Dark Black */
+      background-color: #212529;
       color: #ffffff !important;
       border: none;
       transition: all 0.3s ease;
@@ -292,11 +288,11 @@ const Projects = () => {
     }
     
     .dark-mode .btn-adaptive {
-      background-color: #ffffff; /* White Button */
-      color: #000000 !important; /* Force Black Text */
+      background-color: #ffffff;
+      color: #000000 !important;
     }
     .dark-mode .btn-adaptive:hover {
-      background-color: #e2e6ea; /* Light Grey Hover */
+      background-color: #e2e6ea;
       color: #000000 !important;
     }
 
@@ -304,7 +300,6 @@ const Projects = () => {
       object-fit: cover;
     }
     
-    /* Loading Spinner Styling */
     .loading-spinner-container {
       display: flex;
       justify-content: center;
@@ -320,7 +315,6 @@ const Projects = () => {
       <div className={`projects-container ${isDarkMode ? 'dark-mode' : ''}`}>
         <CustomNavbar />
 
-        {/* 1. HERO SECTION */}
         <section className="hero-section mb-4">
           <div className="container">
             <h3 className="hero-title">Our Work</h3>
@@ -339,7 +333,6 @@ const Projects = () => {
           </div>
         ) : (
           <>
-            {/* 2. FILTER BUTTONS */}
             <div className="container mb-5">
               <div className="d-flex justify-content-center flex-wrap gap-2">
                 {categories.map((cat) => (
@@ -358,7 +351,6 @@ const Projects = () => {
               </div>
             </div>
 
-            {/* 3. PROJECT GRID */}
             <div className="container pb-5">
               <div className="row g-4">
                 {filteredProjects.length > 0 ? (
@@ -366,7 +358,6 @@ const Projects = () => {
                     <div key={project.id} className="col-12 col-md-6 col-lg-4">
                       <div className="project-card">
                         
-                        {/* Image Container */}
                         <div className="overflow-hidden position-relative" style={{ height: '220px' }}>
                           <img
                             src={project.image}
@@ -385,7 +376,6 @@ const Projects = () => {
                           </span>
                         </div>
 
-                        {/* Card Body */}
                         <div className="p-4 d-flex flex-column flex-grow-1">
                           <h5 className="fw-bold mb-2 project-title">{project.title}</h5>
                           <p className="small mb-3 flex-grow-1 project-desc">
@@ -393,7 +383,6 @@ const Projects = () => {
                           </p>
                           <div className="d-flex justify-content-between align-items-center mt-3 pt-3 project-divider">
                             
-                            {/* EXTERNAL LINK BUTTON */}
                             <a 
                               href={project.link && project.link !== '#' ? project.link : null} 
                               target="_blank" 
@@ -420,7 +409,6 @@ const Projects = () => {
           </>
         )}
 
-        {/* 4. CALL TO ACTION */}
         <div className="cta-section">
           <div className="container text-center">
             <h2 className="hero-title mb-3">Have an Idea? Let's Build It.</h2>

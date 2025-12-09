@@ -1,20 +1,19 @@
 // In EmployeeManagement.jsx, replace the entire file content with this code.
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { database, auth } from '../../firebase'; // Import your Firebase config
 import {
   ref,
-  push,
   set,
   remove,
   update,
-  off,
   get,
   query,
   orderByKey,
   limitToFirst,
   startAt,
+  endAt,
   orderByChild,
-    equalTo,
+  equalTo,
 } from "firebase/database";
 
 import { createUserWithEmailAndPassword } from "firebase/auth";
@@ -27,12 +26,10 @@ const EmployeeManagement = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  // ... existing states
-  const [totalEmployees, setTotalEmployees] = useState(0);
+  
   const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false);
   const [isEditEmployeeModalOpen, setIsEditEmployeeModalOpen] = useState(false);
   const [isDeleteConfirmModalOpen, setIsDeleteConfirmModalOpen] = useState(false);
-  const [employeeToDeleteId, setEmployeeToDeleteId] = useState(null);
   const [currentEmployeeToEdit, setCurrentEmployeeToEdit] = useState(null);
   const [isStatusConfirmModalOpen, setIsStatusConfirmModalOpen] = useState(false);
   const [employeeToUpdateStatus, setEmployeeToUpdateStatus] = useState(null);
@@ -70,30 +67,32 @@ const EmployeeManagement = () => {
 
 
   // Department Management States
-  const [departments, setDepartments] = useState([
-    { id: 1, name: 'Management', description: 'Executive and senior management team', head: 'Sarah Wilson', employees: 5, status: 'active', createdDate: '15/01/2023' },
-    { id: 2, name: 'Development', description: 'Software development and engineering', head: 'Michael Johnson', employees: 12, status: 'active', createdDate: '15/01/2023' },
-    { id: 3, name: 'Design', description: 'UI/UX design and creative services', head: 'Not assigned', employees: 6, status: 'active', createdDate: '15/01/2023' },
-    { id: 4, name: 'Marketing', description: 'Marketing and brand management', head: 'Not assigned', employees: 8, status: 'active', createdDate: '15/01/2023' },
-    { id: 5, name: 'Sales', description: 'Sales and business development', head: 'Not assigned', employees: 10, status: 'active', createdDate: '15/01/2023' },
-    { id: 6, name: 'Operations', description: 'Operations and process management', head: 'Not assigned', employees: 7, status: 'active', createdDate: '15/01/2023' },
-    { id: 7, name: 'Finance', description: 'Financial planning and accounting', head: 'Not assigned', employees: 4, status: 'active', createdDate: '15/01/2023' },
-    { id: 8, name: 'Support', description: 'Customer support and service', head: 'Not assigned', employees: 9, status: 'active', createdDate: '15/01/2023' },
-    { id: 9, name: 'Quality Assurance', description: 'Quality testing and assurance', head: 'Not assigned', employees: 5, status: 'active', createdDate: '15/01/2023' },
-    { id: 10, name: 'Tech Placement', description: 'Technology recruitment and placement', head: 'Michael Johnson', employees: 8, status: 'active', createdDate: '15/01/2023' },
-    { id: 11, name: 'HR', description: 'Human resources and talent management', head: 'Not assigned', employees: 3, status: 'active', createdDate: '15/01/2023' },
-    { id: 12, name: 'External', description: 'External clients and partners', head: 'Not assigned', employees: 0, status: 'active', createdDate: '15/01/2023' },
+  const [departments] = useState([
+    { id: 1, name: 'Management' },
+    { id: 2, name: 'Development' },
+    { id: 3, name: 'Design' },
+    { id: 4, name: 'Marketing' },
+    { id: 5, name: 'Sales' },
+    { id: 6, name: 'Operations' },
+    { id: 7, name: 'Finance' },
+    { id: 8, name: 'Support' },
+    { id: 9, name: 'Quality Assurance' },
+    { id: 10, name: 'Tech Placement' },
+    { id: 11, name: 'HR' },
+    { id: 12, name: 'External' },
   ]);
 
-    // Pagination + caching
+  // Pagination + caching
+  // We fetch a 'BUFFER' (e.g. 15) to ensure we have enough non-client users to fill the PAGE_SIZE (5)
   const PAGE_SIZE = 5;
+  const FETCH_BUFFER = 15; 
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageCache, setPageCache] = useState({});       // { 1: [5 employees], 2: [5 employees], ... }
-  const [pageLastKeys, setPageLastKeys] = useState({}); // { 1: "lastFirebaseKeyOfPage1", ... }
+  const [pageCache, setPageCache] = useState({});       // { 1: [5 employees], ... }
+  const [pageLastKeys, setPageLastKeys] = useState({}); // { 1: "keyOfLastItem" }
   const [hasMorePages, setHasMorePages] = useState(true);
 
   // Search
-  const [searchResults, setSearchResults] = useState(null); // null => show normal pagination
+  const [searchResults, setSearchResults] = useState(null); 
   const [isSearching, setIsSearching] = useState(false);
 
 
@@ -110,6 +109,12 @@ const EmployeeManagement = () => {
   const genderOptions = ['Male', 'Female', 'Other'];
   const maritalStatusOptions = ['Single', 'Married', 'Divorced', 'Widowed'];
 
+  // --- Helper to check if user is a Client ---
+  const isClientRole = (user) => {
+    if (!user.roles || !Array.isArray(user.roles)) return false;
+    return user.roles.some(r => r.toLowerCase() === 'client');
+  };
+
   // --- Employee Management Handlers ---
    const handleSearchChange = (event) => {
     const value = event.target.value;
@@ -120,15 +125,10 @@ const EmployeeManagement = () => {
       setSearchResults(null);
     }
   };
-const employeesToRender = searchResults && searchTerm.trim()
+
+  const employeesToRender = searchResults && searchTerm.trim()
     ? searchResults
     : employees;
-
-
-
-
-
-
 
   const handleAddEmployeeClick = () => {
     setIsAddEmployeeModalOpen(true);
@@ -176,36 +176,33 @@ const employeesToRender = searchResults && searchTerm.trim()
     setNewEmployee(prev => ({ ...prev, temporaryPassword: password }));
   };
 
-
-
   const handleCreateEmployeeAccount = async (e) => {
     e.preventDefault();
-    setIsCreatingEmployee(true); // NEW: Start loading
+    setIsCreatingEmployee(true); 
 
-    // Construct the new employee object from the form state
     const newEmployeeData = {
       // Personal Info
-      firstName: newEmployee.firstName,
-      lastName: newEmployee.lastName,
-      gender: newEmployee.gender,
-      dateOfBirth: newEmployee.dateOfBirth,
-      maritalStatus: newEmployee.maritalStatus,
+      firstName: newEmployee.firstName || '',
+      lastName: newEmployee.lastName || '',
+      gender: newEmployee.gender || '',
+      dateOfBirth: newEmployee.dateOfBirth || '',
+      maritalStatus: newEmployee.maritalStatus || '',
       
       // Contact Info
-      personalNumber: newEmployee.personalNumber,
-      alternativeNumber: newEmployee.alternativeNumber,
-      personalEmail: newEmployee.personalEmail,
-      workEmail: newEmployee.workEmail,
+      personalNumber: newEmployee.personalNumber || '',
+      alternativeNumber: newEmployee.alternativeNumber || '',
+      personalEmail: newEmployee.personalEmail || '',
+      workEmail: newEmployee.workEmail || '',
 
       // Address Info
-      address: newEmployee.address,
-      country: newEmployee.country,
-      state: newEmployee.state,
-      city: newEmployee.city,
-      zipcode: newEmployee.zipcode,
+      address: newEmployee.address || '',
+      country: newEmployee.country || '',
+      state: newEmployee.state || '',
+      city: newEmployee.city || '',
+      zipcode: newEmployee.zipcode || '',
       
       // Employment Info
-      dateOfJoin: newEmployee.dateOfJoin,
+      dateOfJoin: newEmployee.dateOfJoin || '',
       temporaryPassword: newEmployee.temporaryPassword,
       accountStatus: newEmployee.accountStatus,
       roles: [newEmployee.role.toLowerCase()],
@@ -225,18 +222,23 @@ const employeesToRender = searchResults && searchTerm.trim()
       const userRef = ref(database, `users/${user.uid}`);
       await set(userRef, newEmployeeData);
       
-      console.log("Employee created successfully in Firebase Auth and Database!");
+      console.log("Employee created successfully!");
       handleCloseAddEmployeeModal();
+      
+      // Clear cache and reload page 1 to show new user
+      setPageCache({});
+      setPageLastKeys({});
+      loadPage(1);
 
     } catch (error) {
       if (error.code === 'auth/email-already-in-use') {
-        alert("This email is already registered. Please use a different work email.");
+        alert("This email is already registered.");
       } else {
         console.error("Error creating employee:", error);
-        alert("Failed to create employee. Please check the details and try again.");
+        alert("Failed to create employee.");
       }
     } finally {
-      setIsCreatingEmployee(false); // NEW: Stop loading
+      setIsCreatingEmployee(false);
     }
   };
 
@@ -273,7 +275,7 @@ const employeesToRender = searchResults && searchTerm.trim()
   };
 
   const handleEditEmployeeClick = (firebaseKey) => {
-    const employee = employees.find(u => u.firebaseKey === firebaseKey);
+    const employee = (searchResults || employees).find(u => u.firebaseKey === firebaseKey);
     if (employee) {
       const employeeDepartment = departmentOptions.find(dept => (employee.roles || []).includes(dept.toLowerCase())) || 'No department assigned';
       const employeeAccountStatus = accountStatusOptions.find(status => (employee.roles || []).includes(status.toLowerCase())) || 'Active';
@@ -319,7 +321,7 @@ const employeesToRender = searchResults && searchTerm.trim()
   
   const handleUpdateEmployeeAccount = (e) => {
     e.preventDefault();
-    const originalEmployee = employees.find(emp => emp.firebaseKey === currentEmployeeToEdit.firebaseKey);
+    const originalEmployee = (searchResults || employees).find(emp => emp.firebaseKey === currentEmployeeToEdit.firebaseKey);
     const changes = getEmployeeChanges(originalEmployee, currentEmployeeToEdit);
 
     if (changes === 'no changes') {
@@ -334,20 +336,18 @@ const employeesToRender = searchResults && searchTerm.trim()
     setIsConfirmUpdateModalOpen(true);
     setConfirmActionType('employeeUpdate');
   };
-// --- Calculation for Pagination Range ---
-  // Calculate the starting number (e.g., Page 1 starts at 1, Page 2 starts at 6)
-  const startRange = (currentPage - 1) * PAGE_SIZE + 1;
   
-  // Calculate the ending number based on how many items are actually in the current list
+  // --- Calculation for Pagination Range ---
+  const startRange = (currentPage - 1) * PAGE_SIZE + 1;
   const endRange = startRange + (employees.length > 0 ? employees.length - 1 : 0);
-  // ----------------------------------------
+  
   const confirmEmployeeUpdate = async () => {
     if (!pendingEmployeeUpdate || !pendingEmployeeUpdate.firebaseKey) {
       console.error("Update failed: Employee data or Firebase key is missing.");
       return;
     }
 
-    setIsUpdatingEmployee(true); // NEW: Start loading
+    setIsUpdatingEmployee(true);
 
     const { firebaseKey, ...employeeDataToUpdate } = pendingEmployeeUpdate;
     const originalEmployee = employees.find(emp => emp.firebaseKey === firebaseKey);
@@ -364,12 +364,19 @@ const employeesToRender = searchResults && searchTerm.trim()
     try {
       const usersRef = ref(database, `users/${firebaseKey}`);
       await update(usersRef, updatedData);
-      console.log("Employee updated successfully in Firebase!");
+      console.log("Employee updated successfully!");
+      
+      // Update local state to reflect changes immediately without reload
+      setEmployees(prev => prev.map(emp => emp.firebaseKey === firebaseKey ? { ...emp, ...updatedData, firebaseKey } : emp));
+      if (searchResults) {
+          setSearchResults(prev => prev.map(emp => emp.firebaseKey === firebaseKey ? { ...emp, ...updatedData, firebaseKey } : emp));
+      }
+
     } catch (error) {
-      console.error("Error updating employee in Firebase:", error);
-      alert("Failed to update employee. Please try again.");
+      console.error("Error updating employee:", error);
+      alert("Failed to update employee.");
     } finally {
-      setIsUpdatingEmployee(false); // NEW: Stop loading
+      setIsUpdatingEmployee(false);
       handleCloseEditEmployeeModal();
       setIsConfirmUpdateModalOpen(false);
       setPendingEmployeeUpdate(null);
@@ -377,30 +384,36 @@ const employeesToRender = searchResults && searchTerm.trim()
   };
   
   const handleDeleteEmployeeClick = (employeeId) => {
-    const employee = employees.find(emp => emp.firebaseKey === employeeId);
+    const employee = (searchResults || employees).find(emp => emp.firebaseKey === employeeId);
     setEmployeeToDeleteDetails(employee);
-    setConfirmUpdateMessage(`Are you sure you want to delete employee '${employee.firstName} ${employee.lastName}'? This action cannot be undone.`);
+    setConfirmUpdateMessage(`Are you sure you want to delete employee '${employee.firstName || ''} ${employee.lastName || ''}'? This action cannot be undone.`);
     setIsConfirmUpdateModalOpen(true);
     setConfirmActionType('employeeDelete');
   };
   
   const handleConfirmDelete = async () => {
     if (!employeeToDeleteDetails || !employeeToDeleteDetails.firebaseKey) {
-      console.error("Delete failed: Employee data or Firebase key is missing.");
       return;
     }
 
-    setIsDeletingEmployee(true); // NEW: Start loading
+    setIsDeletingEmployee(true);
 
     try {
       const usersRef = ref(database, `users/${employeeToDeleteDetails.firebaseKey}`);
       await remove(usersRef);
-      console.log("Employee deleted successfully from Firebase!");
+      console.log("Employee deleted successfully!");
+      
+      // Remove from local lists
+      setEmployees(prev => prev.filter(emp => emp.firebaseKey !== employeeToDeleteDetails.firebaseKey));
+      if (searchResults) {
+          setSearchResults(prev => prev.filter(emp => emp.firebaseKey !== employeeToDeleteDetails.firebaseKey));
+      }
+
     } catch (error) {
-      console.error("Error deleting employee from Firebase:", error);
-      alert("Failed to delete employee. Please try again.");
+      console.error("Error deleting employee:", error);
+      alert("Failed to delete employee.");
     } finally {
-      setIsDeletingEmployee(false); // NEW: Stop loading
+      setIsDeletingEmployee(false);
       setIsConfirmUpdateModalOpen(false);
       setEmployeeToDeleteDetails(null);
     }
@@ -408,8 +421,8 @@ const employeesToRender = searchResults && searchTerm.trim()
 
 
   const getInitials = (name) => {
-    if (!name) return '';
-    const nameParts = (name || '').split(' ').filter(part => part.length > 0);
+    if (!name || name.trim() === '') return '?';
+    const nameParts = name.trim().split(' ').filter(part => part.length > 0);
     if (nameParts.length === 1) return nameParts[0].charAt(0).toUpperCase();
     if (nameParts.length >= 2) return (nameParts[0].charAt(0) + nameParts[nameParts.length - 1].charAt(0)).toUpperCase();
     return '';
@@ -429,19 +442,23 @@ const employeesToRender = searchResults && searchTerm.trim()
 
     try {
       await update(userRef, { accountStatus: newStatus });
-      console.log(`Employee status for ${firebaseKey} updated to ${newStatus}`);
+      
+      // Update local state
+      const updateList = (list) => list.map(emp => emp.firebaseKey === firebaseKey ? { ...emp, accountStatus: newStatus } : emp);
+      setEmployees(prev => updateList(prev));
+      if (searchResults) setSearchResults(prev => updateList(prev));
+
     } catch (error) {
-      console.error("Failed to update employee status in Firebase:", error);
-      alert("An error occurred while updating the employee's status.");
+      console.error("Failed to update status:", error);
+      alert("An error occurred while updating the status.");
     } finally {
       setIsStatusConfirmModalOpen(false);
       setEmployeeToUpdateStatus(null);
     }
   };
 
-
-
   const getRoleTagBg = (role) => {
+    if (!role) return '#f3f4f6';
     switch (role.toLowerCase()) {
       case 'admin': return '#fee2e2';
       case 'manager': return '#E0F7FA';
@@ -449,39 +466,46 @@ const employeesToRender = searchResults && searchTerm.trim()
       case 'employee': return '#E1F5FE';
       case 'active': return '#E8F5E9';
       case 'inactive': return '#FFEBEE';
-      case 'management': return '#E3F2FD';
-      case 'tech placement': return '#FCE4EC';
       default: return '#f3f4f6';
     }
   };
+  
+  const getRoleTagText = (role) => {
+      if (!role) return '#6b7280';
+      switch (role.toLowerCase()) {
+        case 'admin': return '#991b1b';
+        case 'manager': return '#00BCD4';
+        case 'team lead': return '#9C27B0';
+        case 'employee': return '#2196F3';
+        case 'active': return '#4CAF50';
+        case 'inactive': return '#F44336';
+        default: return '#6b7280';
+      }
+    };
 
     const handleNextPage = () => {
-    // Don't go to next page while searching
     if (hasMorePages && !searchResults) {
       loadPage(currentPage + 1);
     }
   };
 
   const handlePrevPage = () => {
-    // Don't go to previous page while searching
     if (currentPage > 1 && !searchResults) {
       loadPage(currentPage - 1);
     }
   };
 
-
-    // Load one specific page (5 employees) from Firebase, with caching
+  // Load one specific page from Firebase, with caching
+  // UPDATED: Fetches FETCH_BUFFER instead of PAGE_SIZE to allow for client filtering
   const loadPage = async (pageNumber) => {
   if (pageNumber < 1) return;
 
-  // Use cache if we already loaded this page
   if (pageCache[pageNumber]) {
     setEmployees(pageCache[pageNumber]);
     setCurrentPage(pageNumber);
     return;
   }
 
-  // Don’t try to go forward if we already know there is no next page
   if (!hasMorePages && pageNumber > currentPage) return;
 
   setLoading(true);
@@ -489,23 +513,23 @@ const employeesToRender = searchResults && searchTerm.trim()
 
   try {
     let employeesQuery;
-
+    // We fetch more items (FETCH_BUFFER) than we display (PAGE_SIZE)
+    // so we can filter out "Clients" without ending up with 0 items.
+    
     if (pageNumber === 1) {
-      // First page -> first 5 users by key
       employeesQuery = query(
         ref(database, "users"),
         orderByKey(),
-        limitToFirst(PAGE_SIZE) // PAGE_SIZE = 5
+        limitToFirst(FETCH_BUFFER) 
       );
     } else {
       const prevLastKey = pageLastKeys[pageNumber - 1];
 
-      // If we have no cursor for previous page, bail out to page 1
       if (!prevLastKey) {
         employeesQuery = query(
           ref(database, "users"),
           orderByKey(),
-          limitToFirst(PAGE_SIZE)
+          limitToFirst(FETCH_BUFFER)
         );
         pageNumber = 1;
       } else {
@@ -513,7 +537,7 @@ const employeesToRender = searchResults && searchTerm.trim()
           ref(database, "users"),
           orderByKey(),
           startAt(prevLastKey),
-          limitToFirst(PAGE_SIZE + 1) // +1 so we can drop the duplicate
+          limitToFirst(FETCH_BUFFER + 1)
         );
       }
     }
@@ -521,42 +545,48 @@ const employeesToRender = searchResults && searchTerm.trim()
     const snap = await get(employeesQuery);
 
     if (!snap.exists()) {
-      // No more data at all
       setHasMorePages(false);
+      setEmployees([]); 
       return;
     }
 
     let raw = snap.val() || {};
     let keys = Object.keys(raw);
+    keys.sort();
 
-    // Convert to array of users
     let users = keys.map((k) => ({
       firebaseKey: k,
       ...raw[k],
     }));
 
-    // For page > 1, first record is duplicate of last record on previous page
     if (pageNumber > 1) {
+      // Drop the overlap (the cursor)
       users = users.slice(1);
       keys = keys.slice(1);
     }
     
+    // --- KEY CHANGE: Filter out clients here ---
+    // We filter BEFORE we slice to PAGE_SIZE to ensure we fill the page.
+    const nonClientUsers = users.filter(u => !isClientRole(u));
+    // ------------------------------------------
 
-    // If there is literally no data after slicing, don’t move page forward
-    if (users.length === 0) {
-      setHasMorePages(false);
-      return;
+    if (nonClientUsers.length === 0 && users.length > 0) {
+      // Corner case: We fetched data but ALL of them were clients.
+      // In a real production app, we would recursively fetch more here.
+      // For now, to keep complexity low, we just show empty or "Load Next".
     }
 
-    // Limit to PAGE_SIZE
-    const pageSlice = users.slice(0, PAGE_SIZE);
-
-    // If fewer than we requested, we know this is the last page
-    const isLastPage = pageSlice.length < PAGE_SIZE;
+    // Determine if we have more pages based on the fetch vs slice
+    // If we fetched FETCH_BUFFER but only show PAGE_SIZE, we probably have more.
+    const pageSlice = nonClientUsers.slice(0, PAGE_SIZE);
+    
+    // Save cursor for next page. We use the Key of the last item in the *fetched* list (not filtered list)
+    // to ensure pagination sequence remains correct on the DB side.
+    const lastKeyRaw = keys[keys.length - 1]; 
+    
+    // Check if we reached the end of the DB
+    const isLastPage = users.length < FETCH_BUFFER; 
     setHasMorePages(!isLastPage);
-
-    // Save cursor for next page
-    const lastKey = keys[keys.length - 1];
 
     setPageCache((prev) => ({
       ...prev,
@@ -565,7 +595,7 @@ const employeesToRender = searchResults && searchTerm.trim()
 
     setPageLastKeys((prev) => ({
       ...prev,
-      [pageNumber]: lastKey,
+      [pageNumber]: lastKeyRaw,
     }));
 
     setEmployees(pageSlice);
@@ -579,97 +609,74 @@ const employeesToRender = searchResults && searchTerm.trim()
 };
 
 
-  // On mount: only load the first 5 users
+  // On mount: only load the first page
   useEffect(() => {
     loadPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
   const handleSearchClick = async () => {
   const term = searchTerm.trim();
   if (!term) {
-    // Empty search -> back to normal paginated view
     setSearchResults(null);
     return;
   }
 
-  const lowered = term.toLowerCase();
+  const capTerm = term.charAt(0).toUpperCase() + term.slice(1);
 
-  // 1) First, search inside already loaded pages (no DB read)
-  const cachedEmployees = Object.values(pageCache).flat();
-  const localMatches = cachedEmployees.filter((employee) =>
-    (employee.firstName || "").toLowerCase().includes(lowered) ||
-    (employee.lastName || "").toLowerCase().includes(lowered) ||
-    (employee.workEmail || "").toLowerCase().includes(lowered) ||
-    (employee.personalEmail || "").toLowerCase().includes(lowered)
-  );
-
-  if (localMatches.length > 0) {
-    setSearchResults(localMatches);
-    return;
-  }
-
-  // 2) If not found locally, query ONLY matching users from DB
   setIsSearching(true);
   setError(null);
 
   try {
-    const matches = [];
+    const matchesMap = new Map();
+
+    const runAndMerge = async (q) => {
+        const snap = await get(q);
+        if (snap.exists()) {
+            const data = snap.val();
+            Object.keys(data).forEach((key) => {
+                const user = { firebaseKey: key, ...data[key] };
+                // --- KEY CHANGE: Filter out clients in search ---
+                if (!isClientRole(user)) {
+                   matchesMap.set(key, user);
+                }
+            });
+        }
+    };
 
     if (term.includes("@")) {
-      // Treat as email (work or personal)
-      const workEmailQuery = query(
+       const workEmailQuery = query(
         ref(database, "users"),
         orderByChild("workEmail"),
-        equalTo(term)
+        equalTo(term),
+        limitToFirst(10) 
       );
-      const personalEmailQuery = query(
-        ref(database, "users"),
-        orderByChild("personalEmail"),
-        equalTo(term)
-      );
-
-      const [workSnap, personalSnap] = await Promise.all([
-        get(workEmailQuery),
-        get(personalEmailQuery),
-      ]);
-
-      [workSnap, personalSnap].forEach((snap) => {
-        if (snap.exists()) {
-          const data = snap.val();
-          Object.keys(data).forEach((key) => {
-            matches.push({ firebaseKey: key, ...data[key] });
-          });
-        }
-      });
+      await runAndMerge(workEmailQuery);
+      
     } else {
-      // Treat as exact firstName / lastName
       const firstNameQuery = query(
         ref(database, "users"),
         orderByChild("firstName"),
-        equalTo(term)
+        startAt(capTerm),
+        endAt(capTerm + "\uf8ff"),
+        limitToFirst(10) 
       );
+
       const lastNameQuery = query(
         ref(database, "users"),
         orderByChild("lastName"),
-        equalTo(term)
+        startAt(capTerm),
+        endAt(capTerm + "\uf8ff"),
+        limitToFirst(10)
       );
 
-      const [firstSnap, lastSnap] = await Promise.all([
-        get(firstNameQuery),
-        get(lastNameQuery),
+      await Promise.all([
+        runAndMerge(firstNameQuery),
+        runAndMerge(lastNameQuery),
       ]);
-
-      [firstSnap, lastSnap].forEach((snap) => {
-        if (snap.exists()) {
-          const data = snap.val();
-          Object.keys(data).forEach((key) => {
-            matches.push({ firebaseKey: key, ...data[key] });
-          });
-        }
-      });
     }
 
-    // NO role filtering here – show whatever we found
+    const matches = Array.from(matchesMap.values());
     setSearchResults(matches);
   } catch (err) {
     console.error("Error searching employee:", err);
@@ -678,22 +685,6 @@ const employeesToRender = searchResults && searchTerm.trim()
     setIsSearching(false);
   }
 };
-
-
-
-  const getRoleTagText = (role) => {
-    switch (role.toLowerCase()) {
-      case 'admin': return '#991b1b';
-      case 'manager': return '#00BCD4';
-      case 'team lead': return '#9C27B0';
-      case 'employee': return '#2196F3';
-      case 'active': return '#4CAF50';
-      case 'inactive': return '#F44336';
-      case 'management': return '#2196F3';
-      case 'tech placement': return '#E91E63';
-      default: return '#6b7280';
-    }
-  };
 
   return (
     <div className="ad-body-container">
@@ -759,20 +750,17 @@ const employeesToRender = searchResults && searchTerm.trim()
             min-height: 100vh;
             color: var(--text-primary);
         }
-
-           .toggle-switch {
+        .toggle-switch {
           position: relative;
           display: inline-block;
           width: 50px;
           height: 28px;
         }
-
         .toggle-switch input {
           opacity: 0;
           width: 0;
           height: 0;
         }
-
         .toggle-slider {
           position: absolute;
           cursor: pointer;
@@ -784,7 +772,6 @@ const employeesToRender = searchResults && searchTerm.trim()
           transition: .4s;
           border-radius: 28px;
         }
-
         .toggle-slider:before {
           position: absolute;
           content: "";
@@ -796,11 +783,9 @@ const employeesToRender = searchResults && searchTerm.trim()
           transition: .4s;
           border-radius: 50%;
         }
-
         input:checked + .toggle-slider {
-          background-color: #28a745; /* Green for Active */
+          background-color: #28a745; 
         }
-
         input:checked + .toggle-slider:before {
           transform: translateX(22px);
         }
@@ -968,17 +953,16 @@ const employeesToRender = searchResults && searchTerm.trim()
             max-height: 90vh;
             overflow-y: auto;
         }
-
-          .employee-add-modal-content {
-  background: #fff;
-  border-radius: 12px;
-  max-width: 850px;
-  width: 95%;
-  max-height: 90vh;
-  overflow-y: auto;
-  padding: 24px 32px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-}
+        .employee-add-modal-content {
+            background: #fff;
+            border-radius: 12px;
+            max-width: 850px;
+            width: 95%;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 24px 32px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
         .modal-header {
             display: flex;
             justify-content: space-between;
@@ -1131,20 +1115,17 @@ const employeesToRender = searchResults && searchTerm.trim()
             background-color: #2e7d32;
             color: #fff;
         }
-
-                .pagination-controls {
+        .pagination-controls {
           margin-top: 1rem;
           display: flex;
           justify-content: flex-end;
           align-items: center;
           gap: 0.75rem;
         }
-
         .pagination-info {
           font-size: 0.875rem;
           color: var(--text-secondary);
         }
-
       `}
       </style>
       <main>
@@ -1153,120 +1134,121 @@ const employeesToRender = searchResults && searchTerm.trim()
             <div className="employee-management-header">
               <h2 className="employee-management-title">Employee Management</h2>
              <div className="employee-search-add">
-  <input
-    type="text"
-    placeholder="Search employees by name or email..."
-    className="employee-search-input"
-    value={searchTerm}
-    onChange={handleSearchChange}
-  />
-  <button
-    type="button"
-    className="action-btn"
-    onClick={handleSearchClick}
-    disabled={isSearching}
-  >
-    {isSearching ? "Searching..." : "Search"}
-  </button>
-  <button className="add-employee-btn" onClick={handleAddEmployeeClick}>
-    Add Employee
-  </button>
-</div>
-
+              <input
+                type="text"
+                placeholder="Search by full email Or first/last name"
+                className="employee-search-input"
+                value={searchTerm}
+                onChange={handleSearchChange}
+              />
+              <button
+                type="button"
+                className="action-btn"
+                onClick={handleSearchClick}
+                disabled={isSearching}
+              >
+                {isSearching ? "Searching..." : "Search"}
+              </button>
+              <button className="add-employee-btn" onClick={handleAddEmployeeClick}>
+                Add Employee
+              </button>
             </div>
+          </div>
           <div className="employee-list">
-  {loading && !employeesToRender.length ? (
-    <div>Loading employees...</div>
-  ) : employeesToRender.length === 0 ? (
-    <div>No employees found.</div>
-  ) : (
-    employeesToRender.map((employee) => (
-      <div className="employee-card" key={employee.firebaseKey}>
-        <div className="employee-card-left">
-          <div className="employee-avatar">
-            {getInitials(`${employee.firstName} ${employee.lastName}`)}
-          </div>
-          <div className="employee-info">
-            <div className="employee-name">
-              {`${employee.firstName} ${employee.lastName}`}
-            </div>
-            <div className="employee-email">{employee.workEmail}</div>
-            <div className="employee-roles">
-              {(employee.roles || []).map((role) => (
-                <span
-                  key={role}
-                  className="role-tag"
-                  style={{
-                    backgroundColor: getRoleTagBg(role),
-                    color: getRoleTagText(role),
-                  }}
-                >
-                  {role}
-                </span>
-              ))}
-            </div>
-          </div>
+          {loading && !employeesToRender.length ? (
+            <div>Loading employees...</div>
+          ) : employeesToRender.length === 0 ? (
+            <div>No employees found.</div>
+          ) : (
+            employeesToRender.map((employee) => (
+              <div className="employee-card" key={employee.firebaseKey}>
+                <div className="employee-card-left">
+                  <div className="employee-avatar">
+                    {/* Fixed: Added fallback for undefined names */}
+                    {getInitials(`${employee.firstName || ''} ${employee.lastName || ''}`)}
+                  </div>
+                  <div className="employee-info">
+                    <div className="employee-name">
+                       {/* Fixed: Handle undefined firstName/lastName gracefully */}
+                      {(employee.firstName || employee.lastName) 
+                        ? `${employee.firstName || ''} ${employee.lastName || ''}` 
+                        : 'Unnamed Employee'}
+                    </div>
+                    <div className="employee-email">{employee.workEmail || 'No Email'}</div>
+                    <div className="employee-roles">
+                      {(employee.roles || []).map((role) => (
+                        <span
+                          key={role}
+                          className="role-tag"
+                          style={{
+                            backgroundColor: getRoleTagBg(role),
+                            color: getRoleTagText(role),
+                          }}
+                        >
+                          {role}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className="employee-actions">
+                  <label className="toggle-switch" style={{ top: "10px" }}>
+                    <input
+                      type="checkbox"
+                      checked={employee.accountStatus === "Active"}
+                      onChange={() => handleStatusToggle(employee)}
+                    />
+                    <span className="toggle-slider"></span>
+                  </label>
+                  <button
+                    className="action-btn"
+                    onClick={() => handleEditEmployeeClick(employee.firebaseKey)}
+                  >
+                    Edit
+                  </button>
+
+                  <button
+                    className="action-btn delete-btn"
+                    onClick={() => handleDeleteEmployeeClick(employee.firebaseKey)}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
-        <div className="employee-actions">
-          <label className="toggle-switch" style={{ top: "10px" }}>
-            <input
-              type="checkbox"
-              checked={employee.accountStatus === "Active"}
-              onChange={() => handleStatusToggle(employee)}
-            />
-            <span className="toggle-slider"></span>
-          </label>
-          <button
-            className="action-btn"
-            onClick={() => handleEditEmployeeClick(employee.firebaseKey)}
-          >
-            Edit
-          </button>
 
-          <button
-            className="action-btn delete-btn"
-            onClick={() => handleDeleteEmployeeClick(employee.firebaseKey)}
-          >
-            Delete
-          </button>
-        </div>
-      </div>
-    ))
-  )}
-</div>
+        {/*! Pagination controls – only when not in search mode */}
+        {!searchResults && (
+          <div className="pagination-controls">
+            <span className="pagination-info" style={{ marginRight: '1rem', fontWeight: '500' }}>
+              {employees.length > 0 
+                ? `Showing ${startRange}-${endRange}` 
+                : '0 employees'}
+            </span>
 
-{/*! Pagination controls – only when not in search mode */}
-{!searchResults && (
-  <div className="pagination-controls">
-    {/* NEW: Range Indicator */}
-    <span className="pagination-info" style={{ marginRight: '1rem', fontWeight: '500' }}>
-      {employees.length > 0 
-        ? `Showing ${startRange}-${endRange}` 
-        : '0 employees'}
-    </span>
-
-    <button
-      type="button"
-      className="action-btn"
-      onClick={handlePrevPage}
-      disabled={currentPage === 1 || loading}
-    >
-      Previous
-    </button>
-    
-    <span className="pagination-info">Page {currentPage}</span>
-    
-    <button
-      type="button"
-      className="action-btn"
-      onClick={handleNextPage}
-      disabled={!hasMorePages || loading}
-    >
-      Next
-    </button>
-  </div>
-)}
-
+            <button
+              type="button"
+              className="action-btn"
+              onClick={handlePrevPage}
+              disabled={currentPage === 1 || loading}
+            >
+              Previous
+            </button>
+            
+            <span className="pagination-info">Page {currentPage}</span>
+            
+            <button
+              type="button"
+              className="action-btn"
+              onClick={handleNextPage}
+              disabled={!hasMorePages || loading}
+            >
+              Next
+            </button>
+          </div>
+        )}
           </div>
         </div>
       </main>
@@ -1305,7 +1287,7 @@ const employeesToRender = searchResults && searchTerm.trim()
                   id="lastName"
                   name="lastName"
                   className="form-input"
-                  placeholder="Enter first name"
+                  placeholder="Enter last name"
                   value={newEmployee.lastName}
                   onChange={handleNewemployeeChange}
                   required
@@ -1545,7 +1527,6 @@ const employeesToRender = searchResults && searchTerm.trim()
                     required
                   />
                   <button type="button" className="generate-password-btn" onClick={generateTemporaryPassword}>
-
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" fill="currentColor" style={{ width: '1rem', height: '1rem' }}>
                       <path d="M288 80c-65.2 0-118.8 29.6-159.9 67.7C89.3 183.5 64 223.8 64 256c0 32.2 25.3 72.5 64.1 108.3C169.2 402.4 222.8 432 288 432s118.8-29.6 159.9-67.7C486.7 328.5 512 288.2 512 256c0-32.2-25.3-72.5-64.1-108.3C406.8 109.6 353.2 80 288 80zM96 256c0-10.8 2.8-21.6 7.9-31.7c17.5-35.3 47.6-64.7 85.8-84.3c15.2-7.8 31.5-12 48.3-12s33.1 4.2 48.3 12c38.2 19.6 68.3 49 85.8 84.3c5.1 10.1 7.9 20.9 7.9 31.7s-2.8 21.6-7.9 31.7c-17.5 35.3-47.6 64.7-85.8 84.3c-15.2 7.8-31.5 12-48.3 12c-38.2-19.6-68.3-49-85.8-84.3C98.8 277.6 96 266.8 96 256zm192 0a64 64 0 1 0 0-128 64 64 0 1 0 0 128z" />
                     </svg>
@@ -1739,7 +1720,7 @@ const employeesToRender = searchResults && searchTerm.trim()
             </div>
             <p>
               Are you sure you want to change the status of 
-              <strong> {`${employeeToUpdateStatus.firstName} ${employeeToUpdateStatus.lastName}`} </strong> 
+              <strong> {`${employeeToUpdateStatus.firstName || ''} ${employeeToUpdateStatus.lastName || ''}`} </strong> 
               to <strong>{employeeToUpdateStatus.newStatus}</strong>?
             </p>
             <div className="confirm-modal-buttons">
@@ -1802,4 +1783,3 @@ const employeesToRender = searchResults && searchTerm.trim()
 
 
 export default EmployeeManagement;
-
