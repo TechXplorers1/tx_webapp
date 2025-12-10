@@ -581,41 +581,82 @@ const CLIENT_APPS_PAGE_SIZE = 5;
 
 
 
-  const handleConfirmSelectManager = async () => {
-    if (!managerToConfirm || !registrationForManager) return;
+const handleConfirmSelectManager = async () => {
+  if (!managerToConfirm || !registrationForManager) return;
 
-    const updatedManagerInfo = {
-      manager: `${managerToConfirm.firstName} ${managerToConfirm.lastName}`,
-      assignedManager: managerToConfirm.firebaseKey,
-    };
+  // 1. Basic IDs
+  const clientKey = registrationForManager.clientFirebaseKey;
+  const regKey = registrationForManager.registrationKey;
 
-    const registrationRef = ref(
-      database,
-      `clients/${registrationForManager.clientFirebaseKey}/serviceRegistrations/${registrationForManager.registrationKey}`
+  // Old manager (if any) so we can clean up their index
+  const oldManagerId = registrationForManager.assignedManager || null;
+
+  // New manager
+  const newManagerId = managerToConfirm.firebaseKey;
+  const assignmentKey = `${clientKey}_${regKey}`;
+
+  const updatedManagerInfo = {
+    manager: `${managerToConfirm.firstName} ${managerToConfirm.lastName}`,
+    assignedManager: newManagerId,
+  };
+
+  // 2. Build a multi-location update payload
+  const updates = {};
+
+  // 2A. Update main client registration node
+  updates[`clients/${clientKey}/serviceRegistrations/${regKey}/manager`] =
+    updatedManagerInfo.manager;
+  updates[`clients/${clientKey}/serviceRegistrations/${regKey}/assignedManager`] =
+    updatedManagerInfo.assignedManager;
+  updates[`clients/${clientKey}/serviceRegistrations/${regKey}/assignmentStatus`] =
+    'pending_employee';
+
+  // 2B. Create / update the Manager → Client reverse index
+  updates[`manager_assignments/${newManagerId}/${assignmentKey}`] = {
+    clientFirebaseKey: clientKey,
+    registrationKey: regKey,
+    clientName: `${registrationForManager.firstName || ''} ${
+      registrationForManager.lastName || ''
+    }`.trim(),
+    status: 'pending_employee',
+  };
+
+  // 2C. If there was an old manager, remove the old index entry
+  if (oldManagerId) {
+    updates[`manager_assignments/${oldManagerId}/${assignmentKey}`] = null;
+  }
+
+  try {
+    // 3. Apply all updates atomically
+    await update(ref(database), updates);
+
+    // 4. Update local state so the UI immediately reflects it
+    setServiceRegistrations(prev =>
+      prev.map(reg =>
+        reg.registrationKey === regKey
+          ? {
+              ...reg,
+              ...updatedManagerInfo,
+              assignmentStatus: 'pending_employee',
+            }
+          : reg
+      )
     );
 
-    try {
-      await update(registrationRef, {
-        ...updatedManagerInfo,
-        assignmentStatus: 'pending_employee',
-      });
+    // Optionally: you can show a toast/snackbar here
+    // triggerNotification("Manager assigned successfully!");
 
-      setServiceRegistrations((prev) =>
-        prev.map((reg) =>
-          reg.registrationKey === registrationForManager.registrationKey
-            ? { ...reg, ...updatedManagerInfo, assignmentStatus: 'pending_employee' }
-            : reg
-        )
-      );
-    } catch (error) {
-      console.error('Failed to assign manager:', error);
-    } finally {
-      setIsConfirmManagerModalOpen(false);
-      setIsManagerModalOpen(false);
-      setManagerToConfirm(null);
-      setRegistrationForManager(null);
-    }
-  };
+  } catch (error) {
+    console.error('Failed to assign manager:', error);
+    alert('Failed to assign manager. Please try again.');
+  } finally {
+    // 5. Close modals and clear temp state
+    setIsConfirmManagerModalOpen(false);
+    setIsManagerModalOpen(false);
+    setManagerToConfirm(null);
+    setRegistrationForManager(null);
+  }
+};
 
 
   // All registrations after applying tab/service/search filters
