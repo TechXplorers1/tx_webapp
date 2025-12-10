@@ -587,7 +587,7 @@ const EmployeeData = () => {
     (async () => {
       try {
         // optimization: using cached data
-        const usersData = await getCachedData('users', 'cache_all_users', 60);
+        const usersData = await getCachedData('users', 'cache_users_full', 1440);
         const managementList = [];
 
         if (usersData) {

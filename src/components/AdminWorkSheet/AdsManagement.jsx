@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { database, storage } from '../../firebase'; // Standardized Import
+import { database, storage } from '../../firebase'; 
 import { ref, push, serverTimestamp, remove, update, get, query, orderByChild, limitToLast } from "firebase/database";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage"; 
 import { Modal, Button, Form, Card, Badge, Spinner, Container, Row, Col } from 'react-bootstrap';
@@ -16,10 +16,8 @@ const AdsManagement = () => {
         type: 'popup', 
     });
 
-    // File states
     const [imageFile, setImageFile] = useState(null); 
     const [editImageFile, setEditImageFile] = useState(null);
-
     const [postedAds, setPostedAds] = useState([]);
     const [loading, setLoading] = useState(false);
 
@@ -30,10 +28,10 @@ const AdsManagement = () => {
     const [deleteAdKey, setDeleteAdKey] = useState(null);
     const [isDeleteConfirmModalOpen, setIsDeleteConfirmModalOpen] = useState(false);
 
-    // --- DATA FETCHING (SAFE MODE) ---
+    // --- DATA FETCHING ---
     const loadAds = async () => {
         try {
-            // SAFETY: Limit to last 50 to prevent billing spikes
+            // Note: Ensure '.indexOn': ['createdAt'] is in your Firebase Rules
             const adsQuery = query(
                 ref(database, "welcomeCards"),
                 orderByChild("createdAt"),
@@ -49,8 +47,12 @@ const AdsManagement = () => {
                     ...data[key]
                 }));
 
-                // Sort newest first
-                list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                // Sort newest first (Javascript sort as backup)
+                list.sort((a, b) => {
+                    const dateA = a.createdAt || 0;
+                    const dateB = b.createdAt || 0;
+                    return dateB - dateA;
+                });
                 setPostedAds(list);
             } else {
                 setPostedAds([]);
@@ -71,15 +73,11 @@ const AdsManagement = () => {
     };
 
     const handleFileChange = (e) => {
-        if (e.target.files[0]) {
-            setImageFile(e.target.files[0]);
-        }
+        if (e.target.files[0]) setImageFile(e.target.files[0]);
     };
 
     const handleEditFileChange = (e) => {
-        if (e.target.files[0]) {
-            setEditImageFile(e.target.files[0]);
-        }
+        if (e.target.files[0]) setEditImageFile(e.target.files[0]);
     };
 
     const handlePostAd = async (e) => {
@@ -97,6 +95,11 @@ const AdsManagement = () => {
 
             // 1. Upload Image if file selected
             if (imageFile) {
+                // Check file size (limit 2MB)
+                if (imageFile.size > 2 * 1024 * 1024) {
+                    throw new Error("File too large. Please upload an image smaller than 2MB.");
+                }
+
                 const imageStorageRef = storageRef(storage, `ad_images/${Date.now()}_${imageFile.name}`);
                 const snapshot = await uploadBytes(imageStorageRef, imageFile);
                 finalImageUrl = await getDownloadURL(snapshot.ref);
@@ -117,11 +120,17 @@ const AdsManagement = () => {
             });
             setImageFile(null); 
             setShowCreateModal(false); 
-            await loadAds(); // Refresh list
+            await loadAds(); 
 
         } catch (error) {
             console.error("Error posting ad:", error);
-            alert("Failed to post ad.");
+            if (error.code === 'storage/quota-exceeded') {
+                alert("Storage Full: Cannot upload image. Upgrade plan or delete old files.");
+            } else if (error.message.includes("File too large")) {
+                alert(error.message);
+            } else {
+                alert("Failed to post ad. Check console for details.");
+            }
         } finally {
             setLoading(false);
         }
@@ -148,6 +157,9 @@ const AdsManagement = () => {
             let finalImageUrl = adToEdit.imageUrl;
 
             if (editImageFile) {
+                 if (editImageFile.size > 2 * 1024 * 1024) {
+                    throw new Error("File too large. Please upload an image smaller than 2MB.");
+                }
                 const imageStorageRef = storageRef(storage, `ad_images/${Date.now()}_${editImageFile.name}`);
                 const snapshot = await uploadBytes(imageStorageRef, editImageFile);
                 finalImageUrl = await getDownloadURL(snapshot.ref);
@@ -164,10 +176,14 @@ const AdsManagement = () => {
             });
 
             setIsEditModalOpen(false);
-            await loadAds(); // Refresh list
+            await loadAds(); 
         } catch (error) {
             console.error("Error updating ad:", error);
-            alert("Update failed.");
+            if (error.code === 'storage/quota-exceeded') {
+                alert("Storage Full: Cannot upload new image.");
+            } else {
+                alert("Update failed. Check console.");
+            }
         } finally {
             setLoading(false);
         }
@@ -184,8 +200,9 @@ const AdsManagement = () => {
         try {
             await remove(ref(database, `welcomeCards/${deleteAdKey}`));
             setIsDeleteConfirmModalOpen(false);
-            await loadAds(); // Refresh list
+            await loadAds(); 
         } catch (error) {
+            console.error(error);
             alert("Delete failed.");
         } finally {
             setLoading(false);
@@ -230,7 +247,7 @@ const AdsManagement = () => {
                                                 <Card.Img 
                                                     variant="top" 
                                                     src={ad.imageUrl} 
-                                                    loading="lazy" /* SAFETY FIX: Lazy Load Images */
+                                                    loading="lazy"
                                                     style={{ height: '160px', objectFit: 'cover' }} 
                                                 />
                                             ) : (

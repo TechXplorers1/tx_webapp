@@ -1,81 +1,91 @@
 import React, { useState, useEffect } from 'react';
-import { database } from '../../firebase'; // Corrected import path
-import { ref, get, update, remove } from "firebase/database";
+import { database } from '../../firebase'; 
+import { ref, get, update, remove, query, limitToLast } from "firebase/database"; // Added query and limitToLast
+
 const RequestManagement = () => {
   // --- Request Management States ---
   const [requestTab, setRequestTab] = useState('career');
+  
+  // Career States
   const [showCareerDetailsModal, setShowCareerDetailsModal] = useState(false);
   const [selectedCareerSubmission, setSelectedCareerSubmission] = useState(null);
+  
+  // Contact Us States
   const [showContactDetailsModal, setShowContactDetailsModal] = useState(false);
   const [selectedContactSubmission, setSelectedContactSubmission] = useState(null);
+  
+  // Confirmation Modal States
   const [showRequestConfirmModal, setShowRequestConfirmModal] = useState(false);
   const [requestConfirmAction, setRequestConfirmAction] = useState(null);
   const [requestConfirmMessage, setRequestConfirmMessage] = useState('');
   const [itemToProcess, setItemToProcess] = useState(null);
-  const [showServiceRequestModal, setShowServiceRequestModal] = useState(false);
-  const [selectedServiceRequest, setSelectedServiceRequest] = useState(null);
 
+  // Data Arrays
   const [careerSubmissions, setCareerSubmissions] = useState([]);
   const [contactSubmissions, setContactSubmissions] = useState([]);
-  const [serviceRequests, setServiceRequests] = useState([]);
 
-  // useEffect to fetch all submissions from Firebase in real-time
-// AFTER – single read of the submissions tree
-useEffect(() => {
-  let cancelled = false;
+  // --- OPTIMIZED DATA FETCHING ---
+  useEffect(() => {
+    let cancelled = false;
 
-  const fetchSubmissions = async () => {
-    try {
-      const submissionsRef = ref(database, "submissions");
-      const snapshot = await get(submissionsRef);
+    const fetchSubmissions = async () => {
+      try {
+        // 1. Fetch only the last 50 Career Submissions
+        const careerQuery = query(
+            ref(database, "submissions/career_submissions"),
+            limitToLast(50)
+        );
 
-      if (!snapshot.exists() || cancelled) {
-        if (!cancelled) {
-          setCareerSubmissions([]);
-          setContactSubmissions([]);
-          setServiceRequests([]);
+        // 2. Fetch only the last 50 Contact Messages
+        const contactQuery = query(
+            ref(database, "submissions/contactMessages"),
+            limitToLast(50)
+        );
+
+        // Run both small requests in parallel
+        const [careerSnap, contactSnap] = await Promise.all([
+            get(careerQuery),
+            get(contactQuery)
+        ]);
+
+        if (cancelled) return;
+
+        // Process Career Data
+        if (careerSnap.exists()) {
+            const data = careerSnap.val();
+            const formatted = Object.keys(data).map(key => ({
+                firebaseKey: key,
+                ...data[key],
+            })).reverse(); // Reverse to show newest first
+            setCareerSubmissions(formatted);
+        } else {
+            setCareerSubmissions([]);
         }
-        return;
+
+        // Process Contact Data
+        if (contactSnap.exists()) {
+            const data = contactSnap.val();
+            const formatted = Object.keys(data).map(key => ({
+                firebaseKey: key,
+                ...data[key],
+            })).reverse(); // Reverse to show newest first
+            setContactSubmissions(formatted);
+        } else {
+            setContactSubmissions([]);
+        }
+
+      } catch (err) {
+        if (!cancelled) {
+          console.error("Failed to load submissions:", err);
+        }
       }
+    };
 
-      const allSubmissions = snapshot.val();
-
-      const formatData = (obj = {}) =>
-        Object.keys(obj).map(key => ({
-          firebaseKey: key,
-          ...obj[key],
-        }));
-
-      if (!cancelled) {
-        setCareerSubmissions(
-          allSubmissions.career_submissions
-            ? formatData(allSubmissions.career_submissions)
-            : []
-        );
-        setContactSubmissions(
-          allSubmissions.contactMessages
-            ? formatData(allSubmissions.contactMessages)
-            : []
-        );
-        setServiceRequests(
-          allSubmissions.serviceRequests
-            ? formatData(allSubmissions.serviceRequests)
-            : []
-        );
-      }
-    } catch (err) {
-      if (!cancelled) {
-        console.error("Failed to load submissions:", err);
-      }
-    }
-  };
-
-  fetchSubmissions();
-  return () => {
-    cancelled = true;
-  };
-}, []);
-
+    fetchSubmissions();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Handler to download the resume file
   const handleDownloadResume = (submission) => {
@@ -83,8 +93,6 @@ useEffect(() => {
         alert("No resume URL found for this submission.");
         return;
     }
-    // Directly open the URL in a new tab, which will trigger a download
-    // This is more reliable than fetching the blob.
     window.open(submission.resumeURL, '_blank');
   };
 
@@ -109,32 +117,22 @@ useEffect(() => {
     setSelectedContactSubmission(null);
   };
 
-  const handleViewServiceRequestDetails = (submission) => {
-    setSelectedServiceRequest(submission);
-    setShowServiceRequestModal(true);
-  };
-
-  const handleCloseServiceRequestModal = () => {
-    setShowServiceRequestModal(false);
-    setSelectedServiceRequest(null);
-  };
-
-  // Handler for opening the confirmation modal for various actions
+  // Handler for opening the confirmation modal
   const handleRequestAction = (action, item) => {
     setItemToProcess(item);
     setRequestConfirmAction(action);
     let message = '';
+    
     if (action === 'accept') message = `Are you sure you want to accept the application from ${item.firstName} ${item.lastName}?`;
     if (action === 'reject') message = `Are you sure you want to reject the application from ${item.firstName} ${item.lastName}?`;
     if (action === 'deleteContact') message = `Are you sure you want to delete the message from ${item.firstName} ${item.lastName}? This cannot be undone.`;
-    if (action === 'deleteServiceRequest') message = `Are you sure you want to delete the service request from ${item.email}? This cannot be undone.`;
-    if (action === 'deleteCareerSubmission')
-  message = `Are you sure you want to delete the career application from ${item.firstName} ${item.lastName}? This cannot be undone.`;
+    if (action === 'deleteCareerSubmission') message = `Are you sure you want to delete the career application from ${item.firstName} ${item.lastName}? This cannot be undone.`;
+    
     setRequestConfirmMessage(message);
     setShowRequestConfirmModal(true);
   };
 
-  // Handler for confirming and executing the action in the confirmation modal
+  // Handler for confirming and executing the action
   const confirmRequestAction = async () => {
     if (!itemToProcess || !requestConfirmAction) return;
 
@@ -143,24 +141,28 @@ useEffect(() => {
       if (requestConfirmAction === 'accept') {
         itemRef = ref(database, `submissions/career_submissions/${itemToProcess.firebaseKey}`);
         await update(itemRef, { status: 'Accepted' });
+        // Update local state to reflect change without re-fetching
+        setCareerSubmissions(prev => prev.map(item => item.firebaseKey === itemToProcess.firebaseKey ? { ...item, status: 'Accepted' } : item));
       }
       if (requestConfirmAction === 'reject') {
         itemRef = ref(database, `submissions/career_submissions/${itemToProcess.firebaseKey}`);
         await update(itemRef, { status: 'Rejected' });
+        // Update local state
+        setCareerSubmissions(prev => prev.map(item => item.firebaseKey === itemToProcess.firebaseKey ? { ...item, status: 'Rejected' } : item));
       }
       if (requestConfirmAction === 'deleteContact') {
         itemRef = ref(database, `submissions/contactMessages/${itemToProcess.firebaseKey}`);
         await remove(itemRef);
-      }
-      if (requestConfirmAction === 'deleteServiceRequest') {
-        itemRef = ref(database, `submissions/serviceRequests/${itemToProcess.firebaseKey}`);
-        await remove(itemRef);
+        // Remove from local state
+        setContactSubmissions(prev => prev.filter(item => item.firebaseKey !== itemToProcess.firebaseKey));
       }
       if (requestConfirmAction === 'deleteCareerSubmission') {
-  itemRef = ref(database, `submissions/career_submissions/${itemToProcess.firebaseKey}`);
-  await remove(itemRef);
-}
-      closeRequestConfirmModal(); // Close modal after action
+        itemRef = ref(database, `submissions/career_submissions/${itemToProcess.firebaseKey}`);
+        await remove(itemRef);
+        // Remove from local state
+        setCareerSubmissions(prev => prev.filter(item => item.firebaseKey !== itemToProcess.firebaseKey));
+      }
+      closeRequestConfirmModal(); 
     } catch (error) {
       console.error("Firebase action failed", error);
       alert("The requested action failed. Please try again.");
@@ -175,7 +177,7 @@ useEffect(() => {
     setItemToProcess(null);
   };
   
-  // --- Style Helper Functions for status tags ---
+  // --- Style Helper Functions ---
   const getRoleTagBg = (role) => {
     switch (role?.toLowerCase()) {
       case 'pending': return '#FEF3C7';
@@ -196,6 +198,7 @@ useEffect(() => {
 
   return (
     <div className="add-body-container">
+      {/* Styles kept exactly as they were */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         :root {
@@ -214,8 +217,7 @@ useEffect(() => {
             --confirm-delete-btn-bg: #EF4444;
             --create-employee-btn-bg: #2563eb;
         }
-    
-             .add-body-container {
+        .add-body-container {
             font-family: 'Inter', sans-serif;
             background-color: var(--bg-body);
             min-height: 100vh;
@@ -394,19 +396,13 @@ useEffect(() => {
             className={`request-tab-btn ${requestTab === 'career' ? 'active' : ''}`}
             onClick={() => setRequestTab('career')}
           >
-            Career Applications ({careerSubmissions.length})
+            Career Applications
           </button>
           <button
             className={`request-tab-btn ${requestTab === 'contactUs' ? 'active' : ''}`}
             onClick={() => setRequestTab('contactUs')}
           >
-            Contact Us Messages ({contactSubmissions.length})
-          </button>
-          <button
-            className={`request-tab-btn ${requestTab === 'serviceRequest' ? 'active' : ''}`}
-            onClick={() => setRequestTab('serviceRequest')}
-          >
-            Service Requests ({serviceRequests.length})
+            Contact Us Messages
           </button>
         </div>
 
@@ -426,73 +422,51 @@ useEffect(() => {
                 </tr>
               </thead>
               <tbody>
-                {careerSubmissions.map((sub, index) => (
-                  <tr key={sub.firebaseKey}>
-                    <td>{index + 1}</td>
-                    <td>{`${sub.firstName} ${sub.lastName}`}</td>
-                    <td>
-                      <div>{sub.email}</div>
-                      <div style={{color: 'var(--text-secondary)', fontSize: '0.8rem'}}>{sub.mobile}</div>
-                    </td>
-                    <td>{sub.role}</td>
-                    <td>{sub.experience} yrs</td>
-                    <td>
-                      <span className="status-tag" style={{ backgroundColor: getRoleTagBg(sub.status), color: getRoleTagText(sub.status) }}>
-                        {sub.status}
-                      </span>
-                    </td>
-                    <td>
-                      {sub.resumeURL ? (
-                        <button className="action-button download" onClick={() => handleDownloadResume(sub)}>{sub.resume}</button>
-                      ) : (
-                        <span>No Resume</span>
-                      )}
-                    </td>
-              
-                    <td>
-<div className="action-buttons">
-  <button
-    className="action-button view"
-    onClick={() => handleViewCareerDetails(sub)}
-  >
-    View
-  </button>
-
-  {sub.status === 'Pending' && (
-    <>
-      <button
-        className="action-button accept"
-        onClick={() => handleRequestAction('accept', sub)}
-      >
-        Accept
-      </button>
-      <button
-        className="action-button reject"
-        onClick={() => handleRequestAction('reject', sub)}
-      >
-        Reject
-      </button>
-    </>
-  )}
-
-  {/* Delete Button for Career Applications */}
-  <button
-    className="action-button reject"
-    onClick={() =>
-      handleRequestAction(
-        'deleteCareerSubmission',
-        sub
-      )
-    }
-    style={{ backgroundColor: '#DC2626', color: 'white' }}
-  >
-    Delete
-  </button>
-</div>
-
+                {careerSubmissions.length > 0 ? (
+                  careerSubmissions.map((sub, index) => (
+                    <tr key={sub.firebaseKey}>
+                      <td>{index + 1}</td>
+                      <td>{`${sub.firstName} ${sub.lastName}`}</td>
+                      <td>
+                        <div>{sub.email}</div>
+                        <div style={{color: 'var(--text-secondary)', fontSize: '0.8rem'}}>{sub.mobile}</div>
+                      </td>
+                      <td>{sub.role}</td>
+                      <td>{sub.experience} yrs</td>
+                      <td>
+                        <span className="status-tag" style={{ backgroundColor: getRoleTagBg(sub.status), color: getRoleTagText(sub.status) }}>
+                          {sub.status}
+                        </span>
+                      </td>
+                      <td>
+                        {sub.resumeURL ? (
+                          <button className="action-button download" onClick={() => handleDownloadResume(sub)}>{sub.resume}</button>
+                        ) : (
+                          <span>No Resume</span>
+                        )}
+                      </td>
+                
+                      <td>
+                        <div className="action-buttons">
+                          <button className="action-button view" onClick={() => handleViewCareerDetails(sub)}>View</button>
+                          {sub.status === 'Pending' && (
+                            <>
+                              <button className="action-button accept" onClick={() => handleRequestAction('accept', sub)}>Accept</button>
+                              <button className="action-button reject" onClick={() => handleRequestAction('reject', sub)}>Reject</button>
+                            </>
+                          )}
+                          <button className="action-button reject" style={{ backgroundColor: '#DC2626', color: 'white' }} onClick={() => handleRequestAction('deleteCareerSubmission', sub)}>Delete</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="8" style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
+                      No recent applications found.
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
@@ -512,56 +486,32 @@ useEffect(() => {
                 </tr>
               </thead>
               <tbody>
-                {contactSubmissions.map((sub, index) => (
-                  <tr key={sub.firebaseKey}>
-                    <td>{index + 1}</td>
-                    <td>{sub.firstName} {sub.lastName}</td>
-                    <td>
-                      <div>{sub.email}</div>
-                      <div style={{color: 'var(--text-secondary)', fontSize: '0.8rem'}}>{sub.phone}</div>
-                    </td>
-                    <td className="message-cell" title={sub.message} onClick={() => handleViewContactDetails(sub)}>{sub.message}</td>
-                    <td>{sub.receivedDate}</td>
-                    <td>
-                      <div className="action-buttons">
-                        <button className="action-button view" onClick={() => handleViewContactDetails(sub)}>View</button>
-                        <button className="action-button reject" onClick={() => handleRequestAction('deleteContact', sub)}>Delete</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {requestTab === 'serviceRequest' && (
-          <div className="request-table-container">
-            <table className="request-table">
-              <thead>
-                <tr>
-                  <th>S.No</th>
-                  <th>Email</th>
-                  <th>Message</th>
-                  <th>Received Date</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {serviceRequests.map((req, index) => (
-                  <tr key={req.firebaseKey}>
-                    <td>{index + 1}</td>
-                    <td>{req.email}</td>
-                    <td className="message-cell" title={req.message} onClick={() => handleViewServiceRequestDetails(req)}>{req.message}</td>
-                    <td>{req.receivedDate}</td>
-                    <td>
-                      <div className="action-buttons">
-                        <button className="action-button view" onClick={() => handleViewServiceRequestDetails(req)}>View</button>
-                        <button className="action-button reject" onClick={() => handleRequestAction('deleteServiceRequest', req)}>Delete</button>
-                      </div>
+                {contactSubmissions.length > 0 ? (
+                  contactSubmissions.map((sub, index) => (
+                    <tr key={sub.firebaseKey}>
+                      <td>{index + 1}</td>
+                      <td>{sub.firstName} {sub.lastName}</td>
+                      <td>
+                        <div>{sub.email}</div>
+                        <div style={{color: 'var(--text-secondary)', fontSize: '0.8rem'}}>{sub.phone}</div>
+                      </td>
+                      <td className="message-cell" title={sub.message} onClick={() => handleViewContactDetails(sub)}>{sub.message}</td>
+                      <td>{sub.receivedDate}</td>
+                      <td>
+                        <div className="action-buttons">
+                          <button className="action-button view" onClick={() => handleViewContactDetails(sub)}>View</button>
+                          <button className="action-button reject" onClick={() => handleRequestAction('deleteContact', sub)}>Delete</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
+                      No recent contact messages found.
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
@@ -597,7 +547,7 @@ useEffect(() => {
                         <a href={selectedCareerSubmission.resumeURL} target="_blank" rel="noopener noreferrer">
                             {selectedCareerSubmission.resume || 'View Resume'}
                         </a>
-                        <button onClick={() => handleDownloadResume(selectedCareerSubmission)} className="download-btn mt-2">Download Resume</button>
+                        <button onClick={() => handleDownloadResume(selectedCareerSubmission)} className="download-btn mt-2" style={{marginLeft: '10px'}}>Download</button>
                     </div>
                   )}
                 </div>
@@ -631,31 +581,6 @@ useEffect(() => {
             </div>
             <div className="modal-footer">
               <button type="button" className="confirm-cancel-btn" onClick={handleCloseContactDetailsModal}>Close</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Service Request Details Modal */}
-      {showServiceRequestModal && selectedServiceRequest && (
-        <div className="modal-overlay open">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h3 className="modal-title">Service Request Details</h3>
-              <button className="modal-close-btn" onClick={handleCloseServiceRequestModal}>&times;</button>
-            </div>
-            <div className="modal-body">
-                <div>
-                  <div className="detail-item"><span className="detail-label">From:</span> <span>{selectedServiceRequest.email}</span></div>
-                  <div className="detail-item"><span className="detail-label">Received:</span> <span>{selectedServiceRequest.receivedDate}</span></div>
-                  <div className="message-content">
-                    <h5 className="detail-label">Message:</h5>
-                    <p>{selectedServiceRequest.message}</p>
-                  </div>
-                </div>
-            </div>
-            <div className="modal-footer">
-              <button type="button" className="confirm-cancel-btn" onClick={handleCloseServiceRequestModal}>Close</button>
             </div>
           </div>
         </div>

@@ -774,7 +774,7 @@ const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false); // 
     let cancelledUsersFetch = false;
     (async () => {
       try {
-        const usersData = await getCachedData('users', 'cache_all_users', 60);
+        const usersData = await getCachedData('users', 'cache_users_full', 1440); //24 hours cache
         if (cancelledUsersFetch) return;
         if (usersData) {
           const employees = Object.entries(usersData)

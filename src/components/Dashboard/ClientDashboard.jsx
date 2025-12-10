@@ -2550,48 +2550,55 @@ const ClientDashboard = () => {
     }
   };
 
+// --- FIX: FETCH ADS (ONCE ONLY - LOW COST) ---
   useEffect(() => {
-    const fetchTodayWelcomeCard = async () => {
+    const fetchAds = async () => {
       try {
-        const cardRef = ref(database, 'welcomeCards');
-        const snapshot = await get(cardRef);
+        const adsRef = ref(database, 'welcomeCards');
+        const snapshot = await get(adsRef); // <--- Changed to 'get' for one-time fetch
 
-        if (!snapshot.exists()) {
-          setWelcomeCardData(null);
-          setShowWelcomeCardModal(false);
-          return;
-        }
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
-        const cards = snapshot.val();
-        const cardKeys = Object.keys(cards);
-        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+          const banners = [];
+          const popups = [];
 
-        let activeCard = null;
-        let activeCardKey = null;
+          Object.keys(data).forEach(key => {
+            const ad = { id: key, ...data[key] };
 
-        for (const key of cardKeys) {
-          const card = cards[key];
-          if (card.targetDate === today) {
-            activeCard = card;
-            activeCardKey = key;
-            break;
+            if (ad.type === 'banner') {
+              banners.push(ad);
+            } else if (ad.type === 'popup') {
+              // Check if target date matches TODAY
+              if (ad.targetDate === today) {
+                const isClosed = localStorage.getItem(`closed_ad_${ad.id}`) === 'true';
+                if (!isClosed) {
+                  popups.push(ad);
+                }
+              }
+            }
+          });
+
+          // Sort banners: Newest first
+          banners.sort((a, b) => new Date(b.createdAt || b.targetDate) - new Date(a.createdAt || a.targetDate));
+
+          setActiveBannerAds(banners);
+          setActivePopupAds(popups);
+
+          if (popups.length > 0) {
+            setShowPopupModal(true);
           }
-        }
-
-        if (activeCard && !wasCardClosedToday(activeCardKey)) {
-          // NOTE: correct spread syntax here
-          setWelcomeCardData({ ...activeCard, key: activeCardKey });
-          setShowWelcomeCardModal(true);
         } else {
-          setWelcomeCardData(null);
-          setShowWelcomeCardModal(false);
+          setActiveBannerAds([]);
+          setActivePopupAds([]);
         }
-      } catch (err) {
-        console.error('Failed to load welcome card:', err);
+      } catch (error) {
+        console.error("Error fetching ads:", error);
       }
     };
 
-    fetchTodayWelcomeCard();
+    fetchAds();
   }, []);
 
 
