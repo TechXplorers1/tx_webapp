@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ref, get, update } from "firebase/database";
-import { database } from '../../firebase'; 
+import { database } from '../../firebase';
 import { RefreshCw } from 'lucide-react'; // Ensure you have lucide-react installed
 
 // --- IndexedDB Helpers (For Cost-Free Caching) ---
@@ -50,10 +50,10 @@ const AssetManagement = () => {
 
   // Modal State
   const [isAssignAssetModalOpen, setIsAssignAssetModalOpen] = useState(false);
-  const [newAssignment, setNewAssignment] = useState({ 
-    assetFirebaseKey: '', 
-    employeeFirebaseKey: '', 
-    reason: '' 
+  const [newAssignment, setNewAssignment] = useState({
+    assetFirebaseKey: '',
+    employeeFirebaseKey: '',
+    reason: ''
   });
   const [assetSearchTermInModal, setAssetSearchTermInModal] = useState('');
 
@@ -64,20 +64,23 @@ const AssetManagement = () => {
     if (forceNetwork) setLoading(true);
 
     try {
-      // 1. Load USERS (Cache for 24 hours to save bandwidth)
+      // 1. Load EMPLOYEES (Cache for 24 hours to save bandwidth)
       let usersMap = {};
-      const cachedUsers = await dbGet('cache_users_full');
+      const cachedUsers = await dbGet('cache_employees_index');
       const isUserCacheValid = cachedUsers && (Date.now() - cachedUsers.timestamp) < (24 * 60 * 60 * 1000);
 
       if (!forceNetwork && isUserCacheValid) {
         usersMap = cachedUsers.data;
       } else {
         // Only download if cache is missing or older than 24h, or forced
-        const usersSnap = await get(ref(database, "users"));
+        const usersSnap = await get(ref(database, "employees_index"));
         usersMap = usersSnap.exists() ? usersSnap.val() : {};
-        await dbSet('cache_users_full', { data: usersMap, timestamp: Date.now() });
+        if (Object.keys(usersMap).length === 0) {
+          console.warn("Employees index empty. Might need to run optimization.");
+        }
+        await dbSet('cache_employees_index', { data: usersMap, timestamp: Date.now() });
       }
-      
+
       const usersArray = Object.keys(usersMap).map(key => ({
         firebaseKey: key,
         ...usersMap[key],
@@ -86,7 +89,7 @@ const AssetManagement = () => {
 
       // 2. Load ASSETS (Check Cache first, then Network)
       const cachedAssets = await dbGet('cache_assets_full');
-      
+
       // If we have cache and aren't forcing network, load it immediately
       if (!forceNetwork && cachedAssets) {
         const assetsMap = cachedAssets.data;
@@ -98,9 +101,9 @@ const AssetManagement = () => {
       if (forceNetwork || !cachedAssets) {
         const assetsSnap = await get(ref(database, "assets"));
         const assetsMap = assetsSnap.exists() ? assetsSnap.val() : {};
-        
+
         await dbSet('cache_assets_full', { data: assetsMap, timestamp: Date.now() });
-        
+
         setAssets(Object.keys(assetsMap).map(key => ({ firebaseKey: key, ...assetsMap[key] })));
         setLastUpdated(Date.now());
       }
@@ -123,7 +126,7 @@ const AssetManagement = () => {
       // When you come back to this tab, reload from Cache.
       // Since AssetWorksheet updates the cache, this page updates instantly for $0.
       console.log("Tab focused, reloading from cache...");
-      loadData(false); 
+      loadData(false);
     };
 
     window.addEventListener('focus', handleFocus);
@@ -135,19 +138,19 @@ const AssetManagement = () => {
   const recentActivity = assets
     .filter(asset => asset.status === 'assigned' && asset.assignedTo !== 'Unassigned')
     .sort((a, b) => {
-        const parseDate = (d) => {
-           if(!d) return 0;
-           if(d.includes('/')) return new Date(d.split('/').reverse().join('-'));
-           return new Date(d);
-        };
-        return parseDate(b.assignedDate) - parseDate(a.assignedDate);
+      const parseDate = (d) => {
+        if (!d) return 0;
+        if (d.includes('/')) return new Date(d.split('/').reverse().join('-'));
+        return new Date(d);
+      };
+      return parseDate(b.assignedDate) - parseDate(a.assignedDate);
     })
     .slice(0, 10); // Limit to 10 items for UI cleanliness
 
   const filteredAvailableAssets = assets.filter(asset =>
     asset.status === 'available' &&
     (asset.name.toLowerCase().includes(assetSearchTermInModal.toLowerCase()) ||
-     (asset.serialNumber || '').toLowerCase().includes(assetSearchTermInModal.toLowerCase()))
+      (asset.serialNumber || '').toLowerCase().includes(assetSearchTermInModal.toLowerCase()))
   );
 
   // --- Event Handlers ---
@@ -187,16 +190,16 @@ const AssetManagement = () => {
       await update(assetRef, updates);
 
       // 2. Update Local Cache & State (Saves a download cost!)
-      const updatedAssets = assets.map(a => 
+      const updatedAssets = assets.map(a =>
         a.firebaseKey === assetFirebaseKey ? { ...a, ...updates } : a
       );
       setAssets(updatedAssets);
-      
+
       // Update IndexedDB so the next reload is fresh
       const cachedWrapper = await dbGet('cache_assets_full') || { data: {} };
       if (cachedWrapper.data[assetFirebaseKey]) {
-         cachedWrapper.data[assetFirebaseKey] = { ...cachedWrapper.data[assetFirebaseKey], ...updates };
-         await dbSet('cache_assets_full', { data: cachedWrapper.data, timestamp: Date.now() });
+        cachedWrapper.data[assetFirebaseKey] = { ...cachedWrapper.data[assetFirebaseKey], ...updates };
+        await dbSet('cache_assets_full', { data: cachedWrapper.data, timestamp: Date.now() });
       }
 
       handleCloseAssignAssetModal();
@@ -205,7 +208,7 @@ const AssetManagement = () => {
       alert("Error assigning asset. Please try again.");
     }
   };
-  
+
   // --- Style Helper Functions ---
   const getStatusTagBg = (status) => {
     switch (status?.toLowerCase()) {
@@ -303,16 +306,16 @@ const AssetManagement = () => {
               <div>
                 <h2 className="asset-title">Asset Management</h2>
                 <p className="asset-subtitle">
-                  {lastUpdated 
-                    ? `Data cached: ${new Date(lastUpdated).toLocaleTimeString()}` 
+                  {lastUpdated
+                    ? `Data cached: ${new Date(lastUpdated).toLocaleTimeString()}`
                     : 'Assign and manage equipment for your team.'}
                 </p>
               </div>
-              
+
               <div className="header-actions">
                 {/* Manual Sync Button: Use this if you know data changed on another computer */}
                 <button className="refresh-btn" onClick={() => loadData(true)} disabled={loading}>
-                  <RefreshCw size={16} className={loading ? 'spin' : ''} /> 
+                  <RefreshCw size={16} className={loading ? 'spin' : ''} />
                   {loading ? ' Syncing...' : ' Sync Data'}
                 </button>
                 <button className="assign-asset-btn" onClick={handleAssignAssetClick}>Assign Asset</button>
@@ -322,7 +325,7 @@ const AssetManagement = () => {
             {loading && !assets.length ? (
               <div style={{ padding: '2rem', textAlign: 'center' }}>Loading asset data...</div>
             ) : error ? (
-               <div style={{ padding: '2rem', textAlign: 'center', color: 'red' }}>Error: {error}</div>
+              <div style={{ padding: '2rem', textAlign: 'center', color: 'red' }}>Error: {error}</div>
             ) : (
               <>
                 <div className="asset-stats-grid">
@@ -345,8 +348,8 @@ const AssetManagement = () => {
                               <td>
                                 <div className="asset-info">
                                   <div>
-                                    <div style={{fontWeight: 500}}>{asset?.name}</div>
-                                    <div style={{color: 'var(--text-secondary)', fontSize: '0.8rem'}}>{asset?.serialNumber || 'N/A'}</div>
+                                    <div style={{ fontWeight: 500 }}>{asset?.name}</div>
+                                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>{asset?.serialNumber || 'N/A'}</div>
                                   </div>
                                 </div>
                               </td>
@@ -357,7 +360,7 @@ const AssetManagement = () => {
                           );
                         })}
                         {recentActivity.length === 0 && (
-                          <tr><td colSpan="4" style={{textAlign:'center', padding:'1rem', color:'#888'}}>No recent assignments found.</td></tr>
+                          <tr><td colSpan="4" style={{ textAlign: 'center', padding: '1rem', color: '#888' }}>No recent assignments found.</td></tr>
                         )}
                       </tbody>
                     </table>

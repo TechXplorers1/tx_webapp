@@ -8,7 +8,7 @@ import RequestManagement from './RequestManagement';
 import ProjectManagement from './ProjectManagement';
 import AdsManagement from './AdsManagement';
 import { database } from '../../firebase'; // Import your Firebase config
-import { ref, update , get} from "firebase/database"; // Import update function
+import { ref, update, get } from "firebase/database"; // Import update function
 
 const AdminPage = () => {
   const navigate = useNavigate();
@@ -141,65 +141,150 @@ const AdminPage = () => {
     { value: 'adsManagement', label: 'Ads Management' },
 
   ];
- // --- MIGRATION TOOL (UPDATED FOR MANAGERS) ---
-  // const runOneTimeMigration = async () => {
-  //   if (!window.confirm("This will index BOTH Employees and Managers. Run this once to optimize database. Continue?")) return;
+  // --- OPTIMIZATION MIGRATION TOOL ---
+  const runDataOptimizationMigration = async () => {
+    if (!window.confirm("⚠️ This will create a 'Master Index' of all client registrations to reduce data usage. \n\nThis process reads all data once and writes an optimized list. \n\nContinue?")) return;
 
-  //   try {
-  //     const allClientsSnap = await get(ref(database, 'clients'));
-  //     if (!allClientsSnap.exists()) return alert("No clients found.");
+    try {
+      // 1. Fetch ALL clients one last time (this is the heavy operation we are fixing)
+      const allClientsSnap = await get(ref(database, 'clients'));
+      if (!allClientsSnap.exists()) return alert("No clients found to migrate.");
 
-  //     const allClients = allClientsSnap.val();
-  //     const updates = {};
-  //     let empCount = 0;
-  //     let mgrCount = 0;
+      const allClients = allClientsSnap.val();
+      const indexUpdates = {};
+      let count = 0;
 
-  //     Object.keys(allClients).forEach(clientKey => {
-  //       const regs = allClients[clientKey].serviceRegistrations;
-  //       if (regs) {
-  //         Object.keys(regs).forEach(regKey => {
-  //           const reg = regs[regKey];
-  //           const assignmentKey = `${clientKey}_${regKey}`;
-  //           const clientName = `${reg.firstName} ${reg.lastName}`;
+      // 2. Flatten the data
+      Object.keys(allClients).forEach(clientKey => {
+        const client = allClients[clientKey];
+        if (client.serviceRegistrations) {
+          Object.keys(client.serviceRegistrations).forEach(regKey => {
+            const reg = client.serviceRegistrations[regKey];
+            const indexKey = `${clientKey}_${regKey}`; // Unique ID for the index
 
-  //           // 1. Index for Employee (Existing logic)
-  //           if (reg.assignedTo) {
-  //             const path = `employee_assignments/${reg.assignedTo}/${assignmentKey}`;
-  //             updates[path] = {
-  //               clientFirebaseKey: clientKey,
-  //               registrationKey: regKey,
-  //               clientName: clientName,
-  //               status: reg.assignmentStatus || 'active'
-  //             };
-  //             empCount++;
-  //           }
+            // Create a lightweight object for the list
+            // We include ALL fields used for Filtering and Display in the main table
+            indexUpdates[`service_registrations_index/${indexKey}`] = {
+              clientFirebaseKey: clientKey,
+              registrationKey: regKey,
 
-  //           // 2. NEW: Index for Manager
-  //           if (reg.assignedManager) {
-  //             const path = `manager_assignments/${reg.assignedManager}/${assignmentKey}`;
-  //             updates[path] = {
-  //               clientFirebaseKey: clientKey,
-  //               registrationKey: regKey,
-  //               clientName: clientName,
-  //               status: reg.assignmentStatus || 'active'
-  //             };
-  //             mgrCount++;
-  //           }
-  //         });
-  //       }
-  //     });
+              // Basic Info
+              firstName: reg.firstName || client.firstName || '',
+              middleName: reg.middleName || client.middleName || '',
+              lastName: reg.lastName || client.lastName || '',
+              dob: reg.dob || reg.dateOfBirth || client.dob || client.dateOfBirth || '',
+              gender: reg.gender || client.gender || '',
+              ethnicity: reg.ethnicity || client.ethnicity || '',
+              mobile: reg.mobile || client.mobile || '',
+              email: reg.email || client.email || '',
 
-  //     if (Object.keys(updates).length > 0) {
-  //       await update(ref(database), updates);
-  //       alert(`Migration Successful!\nIndexed ${empCount} Employee assignments.\nIndexed ${mgrCount} Manager assignments.`);
-  //     } else {
-  //       alert("No assignments found to migrate.");
-  //     }
-  //   } catch (e) {
-  //     console.error(e);
-  //     alert("Migration failed: " + e.message);
-  //   }
-  // };
+              // Address
+              address: reg.address || client.address || '',
+              city: reg.city || client.city || '',
+              state: reg.state || client.state || '',
+              county: reg.county || client.county || '',
+              zipCode: reg.zipCode || reg.zipcode || client.zipCode || client.zipcode || '',
+              country: reg.country || client.country || '',
+              countryCode: reg.countryCode || client.countryCode || '+1',
+
+              // Professional Info
+              service: reg.service || 'Unknown',
+              assignmentStatus: reg.assignmentStatus || 'registered',
+              currentCompany: reg.currentCompany || '',
+              currentDesignation: reg.currentDesignation || '',
+              yearsOfExperience: reg.yearsOfExperience || '',
+              currentSalary: reg.currentSalary || '',
+              expectedSalary: reg.expectedSalary || '',
+              noticePeriod: reg.noticePeriod || '',
+
+              // Job Preferences & Visa
+              jobsToApply: reg.jobsToApply || '',
+              workPreference: reg.workPreference || '',
+              willingToRelocate: reg.willingToRelocate || '',
+              restrictedCompanies: reg.restrictedCompanies || '',
+              preferredInterviewTime: reg.preferredInterviewTime || '',
+              earliestJoiningDate: reg.earliestJoiningDate || '',
+              relievingDate: reg.relievingDate || '',
+
+              // Clearance
+              securityClearance: reg.securityClearance || '',
+              clearanceLevel: reg.clearanceLevel || '',
+
+              // Visa
+              visaStatus: reg.visaStatus || '',
+              otherVisaStatus: reg.otherVisaStatus || '',
+
+              // Education (Array)
+              educationDetails: reg.educationDetails || [],
+
+              // References
+              referenceName: reg.referenceName || '',
+              referencePhone: reg.referencePhone || '',
+              referenceAddress: reg.referenceAddress || '',
+              referenceEmail: reg.referenceEmail || '',
+              referenceRole: reg.referenceRole || '',
+
+              // Account
+              jobPortalAccountNameandCredentials: reg.jobPortalAccountNameandCredentials || '',
+
+              // Files (URLs/Metadata only)
+              resume: reg.resume || reg.resumes || [],
+              coverLetter: reg.coverLetter || reg.coverLetterUrl || '',
+
+              // Dates - Ensure we capture the date meaningfully and format it
+              appliedDate: (reg.appliedDate || reg.dateOfJoin || reg.registeredDate || client.registeredDate || client.dateOfJoin || new Date().toISOString()).split('T')[0],
+              registeredDate: (reg.registeredDate || reg.dateOfJoin || client.registeredDate || client.dateOfJoin || new Date().toISOString()).split('T')[0],
+
+              // Manager Info
+              manager: reg.manager || null,
+              assignedManager: reg.assignedManager || null,
+            };
+            count++;
+          });
+        }
+      });
+
+      // 2B. NEW: Create Master Employee Index (to avoid fetching all users)
+      const allUsersSnap = await get(ref(database, 'users'));
+      let employeeCount = 0;
+      if (allUsersSnap.exists()) {
+        const allUsers = allUsersSnap.val();
+        Object.keys(allUsers).forEach(userKey => {
+          const user = allUsers[userKey];
+          // Check if user has an internal role
+          const roles = Array.isArray(user.roles) ? user.roles.map(r => r.toLowerCase()) : [(user.role || '').toLowerCase()];
+          const internalRoles = ['admin', 'manager', 'employee', 'team lead', 'hr', 'support', 'sales', 'development'];
+          const isInternal = roles.some(r => internalRoles.includes(r));
+
+          if (isInternal) {
+            indexUpdates[`employees_index/${userKey}`] = {
+              firebaseKey: userKey,
+              firstName: user.firstName || '',
+              lastName: user.lastName || '',
+              email: user.email || user.workEmail || '',
+              mobile: user.mobile || user.personalNumber || '',
+              roles: user.roles || [user.role || 'employee'],
+              department: user.department || '',
+              accountStatus: user.accountStatus || 'Active'
+            };
+            employeeCount++;
+          }
+        });
+      }
+
+      // 3. Write the index to Firebase
+      if (count > 0 || employeeCount > 0) {
+        await update(ref(database), indexUpdates);
+        alert(`✅ Optimization Successful!\n\nCreated index for ${count} registrations.\nCreated index for ${employeeCount} employees.\n\nThe 'Admin Worksheet' will now be much faster after you refresh.`);
+      } else {
+        alert("No registrations or employees found to index.");
+      }
+
+    } catch (e) {
+      console.error("Migration Error:", e);
+      alert("Migration Failed: " + e.message);
+    }
+  };
 
   return (
     <div className="ad-body-container">
@@ -403,13 +488,22 @@ const AdminPage = () => {
 
               <h2 className="ad-title">Admin Worksheet</h2>
               <p className="ad-subtitle">System administration and Employee management</p>
-              {/* Add this inside your <div className="ad-dashboard-header"> or near it
               <button
-                onClick={runOneTimeMigration}
-                style={{ padding: '10px', background: '#dc3545', color: 'white', border: 'none', borderRadius: '5px', marginBottom: '20px', cursor: 'pointer' }}
+                onClick={runDataOptimizationMigration}
+                style={{
+                  padding: '8px 16px',
+                  background: 'linear-gradient(to right, #2563eb, #3b82f6)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  marginBottom: '20px',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  boxShadow: '0 2px 4px rgba(37, 99, 235, 0.2)'
+                }}
               >
-                ⚠️ Run DB Optimization Migration
-              </button> */}
+                ⚡ Optimize Database (Run Once)
+              </button>
             </div>
           </div>
           <div className="custom-radio-group-container">

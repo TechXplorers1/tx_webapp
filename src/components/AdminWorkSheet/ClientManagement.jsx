@@ -65,7 +65,7 @@ const ClientManagement = () => {
   const [currentPage, setCurrentPage] = useState(1);
 
   const [clientAppsPage, setClientAppsPage] = useState(1);
-const CLIENT_APPS_PAGE_SIZE = 5;
+  const CLIENT_APPS_PAGE_SIZE = 5;
 
 
   // Simple in-browser cache key so we don't re-download on every visit
@@ -127,35 +127,25 @@ const CLIENT_APPS_PAGE_SIZE = 5;
           console.warn('ClientManagement cache read failed, falling back to network:', cacheErr);
         }
 
-        // --- 2. If no cache, fetch once from Firebase ---
-        const [clientsSnap, usersSnap] = await Promise.all([
-          get(ref(database, 'clients')),
-          get(ref(database, 'users')),
+        // --- 2. If no cache, fetch OPTIMIZED index from Firebase ---
+        // Instead of fetching "clients" (huge), we fetch "service_registrations_index" (small)
+        const [indexSnap, usersSnap] = await Promise.all([
+          get(ref(database, 'service_registrations_index')),
+          // We now fetch the optimized employee index instead of ALL users
+          get(ref(database, 'employees_index')),
         ]);
 
         if (cancelled) return;
 
-        // ---- Clients → flattened serviceRegistrations ----
-        const clientsData = clientsSnap.exists() ? clientsSnap.val() : {};
-        const allRegistrations = [];
+        // ---- Index → serviceRegistrations ----
+        // The index is already flat! We just need to convert object to array.
+        const indexData = indexSnap.exists() ? indexSnap.val() : {};
+        const allRegistrations = Object.values(indexData);
 
-        Object.keys(clientsData).forEach((clientKey) => {
-          const client = clientsData[clientKey];
-          if (!client || !client.serviceRegistrations) return;
-
-          Object.keys(client.serviceRegistrations).forEach((regKey) => {
-            const registration = client.serviceRegistrations[regKey];
-            allRegistrations.push({
-              ...registration,
-              clientFirebaseKey: clientKey,
-              registrationKey: regKey,
-              email: client.email,
-              mobile: client.mobile,
-              firstName: registration.firstName || client.firstName,
-              lastName: registration.lastName || client.lastName,
-            });
-          });
-        });
+        // If index is empty, it might mean migration hasn't run. 
+        if (allRegistrations.length === 0) {
+          console.warn("No service_registrations_index found. Please run Optimize Database in Admin Page.");
+        }
 
         // ---- Users → managers list (supports roles[] or role) ----
         const usersData = usersSnap.exists() ? usersSnap.val() : {};
@@ -248,11 +238,19 @@ const CLIENT_APPS_PAGE_SIZE = 5;
   ];
 
   const handleAcceptClient = async (registration) => {
-    const registrationRef = ref(database, `clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}`);
     try {
-      await update(registrationRef, {
-        assignmentStatus: 'pending_manager'
-      });
+      const updates = {};
+      const indexKey = `service_registrations_index/${registration.clientFirebaseKey}_${registration.registrationKey}`;
+
+      updates[`clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}/assignmentStatus`] = 'pending_manager';
+      updates[`${indexKey}/assignmentStatus`] = 'pending_manager';
+
+      await update(ref(database), updates);
+
+      // Optimistic update
+      setServiceRegistrations(prevRegistrations => prevRegistrations.map(reg =>
+        reg.registrationKey === registration.registrationKey ? { ...reg, assignmentStatus: 'pending_manager' } : reg
+      ));
     } catch (error) {
       console.error("Failed to accept client registration:", error);
     }
@@ -271,11 +269,15 @@ const CLIENT_APPS_PAGE_SIZE = 5;
       console.error("Missing registration details to decline client.");
       return;
     }
-    const registrationRef = ref(database, `clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}`);
     try {
-      await update(registrationRef, {
-        assignmentStatus: 'rejected'
-      });
+      const updates = {};
+      const indexKey = `service_registrations_index/${registration.clientFirebaseKey}_${registration.registrationKey}`;
+
+      updates[`clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}/assignmentStatus`] = 'rejected';
+      updates[`${indexKey}/assignmentStatus`] = 'rejected';
+
+      await update(ref(database), updates);
+
       console.log(`Client ${registration.firstName} declined and moved to rejected.`);
       // OPTIMISTIC UPDATE: update local state immediately
       setServiceRegistrations(prevRegistrations => prevRegistrations.map(reg =>
@@ -300,11 +302,15 @@ const CLIENT_APPS_PAGE_SIZE = 5;
 
   const handleConfirmUnaccept = async () => {
     if (!clientToUnaccept) return;
-    const registrationRef = ref(database, `clients/${clientToUnaccept.clientFirebaseKey}/serviceRegistrations/${clientToUnaccept.registrationKey}`);
     try {
-      await update(registrationRef, {
-        assignmentStatus: 'registered' // Status for the 'Registered Clients' tab
-      });
+      const updates = {};
+      const indexKey = `service_registrations_index/${clientToUnaccept.clientFirebaseKey}_${clientToUnaccept.registrationKey}`;
+
+      updates[`clients/${clientToUnaccept.clientFirebaseKey}/serviceRegistrations/${clientToUnaccept.registrationKey}/assignmentStatus`] = 'registered';
+      updates[`${indexKey}/assignmentStatus`] = 'registered';
+
+      await update(ref(database), updates);
+
       // OPTIMISTIC UPDATE: update local state immediately
       setServiceRegistrations(prevRegistrations => prevRegistrations.map(reg =>
         reg.registrationKey === clientToUnaccept.registrationKey ? { ...reg, assignmentStatus: 'registered' } : reg
@@ -436,24 +442,21 @@ const CLIENT_APPS_PAGE_SIZE = 5;
       return;
     }
 
-    // 🎯 FIX: Target the specific service registration path
-    const serviceRegistrationRef = ref(
-      database,
-      `clients/${clientToDelete.clientFirebaseKey}/serviceRegistrations/${clientToDelete.registrationKey}`
-    );
-
     try {
-      // Use remove() on the specific service registration path
-      await remove(serviceRegistrationRef);
+      const updates = {};
+      const indexKey = `service_registrations_index/${clientToDelete.clientFirebaseKey}_${clientToDelete.registrationKey}`;
+
+      // Remove from both locations
+      updates[`clients/${clientToDelete.clientFirebaseKey}/serviceRegistrations/${clientToDelete.registrationKey}`] = null;
+      updates[indexKey] = null;
+
+      await update(ref(database), updates);
 
       console.log(`Successfully deleted service registration: ${clientToDelete.registrationKey}`);
 
       // Clean up local state (Optional: also update the local clients list to remove the service instantly)
       setIsDeleteClientConfirmModalOpen(false);
       setClientToDelete(null);
-
-      // After successful deletion in Firebase, your real-time listener will 
-      // update the clients list, and only this single service will be gone.
 
     } catch (error) {
       console.error("Failed to delete client service registration:", error);
@@ -472,13 +475,23 @@ const CLIENT_APPS_PAGE_SIZE = 5;
       alert('Please select a manager first using the "Select Manager" button.');
       return;
     }
-    const registrationRef = ref(database, `clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}`);
+
     try {
-      await update(registrationRef, {
-        manager: registration.manager, // Name of the manager
-        assignedManager: registration.managerFirebaseKey, // Firebase key of the manager
-        assignmentStatus: 'pending_employee' // Change status from 'pending_manager' to 'pending_employee'
-      });
+      const updates = {};
+      const indexKey = `service_registrations_index/${registration.clientFirebaseKey}_${registration.registrationKey}`;
+
+      // Update Main Node
+      updates[`clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}/manager`] = registration.manager;
+      updates[`clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}/assignedManager`] = registration.managerFirebaseKey;
+      updates[`clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}/assignmentStatus`] = 'pending_employee';
+
+      // Update Index
+      updates[`${indexKey}/manager`] = registration.manager;
+      updates[`${indexKey}/assignedManager`] = registration.managerFirebaseKey;
+      updates[`${indexKey}/assignmentStatus`] = 'pending_employee';
+
+      await update(ref(database), updates);
+
       // OPTIMISTIC UPDATE: Update local state immediately
       setServiceRegistrations(prev => prev.map(reg =>
         reg.registrationKey === registration.registrationKey
@@ -501,11 +514,15 @@ const CLIENT_APPS_PAGE_SIZE = 5;
       console.error("Missing registration details to restore client.");
       return;
     }
-    const registrationRef = ref(database, `clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}`);
     try {
-      await update(registrationRef, {
-        assignmentStatus: 'pending_manager'
-      });
+      const updates = {};
+      const indexKey = `service_registrations_index/${registration.clientFirebaseKey}_${registration.registrationKey}`;
+
+      updates[`clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}/assignmentStatus`] = 'pending_manager';
+      updates[`${indexKey}/assignmentStatus`] = 'pending_manager';
+
+      await update(ref(database), updates);
+
       console.log(`Client ${registration.firstName} restored and moved to unassigned.`);
       // OPTIMISTIC UPDATE: update local state immediately
       setServiceRegistrations(prevRegistrations => prevRegistrations.map(reg =>
@@ -581,82 +598,87 @@ const CLIENT_APPS_PAGE_SIZE = 5;
 
 
 
-const handleConfirmSelectManager = async () => {
-  if (!managerToConfirm || !registrationForManager) return;
+  const handleConfirmSelectManager = async () => {
+    if (!managerToConfirm || !registrationForManager) return;
 
-  // 1. Basic IDs
-  const clientKey = registrationForManager.clientFirebaseKey;
-  const regKey = registrationForManager.registrationKey;
+    // 1. Basic IDs
+    const clientKey = registrationForManager.clientFirebaseKey;
+    const regKey = registrationForManager.registrationKey;
 
-  // Old manager (if any) so we can clean up their index
-  const oldManagerId = registrationForManager.assignedManager || null;
+    // Old manager (if any) so we can clean up their index
+    const oldManagerId = registrationForManager.assignedManager || null;
 
-  // New manager
-  const newManagerId = managerToConfirm.firebaseKey;
-  const assignmentKey = `${clientKey}_${regKey}`;
+    // New manager
+    const newManagerId = managerToConfirm.firebaseKey;
+    const assignmentKey = `${clientKey}_${regKey}`;
 
-  const updatedManagerInfo = {
-    manager: `${managerToConfirm.firstName} ${managerToConfirm.lastName}`,
-    assignedManager: newManagerId,
-  };
+    const updatedManagerInfo = {
+      manager: `${managerToConfirm.firstName} ${managerToConfirm.lastName}`,
+      assignedManager: newManagerId,
+    };
 
-  // 2. Build a multi-location update payload
-  const updates = {};
+    // 2. Build a multi-location update payload
+    const updates = {};
 
-  // 2A. Update main client registration node
-  updates[`clients/${clientKey}/serviceRegistrations/${regKey}/manager`] =
-    updatedManagerInfo.manager;
-  updates[`clients/${clientKey}/serviceRegistrations/${regKey}/assignedManager`] =
-    updatedManagerInfo.assignedManager;
-  updates[`clients/${clientKey}/serviceRegistrations/${regKey}/assignmentStatus`] =
-    'pending_employee';
+    // 2A. Update main client registration node
+    updates[`clients/${clientKey}/serviceRegistrations/${regKey}/manager`] =
+      updatedManagerInfo.manager;
+    updates[`clients/${clientKey}/serviceRegistrations/${regKey}/assignedManager`] =
+      updatedManagerInfo.assignedManager;
+    updates[`clients/${clientKey}/serviceRegistrations/${regKey}/assignmentStatus`] =
+      'pending_employee';
 
-  // 2B. Create / update the Manager → Client reverse index
-  updates[`manager_assignments/${newManagerId}/${assignmentKey}`] = {
-    clientFirebaseKey: clientKey,
-    registrationKey: regKey,
-    clientName: `${registrationForManager.firstName || ''} ${
-      registrationForManager.lastName || ''
-    }`.trim(),
-    status: 'pending_employee',
-  };
+    // 2B. Create / update the Manager → Client reverse index
+    updates[`manager_assignments/${newManagerId}/${assignmentKey}`] = {
+      clientFirebaseKey: clientKey,
+      registrationKey: regKey,
+      clientName: `${registrationForManager.firstName || ''} ${registrationForManager.lastName || ''
+        }`.trim(),
+      status: 'pending_employee',
+    };
 
-  // 2C. If there was an old manager, remove the old index entry
-  if (oldManagerId) {
-    updates[`manager_assignments/${oldManagerId}/${assignmentKey}`] = null;
-  }
+    // 2C. Update the Service Registrations Index (Optimization)
+    const indexKey = `service_registrations_index/${clientKey}_${regKey}`;
+    updates[`${indexKey}/manager`] = updatedManagerInfo.manager;
+    updates[`${indexKey}/assignedManager`] = updatedManagerInfo.assignedManager;
+    updates[`${indexKey}/assignmentStatus`] = 'pending_employee';
 
-  try {
-    // 3. Apply all updates atomically
-    await update(ref(database), updates);
+    // 2D. If there was an old manager, remove the old index entry
+    if (oldManagerId) {
+      updates[`manager_assignments/${oldManagerId}/${assignmentKey}`] = null;
+    }
 
-    // 4. Update local state so the UI immediately reflects it
-    setServiceRegistrations(prev =>
-      prev.map(reg =>
-        reg.registrationKey === regKey
-          ? {
+    try {
+      // 3. Apply all updates atomically
+      await update(ref(database), updates);
+
+      // 4. Update local state so the UI immediately reflects it
+      setServiceRegistrations(prev =>
+        prev.map(reg =>
+          reg.registrationKey === regKey
+            ? {
               ...reg,
               ...updatedManagerInfo,
               assignmentStatus: 'pending_employee',
             }
-          : reg
-      )
-    );
+            : reg
+        )
+      );
 
-    // Optionally: you can show a toast/snackbar here
-    // triggerNotification("Manager assigned successfully!");
+      // Optionally: you can show a toast/snackbar here
+      // triggerNotification("Manager assigned successfully!");
 
-  } catch (error) {
-    console.error('Failed to assign manager:', error);
-    alert('Failed to assign manager. Please try again.');
-  } finally {
-    // 5. Close modals and clear temp state
-    setIsConfirmManagerModalOpen(false);
-    setIsManagerModalOpen(false);
-    setManagerToConfirm(null);
-    setRegistrationForManager(null);
-  }
-};
+    } catch (error) {
+      console.error('Failed to assign manager:', error);
+      alert('Failed to assign manager. Please try again.');
+    } finally {
+      // 5. Close modals and clear temp state
+      setIsConfirmManagerModalOpen(false);
+      setIsManagerModalOpen(false);
+      setManagerToConfirm(null);
+      setRegistrationForManager(null);
+    }
+  };
 
 
   // All registrations after applying tab/service/search filters
@@ -691,7 +713,16 @@ const handleConfirmSelectManager = async () => {
   const handleViewClientDetails = async (client) => {
     // `client` here is the registration row (from Active/Registered/Etc.)
     // It already has clientFirebaseKey + registrationKey
-    setSelectedClientForDetails(client);
+
+    // NORMALIZE keys from Index (resume -> resumes, coverLetter -> coverLetterUrl)
+    const normalizedClient = {
+      ...client,
+      resumes: client.resumes || client.resume || [],
+      coverLetterUrl: client.coverLetterUrl || client.coverLetter || '',
+      coverLetterFileName: client.coverLetterFileName || (client.coverLetter ? 'cover_letter' : '') // Fallback
+    };
+
+    setSelectedClientForDetails(normalizedClient);
     setActiveClientDetailsTab('Profile');
     setIsClientDetailsModalOpen(true);
 
@@ -706,9 +737,11 @@ const handleConfirmSelectManager = async () => {
           setSelectedClientForDetails(prev => ({
             ...(prev || {}),
             ...baseProfile,
-            // Keep registration-level keys from the original row
+            // Keep registration-level keys from the original row and our normalization
             clientFirebaseKey: client.clientFirebaseKey,
             registrationKey: client.registrationKey,
+            resumes: normalizedClient.resumes,
+            coverLetterUrl: normalizedClient.coverLetterUrl
           }));
         }
       }
@@ -887,11 +920,31 @@ const handleConfirmSelectManager = async () => {
       }
 
       const { firstName, lastName, email, mobile, ...registrationUpdates } = updates;
-      const regRef = ref(database, `clients/${currentClientToEdit.clientFirebaseKey}/serviceRegistrations/${currentClientToEdit.registrationKey}`);
-      const clientProfileRef = ref(database, `clients/${currentClientToEdit.clientFirebaseKey}`);
 
-      await update(regRef, registrationUpdates);
-      await update(clientProfileRef, { firstName, lastName, email, mobile });
+      const updatePayload = {};
+      const indexKey = `service_registrations_index/${currentClientToEdit.clientFirebaseKey}_${currentClientToEdit.registrationKey}`;
+
+      // 1. Update Registration Node
+      updatePayload[`clients/${currentClientToEdit.clientFirebaseKey}/serviceRegistrations/${currentClientToEdit.registrationKey}`] = registrationUpdates;
+
+      // 2. Update Client Profile Node
+      updatePayload[`clients/${currentClientToEdit.clientFirebaseKey}/firstName`] = firstName;
+      updatePayload[`clients/${currentClientToEdit.clientFirebaseKey}/lastName`] = lastName;
+      updatePayload[`clients/${currentClientToEdit.clientFirebaseKey}/email`] = email;
+      updatePayload[`clients/${currentClientToEdit.clientFirebaseKey}/mobile`] = mobile;
+
+      // 3. Update Service Index (Optimization)
+      // We only update fields that might have changed to avoid overwriting unrelated index data
+      updatePayload[`${indexKey}/firstName`] = firstName || '';
+      updatePayload[`${indexKey}/lastName`] = lastName || '';
+      updatePayload[`${indexKey}/email`] = email || '';
+      updatePayload[`${indexKey}/mobile`] = mobile || '';
+      if (registrationUpdates.service) updatePayload[`${indexKey}/service`] = registrationUpdates.service;
+      if (registrationUpdates.country) updatePayload[`${indexKey}/country`] = registrationUpdates.country;
+      if (registrationUpdates.jobsToApply) updatePayload[`${indexKey}/jobsToApply`] = registrationUpdates.jobsToApply;
+      if (registrationUpdates.visaStatus) updatePayload[`${indexKey}/visaStatus`] = registrationUpdates.visaStatus;
+
+      await update(ref(database), updatePayload);
 
       handleCloseEditClientModal();
       setShowSuccessModal(true);
@@ -912,9 +965,9 @@ const handleConfirmSelectManager = async () => {
     if (['unassigned', 'active', 'restored'].includes(currentClientFilter)) headers.push('Manager');
     headers.push('Details', 'Actions');
 
-    const getManagerName = (managerFirebaseKey) => {
+    const getManagerName = (managerFirebaseKey, fallbackName) => {
       const manager = managerList.find(m => m.firebaseKey === managerFirebaseKey);
-      return manager ? `${manager.firstName} ${manager.lastName}` : 'N/A';
+      return manager ? `${manager.firstName} ${manager.lastName}` : (fallbackName || 'N/A');
     };
 
     return (
@@ -952,7 +1005,7 @@ const handleConfirmSelectManager = async () => {
                   )}
                   {currentClientFilter === 'active' && (
                     <td>
-                      {getManagerName(registration.assignedManager)}
+                      {getManagerName(registration.assignedManager, registration.manager)}
                     </td>
                   )}
                   <td>
@@ -1115,10 +1168,10 @@ const handleConfirmSelectManager = async () => {
 
 
   useEffect(() => {
-  // Whenever the date range, client, or applications change,
-  // reset to the first page so pagination doesn't break.
-  setClientAppsPage(1);
-}, [clientDateRange.startDate, clientDateRange.endDate, clientApplications, selectedClientForDetails]);
+    // Whenever the date range, client, or applications change,
+    // reset to the first page so pagination doesn't break.
+    setClientAppsPage(1);
+  }, [clientDateRange.startDate, clientDateRange.endDate, clientApplications, selectedClientForDetails]);
 
 
 
@@ -1136,11 +1189,11 @@ const handleConfirmSelectManager = async () => {
     });
   };
 
-        {/* Client Details PAGE (inline, no popup) */}
-if (isClientDetailsModalOpen && selectedClientForDetails) {
- return (
-   <div className="ad-body-container">
-  <style>{`
+  {/* Client Details PAGE (inline, no popup) */ }
+  if (isClientDetailsModalOpen && selectedClientForDetails) {
+    return (
+      <div className="ad-body-container">
+        <style>{`
         /* Import Inter font from Google Fonts */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
@@ -2110,84 +2163,84 @@ if (isClientDetailsModalOpen && selectedClientForDetails) {
             
 
       `}
-      </style>
+        </style>
 
 
 
-<div className="client-management-page">
-  <section className="client-details-page">
-    <div className="client-details-page-header">
-      <button
-        className="back-to-list-button"
-        onClick={handleCloseClientDetailsModal}
-      >
-        ← Back to Clients
-      </button>
+        <div className="client-management-page">
+          <section className="client-details-page">
+            <div className="client-details-page-header">
+              <button
+                className="back-to-list-button"
+                onClick={handleCloseClientDetailsModal}
+              >
+                ← Back to Clients
+              </button>
 
-      <h3 className="client-details-page-title">
-        Client Details: {selectedClientForDetails.firstName} {selectedClientForDetails.lastName}
-      </h3>
-    </div>
+              <h3 className="client-details-page-title">
+                Client Details: {selectedClientForDetails.firstName} {selectedClientForDetails.lastName}
+              </h3>
+            </div>
 
-    {/* Tabs */}
-    <div className="client-details-tabs">
-      {['Profile', 'Applications', 'Interviews'].map((tab) => (
-        <button
-          key={tab}
-          className={`tab-button ${activeClientDetailsTab === tab ? 'active' : ''}`}
-          onClick={() => setActiveClientDetailsTab(tab)}
-        >
-          {tab}
-        </button>
-      ))}
-    </div>
+            {/* Tabs */}
+            <div className="client-details-tabs">
+              {['Profile', 'Applications', 'Interviews'].map((tab) => (
+                <button
+                  key={tab}
+                  className={`tab-button ${activeClientDetailsTab === tab ? 'active' : ''}`}
+                  onClick={() => setActiveClientDetailsTab(tab)}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
 
-    {/* SERVICE-BASED VIEW (same logic as before) */}
-    {simplifiedServices.includes(selectedClientForDetails.service) ? (
-      <div className="client-preview-grid-container" style={{ gridTemplateColumns: '1fr' }}>
-        <div className="client-preview-section">
-          <h4 className="client-preview-section-title">Service Request Details</h4>
+            {/* SERVICE-BASED VIEW (same logic as before) */}
+            {simplifiedServices.includes(selectedClientForDetails.service) ? (
+              <div className="client-preview-grid-container" style={{ gridTemplateColumns: '1fr' }}>
+                <div className="client-preview-section">
+                  <h4 className="client-preview-section-title">Service Request Details</h4>
 
-          <div className="assign-form-group">
-            <label>First Name *</label>
-            <div className="read-only-value">{selectedClientForDetails.firstName || '-'}</div>
-          </div>
-          <div className="assign-form-group">
-            <label>Last Name *</label>
-            <div className="read-only-value">{selectedClientForDetails.lastName || '-'}</div>
-          </div>
-          <div className="assign-form-group">
-            <label>Mobile *</label>
-            <div className="read-only-value">{selectedClientForDetails.mobile || '-'}</div>
-          </div>
-          <div className="assign-form-group">
-            <label>Email ID *</label>
-            <div className="read-only-value">{selectedClientForDetails.email || '-'}</div>
-          </div>
-          <div className="assign-form-group">
-            <label>Service *</label>
-            <div className="read-only-value">{selectedClientForDetails.service || '-'}</div>
-          </div>
+                  <div className="assign-form-group">
+                    <label>First Name *</label>
+                    <div className="read-only-value">{selectedClientForDetails.firstName || '-'}</div>
+                  </div>
+                  <div className="assign-form-group">
+                    <label>Last Name *</label>
+                    <div className="read-only-value">{selectedClientForDetails.lastName || '-'}</div>
+                  </div>
+                  <div className="assign-form-group">
+                    <label>Mobile *</label>
+                    <div className="read-only-value">{selectedClientForDetails.mobile || '-'}</div>
+                  </div>
+                  <div className="assign-form-group">
+                    <label>Email ID *</label>
+                    <div className="read-only-value">{selectedClientForDetails.email || '-'}</div>
+                  </div>
+                  <div className="assign-form-group">
+                    <label>Service *</label>
+                    <div className="read-only-value">{selectedClientForDetails.service || '-'}</div>
+                  </div>
 
-          {selectedClientForDetails.subServices &&
-            selectedClientForDetails.subServices.length > 0 && (
-              <div className="assign-form-group">
-                <label>What service do you want?</label>
-                <div className="read-only-value">
-                  {selectedClientForDetails.subServices.join(', ') || '-'}
+                  {selectedClientForDetails.subServices &&
+                    selectedClientForDetails.subServices.length > 0 && (
+                      <div className="assign-form-group">
+                        <label>What service do you want?</label>
+                        <div className="read-only-value">
+                          {selectedClientForDetails.subServices.join(', ') || '-'}
+                        </div>
+                      </div>
+                    )}
                 </div>
               </div>
-            )}
-        </div>
-      </div>
-    ) : (
-      <>
-        {/* PROFILE TAB */}
-        {activeClientDetailsTab === 'Profile' && (
-          <div className="client-preview-grid-container">
-            <div className="client-preview-section">
-              <h4 className="client-preview-section-title">Personal Information</h4>
-              <div className="assign-form-group">
+            ) : (
+              <>
+                {/* PROFILE TAB */}
+                {activeClientDetailsTab === 'Profile' && (
+                  <div className="client-preview-grid-container">
+                    <div className="client-preview-section">
+                      <h4 className="client-preview-section-title">Personal Information</h4>
+                      <div className="assign-form-group">
                         <label>First Name</label>
                         <div className="read-only-value">{selectedClientForDetails.firstName || '-'}</div>
                       </div>
@@ -2419,207 +2472,207 @@ if (isClientDetailsModalOpen && selectedClientForDetails) {
                     </div>
                   </div>
 
-        )}
+                )}
 
-        {/* APPLICATIONS TAB – reuse existing table component */}
-        {activeClientDetailsTab === 'Applications' && (
-          () => {
-    // --- 1. Build filtered list ---
+                {/* APPLICATIONS TAB – reuse existing table component */}
+                {activeClientDetailsTab === 'Applications' && (
+                  () => {
+                    // --- 1. Build filtered list ---
 
-    const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+                    const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
-    const filteredApps = clientApplications.filter((app) => {
-      if (!app.appliedDate) return false;
+                    const filteredApps = clientApplications.filter((app) => {
+                      if (!app.appliedDate) return false;
 
-      const appDate = new Date(app.appliedDate);
-      const appDateStr = appDate.toISOString().split('T')[0];
+                      const appDate = new Date(app.appliedDate);
+                      const appDateStr = appDate.toISOString().split('T')[0];
 
-      // 👉 DEFAULT: no filters → show ONLY today's applications
-      if (!clientDateRange.startDate && !clientDateRange.endDate) {
-        return appDateStr === todayStr;
-      }
+                      // 👉 DEFAULT: no filters → show ALL applications
+                      if (!clientDateRange.startDate && !clientDateRange.endDate) {
+                        return true;
+                      }
 
-      // 👉 If filters are set → use From / To range
-      const start = clientDateRange.startDate ? new Date(clientDateRange.startDate) : null;
-      const end = clientDateRange.endDate ? new Date(clientDateRange.endDate) : null;
+                      // 👉 If filters are set → use From / To range
+                      const start = clientDateRange.startDate ? new Date(clientDateRange.startDate) : null;
+                      const end = clientDateRange.endDate ? new Date(clientDateRange.endDate) : null;
 
-      if (start) {
-        start.setHours(0, 0, 0, 0);
-      }
-      if (end) {
-        end.setHours(23, 59, 59, 999);
-      }
+                      if (start) {
+                        start.setHours(0, 0, 0, 0);
+                      }
+                      if (end) {
+                        end.setHours(23, 59, 59, 999);
+                      }
 
-      return (!start || appDate >= start) && (!end || appDate <= end);
-    });
+                      return (!start || appDate >= start) && (!end || appDate <= end);
+                    });
 
-    // --- 2. Pagination (5 per page) ---
+                    // --- 2. Pagination (5 per page) ---
 
-    const totalPages = Math.max(1, Math.ceil(filteredApps.length / CLIENT_APPS_PAGE_SIZE));
-    const safePage = Math.min(clientAppsPage, totalPages);
-    const startIndex = (safePage - 1) * CLIENT_APPS_PAGE_SIZE;
-    const endIndex = startIndex + CLIENT_APPS_PAGE_SIZE;
-    const paginatedApps = filteredApps.slice(startIndex, endIndex);
-      return (
-                  <div className="applications-tab-content">
-                    <div className="date-filter" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <label>From: </label>
-                      <input
-                        type="date"
-                        value={clientDateRange.startDate}
-                        onChange={(e) =>
-                          setClientDateRange((prev) => ({ ...prev, startDate: e.target.value }))
-                        }
-                      />
-                      <label style={{ marginLeft: '1rem' }}>To: </label>
-                      <input
-                        type="date"
-                        value={clientDateRange.endDate}
-                        onChange={(e) =>
-                          setClientDateRange((prev) => ({ ...prev, endDate: e.target.value }))
-                        }
-                      />
-                    </div>
+                    const totalPages = Math.max(1, Math.ceil(filteredApps.length / CLIENT_APPS_PAGE_SIZE));
+                    const safePage = Math.min(clientAppsPage, totalPages);
+                    const startIndex = (safePage - 1) * CLIENT_APPS_PAGE_SIZE;
+                    const endIndex = startIndex + CLIENT_APPS_PAGE_SIZE;
+                    const paginatedApps = filteredApps.slice(startIndex, endIndex);
+                    return (
+                      <div className="applications-tab-content">
+                        <div className="date-filter" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <label>From: </label>
+                          <input
+                            type="date"
+                            value={clientDateRange.startDate}
+                            onChange={(e) =>
+                              setClientDateRange((prev) => ({ ...prev, startDate: e.target.value }))
+                            }
+                          />
+                          <label style={{ marginLeft: '1rem' }}>To: </label>
+                          <input
+                            type="date"
+                            value={clientDateRange.endDate}
+                            onChange={(e) =>
+                              setClientDateRange((prev) => ({ ...prev, endDate: e.target.value }))
+                            }
+                          />
+                        </div>
 
-                    <table className="client-table">
-                      <thead>
-                        <tr>
-                          <th>Employee Name</th>
-                          <th>Client Name</th>
-                          <th>Applied Date</th>
-                          <th>Company</th>
-                          <th>Job Title</th>
-                          <th>Job ID</th>
-                          <th>Job Boards</th>
-                          <th>Description Link</th>
-                          <th>Applied Time</th>
-                          <th>Status</th>
-                          <th>Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                      {paginatedApps.map((app, idx) => (
-              <tr key={idx}>
-                <td>{app.employeeName || '-'}</td>
-                <td>{selectedClientForDetails?.firstName || '-'}</td>
-                <td>{app.appliedDate || '-'}</td>
-                <td>{app.company || '-'}</td>
-                <td>{app.jobTitle || '-'}</td>
-                <td>{app.jobId || '-'}</td>
-                <td>{app.jobBoards || '-'}</td>
-                <td>
-                                {app.jobDescriptionUrl ? (
-                                  <a href={app.jobDescriptionUrl} target="_blank" rel="noreferrer" style={{ color: 'Blue', textAlign: "center" }}>
-                                    Link
-                                  </a>
-                                ) : (
-                                  '-'
-                                )}
-                              </td>
-                              <td>{app.timestamp || '-'}</td>
-                              <td>{app.status || '-'}</td>
-                              <td>
-                                <i
-                                  className="fa fa-eye action-icon view"
-                                  title="View"
-                                  onClick={() => {
-                                    setSelectedApplication(app);
-                                    setIsAppViewModalOpen(true);
-                                  }}
-                                  style={{ cursor: 'pointer', marginRight: '10px', color: '#007bff' }}
-                                />
-                                <i
-                                  className="fa fa-edit action-icon edit"
-                                  title="Edit"
-                                  onClick={() => {
-                                    setSelectedApplication(app);
-                                    setIsAppEditModalOpen(true);
-                                  }}
-                                  style={{ cursor: 'pointer', marginRight: '10px', color: '#28a745' }}
-                                />
-                                <i
-                                  className="fa fa-trash action-icon delete"
-                                  title="Delete"
-                                  onClick={() => {
-                                    setSelectedApplication(app);
-                                    setIsAppDeleteConfirmOpen(true);
-                                  }}
-                                  style={{ cursor: 'pointer', color: '#dc3545' }}
-                                />
-                              </td>
+                        <table className="client-table">
+                          <thead>
+                            <tr>
+                              <th>Employee Name</th>
+                              <th>Client Name</th>
+                              <th>Applied Date</th>
+                              <th>Company</th>
+                              <th>Job Title</th>
+                              <th>Job ID</th>
+                              <th>Job Boards</th>
+                              <th>Description Link</th>
+                              <th>Applied Time</th>
+                              <th>Status</th>
+                              <th>Actions</th>
                             </tr>
-                          ))}
-                        {filteredApps.length === 0 && (
-              <tr>
-                <td colSpan="11" style={{ textAlign: 'center' }}>
-                  No applications found
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                          </thead>
+                          <tbody>
+                            {paginatedApps.map((app, idx) => (
+                              <tr key={idx}>
+                                <td>{app.employeeName || '-'}</td>
+                                <td>{selectedClientForDetails?.firstName || '-'}</td>
+                                <td>{app.appliedDate || '-'}</td>
+                                <td>{app.company || '-'}</td>
+                                <td>{app.jobTitle || '-'}</td>
+                                <td>{app.jobId || '-'}</td>
+                                <td>{app.jobBoards || '-'}</td>
+                                <td>
+                                  {app.jobDescriptionUrl ? (
+                                    <a href={app.jobDescriptionUrl} target="_blank" rel="noreferrer" style={{ color: 'Blue', textAlign: "center" }}>
+                                      Link
+                                    </a>
+                                  ) : (
+                                    '-'
+                                  )}
+                                </td>
+                                <td>{app.timestamp || '-'}</td>
+                                <td>{app.status || '-'}</td>
+                                <td>
+                                  <i
+                                    className="fa fa-eye action-icon view"
+                                    title="View"
+                                    onClick={() => {
+                                      setSelectedApplication(app);
+                                      setIsAppViewModalOpen(true);
+                                    }}
+                                    style={{ cursor: 'pointer', marginRight: '10px', color: '#007bff' }}
+                                  />
+                                  <i
+                                    className="fa fa-edit action-icon edit"
+                                    title="Edit"
+                                    onClick={() => {
+                                      setSelectedApplication(app);
+                                      setIsAppEditModalOpen(true);
+                                    }}
+                                    style={{ cursor: 'pointer', marginRight: '10px', color: '#28a745' }}
+                                  />
+                                  <i
+                                    className="fa fa-trash action-icon delete"
+                                    title="Delete"
+                                    onClick={() => {
+                                      setSelectedApplication(app);
+                                      setIsAppDeleteConfirmOpen(true);
+                                    }}
+                                    style={{ cursor: 'pointer', color: '#dc3545' }}
+                                  />
+                                </td>
+                              </tr>
+                            ))}
+                            {filteredApps.length === 0 && (
+                              <tr>
+                                <td colSpan="11" style={{ textAlign: 'center' }}>
+                                  No applications found
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
 
-        {/* Pagination controls (always 5 per page) */}
-        {filteredApps.length > 0 && (
-          <div
-            style={{
-              marginTop: '12px',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              fontSize: '0.875rem',
-            }}
-          >
-            <div>
-              Showing{' '}
-              <strong>
-                {filteredApps.length === 0 ? 0 : startIndex + 1} –{' '}
-                {Math.min(endIndex, filteredApps.length)}
-              </strong>{' '}
-              of <strong>{filteredApps.length}</strong> applications
-            </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button
-                onClick={() => setClientAppsPage((p) => Math.max(1, p - 1))}
-                disabled={safePage === 1}
-                style={{
-                  padding: '6px 10px',
-                  borderRadius: '4px',
-                  border: '1px solid #d1d5db',
-                  backgroundColor: safePage === 1 ? '#e5e7eb' : '#ffffff',
-                  cursor: safePage === 1 ? 'not-allowed' : 'pointer',
-                }}
-              >
-                Previous
-              </button>
-              <span>
-                Page <strong>{safePage}</strong> of <strong>{totalPages}</strong>
-              </span>
-              <button
-                onClick={() =>
-                  setClientAppsPage((p) => Math.min(totalPages, p + 1))
-                }
-                disabled={safePage === totalPages}
-                style={{
-                  padding: '6px 10px',
-                  borderRadius: '4px',
-                  border: '1px solid #d1d5db',
-                  backgroundColor: safePage === totalPages ? '#e5e7eb' : '#ffffff',
-                  cursor: safePage === totalPages ? 'not-allowed' : 'pointer',
-                }}
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  })()}
+                        {/* Pagination controls (always 5 per page) */}
+                        {filteredApps.length > 0 && (
+                          <div
+                            style={{
+                              marginTop: '12px',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              fontSize: '0.875rem',
+                            }}
+                          >
+                            <div>
+                              Showing{' '}
+                              <strong>
+                                {filteredApps.length === 0 ? 0 : startIndex + 1} –{' '}
+                                {Math.min(endIndex, filteredApps.length)}
+                              </strong>{' '}
+                              of <strong>{filteredApps.length}</strong> applications
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <button
+                                onClick={() => setClientAppsPage((p) => Math.max(1, p - 1))}
+                                disabled={safePage === 1}
+                                style={{
+                                  padding: '6px 10px',
+                                  borderRadius: '4px',
+                                  border: '1px solid #d1d5db',
+                                  backgroundColor: safePage === 1 ? '#e5e7eb' : '#ffffff',
+                                  cursor: safePage === 1 ? 'not-allowed' : 'pointer',
+                                }}
+                              >
+                                Previous
+                              </button>
+                              <span>
+                                Page <strong>{safePage}</strong> of <strong>{totalPages}</strong>
+                              </span>
+                              <button
+                                onClick={() =>
+                                  setClientAppsPage((p) => Math.min(totalPages, p + 1))
+                                }
+                                disabled={safePage === totalPages}
+                                style={{
+                                  padding: '6px 10px',
+                                  borderRadius: '4px',
+                                  border: '1px solid #d1d5db',
+                                  backgroundColor: safePage === totalPages ? '#e5e7eb' : '#ffffff',
+                                  cursor: safePage === totalPages ? 'not-allowed' : 'pointer',
+                                }}
+                              >
+                                Next
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
 
-        {/* INTERVIEWS TAB – reuse existing table component */}
-        {activeClientDetailsTab === 'Interviews' && (
-              <div className="interviews-tab-content">
+                {/* INTERVIEWS TAB – reuse existing table component */}
+                {activeClientDetailsTab === 'Interviews' && (
+                  <div className="interviews-tab-content">
                     <table className="client-table">
                       <thead>
                         <tr>
@@ -2665,14 +2718,14 @@ if (isClientDetailsModalOpen && selectedClientForDetails) {
                       </tbody>
                     </table>
                   </div>
-        )}
-      </>
-    )}
-  </section>
-  </div>
-  </div>
-  );
-}
+                )}
+              </>
+            )}
+          </section>
+        </div>
+      </div>
+    );
+  }
 
 
 
