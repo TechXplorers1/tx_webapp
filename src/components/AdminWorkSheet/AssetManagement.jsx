@@ -118,19 +118,9 @@ const AssetManagement = () => {
   }, []);
 
   // --- Effects ---
-  // Initial load + Auto-reload on tab focus (solves sync issue)
+  // Initial load only.
   useEffect(() => {
     loadData(false); // Initial load from cache (Fast & Free)
-
-    const handleFocus = () => {
-      // When you come back to this tab, reload from Cache.
-      // Since AssetWorksheet updates the cache, this page updates instantly for $0.
-      console.log("Tab focused, reloading from cache...");
-      loadData(false);
-    };
-
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
   }, [loadData]);
 
 

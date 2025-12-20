@@ -127,7 +127,23 @@ const ClientManagement = () => {
           console.warn('ClientManagement cache read failed, falling back to network:', cacheErr);
         }
 
+        // --- CIRCUIT BREAKER: Prevent infinite loops ---
+        const lastFetch = localStorage.getItem('last_client_fetch_timestamp');
+        if (lastFetch && (Date.now() - parseInt(lastFetch) < 10000)) {
+          console.warn("⚠️ Data fetch blocked: Too frequent requests. Using cache if available.");
+          // Try to use memory cache or just return to avoid network cost
+          if (cached && cached.serviceRegistrations) {
+            setServiceRegistrations(cached.serviceRegistrations);
+            setManagerList(cached.managerList || []);
+            setLoading(false);
+            return;
+          }
+        }
+
         // --- 2. If no cache, fetch OPTIMIZED index from Firebase ---
+        console.log("Fetching fresh data from Firebase...");
+        localStorage.setItem('last_client_fetch_timestamp', Date.now());
+
         // Instead of fetching "clients" (huge), we fetch "service_registrations_index" (small)
         const [indexSnap, usersSnap] = await Promise.all([
           get(ref(database, 'service_registrations_index')),
