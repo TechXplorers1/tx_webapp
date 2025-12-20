@@ -11,10 +11,10 @@ import { useAuth } from '../components/AuthContext';
 import '../styles/AuthForm.css';
 
 import { auth, database } from "../../src/firebase";
-import { 
-    createUserWithEmailAndPassword,
-    GoogleAuthProvider,
-    signInWithPopup
+import {
+  createUserWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup
 } from "firebase/auth";
 import { ref, set, get, child } from "firebase/database";
 
@@ -47,33 +47,31 @@ export default function SignupPage() {
     let userDataFromDb;
 
     if (snapshot.exists()) {
-        userDataFromDb = snapshot.val();
+      userDataFromDb = snapshot.val();
     } else {
-        userDataFromDb = {
-            email: user.email,
-            roles: ['client'],
-        };
-        await set(userRef, userDataFromDb);
-    }
-    
-    const finalUserData = {
-        uid: user.uid,
+      userDataFromDb = {
         email: user.email,
-        roles: userDataFromDb.roles || ['client'],
-        avatar: user.photoURL || `https://placehold.co/40x40/007bff/white?text=${user.email.charAt(0).toUpperCase()}`
-    };
+        roles: ['client'],
+      };
+      await set(userRef, userDataFromDb);
+    }
 
-    sessionStorage.setItem('loggedInEmployee', JSON.stringify(finalUserData));
+    const finalUserData = {
+      uid: user.uid,
+      email: user.email,
+      roles: userDataFromDb.roles || ['client'],
+      avatar: user.photoURL || `https://placehold.co/40x40/007bff/white?text=${user.email.charAt(0).toUpperCase()}`
+    };
     login(finalUserData);
 
     if (finalUserData.roles.includes('admin')) {
-        navigate('/adminpage');
+      navigate('/adminpage');
     } else if (finalUserData.roles.includes('manager')) {
-        navigate('/managerworksheet');
+      navigate('/managerworksheet');
     } else if (finalUserData.roles.includes('employee')) {
-        navigate('/employees');
-    }else {
-        navigate('/clientdashboard');
+      navigate('/employees');
+    } else {
+      navigate('/clientdashboard');
     }
   };
 
@@ -101,43 +99,49 @@ export default function SignupPage() {
     }
 
     if (!hasError) {
-        setIsSigningUp(true); // NEW: Start loading
-        try {
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            const user = userCredential.user;
+      setIsSigningUp(true); // NEW: Start loading
+      try {
+        await setPersistence(auth, browserSessionPersistence);
 
-            const userRecord = {
-                email: user.email,
-                roles: ['client'],
-            };
+        const userCredential = await createUserWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+        const user = userCredential.user;
 
-            await set(ref(database, 'users/' + user.uid), userRecord);
+        const userRecord = {
+          email: user.email,
+          roles: ['client'],
+        };
 
-            const clientRecord = {
-                email: user.email,
-                firstName: user.email.split('@')[0],
-                lastName: '',
-                displayStatuses: ['registered'],
-            };
+        await set(ref(database, 'users/' + user.uid), userRecord);
 
-            await set(ref(database, 'clients/' + user.uid), clientRecord);
+        const clientRecord = {
+          email: user.email,
+          firstName: user.email.split('@')[0],
+          lastName: '',
+          displayStatuses: ['registered'],
+        };
 
-            setShowSuccessModal(true);
+        await set(ref(database, 'clients/' + user.uid), clientRecord);
 
-            setTimeout(() => {
-                handleCloseSuccessModal();
-            }, 3000);
+        setShowSuccessModal(true);
 
-        } catch (error) {
-            if (error.code === 'auth/email-already-in-use') {
-                setEmailError("An account with this email already exists.");
-            } else {
-                setPasswordError("Failed to create an account. Please try again.");
-                console.error("Firebase signup error:", error);
-            }
-        } finally {
-            setIsSigningUp(false); // NEW: Stop loading
+        setTimeout(() => {
+          handleCloseSuccessModal();
+        }, 3000);
+
+      } catch (error) {
+        if (error.code === 'auth/email-already-in-use') {
+          setEmailError("An account with this email already exists.");
+        } else {
+          setPasswordError("Failed to create an account. Please try again.");
+          console.error("Firebase signup error:", error);
         }
+      } finally {
+        setIsSigningUp(false); // NEW: Stop loading
+      }
     }
   };
 
@@ -145,13 +149,15 @@ export default function SignupPage() {
     setIsSigningUp(true); // NEW: Start loading for Google login
     const provider = new GoogleAuthProvider();
     try {
-        const result = await signInWithPopup(auth, provider);
-        await processGoogleUser(result.user);
+      await setPersistence(auth, browserSessionPersistence);
+
+      const result = await signInWithPopup(auth, provider);
+      await processGoogleUser(result.user);
     } catch (error) {
-        setPasswordError("Failed to sign in with Google. Please try again.");
-        console.error("Firebase Google login error:", error);
+      setPasswordError("Failed to sign in with Google. Please try again.");
+      console.error("Firebase Google login error:", error);
     } finally {
-        setIsSigningUp(false); // NEW: Stop loading
+      setIsSigningUp(false); // NEW: Stop loading
     }
   };
 
@@ -161,7 +167,7 @@ export default function SignupPage() {
   };
 
   return (
-      <>
+    <>
       <div className="auth-page-wrapper">
         <JsNavbar />
         <div className="auth-card">
@@ -176,7 +182,7 @@ export default function SignupPage() {
           </Button>
           <div className="or-divider">OR</div>
 
-             <Form onSubmit={handleSubmit}>
+          <Form onSubmit={handleSubmit}>
             <Form.Group className="mb-3">
               <Form.Label className="form-label-modern">Email</Form.Label>
               <div className={`input-group-modern ${emailError ? 'border-danger' : ''}`}>
@@ -193,7 +199,7 @@ export default function SignupPage() {
               <Form.Control.Feedback type="invalid">{emailError}</Form.Control.Feedback>
             </Form.Group>
 
-              <Form.Group className="mb-3">
+            <Form.Group className="mb-3">
               <Form.Label className="form-label-modern">Password</Form.Label>
               <div className={`input-group-modern ${passwordError ? 'border-danger' : ''}`}>
                 <span className="input-group-icon"><RiLockPasswordFill /></span>
@@ -215,7 +221,7 @@ export default function SignupPage() {
               <Form.Control.Feedback type="invalid">{passwordError}</Form.Control.Feedback>
             </Form.Group>
 
-               <Form.Group className="mb-4">
+            <Form.Group className="mb-4">
               <Form.Label className="form-label-modern">Confirm Password</Form.Label>
               <div className={`input-group-modern ${confirmPasswordError ? 'border-danger' : ''}`}>
                 <span className="input-group-icon"><RiLockPasswordFill /></span>
@@ -231,19 +237,19 @@ export default function SignupPage() {
               <Form.Control.Feedback type="invalid">{confirmPasswordError}</Form.Control.Feedback>
             </Form.Group>
 
-              <Button type="submit" className="w-100 btn btn-primary text-white fw-bold auth-btn-modern" disabled={isSigningUp}>
+            <Button type="submit" className="w-100 btn btn-primary text-white fw-bold auth-btn-modern" disabled={isSigningUp}>
               {isSigningUp ? (
-                  <>
-                      <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
-                      Signing Up...
-                  </>
+                <>
+                  <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
+                  Signing Up...
+                </>
               ) : (
-                  'Sign Up'
+                'Sign Up'
               )}
             </Button>
 
 
-               <div className="text-center mt-3">
+            <div className="text-center mt-3">
               <span className="auth-link-text">Already have an account?</span>
               <span
                 style={{ color: '#007bff', fontWeight: 600, marginLeft: '0.5rem', cursor: 'pointer' }}
@@ -258,14 +264,14 @@ export default function SignupPage() {
 
       <Modal show={showSuccessModal} onHide={handleCloseSuccessModal} centered>
         <Modal.Body className="text-center p-4">
-                  <img
-                    src="https://cdn-icons-png.flaticon.com/512/845/845646.jpeg"
-                    alt="Success"
-                    style={{ width: '80px' }}
-                    onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/80x80/28a745/white?text=OK'; }}
-                  />
-                  <h5 className="mt-3 text-success">Account successfully created!</h5>
-                </Modal.Body>
+          <img
+            src="https://cdn-icons-png.flaticon.com/512/845/845646.jpeg"
+            alt="Success"
+            style={{ width: '80px' }}
+            onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/80x80/28a745/white?text=OK'; }}
+          />
+          <h5 className="mt-3 text-success">Account successfully created!</h5>
+        </Modal.Body>
       </Modal>
     </>
   );

@@ -9,10 +9,14 @@ import { RiLockPasswordFill } from "react-icons/ri";
 import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
 import { useAuth } from '../components/AuthContext';
 import '../styles/AuthForm.css';
+import {
+  setPersistence,
+  browserSessionPersistence
+} from "firebase/auth";
 
 import { auth, database } from "../../src/firebase";
-import { 
-  signInWithEmailAndPassword, 
+import {
+  signInWithEmailAndPassword,
   sendPasswordResetEmail,
   GoogleAuthProvider,
   signInWithPopup
@@ -71,10 +75,6 @@ export default function LoginPage() {
           `https://placehold.co/40x40/007bff/white?text=${email.charAt(0).toUpperCase()}`,
       };
 
-
-      sessionStorage.setItem('loggedInClient', JSON.stringify(finalUserData));
-      // ✅ Cache in sessionStorage and context
-      sessionStorage.setItem('loggedInEmployee', JSON.stringify(finalUserData));
       login(finalUserData);
 
       // ✅ Map roles to routes (cleaner and faster)
@@ -98,7 +98,7 @@ export default function LoginPage() {
     e.preventDefault();
     setLoginError("");
     setIsLoggingIn(true); // NEW: Start loading
-    
+
     if (!email || !password) {
       setLoginError("Please enter both email and password.");
       setIsLoggingIn(false);
@@ -106,17 +106,24 @@ export default function LoginPage() {
     }
 
     try {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        await processLogin(userCredential.user);
+      await setPersistence(auth, browserSessionPersistence);
+
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+
+      await processLogin(userCredential.user);
     } catch (error) {
-        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-            setLoginError("Invalid email or password.");
-        } else {
-            setLoginError("An error occurred during login. Please try again.");
-            console.error("Firebase email login error:", error);
-        }
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        setLoginError("Invalid email or password.");
+      } else {
+        setLoginError("An error occurred during login. Please try again.");
+        console.error("Firebase email login error:", error);
+      }
     } finally {
-        setIsLoggingIn(false); // NEW: Stop loading
+      setIsLoggingIn(false); // NEW: Stop loading
     }
   };
 
@@ -125,13 +132,16 @@ export default function LoginPage() {
     setIsLoggingIn(true); // NEW: Start loading for Google login
     const provider = new GoogleAuthProvider();
     try {
-        const result = await signInWithPopup(auth, provider);
-        await processLogin(result.user);
+      await setPersistence(auth, browserSessionPersistence);
+
+      const result = await signInWithPopup(auth, provider);
+
+      await processLogin(result.user);
     } catch (error) {
-        setLoginError("Failed to sign in with Google. Please try again.");
-        console.error("Firebase Google login error:", error);
+      setLoginError("Failed to sign in with Google. Please try again.");
+      console.error("Firebase Google login error:", error);
     } finally {
-        setIsLoggingIn(false); // NEW: Stop loading
+      setIsLoggingIn(false); // NEW: Stop loading
     }
   };
 
@@ -141,11 +151,11 @@ export default function LoginPage() {
       return;
     }
     try {
-        await sendPasswordResetEmail(auth, forgotEmail);
-        setModalAlert({ type: "success", message: `A password reset link has been sent to ${forgotEmail}.` });
+      await sendPasswordResetEmail(auth, forgotEmail);
+      setModalAlert({ type: "success", message: `A password reset link has been sent to ${forgotEmail}.` });
     } catch (error) {
-        setModalAlert({ type: "danger", message: "Could not send password reset email. Please check the address and try again." });
-        console.error("Password reset error:", error);
+      setModalAlert({ type: "danger", message: "Could not send password reset email. Please check the address and try again." });
+      console.error("Password reset error:", error);
     }
   }
 
@@ -156,7 +166,7 @@ export default function LoginPage() {
   }
 
   return (
- <>
+    <>
       <div className="auth-page-wrapper">
         <JsNavbar />
         <div className="auth-card">
@@ -167,12 +177,12 @@ export default function LoginPage() {
             onClick={handleGoogleLogin}
             disabled={isLoggingIn} // NEW: Disable during login
           >
-          <FcGoogle size={22} /> Continue with Google
-        </Button>
-        <div className="or-divider">OR</div>
+            <FcGoogle size={22} /> Continue with Google
+          </Button>
+          <div className="or-divider">OR</div>
 
-        <Form onSubmit={handleSubmit}>
-          <Form.Group className="mb-3">
+          <Form onSubmit={handleSubmit}>
+            <Form.Group className="mb-3">
               <Form.Label className="form-label-modern">Email</Form.Label>
               <div className="input-group-modern">
                 <span className="input-group-icon"><MdEmail /></span>
@@ -187,7 +197,7 @@ export default function LoginPage() {
               </div>
             </Form.Group>
 
-         <Form.Group className="mb-3">
+            <Form.Group className="mb-3">
               <Form.Label className="form-label-modern">Password</Form.Label>
               <div className="input-group-modern">
                 <span className="input-group-icon"><RiLockPasswordFill /></span>
@@ -205,7 +215,7 @@ export default function LoginPage() {
               </div>
             </Form.Group>
 
-          <div className="text-end mb-3">
+            <div className="text-end mb-3">
               <span
                 style={{ color: '#007bff', fontWeight: 600, cursor: 'pointer' }}
                 onClick={openForgotModal}
@@ -214,36 +224,36 @@ export default function LoginPage() {
               </span>
             </div>
 
-          {loginError && <Alert variant="danger" className="py-2">{loginError}</Alert>}
+            {loginError && <Alert variant="danger" className="py-2">{loginError}</Alert>}
 
-          <Button type="submit" className="w-100 btn btn-primary text-white fw-bold auth-btn-modern" disabled={isLoggingIn}>
+            <Button type="submit" className="w-100 btn btn-primary text-white fw-bold auth-btn-modern" disabled={isLoggingIn}>
               {isLoggingIn ? (
-                  <>
-                      <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
-                      Logging In...
-                  </>
+                <>
+                  <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
+                  Logging In...
+                </>
               ) : (
-                  'Log In'
+                'Log In'
               )}
-          </Button>
+            </Button>
 
 
-          <div className="text-center mt-3">
-            <span className="auth-link-text">Don't have an account?</span>
-            <span
-              style={{ color: '#007bff', fontWeight: 600, marginLeft: '0.5rem', cursor: 'pointer' }}
-              onClick={() => navigate('/signup')}
-            >
-              Sign Up
-            </span>
-          </div>
-        </Form>
-      </div>
+            <div className="text-center mt-3">
+              <span className="auth-link-text">Don't have an account?</span>
+              <span
+                style={{ color: '#007bff', fontWeight: 600, marginLeft: '0.5rem', cursor: 'pointer' }}
+                onClick={() => navigate('/signup')}
+              >
+                Sign Up
+              </span>
+            </div>
+          </Form>
+        </div>
 
-      <Modal show={showForgotModal} onHide={() => setShowForgotModal(false)} centered>
-        <Modal.Header closeButton><Modal.Title>Reset Password</Modal.Title></Modal.Header>
-        <Modal.Body>
-          {modalAlert.message && <Alert variant={modalAlert.type}>{modalAlert.message}</Alert>}
+        <Modal show={showForgotModal} onHide={() => setShowForgotModal(false)} centered>
+          <Modal.Header closeButton><Modal.Title>Reset Password</Modal.Title></Modal.Header>
+          <Modal.Body>
+            {modalAlert.message && <Alert variant={modalAlert.type}>{modalAlert.message}</Alert>}
             <Form.Group>
               <Form.Label>Enter your registered email</Form.Label>
               <Form.Control
@@ -254,12 +264,12 @@ export default function LoginPage() {
                 autoComplete="email"
               />
             </Form.Group>
-        </Modal.Body>
-        <Modal.Footer>
+          </Modal.Body>
+          <Modal.Footer>
             <Button variant="primary" onClick={handlePasswordReset}>Send Reset Link</Button>
-        </Modal.Footer>
-      </Modal>
-    </div>
+          </Modal.Footer>
+        </Modal>
+      </div>
     </>
   );
 }
