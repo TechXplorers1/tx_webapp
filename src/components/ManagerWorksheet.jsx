@@ -698,7 +698,8 @@ const ManagerWorkSheet = () => {
                   mobile: clientRoot.mobile,
                   firstName: reg.firstName || clientRoot.firstName,
                   lastName: reg.lastName || clientRoot.lastName,
-                  name: `${reg.firstName || ''} ${reg.lastName || ''}`.trim()
+                  // Fix: Use resolved names for the full name
+                  name: `${reg.firstName || clientRoot.firstName || ''} ${reg.lastName || clientRoot.lastName || ''}`.trim()
                 };
               }
             }
@@ -717,7 +718,13 @@ const ManagerWorkSheet = () => {
 
         for (const reg of allRegistrations) {
           // Double check assignment matches (sanity check)
-          if (reg.assignedManager !== managerFirebaseKey) continue;
+          if (reg.name.includes("James")) {
+            console.log("DEBUG: Checking James:", reg.name, reg.assignmentStatus, reg.assignedManager, managerFirebaseKey, reg.assignedTo);
+          }
+          if (reg.assignedManager !== managerFirebaseKey) {
+            if (reg.name.includes("James")) console.log("DEBUG: James skipped due to manager mismatch");
+            continue;
+          }
 
           switch (reg.assignmentStatus) {
             case "pending_employee":

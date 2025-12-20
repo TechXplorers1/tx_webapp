@@ -1,48 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { getDatabase, ref, update, remove, set, get, query, orderByChild, equalTo, limitToFirst, startAfter, startAt, orderByKey, runTransaction, onValue } from "firebase/database";
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { getDatabase, ref, update, remove, set, get } from "firebase/database";
 import { database } from '../../firebase';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Spinner } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
 
-
-// --- ADD THIS BLOCK ---
-const IDB_CONFIG = { name: 'AppCacheDB', version: 1, store: 'firebase_cache' };
-
-const openDB = () => {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(IDB_CONFIG.name, IDB_CONFIG.version);
-    request.onupgradeneeded = (e) => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains(IDB_CONFIG.store)) {
-        db.createObjectStore(IDB_CONFIG.store);
-      }
-    };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-};
-
-const dbGet = async (key) => {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(IDB_CONFIG.store, 'readonly');
-    const request = transaction.objectStore(IDB_CONFIG.store).get(key);
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-};
-
-const dbSet = async (key, val) => {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(IDB_CONFIG.store, 'readwrite');
-    const request = transaction.objectStore(IDB_CONFIG.store).put(val, key);
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error);
-  });
-};
 
 const ClientManagement = () => {
+  const navigate = useNavigate();
+
   // --- Client Management States ---
   const [managerList, setManagerList] = useState([]);
   const [clientFilter, setClientFilter] = useState('registered');
@@ -89,316 +55,146 @@ const ClientManagement = () => {
     endDate: '',
   });
   const [todayClientAppCounts, setTodayClientAppCounts] = useState({});
-  // --- Pagination State ---
-  // --- Server-Side Pagination State ---
-  const [lastVisibleKey, setLastVisibleKey] = useState(null);
-  const [pageStack, setPageStack] = useState([]); // Stack of 'firstKey' for each page to enable Previous
-  const [itemsPerPage] = useState(10);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
-  // --- Server-Side Counters ---
-  const [clientCounts, setClientCounts] = useState({ registered: 0, unassigned: 0, active: 0, rejected: 0, restored: 0 });
-
-
-
   // --- Application Modals & Editing ---
   const [isAppViewModalOpen, setIsAppViewModalOpen] = useState(false);
   const [isAppEditModalOpen, setIsAppEditModalOpen] = useState(false);
   const [isAppDeleteConfirmOpen, setIsAppDeleteConfirmOpen] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState(null);
-  // --- NEW: Helper to fetch/cache data ---
-  const getCachedData = async (dbPath, storageKey, durationMinutes = 60) => {
-    try {
-      const cached = await dbGet(storageKey);
-      if (cached) {
-        const { data, timestamp } = cached;
-        const isFresh = (new Date().getTime() - timestamp) < (durationMinutes * 60 * 1000);
-        if (isFresh) return data; // Return cached data if fresh
-      }
-      // If not fresh, fetch from Firebase
-      const snapshot = await get(ref(database, dbPath));
-      const data = snapshot.exists() ? snapshot.val() : {};
-      await dbSet(storageKey, { data, timestamp: new Date().getTime() });
-      return data;
-    } catch (err) {
-      console.error("Cache Error:", err);
-      return {};
-    }
-  };
+  // Page size for applications / registrations
+  const PAGE_SIZE = 5;
+  const [currentPage, setCurrentPage] = useState(1);
 
-  // --- NEW: Helper to update cache locally ---
-  const updateLocalCache = async (clientKey, regKey, updates) => {
-    try {
-      const cachedWrapper = await dbGet('cache_clients_full');
-      if (cachedWrapper && cachedWrapper.data && cachedWrapper.data[clientKey]) {
-        // If modifying a registration inside the client
-        if (regKey && cachedWrapper.data[clientKey].serviceRegistrations?.[regKey]) {
-          cachedWrapper.data[clientKey].serviceRegistrations[regKey] = {
-            ...cachedWrapper.data[clientKey].serviceRegistrations[regKey],
-            ...updates
-          };
-        }
-        // If modifying the root client profile (firstName, email, etc)
-        else if (!regKey) {
-          Object.assign(cachedWrapper.data[clientKey], updates);
-        }
-        await dbSet('cache_clients_full', cachedWrapper);
-      }
-    } catch (e) { console.error("Local update failed", e); }
-  };
+  const [clientAppsPage, setClientAppsPage] = useState(1);
+  const CLIENT_APPS_PAGE_SIZE = 5;
 
+
+  // Simple in-browser cache key so we don't re-download on every visit
+  const CLIENT_MGMT_CACHE_KEY = 'clientManagement_cache_v1';
+
+
+  const derivedCounts = useMemo(() => {
+    const counts = {
+      registered: 0,
+      unassigned: 0,
+      active: 0,
+      rejected: 0,
+      restored: 0,
+    };
+
+    serviceRegistrations.forEach((reg) => {
+      const status = reg.assignmentStatus;
+
+      if (status === 'registered' || !status) {
+        counts.registered++;
+      } else if (status === 'pending_manager') {
+        counts.unassigned++;
+      } else if (['pending_employee', 'pending_acceptance', 'active'].includes(status)) {
+        // NOTE: we are intentionally NOT counting 'inactive' as active here,
+        // to match what the "Active Clients" tab actually displays.
+        counts.active++;
+      } else if (status === 'rejected') {
+        counts.rejected++;
+      } else if (status === 'restored') {
+        counts.restored++;
+      }
+    });
+
+    return counts;
+  }, [serviceRegistrations]);
 
 
 
   // 1) Load clients + users ONCE (no streaming)
-  // 1) Server-Side Fetch Function
-  const fetchClients = async (startKey = null, direction = 'first', searchQuery = null) => {
-    try {
-      setLoading(true);
-      setError(null);
+  // 1) Load clients + users ONCE (no streaming) with session cache
+  useEffect(() => {
+    let cancelled = false;
 
-      let clientsQuery;
-      const clientsRef = ref(database, 'clients');
+    const loadClientsAndUsers = async () => {
+      try {
+        setLoading(true);
 
-      if (searchQuery) {
-        // --- SEARCH BY EMAIL ---
-        setIsSearching(true);
-        clientsQuery = query(clientsRef, orderByChild('email'), equalTo(searchQuery));
-      } else {
-        // --- PAGINATION ---
-        setIsSearching(false);
-        // We fetch itemsPerPage + 1 to check if there is a next page
-        if (direction === 'first') {
-          clientsQuery = query(clientsRef, orderByKey(), limitToFirst(itemsPerPage + 1));
-          setPageStack([]);
-        } else if (direction === 'next' && startKey) {
-          clientsQuery = query(clientsRef, orderByKey(), startAfter(startKey), limitToFirst(itemsPerPage + 1));
-        } else if (direction === 'prev' && startKey) {
-          // For prev, startKey should be the start key of the PREVIOUS page
-          // stored in the stack. 
-          clientsQuery = query(clientsRef, orderByKey(), startAt(startKey), limitToFirst(itemsPerPage + 1));
-        } else {
-          // Fallback
-          clientsQuery = query(clientsRef, orderByKey(), limitToFirst(itemsPerPage + 1));
+        // --- 1. Try to read from IndexedDB cache first ---
+        try {
+          const cached = await dbGet(CLIENT_MGMT_CACHE_KEY);
+          if (!cancelled && cached && Array.isArray(cached.serviceRegistrations)) {
+            setServiceRegistrations(cached.serviceRegistrations);
+            setManagerList(cached.managerList || []);
+            setError(null);
+            setLoading(false);
+            return; // ✅ Served from cache, no Firebase call
+          }
+        } catch (cacheErr) {
+          console.warn('ClientManagement cache read failed, falling back to network:', cacheErr);
         }
-      }
 
-      // Execute Query
-      const snapshot = await get(clientsQuery);
-      const data = snapshot.exists() ? snapshot.val() : {};
+        // --- 2. If no cache, fetch OPTIMIZED index from Firebase ---
+        // Instead of fetching "clients" (huge), we fetch "service_registrations_index" (small)
+        const [indexSnap, usersSnap] = await Promise.all([
+          get(ref(database, 'service_registrations_index')),
+          // We now fetch the optimized employee index instead of ALL users
+          get(ref(database, 'employees_index')),
+        ]);
 
-      // Process Data
-      const keys = Object.keys(data);
-      let hasMore = false;
+        if (cancelled) return;
 
-      if (!searchQuery && keys.length > itemsPerPage) {
-        hasMore = true;
-        // Remove the extra item used for checking 'hasMore'
-        keys.pop(); // The last key is just for the cursor of the NEXT page
-      }
+        // ---- Index → serviceRegistrations ----
+        // The index is already flat! We just need to convert object to array.
+        const indexData = indexSnap.exists() ? indexSnap.val() : {};
+        const allRegistrations = Object.values(indexData);
 
-      if (!searchQuery && keys.length > 0) {
-        setLastVisibleKey(keys[keys.length - 1]);
-      }
+        // If index is empty, it might mean migration hasn't run. 
+        if (allRegistrations.length === 0) {
+          console.warn("No service_registrations_index found. Please run Optimize Database in Admin Page.");
+        }
 
-      // If going next, push current start to stack
-      // Actually, easier logic:
-      // Page 1: Stack [null]
-      // Page 2: Stack [null, key_start_of_p2]
+        // ---- Users → managers list (supports roles[] or role) ----
+        const usersData = usersSnap.exists() ? usersSnap.val() : {};
+        const allUsers = Object.keys(usersData).map((key) => ({
+          firebaseKey: key,
+          ...usersData[key],
+        }));
 
-      // Map to Registrations
-      const allRegistrations = [];
-      keys.forEach(clientKey => {
-        const client = data[clientKey];
-        if (!client || !client.serviceRegistrations) return;
-
-        Object.keys(client.serviceRegistrations).forEach(regKey => {
-          const registration = client.serviceRegistrations[regKey];
-          allRegistrations.push({
-            ...registration,
-            clientFirebaseKey: clientKey,
-            registrationKey: regKey,
-            email: client.email,
-            mobile: client.mobile,
-            firstName: registration.firstName || client.firstName,
-            lastName: registration.lastName || client.lastName,
-          });
+        const managers = allUsers.filter((u) => {
+          if (Array.isArray(u.roles)) {
+            return u.roles.map((r) => r.toLowerCase()).includes('manager');
+          }
+          return (u.role || '').toLowerCase() === 'manager';
         });
-      });
 
-      setServiceRegistrations(allRegistrations);
+        if (cancelled) return;
 
-      // Fetch Users/Managers (Once, cached)
-      // We still need this for the manager dropdown names
-      const usersData = await getCachedData('users', 'cache_users_full', 60);
-      const usersArray = Object.keys(usersData || {}).map(key => ({
-        firebaseKey: key,
-        ...usersData[key],
-      }));
-      setManagerList(usersArray.filter(u => u.roles && u.roles.includes('manager')));
+        setServiceRegistrations(allRegistrations);
+        setManagerList(managers);
+        setError(null);
 
-    } catch (error) {
-      console.error("Fetch error:", error);
-      setError(error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-
-  // --- SERVER-SIDE COUNTERS LOGIC ---
-  useEffect(() => {
-    const countsRef = ref(database, 'client_counts');
-    const unsubscribe = onValue(countsRef, (snapshot) => {
-      if (snapshot.exists()) {
-        setClientCounts(snapshot.val());
-      }
-    });
-    return () => unsubscribe();
-  }, []);
-
-  const recalculateAllCounts = async () => {
-    if (!window.confirm("This will download ALL data to recalculate counts. Continue?")) return;
-    try {
-      setLoading(true);
-      // 1. Fetch EVERYTHING
-      const snapshot = await get(ref(database, 'clients'));
-      if (!snapshot.exists()) {
-        alert("No data found.");
-        setLoading(false);
-        return;
-      }
-
-      const data = snapshot.val();
-      const counts = { registered: 0, unassigned: 0, active: 0, rejected: 0, restored: 0 };
-
-      Object.values(data).forEach(client => {
-        if (client.serviceRegistrations) {
-          Object.values(client.serviceRegistrations).forEach(reg => {
-            const status = reg.assignmentStatus;
-            if (status === 'registered' || !status) counts.registered++;
-            else if (status === 'pending_manager') counts.unassigned++;
-            else if (['pending_employee', 'pending_acceptance', 'active', 'inactive'].includes(status)) counts.active++;
-            else if (status === 'rejected') counts.rejected++;
-            // Restored logic? Usually restored clients end up back in 'registered' or 'unassigned'.
-            // If we have a 'restored' status:
-            else if (status === 'restored') counts.restored++;
+        // --- 3. Save to IndexedDB cache (no sessionStorage, so no QuotaExceeded) ---
+        try {
+          await dbSet(CLIENT_MGMT_CACHE_KEY, {
+            serviceRegistrations: allRegistrations,
+            managerList: managers,
+            cachedAt: Date.now(),
           });
+        } catch (cacheErr) {
+          console.warn('ClientManagement cache write failed (will simply not cache):', cacheErr);
         }
-      });
-
-      await update(ref(database, 'client_counts'), counts);
-      alert("Counts updated successfully!");
-
-    } catch (e) {
-      console.error(e);
-      alert("Error: " + e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-
-  const updateCounter = (type, increment) => {
-    const countRef = ref(database, `client_counts/${type}`);
-    runTransaction(countRef, (currentCount) => {
-      return (currentCount || 0) + increment;
-    });
-  };
-
-  // Initial Load
-  useEffect(() => {
-    fetchClients(null, 'first');
-  }, []);
-
-
-
-  // Handlers
-  const handleNextPage = () => {
-    if (lastVisibleKey) {
-      setPageStack(prev => [...prev, serviceRegistrations[0].clientFirebaseKey]); // Store start of CURRENT page
-      fetchClients(lastVisibleKey, 'next');
-    }
-  };
-
-  // Simplification: Standard Pagination with Firebase is tricky for "Previous".
-  // A robust way for "Previous" is to maintain a history of "StartAt" keys.
-  // When we load Page 1: StartAt = null.
-  // When we load Page 2: StartAt = LastKeyOfPage1.
-  // To go back to Page 1: we fetch with StartAt = null.
-  // So we just need to pop the "Start keys" stack.
-
-  // handleNextPage:
-  // 1. Push 'current start key' to stack? No.
-  // 2. Fetch 'next'.
-
-  // Let's refine:
-  // We need to know the 'StartAt' key for the CURRENT page to be able to re-fetch it if we wanted.
-  // But for 'Previous', we need the 'StartAt' key of the PREVIOUS page.
-
-  // Revised Strategy:
-  // pageStack = [startKey_Page1, startKey_Page2, startKey_Page3]
-  // Page 1 Load: Fetch(null). Stack = [null].
-  // Click Next:
-  //    lastVisibleKey (end of P1) is the start cursor for P2? NO.
-  //    startAfter(lastVisibleKey) is correct. 
-  //    But to go BACK, we need to know what query generated P1.
-
-  // Let's use a simpler visual approach:
-  // On Next: 
-  //   Save current `serviceRegistrations[0].clientFirebaseKey` as the "Start Key of this page".
-  //   Then fetch next.
-
-  // On Prev:
-  //   Pop the last saved key. 
-  //   Fetch using that key as `startAt`? No, simpler:
-  //   If we used `startAfter`, we can't easily reverse without knowing the boundary.
-
-  // Let's stick to the stack of "First Keys".
-  // Page 1: keys [A...J]. First = A.
-  // Page 2: keys [K...T]. First = K.
-  // Stack: [A, K].
-  // Prev: Pop K. Peek A. Fetch startAt(A).limit(10). 
-
-  const handlePrevPage = () => {
-    if (pageStack.length > 0) {
-      const newStack = [...pageStack];
-      const prevPageStartKey = newStack.pop(); // This is start of CURRENT page
-      // We want start of PREVIOUS page. 
-      // Wait, if stack has [StartP1, StartP2], and we are on P2.
-      // We want to go to P1. So we want StartP1.
-
-      // Let's re-logic:
-      // Stack stores "Start Keys of Previous Pages".
-      // P1: Stack [].
-      // Next -> specific P2 logic.
-      // P2: Stack [StartP1].
-      // Prev -> Pop StartP1. Fetch(StartP1).
-
-      const keyToLoad = newStack.pop();
-      setPageStack(newStack);
-
-      if (keyToLoad === undefined) {
-        // Going back to Page 1 (which had no start key)
-        fetchClients(null, 'first');
-      } else {
-        // For P1, keyToLoad might be null or specific key?
-        // If we used startAfter for P2...
-        // This is getting complicated.
-
-        // EASIEST: Just reload everything? No.
-        // EASIEST SERVER PAGINATION:
-        // Maintain array of `firstKey` for every page.
-        // P1: firstKey = data[0].key.
-        // Next: fetch next.
-        // Prev: use history.
-
-        // Actually, the `fetchClients` logic I wrote handles `startAt(key)` for 'prev'.
-        // So:
-        fetchClients(keyToLoad, 'prev');
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Failed to fetch clients and users:', err);
+          setError('Failed to load client data. Please try again later.');
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
-    }
-  };
+    };
+
+    loadClientsAndUsers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // 2) Compute today's applications COUNT from in-memory data (NO DB calls)
   useEffect(() => {
@@ -442,18 +238,22 @@ const ClientManagement = () => {
   ];
 
   const handleAcceptClient = async (registration) => {
-    const refPath = `clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}`;
     try {
-      await update(ref(database, refPath), { assignmentStatus: 'pending_manager' });
-      // Update Counters (Registered -1, Unassigned +1)
-      updateCounter('registered', -1);
-      updateCounter('unassigned', 1);
+      const updates = {};
+      const indexKey = `service_registrations_index/${registration.clientFirebaseKey}_${registration.registrationKey}`;
 
+      updates[`clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}/assignmentStatus`] = 'pending_manager';
+      updates[`${indexKey}/assignmentStatus`] = 'pending_manager';
 
-      // Update Local Cache & State
-      await updateLocalCache(registration.clientFirebaseKey, registration.registrationKey, { assignmentStatus: 'pending_manager' });
-      setServiceRegistrations(prev => prev.map(r => r.registrationKey === registration.registrationKey ? { ...r, assignmentStatus: 'pending_manager' } : r));
-    } catch (error) { console.error(error); }
+      await update(ref(database), updates);
+
+      // Optimistic update
+      setServiceRegistrations(prevRegistrations => prevRegistrations.map(reg =>
+        reg.registrationKey === registration.registrationKey ? { ...reg, assignmentStatus: 'pending_manager' } : reg
+      ));
+    } catch (error) {
+      console.error("Failed to accept client registration:", error);
+    }
   };
 
   const handleResumeFileChange = (e, index) => {
@@ -465,18 +265,27 @@ const ClientManagement = () => {
     }
   };
   const handleDeclineClient = async (registration) => {
-    const refPath = `clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}`;
+    if (!registration || !registration.clientFirebaseKey || !registration.registrationKey) {
+      console.error("Missing registration details to decline client.");
+      return;
+    }
     try {
-      await update(ref(database, refPath), { assignmentStatus: 'rejected' });
-      // Update Counters (Registered -1, Rejected +1)
-      updateCounter('registered', -1);
-      updateCounter('rejected', 1);
+      const updates = {};
+      const indexKey = `service_registrations_index/${registration.clientFirebaseKey}_${registration.registrationKey}`;
 
+      updates[`clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}/assignmentStatus`] = 'rejected';
+      updates[`${indexKey}/assignmentStatus`] = 'rejected';
 
-      // Update Local Cache & State
-      await updateLocalCache(registration.clientFirebaseKey, registration.registrationKey, { assignmentStatus: 'rejected' });
-      setServiceRegistrations(prev => prev.map(r => r.registrationKey === registration.registrationKey ? { ...r, assignmentStatus: 'rejected' } : r));
-    } catch (error) { console.error(error); }
+      await update(ref(database), updates);
+
+      console.log(`Client ${registration.firstName} declined and moved to rejected.`);
+      // OPTIMISTIC UPDATE: update local state immediately
+      setServiceRegistrations(prevRegistrations => prevRegistrations.map(reg =>
+        reg.registrationKey === registration.registrationKey ? { ...reg, assignmentStatus: 'rejected' } : reg
+      ));
+    } catch (error) {
+      console.error("Failed to decline client registration:", error);
+    }
   };
 
 
@@ -493,32 +302,26 @@ const ClientManagement = () => {
 
   const handleConfirmUnaccept = async () => {
     if (!clientToUnaccept) return;
-    const refPath = `clients/${clientToUnaccept.clientFirebaseKey}/serviceRegistrations/${clientToUnaccept.registrationKey}`;
     try {
-      await update(ref(database, refPath), { assignmentStatus: 'registered' });
-      // If coming from Unassigned: Unassigned -1, Registered +1
-      // If coming from Restored??
-      // The previous status isn't easily known here without checking clientToUnaccept.
-      // Let's assume standard flow Unassigned -> Registered.
-      if (clientToUnaccept.assignmentStatus === 'pending_manager') {
-        updateCounter('unassigned', -1);
-      } else if (clientToUnaccept.assignmentStatus === 'restored') { // if supported
-        updateCounter('restored', -1);
-      } else {
-        // Fallback/General
-        // We might need to handle this more robustly, but for now:
-        updateCounter('unassigned', -1);
-      }
-      updateCounter('registered', 1);
+      const updates = {};
+      const indexKey = `service_registrations_index/${clientToUnaccept.clientFirebaseKey}_${clientToUnaccept.registrationKey}`;
 
+      updates[`clients/${clientToUnaccept.clientFirebaseKey}/serviceRegistrations/${clientToUnaccept.registrationKey}/assignmentStatus`] = 'registered';
+      updates[`${indexKey}/assignmentStatus`] = 'registered';
 
-      // Update Local Cache & State
-      await updateLocalCache(clientToUnaccept.clientFirebaseKey, clientToUnaccept.registrationKey, { assignmentStatus: 'registered' });
-      setServiceRegistrations(prev => prev.map(r => r.registrationKey === clientToUnaccept.registrationKey ? { ...r, assignmentStatus: 'registered' } : r));
+      await update(ref(database), updates);
 
+      // OPTIMISTIC UPDATE: update local state immediately
+      setServiceRegistrations(prevRegistrations => prevRegistrations.map(reg =>
+        reg.registrationKey === clientToUnaccept.registrationKey ? { ...reg, assignmentStatus: 'registered' } : reg
+      ));
       setIsUnacceptClientConfirmModalOpen(false);
       setClientToUnaccept(null);
-    } catch (error) { console.error(error); }
+      console.log(`Client ${clientToUnaccept.firstName} unaccepted and moved back to registered.`);
+    } catch (error) {
+      console.error("Failed to unaccept client registration:", error);
+      alert("Error unaccepting client.");
+    }
   };
 
 
@@ -634,22 +437,31 @@ const ClientManagement = () => {
 
   const handleConfirmClientDelete = async () => {
     if (!clientToDelete) return;
-    const refPath = `clients/${clientToDelete.clientFirebaseKey}/serviceRegistrations/${clientToDelete.registrationKey}`;
+    if (!clientToDelete || !clientToDelete.clientFirebaseKey || !clientToDelete.registrationKey) {
+      console.error("Missing client or registration keys for deletion.");
+      return;
+    }
 
     try {
-      await remove(ref(database, refPath));
+      const updates = {};
+      const indexKey = `service_registrations_index/${clientToDelete.clientFirebaseKey}_${clientToDelete.registrationKey}`;
 
-      // Remove from Local Cache Manually
-      const cachedWrapper = await dbGet('cache_clients_full');
-      if (cachedWrapper?.data?.[clientToDelete.clientFirebaseKey]?.serviceRegistrations) {
-        delete cachedWrapper.data[clientToDelete.clientFirebaseKey].serviceRegistrations[clientToDelete.registrationKey];
-        await dbSet('cache_clients_full', cachedWrapper);
-      }
+      // Remove from both locations
+      updates[`clients/${clientToDelete.clientFirebaseKey}/serviceRegistrations/${clientToDelete.registrationKey}`] = null;
+      updates[indexKey] = null;
 
-      setServiceRegistrations(prev => prev.filter(r => r.registrationKey !== clientToDelete.registrationKey));
+      await update(ref(database), updates);
+
+      console.log(`Successfully deleted service registration: ${clientToDelete.registrationKey}`);
+
+      // Clean up local state (Optional: also update the local clients list to remove the service instantly)
       setIsDeleteClientConfirmModalOpen(false);
       setClientToDelete(null);
-    } catch (error) { console.error(error); }
+
+    } catch (error) {
+      console.error("Failed to delete client service registration:", error);
+      alert("Error deleting service registration.");
+    }
   };
 
   const handleCancelClientDelete = () => {
@@ -663,13 +475,23 @@ const ClientManagement = () => {
       alert('Please select a manager first using the "Select Manager" button.');
       return;
     }
-    const registrationRef = ref(database, `clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}`);
+
     try {
-      await update(registrationRef, {
-        manager: registration.manager, // Name of the manager
-        assignedManager: registration.managerFirebaseKey, // Firebase key of the manager
-        assignmentStatus: 'pending_employee' // Change status from 'pending_manager' to 'pending_employee'
-      });
+      const updates = {};
+      const indexKey = `service_registrations_index/${registration.clientFirebaseKey}_${registration.registrationKey}`;
+
+      // Update Main Node
+      updates[`clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}/manager`] = registration.manager;
+      updates[`clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}/assignedManager`] = registration.managerFirebaseKey;
+      updates[`clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}/assignmentStatus`] = 'pending_employee';
+
+      // Update Index
+      updates[`${indexKey}/manager`] = registration.manager;
+      updates[`${indexKey}/assignedManager`] = registration.managerFirebaseKey;
+      updates[`${indexKey}/assignmentStatus`] = 'pending_employee';
+
+      await update(ref(database), updates);
+
       // OPTIMISTIC UPDATE: Update local state immediately
       setServiceRegistrations(prev => prev.map(reg =>
         reg.registrationKey === registration.registrationKey
@@ -692,11 +514,15 @@ const ClientManagement = () => {
       console.error("Missing registration details to restore client.");
       return;
     }
-    const registrationRef = ref(database, `clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}`);
     try {
-      await update(registrationRef, {
-        assignmentStatus: 'pending_manager'
-      });
+      const updates = {};
+      const indexKey = `service_registrations_index/${registration.clientFirebaseKey}_${registration.registrationKey}`;
+
+      updates[`clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}/assignmentStatus`] = 'pending_manager';
+      updates[`${indexKey}/assignmentStatus`] = 'pending_manager';
+
+      await update(ref(database), updates);
+
       console.log(`Client ${registration.firstName} restored and moved to unassigned.`);
       // OPTIMISTIC UPDATE: update local state immediately
       setServiceRegistrations(prevRegistrations => prevRegistrations.map(reg =>
@@ -729,34 +555,60 @@ const ClientManagement = () => {
     setClientSearchTerm(event.target.value);
   };
 
-  const getFilteredRegistrations = () => {
-    // Server-side pagination: The data in 'serviceRegistrations' IS the data to show.
-    // Client-side filtering by Status (Active/Registered) is tricky if we only fetch 10 items.
-    // If the user selects 'Registered' tab, we should probably trigger a server fetch with that filter?
-    // User Instructions: "switch to server side... 10 per page"
-    // "search using email id".
+  const getFilteredRegistrations = (tabOverride) => {
+    let filtered = serviceRegistrations;
 
-    // For now, removing client-side text filtering.
-    // We will still respect the Tab filters (registered/unassigned) client-side IF the data supports it,
-    // BUT fetching 10 mixed clients and filtering 8 of them out leaves 2. 
-    // This is Bad UX.
+    // Only keep registrations that use one of the known services
+    const validServices = serviceOptions.filter(s => s !== 'All');
+    filtered = filtered.filter(c => !c.service || validServices.includes(c.service));
 
-    // Ideally, `fetchClients` handles the status filter too.
-    // But Firebase doesn't support multiple `orderBy`.
-    // So sticking to "All Clients" or Client-Side filtering of the page.
-    // Given the constraints, we just return the raw list.
-    return serviceRegistrations;
+    const appliedFilter = tabOverride || clientFilter;
+
+    if (appliedFilter === 'registered') {
+      filtered = filtered.filter(c => c.assignmentStatus === 'registered' || !c.assignmentStatus);
+    } else if (appliedFilter === 'unassigned') {
+      filtered = filtered.filter(c => c.assignmentStatus === 'pending_manager');
+    } else if (appliedFilter === 'active') {
+      filtered = filtered.filter(c =>
+        ['pending_employee', 'pending_acceptance', 'active', 'inactive'].includes(c.assignmentStatus)
+      );
+    } else if (appliedFilter === 'rejected') {
+      filtered = filtered.filter(c => c.assignmentStatus === 'rejected');
+    }
+
+    if (selectedServiceFilter !== 'All') {
+      filtered = filtered.filter(client => client.service === selectedServiceFilter);
+    }
+
+    const searchTermLower = clientSearchTerm.toLowerCase();
+    return filtered.filter(client =>
+      (client.firstName?.toLowerCase().includes(searchTermLower)) ||
+      (client.lastName?.toLowerCase().includes(searchTermLower)) ||
+      (client.email?.toLowerCase().includes(searchTermLower)) ||
+      (client.mobile?.toLowerCase().includes(searchTermLower)) ||
+      (client.jobsToApply?.toLowerCase().includes(searchTermLower)) ||
+      (client.country?.toLowerCase().includes(searchTermLower)) ||
+      (client.service?.toLowerCase().includes(searchTermLower))
+    );
+  };
+
+  const getTabCount = (tab) => {
+    return getFilteredRegistrations(tab).length;
   };
 
 
-// In ClientManagement.jsx
 
   const handleConfirmSelectManager = async () => {
     if (!managerToConfirm || !registrationForManager) return;
 
+    // 1. Basic IDs
     const clientKey = registrationForManager.clientFirebaseKey;
     const regKey = registrationForManager.registrationKey;
-    const oldManagerId = registrationForManager.assignedManager; // Check if replacing
+
+    // Old manager (if any) so we can clean up their index
+    const oldManagerId = registrationForManager.assignedManager || null;
+
+    // New manager
     const newManagerId = managerToConfirm.firebaseKey;
     const assignmentKey = `${clientKey}_${regKey}`;
 
@@ -765,46 +617,62 @@ const ClientManagement = () => {
       assignedManager: newManagerId,
     };
 
-    const registrationRef = ref(
-      database,
-      `clients/${clientKey}/serviceRegistrations/${regKey}`
-    );
+    // 2. Build a multi-location update payload
+    const updates = {};
+
+    // 2A. Update main client registration node
+    updates[`clients/${clientKey}/serviceRegistrations/${regKey}/manager`] =
+      updatedManagerInfo.manager;
+    updates[`clients/${clientKey}/serviceRegistrations/${regKey}/assignedManager`] =
+      updatedManagerInfo.assignedManager;
+    updates[`clients/${clientKey}/serviceRegistrations/${regKey}/assignmentStatus`] =
+      'pending_employee';
+
+    // 2B. Create / update the Manager → Client reverse index
+    updates[`manager_assignments/${newManagerId}/${assignmentKey}`] = {
+      clientFirebaseKey: clientKey,
+      registrationKey: regKey,
+      clientName: `${registrationForManager.firstName || ''} ${registrationForManager.lastName || ''
+        }`.trim(),
+      status: 'pending_employee',
+    };
+
+    // 2C. Update the Service Registrations Index (Optimization)
+    const indexKey = `service_registrations_index/${clientKey}_${regKey}`;
+    updates[`${indexKey}/manager`] = updatedManagerInfo.manager;
+    updates[`${indexKey}/assignedManager`] = updatedManagerInfo.assignedManager;
+    updates[`${indexKey}/assignmentStatus`] = 'pending_employee';
+
+    // 2D. If there was an old manager, remove the old index entry
+    if (oldManagerId) {
+      updates[`manager_assignments/${oldManagerId}/${assignmentKey}`] = null;
+    }
 
     try {
-      // 1. Update the main Client Record
-      const updates = {};
-      // Path to update main record
-      updates[`clients/${clientKey}/serviceRegistrations/${regKey}/manager`] = updatedManagerInfo.manager;
-      updates[`clients/${clientKey}/serviceRegistrations/${regKey}/assignedManager`] = updatedManagerInfo.assignedManager;
-      updates[`clients/${clientKey}/serviceRegistrations/${regKey}/assignmentStatus`] = 'pending_employee';
-
-      // 2. Add to New Manager's Index
-      updates[`manager_assignments/${newManagerId}/${assignmentKey}`] = {
-        clientFirebaseKey: clientKey,
-        registrationKey: regKey,
-        clientName: `${registrationForManager.firstName} ${registrationForManager.lastName}`,
-        status: 'pending_employee'
-      };
-
-      // 3. Remove from Old Manager's Index (if exists)
-      if (oldManagerId) {
-        updates[`manager_assignments/${oldManagerId}/${assignmentKey}`] = null;
-      }
-
+      // 3. Apply all updates atomically
       await update(ref(database), updates);
 
-      // Local State Update
-      setServiceRegistrations((prev) =>
-        prev.map((reg) =>
+      // 4. Update local state so the UI immediately reflects it
+      setServiceRegistrations(prev =>
+        prev.map(reg =>
           reg.registrationKey === regKey
-            ? { ...reg, ...updatedManagerInfo, assignmentStatus: 'pending_employee' }
+            ? {
+              ...reg,
+              ...updatedManagerInfo,
+              assignmentStatus: 'pending_employee',
+            }
             : reg
         )
       );
+
+      // Optionally: you can show a toast/snackbar here
+      // triggerNotification("Manager assigned successfully!");
+
     } catch (error) {
       console.error('Failed to assign manager:', error);
-      alert("Failed to assign manager.");
+      alert('Failed to assign manager. Please try again.');
     } finally {
+      // 5. Close modals and clear temp state
       setIsConfirmManagerModalOpen(false);
       setIsManagerModalOpen(false);
       setManagerToConfirm(null);
@@ -812,17 +680,88 @@ const ClientManagement = () => {
     }
   };
 
-  const filteredClients = getFilteredRegistrations();
+
+  // All registrations after applying tab/service/search filters
+  const filteredClients = useMemo(
+    () => getFilteredRegistrations(),
+    [serviceRegistrations, clientFilter, selectedServiceFilter, clientSearchTerm]
+  );
+
+  // --- Pagination (5 applications per page, client-side using cached data) ---
+  const totalPages = Math.max(1, Math.ceil(filteredClients.length / PAGE_SIZE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = (safeCurrentPage - 1) * PAGE_SIZE;
+  const endIndex = startIndex + PAGE_SIZE;
+  const paginatedClients = filteredClients.slice(startIndex, endIndex);
+
+  const handleNextPage = () => {
+    setCurrentPage(prev => Math.min(prev + 1, totalPages));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handlePrevPage = () => {
+    setCurrentPage(prev => Math.max(prev - 1, 1));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // When filters/search change, reset to page 1 so we don't request invalid pages
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [clientFilter, selectedServiceFilter, clientSearchTerm]);
 
   // --- Client Details and Edit Client Modals Handlers ---
   const handleViewClientDetails = async (client) => {
-    setSelectedClientForDetails(client);
+    // `client` here is the registration row (from Active/Registered/Etc.)
+    // It already has clientFirebaseKey + registrationKey
+
+    // NORMALIZE keys from Index (resume -> resumes, coverLetter -> coverLetterUrl)
+    const normalizedClient = {
+      ...client,
+      resumes: client.resumes || client.resume || [],
+      coverLetterUrl: client.coverLetterUrl || client.coverLetter || '',
+      coverLetterFileName: client.coverLetterFileName || (client.coverLetter ? 'cover_letter' : '') // Fallback
+    };
+
+    setSelectedClientForDetails(normalizedClient);
     setActiveClientDetailsTab('Profile');
     setIsClientDetailsModalOpen(true);
 
     try {
-      const applicationsRef = ref(database, `applications/${client.clientFirebaseKey}`);
-      const snapshot = await get(applicationsRef);
+      // 1) Load the base profile for extra fields (optional but nice)
+      if (client.clientFirebaseKey) {
+        const clientProfileRef = ref(database, `clients/${client.clientFirebaseKey}`);
+        const profileSnap = await get(clientProfileRef);
+        if (profileSnap.exists()) {
+          const baseProfile = profileSnap.val() || {};
+          // Merge base profile into the selected client details (so Profile tab shows full info)
+          setSelectedClientForDetails(prev => ({
+            ...(prev || {}),
+            ...baseProfile,
+            // Keep registration-level keys from the original row and our normalization
+            clientFirebaseKey: client.clientFirebaseKey,
+            registrationKey: client.registrationKey,
+            resumes: normalizedClient.resumes,
+            coverLetterUrl: normalizedClient.coverLetterUrl
+          }));
+        }
+      }
+
+      // 2) Load job applications for THIS registration
+      if (!client.clientFirebaseKey || !client.registrationKey) {
+        setClientApplications([]);
+        setClientInterviews([]);
+        return;
+      }
+
+      const clientKey = client.clientFirebaseKey;
+      const regKey = client.registrationKey;
+
+      const jobApplicationsRef = ref(
+        database,
+        `clients/${clientKey}/serviceRegistrations/${regKey}/jobApplications`
+      );
+
+      const snapshot = await get(jobApplicationsRef);
 
       if (!snapshot.exists()) {
         setClientApplications([]);
@@ -830,26 +769,52 @@ const ClientManagement = () => {
         return;
       }
 
-      const data = snapshot.val() || {};
+      const raw = snapshot.val();
 
-      const appsArray = Object.keys(data).map(key => ({
-        firebaseKey: key,
-        ...data[key],
+      // Handle both array and object forms just in case
+      let appsArray = [];
+      if (Array.isArray(raw)) {
+        appsArray = raw.filter(Boolean); // drop null holes if any
+      } else {
+        appsArray = Object.keys(raw).map(key => ({
+          firebaseKey: key,
+          ...raw[key],
+        }));
+      }
+
+      // Enrich each app with client/registration keys so edit/delete modals keep working
+      appsArray = appsArray.map(app => ({
+        ...app,
+        clientFirebaseKey: clientKey,
+        registrationKey: regKey,
       }));
 
-      setClientApplications(appsArray.filter(a => a.type === 'application'));
-      setClientInterviews(appsArray.filter(a => a.type === 'interview'));
+      // All apps go into Applications tab
+      setClientApplications(appsArray);
+
+      // Only "Interview" status (or whatever you use) goes into Interviews tab
+      const interviews = appsArray.filter(
+        app => app.status && app.status.toLowerCase() === 'interview'
+      );
+      setClientInterviews(interviews);
     } catch (err) {
       console.error("Failed to load client details:", err);
+      setClientApplications([]);
+      setClientInterviews([]);
     }
   };
+
 
 
 
   const handleCloseClientDetailsModal = () => {
     setIsClientDetailsModalOpen(false);
     setSelectedClientForDetails(null);
+    setClientApplications([]);
+    setClientInterviews([]);
+    setActiveClientDetailsTab('Profile');
   };
+
 
   const handleEditClientDetailsClick = () => {
     setCurrentClientToEdit({ ...selectedClientForDetails });
@@ -865,13 +830,18 @@ const ClientManagement = () => {
   };
 
   const handleEditClientChange = (e) => {
-    const { name, value } = e.target;
-    // We handle files in specific handlers (handleResumeFileChange, etc.)
-    // to keep this generic handler clean.
-    setCurrentClientToEdit(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    const { name, value, files } = e.target;
+    // Handle new file selection separately
+    if (name === "newResumeFile") {
+      setNewResumeFile(files[0]);
+    } else if (name === "newCoverLetterFile") {
+      setNewCoverLetterFile(files[0]);
+    } else {
+      setCurrentClientToEdit(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   const handleCoverLetterFileChange = (e) => {
@@ -892,115 +862,117 @@ const ClientManagement = () => {
 
   const handleSaveClientDetails = async (e) => {
     e.preventDefault();
-    if (!currentClientToEdit) return;
+    if (!currentClientToEdit || !currentClientToEdit.clientFirebaseKey) {
+      alert("Error: No client selected or client is missing a key.");
+      return;
+    }
     setIsSaving(true);
 
     try {
       const storage = getStorage();
-      const updates = { ...currentClientToEdit };
+      const updatedResumes = [...(currentClientToEdit.resumes || [])];
 
-      // 1. Handle Cover Letter Upload
-      if (newCoverLetterFile) {
-        const coverRef = storageRef(storage, `clients/${currentClientToEdit.clientFirebaseKey}/documents/cover_${Date.now()}_${newCoverLetterFile.name}`);
-        await uploadBytes(coverRef, newCoverLetterFile);
-        const coverUrl = await getDownloadURL(coverRef);
-        updates.coverLetterUrl = coverUrl;
-        updates.coverLetterFileName = newCoverLetterFile.name;
-      }
-
-      // 2. Handle Resume Uploads
-      // We need to handle both replacing specific indexes and adding new ones
-      let updatedResumes = updates.resumes ? [...updates.resumes] : [];
-
-      // Process newResumeFiles state object
-      const uploadPromises = Object.keys(newResumeFiles).map(async (key) => {
-        const file = newResumeFiles[key];
-        const fileRef = storageRef(storage, `clients/${currentClientToEdit.clientFirebaseKey}/documents/resume_${Date.now()}_${file.name}`);
-
-        await uploadBytes(fileRef, file);
-        const downloadUrl = await getDownloadURL(fileRef);
-
-        if (key.startsWith('new_')) {
-          // This is a completely new resume (Appended)
-          updatedResumes.push({
-            name: file.name,
-            url: downloadUrl
-          });
+      // Separate files meant for updating vs. files that are newly added
+      const filesToUpdate = {};
+      const filesToAdd = [];
+      Object.entries(newResumeFiles).forEach(([key, file]) => {
+        if (String(key).startsWith('new_')) {
+          filesToAdd.push(file);
         } else {
-          // This is a replacement for an existing index
-          const index = parseInt(key, 10);
-          if (!isNaN(index) && updatedResumes[index]) {
-            updatedResumes[index] = {
-              name: file.name,
-              url: downloadUrl
-            };
-          }
+          filesToUpdate[key] = file;
         }
       });
 
-      await Promise.all(uploadPromises);
-      updates.resumes = updatedResumes;
+      // --- Process UPDATES on existing resumes ---
+      const updatePromises = Object.entries(filesToUpdate).map(async ([indexStr, file]) => {
+        const index = parseInt(indexStr, 10);
+        const filePath = `resumes/${currentClientToEdit.clientFirebaseKey}/${currentClientToEdit.registrationKey}/${file.name}`;
+        const fileRef = storageRef(storage, filePath);
+        await uploadBytes(fileRef, file);
+        const downloadUrl = await getDownloadURL(fileRef);
+        return { index, data: { name: file.name, url: downloadUrl, size: file.size } };
+      });
+      const updateResults = await Promise.all(updatePromises);
+      updateResults.forEach(({ index, data }) => {
+        if (updatedResumes[index]) updatedResumes[index] = data;
+      });
 
-      // --- CORE DATABASE UPDATE ---
-      const { firstName, lastName, email, mobile, clientFirebaseKey, registrationKey, ...regUpdates } = updates;
+      // --- Process NEWLY ADDED resumes ---
+      const addPromises = filesToAdd.map(async (file) => {
+        const filePath = `resumes/${currentClientToEdit.clientFirebaseKey}/${currentClientToEdit.registrationKey}/${Date.now()}-${file.name}`;
+        const fileRef = storageRef(storage, filePath);
+        await uploadBytes(fileRef, file);
+        const downloadUrl = await getDownloadURL(fileRef);
+        return { name: file.name, url: downloadUrl, size: file.size };
+      });
+      const addResults = await Promise.all(addPromises);
+      updatedResumes.push(...addResults); // Append new resumes to the array
 
-      const regRef = ref(database, `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}`);
-      const profileRef = ref(database, `clients/${clientFirebaseKey}`);
+      // --- Continue with the rest of the save logic ---
+      const updates = { ...currentClientToEdit, resumes: updatedResumes };
 
-      // Update Firebase
-      // We explicitly exclude keys that shouldn't be saved back to DB (like temp UI flags)
-      const cleanRegUpdates = { ...regUpdates };
-      delete cleanRegUpdates.clientFirebaseKey;
-      delete cleanRegUpdates.registrationKey;
+      if (newCoverLetterFile) {
+        const filePath = `coverletters/${currentClientToEdit.clientFirebaseKey}/${currentClientToEdit.registrationKey}/${newCoverLetterFile.name}`;
+        const fileRef = storageRef(storage, filePath);
+        await uploadBytes(fileRef, newCoverLetterFile);
+        updates.coverLetterUrl = await getDownloadURL(fileRef);
+        updates.coverLetterFileName = newCoverLetterFile.name;
+      }
 
-      await update(regRef, cleanRegUpdates);
-      await update(profileRef, { firstName, lastName, email, mobile });
+      const { firstName, lastName, email, mobile, ...registrationUpdates } = updates;
 
-      // Update Local Cache
-      await updateLocalCache(clientFirebaseKey, registrationKey, cleanRegUpdates);
-      await updateLocalCache(clientFirebaseKey, null, { firstName, lastName, email, mobile });
+      const updatePayload = {};
+      const indexKey = `service_registrations_index/${currentClientToEdit.clientFirebaseKey}_${currentClientToEdit.registrationKey}`;
 
-      // Update State
-      setServiceRegistrations(prev => prev.map(r =>
-        r.registrationKey === registrationKey ? { ...r, ...updates } : r
-      ));
+      // 1. Update Registration Node
+      updatePayload[`clients/${currentClientToEdit.clientFirebaseKey}/serviceRegistrations/${currentClientToEdit.registrationKey}`] = registrationUpdates;
+
+      // 2. Update Client Profile Node
+      updatePayload[`clients/${currentClientToEdit.clientFirebaseKey}/firstName`] = firstName;
+      updatePayload[`clients/${currentClientToEdit.clientFirebaseKey}/lastName`] = lastName;
+      updatePayload[`clients/${currentClientToEdit.clientFirebaseKey}/email`] = email;
+      updatePayload[`clients/${currentClientToEdit.clientFirebaseKey}/mobile`] = mobile;
+
+      // 3. Update Service Index (Optimization)
+      // We only update fields that might have changed to avoid overwriting unrelated index data
+      updatePayload[`${indexKey}/firstName`] = firstName || '';
+      updatePayload[`${indexKey}/lastName`] = lastName || '';
+      updatePayload[`${indexKey}/email`] = email || '';
+      updatePayload[`${indexKey}/mobile`] = mobile || '';
+      if (registrationUpdates.service) updatePayload[`${indexKey}/service`] = registrationUpdates.service;
+      if (registrationUpdates.country) updatePayload[`${indexKey}/country`] = registrationUpdates.country;
+      if (registrationUpdates.jobsToApply) updatePayload[`${indexKey}/jobsToApply`] = registrationUpdates.jobsToApply;
+      if (registrationUpdates.visaStatus) updatePayload[`${indexKey}/visaStatus`] = registrationUpdates.visaStatus;
+
+      await update(ref(database), updatePayload);
 
       handleCloseEditClientModal();
       setShowSuccessModal(true);
       setTimeout(() => setShowSuccessModal(false), 3000);
+
     } catch (error) {
-      console.error("Error saving client details:", error);
-      alert("Failed to save changes: " + error.message);
+      console.error("Failed to update client details in Firebase:", error);
+      alert("An error occurred while saving the changes. Please try again.");
     } finally {
       setIsSaving(false);
     }
   };
+
   // --- Rendering Functions ---
   const renderClientTable = (registrationsToRender, serviceType, currentClientFilter, title = '') => {
-    // Note: With server-side pagination, 'registrationsToRender' is already the sliced data.
-    // However, if we are filtering client-side (e.g. by 'Active' status), we might have fewer items.
-    // Ideally server-side pagination should filter by status too, but that requires composite indexes.
-    // For now, we assume standard list or search.
-
     const headers = ['First Name', 'Last Name', 'Mobile', 'Email', serviceType === 'Job Supporting' ? 'Jobs Apply For' : 'Service', 'Registered Date', 'Country'];
     if (serviceType === 'Job Supporting') headers.push('Visa Status');
     if (['unassigned', 'active', 'restored'].includes(currentClientFilter)) headers.push('Manager');
     headers.push('Details', 'Actions');
 
-    const getManagerName = (managerFirebaseKey) => {
+    const getManagerName = (managerFirebaseKey, fallbackName) => {
       const manager = managerList.find(m => m.firebaseKey === managerFirebaseKey);
-      return manager ? `${manager.firstName} ${manager.lastName}` : 'N/A';
+      return manager ? `${manager.firstName} ${manager.lastName}` : (fallbackName || 'N/A');
     };
 
     return (
       <div className="client-table-container">
         {title && <h4 className="client-table-title">{title} ({registrationsToRender.length})</h4>}
-
-        {/* Search Warning */}
-        {isSearching && <div style={{ padding: '10px', background: '#e3f2fd', marginBottom: '10px', borderRadius: '4px' }}>
-          Searching for email. <button onClick={() => { fetchClients(null, 'first'); setClientSearchTerm(''); }} style={{ border: 'none', background: 'transparent', color: 'blue', textDecoration: 'underline', cursor: 'pointer' }}>Clear Search</button>
-        </div>}
-
         <table className="client-table">
           <thead><tr><th>S.No.</th>{headers.map(h => <th key={h}>{h}</th>)}</tr></thead>
           <tbody>
@@ -1014,10 +986,11 @@ const ClientManagement = () => {
                   <td>{registration.email}</td>
                   <td
                     style={{
+                      // Essential styles for wrapping long, continuous text in a table cell:
                       wordBreak: 'break-word',
                       whiteSpace: 'normal',
-                      minWidth: '200px',
-                      maxWidth: '300px'
+                      minWidth: '200px', // Optional: Ensures the column has a minimum width before wrapping starts
+                      maxWidth: '300px'  // Optional: Prevents the column from becoming excessively wide
                     }}
                   >{registration.service === 'Job Supporting' ? registration.jobsToApply : registration.service}</td>
                   <td>{registration.registeredDate}</td>
@@ -1032,7 +1005,7 @@ const ClientManagement = () => {
                   )}
                   {currentClientFilter === 'active' && (
                     <td>
-                      {getManagerName(registration.assignedManager)}
+                      {getManagerName(registration.assignedManager, registration.manager)}
                     </td>
                   )}
                   <td>
@@ -1067,6 +1040,7 @@ const ClientManagement = () => {
                       )}
                       {(currentClientFilter === 'unassigned' || currentClientFilter === 'restored') && (
                         <>
+                          {/* Unaccept button added here for Unassigned Clients */}
                           <button onClick={() => handleUnacceptClientClick(registration)} className="action-button cancel">Unaccept</button>
                           <button onClick={() => handleAssignClient(registration)} className="action-button assign" disabled={!registration.manager}>Save</button>
                         </>
@@ -1075,14 +1049,17 @@ const ClientManagement = () => {
                       {currentClientFilter === 'rejected' && (
                         <>
                           <button onClick={() => handleRestoreClient(registration)} className="action-button restore">Restore</button>
+                          {/* Delete button confirmed here for Rejected Clients */}
                           <button onClick={() => handleDeleteRejectedClient(registration)} className="action-button delete-btn">Delete</button>
                         </>
                       )}
                     </div>
+                    {/* Send Payment Link Button */}
                     <button
                       onClick={() => handleOpenPaymentModal(registration)}
                       className="action-button send-payment-link"
                     >
+                      {/* Credit Card Icon (from Screenshot 2025-07-02 at 7.33.16 PM.jpeg) */}
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '0.9rem', height: '0.9rem' }}>
                         <path d="M20 4H4C3.44772 4 3 4.44772 3 5V19C3 19.5523 3.44772 20 4 20H20C20.5523 20 21 19.5523 21 19V5C21 4.44772 20.5523 4 20 4ZM5 7H19V9H5V7ZM5 11H17V13H5V11ZM5 15H13V17H5V15Z" />
                       </svg>
@@ -1094,78 +1071,50 @@ const ClientManagement = () => {
             ) : (
               <tr>
                 <td colSpan={headers.length} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
-                  {isSearching ? 'No client found with this email.' : 'No clients found.'}
+                  No {serviceType !== 'All' ? serviceType : ''} clients found for this filter.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
-
-        {/* Server-Side Pagination Controls */}
-        {!isSearching && (
-          <div className="pagination-controls" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', marginTop: '1rem' }}>
+        {filteredClients.length > 0 && (
+          <div className="pagination-controls">
             <button
-              onClick={() => {
-                // Pop from stack to go back
-                if (pageStack.length > 0) {
-                  const newStack = [...pageStack];
-                  const prevKey = newStack.pop();
-                  setPageStack(newStack);
-                  // If prevKey undefined, it means Page 1 logic?
-                  // Actually, simpler: just store the START key of each page in stack.
-                  // Page 1 start: null.
-                  // Page 2 start: K10.
-                  // Prev -> fetchClients(stack.top, 'first' or 'next'?)
-
-                  // Simplest: just use the logic we defined in fetchClients('prev')
-                  // But I need to pass the right key.
-
-                  // Let's implement the simpler Stack logic inline here?
-                  // No, handlePrevPage is cleaner.
-                  // Wait, I defined handlePrevPage in the fetch section step 2.
-                  // I need to make sure I call it here.
-                }
-                // Use logic defined in step 2
-                handlePrevPage();
-              }}
-              disabled={pageStack.length === 0}
-              style={{ padding: '0.5rem 1rem', border: '1px solid #ccc', borderRadius: '4px', background: pageStack.length === 0 ? '#eee' : 'white' }}
+              className="pagination-btn"
+              type="button"
+              onClick={handlePrevPage}
+              disabled={safeCurrentPage === 1}
             >
-              Previous
+              ← Previous
             </button>
 
-            {/* We don't know total pages in server side pagination usually */}
-            <span>Page {pageStack.length + 1}</span>
+            <span className="pagination-info">
+              Page <strong>{safeCurrentPage}</strong> of <strong>{totalPages}</strong>
+            </span>
 
             <button
-              onClick={() => {
-                if (lastVisibleKey) {
-                  // Push current page start to stack?
-                  // Actually we need to recover the start of THIS page to go back to it.
-                  // serviceRegistrations[0].clientFirebaseKey is the start of THIS page.
-
-                  setPageStack(prev => [...prev, serviceRegistrations[0].clientFirebaseKey]);
-                  fetchClients(lastVisibleKey, 'next');
-                }
-              }}
-              disabled={!lastVisibleKey} // If no last key, we are at end
-              style={{ padding: '0.5rem 1rem', border: '1px solid #ccc', borderRadius: '4px', background: !lastVisibleKey ? '#eee' : 'white' }}
+              className="pagination-btn"
+              type="button"
+              onClick={handleNextPage}
+              disabled={safeCurrentPage === totalPages}
             >
-              Next
+              Next →
             </button>
           </div>
         )}
+
+
       </div>
     );
   };
-
 
   const renderAllServiceTables = () => {
     const servicesToDisplay = serviceOptions.filter(service => service !== 'All');
     return (
       <div className="all-services-list">
         {servicesToDisplay.map(service => {
-          const clientsForService = filteredClients.filter(registration => {
+          // Only use the current page's clients, already filtered & sliced
+          const clientsForService = paginatedClients.filter(registration => {
             let matchesFilter = false;
             if (clientFilter === 'registered') {
               matchesFilter = registration.assignmentStatus === 'registered' || !registration.assignmentStatus;
@@ -1187,9 +1136,11 @@ const ClientManagement = () => {
 
             return matchesFilter && matchesService && matchesSearch;
           });
+
           if (clientsForService.length === 0) {
             return null;
           }
+
           return (
             <div key={service} className="service-table-list-item">
               {renderClientTable(clientsForService, service, clientFilter, service)}
@@ -1198,7 +1149,8 @@ const ClientManagement = () => {
         })}
       </div>
     );
-  }
+  };
+
 
   const [showScrollToTop, setShowScrollToTop] = useState(false);
 
@@ -1215,6 +1167,14 @@ const ClientManagement = () => {
   }, []);
 
 
+  useEffect(() => {
+    // Whenever the date range, client, or applications change,
+    // reset to the first page so pagination doesn't break.
+    setClientAppsPage(1);
+  }, [clientDateRange.startDate, clientDateRange.endDate, clientApplications, selectedClientForDetails]);
+
+
+
   const scrollToBottom = () => {
     window.scrollTo({
       top: document.body.scrollHeight,
@@ -1229,11 +1189,11 @@ const ClientManagement = () => {
     });
   };
 
-
-
-  return (
-    <div className="ad-body-container">
-      <style>{`
+  {/* Client Details PAGE (inline, no popup) */ }
+  if (isClientDetailsModalOpen && selectedClientForDetails) {
+    return (
+      <div className="ad-body-container">
+        <style>{`
         /* Import Inter font from Google Fonts */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
@@ -1397,6 +1357,30 @@ const ClientManagement = () => {
             
         }
 
+        .client-details-page {
+  margin-top: 24px;
+  padding: 20px;
+  background: var(--bg-color);
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+}
+
+.client-details-page-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.back-to-list-button {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--primary-color);
+}
+
+
         .client-filter-tabs {
             position: relative;
             display: flex;
@@ -1510,6 +1494,51 @@ const ClientManagement = () => {
             color: var(--text-primary);
             font-size: 0.9rem;
         }
+
+        .pagination-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin: 25px 0;
+  font-size: 1rem;
+}
+
+.pagination-btn {
+  background-color: #3b82f6; /* Blue */
+  color: #ffffff;
+  border: none;
+  padding: 10px 18px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.25s ease-in-out;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.35);
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background-color: #2563eb;
+  transform: translateY(-2px);
+}
+
+.pagination-btn:disabled {
+  background-color: #cccccc;
+  color: #666666;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.pagination-info {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: rgba(59, 130, 246, 0.08);
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
 
         .service-filter-group {
             display: flex;
@@ -2131,194 +2160,26 @@ const ClientManagement = () => {
                 justify-content: center;
             }
 
+            
+
       `}
-      </style>
-
-      <main >
-        <div className="client-management-container">
-          <div className="client-management-box">
-            <div className="client-management-header-section">
-              <h2 className="client-management-title">Client Details Management</h2>
-              <button onClick={recalculateAllCounts} style={{ fontSize: '10px', marginLeft: '10px', padding: '2px 5px' }}>Recalculate Counts</button>
-
-            </div>
-
-            {/* Client Filter Tabs */}
-            <div className="client-filter-tabs">
-              {[
-                { label: 'Registered Clients', value: 'registered', count: clientCounts.registered, activeBg: 'var(--client-filter-tab-bg-active-registered)', activeColor: 'var(--client-filter-tab-text-active-registered)', badgeBg: 'var(--client-filter-tab-badge-registered)' },
-                { label: 'Unassigned Clients', value: 'unassigned', count: clientCounts.unassigned, activeBg: 'var(--client-filter-tab-bg-active-unassigned)', activeColor: 'var(--client-filter-tab-text-active-unassigned)', badgeBg: 'var(--client-filter-tab-badge-unassigned)' },
-                { label: 'Active Clients', value: 'active', count: clientCounts.active, activeBg: 'var(--client-filter-tab-bg-active-active)', activeColor: 'var(--client-filter-tab-text-active-active)', badgeBg: 'var(--client-filter-tab-badge-active)' },
-                { label: 'Rejected Clients', value: 'rejected', count: clientCounts.rejected, activeBg: 'var(--client-filter-tab-bg-active-rejected)', activeColor: 'var(--client-filter-tab-text-active-rejected)', badgeBg: 'var(--client-filter-tab-badge-rejected)' },
-                // { label: 'Restore Clients', value: 'restored', count: clients.filter(c => c.displayStatuses.includes('restored')).length, activeBg: 'var(--client-filter-tab-bg-active-restored)', activeColor: 'var(--client-filter-tab-text-active-restored)', badgeBg: 'var(--client-filter-tab-badge-restored)' },
-              ].map((option) => (
-                <label
-                  key={option.value}
-                  className={`client-filter-tab-item ${option.value}`}
-                  style={{
-                    backgroundColor: clientFilter === option.value ? option.activeBg : 'transparent',
-                    color: clientFilter === option.value ? option.activeColor : 'rgba(51, 65, 85, 1)',
-                  }}
-                >
-                  <input
-                    type="radio"
-                    name="client-filter"
-                    value={option.value}
-                    checked={clientFilter === option.value}
-                    onChange={(e) => {
-                      setClientFilter(e.target.value);
-                      setClientSearchTerm('');
-                      // selectedServiceFilter state is intentionally NOT reset here, to maintain selection across tabs
-                    }}
-                  />
-                  <span className="client-filter-tab-label">{option.label}</span>
-                  <span className="badge" style={{ backgroundColor: clientFilter === option.value ? option.badgeBg : '#9AA0A6' }}>
-                    {option.count}
-                  </span>
-                </label>
-              ))}
-            </div>
-
-            {/* Search Input and Service Dropdown */}
-            <div className="client-search-and-filter-group">
-              <div className="client-search-input-group">
-                <span className="search-icon-wrapper">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" style={{ width: '1rem', height: '1rem' }}>
-                    <path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.1-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z" />
-                  </svg>
-                </span>
-                <input
-                  type="text"
-                  id="clientSearch"
-                  placeholder="Search by EXACT Email ID..."
-                  className="client-search-input"
-                  value={clientSearchTerm}
-                  onChange={(e) => setClientSearchTerm(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      fetchClients(null, 'first', clientSearchTerm);
-                    }
-                  }}
-                />
-                <button
-                  onClick={() => fetchClients(null, 'first', clientSearchTerm)}
-                  className="action-button view"
-                  style={{ marginLeft: '10px', height: '42px', minWidth: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >
-                  Search
-                </button>
-              </div>
+        </style>
 
 
-              <div className="service-filter-group">
-                <label htmlFor="serviceFilter" className="form-label" style={{ fontSize: '20px' }}>Services:</label>
-                <select
-                  id="serviceFilter"
-                  name="serviceFilter"
 
-
-                  className="form-select"
-                  value={selectedServiceFilter}
-                  onChange={(e) => setSelectedServiceFilter(e.target.value)}
-                >
-                  {serviceOptions.map(option => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-            </div>
-
-            {selectedServiceFilter === 'All' ? (
-              renderAllServiceTables()
-            ) : (
-              <>
-                <h4 className="client-table-title">
-                  {clientFilter === 'registered' && `Registered Clients`}
-                  {clientFilter === 'unassigned' && `Unassigned Clients`}
-                  {clientFilter === 'active' && `Active Clients`}
-                  {clientFilter === 'rejected' && `Rejected Clients`}
-                  {clientFilter === 'restored' && `Restored Clients`} ({getFilteredRegistrations().length})
-                </h4>
-
-
-                {renderClientTable(getFilteredRegistrations(), selectedServiceFilter, clientFilter)}
-              </>
-            )}
-
-          </div>
-        </div>
-      </main>
-
-      {/* Delete Client Confirmation Modal */}
-      {isDeleteClientConfirmModalOpen && (
-        <div className="modal-overlay open">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h3 className="modal-title">Confirm Deletion</h3>
-              <button className="modal-close-btn" onClick={handleCancelClientDelete}>&times;</button>
-            </div>
-            <p className="modal-subtitle">Are you sure you want to delete this client? This action cannot be undone.</p>
-            <div className="confirm-modal-buttons">
-              <button type="button" className="confirm-cancel-btn" onClick={handleCancelClientDelete}>Cancel</button>
-              <button type="button" className="confirm-delete-btn" onClick={handleConfirmClientDelete}>Delete</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {isManagerModalOpen && registrationForManager && (
-        <div className="modal-overlay open">
-          <div className="modal-content manager-select-modal">
-            <div className="modal-header">
-              <h3 className="modal-title">Select Manager for {registrationForManager.firstName}</h3>
-              <button className="modal-close-btn" onClick={handleCloseManagerModal}>&times;</button>
-            </div>
-
-            <div className="manager-search-container">
-              <input
-                type="text"
-                placeholder="Search managers by name..."
-                className="manager-search-input"
-                value={managerSearchTerm}
-                onChange={(e) => setManagerSearchTerm(e.target.value)}
-              />
-            </div>
-
-            <div className="manager-list">
-              {managerList
-                .filter(manager =>
-                  `${manager.firstName} ${manager.lastName}`.toLowerCase().includes(managerSearchTerm.toLowerCase())
-                )
-                .map(manager => (
-                  <div key={manager.firebaseKey} className="manager-item" onClick={() => handleSelectManager(manager)}>
-                    <div className="manager-avatar">{`${(manager.firstName || ' ').charAt(0)}${(manager.lastName || ' ').charAt(0)}`}</div>
-                    <div className="manager-info">
-                      <div className="manager-name">{`${manager.firstName} ${manager.lastName}`}</div>
-                      <div className="manager-email">{manager.workEmail || manager.email}</div>
-                    </div>
-                  </div>
-                ))
-              }
-              {managerList.length === 0 && (
-                <p style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>No managers found.</p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Client Details Modal */}
-      {isClientDetailsModalOpen && selectedClientForDetails && (
-        <div className="modal-overlay open">
-          <div className="assign-modal-content" style={{ maxWidth: '900px' }}>
-            <div className="assign-modal-header">
-              <h3 className="assign-modal-title">Client Details: {selectedClientForDetails.firstName + ' ' + selectedClientForDetails.lastName}</h3>
-              <button className="assign-modal-close-button" onClick={handleCloseClientDetailsModal}>
-                &times;
+        <div className="client-management-page">
+          <section className="client-details-page">
+            <div className="client-details-page-header">
+              <button
+                className="back-to-list-button"
+                onClick={handleCloseClientDetailsModal}
+              >
+                ← Back to Clients
               </button>
+
+              <h3 className="client-details-page-title">
+                Client Details: {selectedClientForDetails.firstName} {selectedClientForDetails.lastName}
+              </h3>
             </div>
 
             {/* Tabs */}
@@ -2334,10 +2195,12 @@ const ClientManagement = () => {
               ))}
             </div>
 
+            {/* SERVICE-BASED VIEW (same logic as before) */}
             {simplifiedServices.includes(selectedClientForDetails.service) ? (
               <div className="client-preview-grid-container" style={{ gridTemplateColumns: '1fr' }}>
                 <div className="client-preview-section">
                   <h4 className="client-preview-section-title">Service Request Details</h4>
+
                   <div className="assign-form-group">
                     <label>First Name *</label>
                     <div className="read-only-value">{selectedClientForDetails.firstName || '-'}</div>
@@ -2358,19 +2221,21 @@ const ClientManagement = () => {
                     <label>Service *</label>
                     <div className="read-only-value">{selectedClientForDetails.service || '-'}</div>
                   </div>
-                  {selectedClientForDetails.subServices && selectedClientForDetails.subServices.length > 0 && (
-                    <div className="assign-form-group">
-                      <label>What service do you want?</label>
-                      <div className="read-only-value">
-                        {selectedClientForDetails.subServices.join(', ') || '-'}
-                      </div>
-                    </div>
-                  )}
 
+                  {selectedClientForDetails.subServices &&
+                    selectedClientForDetails.subServices.length > 0 && (
+                      <div className="assign-form-group">
+                        <label>What service do you want?</label>
+                        <div className="read-only-value">
+                          {selectedClientForDetails.subServices.join(', ') || '-'}
+                        </div>
+                      </div>
+                    )}
                 </div>
               </div>
             ) : (
               <>
+                {/* PROFILE TAB */}
                 {activeClientDetailsTab === 'Profile' && (
                   <div className="client-preview-grid-container">
                     <div className="client-preview-section">
@@ -2607,120 +2472,205 @@ const ClientManagement = () => {
                     </div>
                   </div>
 
-
                 )}
 
-                {/* --- Applications Tab --- */}
+                {/* APPLICATIONS TAB – reuse existing table component */}
                 {activeClientDetailsTab === 'Applications' && (
-                  <div className="applications-tab-content">
-                    <div className="date-filter" style={{ marginBottom: '1rem' }}>
-                      <label>From: </label>
-                      <input
-                        type="date"
-                        value={clientDateRange.startDate}
-                        onChange={(e) =>
-                          setClientDateRange((prev) => ({ ...prev, startDate: e.target.value }))
-                        }
-                      />
-                      <label style={{ marginLeft: '1rem' }}>To: </label>
-                      <input
-                        type="date"
-                        value={clientDateRange.endDate}
-                        onChange={(e) =>
-                          setClientDateRange((prev) => ({ ...prev, endDate: e.target.value }))
-                        }
-                      />
-                    </div>
+                  () => {
+                    // --- 1. Build filtered list ---
 
-                    <table className="client-table">
-                      <thead>
-                        <tr>
-                          <th>Employee Name</th>
-                          <th>Client Name</th>
-                          <th>Applied Date</th>
-                          <th>Company</th>
-                          <th>Job Title</th>
-                          <th>Job ID</th>
-                          <th>Job Boards</th>
-                          <th>Description Link</th>
-                          <th>Applied Time</th>
-                          <th>Status</th>
-                          <th>Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {clientApplications
-                          .filter((app) => {
-                            if (!clientDateRange.startDate && !clientDateRange.endDate) return true;
-                            const appDate = new Date(app.appliedDate);
-                            const start = clientDateRange.startDate ? new Date(clientDateRange.startDate) : null;
-                            const end = clientDateRange.endDate ? new Date(clientDateRange.endDate) : null;
-                            return (!start || appDate >= start) && (!end || appDate <= end);
-                          })
-                          .map((app, idx) => (
-                            <tr key={idx}>
-                              <td>{app.employeeName || '-'}</td>
-                              <td>{selectedClientForDetails?.firstName || '-'}</td>
-                              <td>{app.appliedDate || '-'}</td>
-                              <td>{app.company || '-'}</td>
-                              <td>{app.jobTitle || '-'}</td>
-                              <td>{app.jobId || '-'}</td>
-                              <td>{app.jobBoards || '-'}</td>
-                              <td>
-                                {app.jobDescriptionUrl ? (
-                                  <a href={app.jobDescriptionUrl} target="_blank" rel="noreferrer" style={{ color: 'Blue', textAlign: "center" }}>
-                                    Link
-                                  </a>
-                                ) : (
-                                  '-'
-                                )}
-                              </td>
-                              <td>{app.timestamp || '-'}</td>
-                              <td>{app.status || '-'}</td>
-                              <td>
-                                <i
-                                  className="fa fa-eye action-icon view"
-                                  title="View"
-                                  onClick={() => {
-                                    setSelectedApplication(app);
-                                    setIsAppViewModalOpen(true);
-                                  }}
-                                  style={{ cursor: 'pointer', marginRight: '10px', color: '#007bff' }}
-                                />
-                                <i
-                                  className="fa fa-edit action-icon edit"
-                                  title="Edit"
-                                  onClick={() => {
-                                    setSelectedApplication(app);
-                                    setIsAppEditModalOpen(true);
-                                  }}
-                                  style={{ cursor: 'pointer', marginRight: '10px', color: '#28a745' }}
-                                />
-                                <i
-                                  className="fa fa-trash action-icon delete"
-                                  title="Delete"
-                                  onClick={() => {
-                                    setSelectedApplication(app);
-                                    setIsAppDeleteConfirmOpen(true);
-                                  }}
-                                  style={{ cursor: 'pointer', color: '#dc3545' }}
-                                />
-                              </td>
+                    const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+                    const filteredApps = clientApplications.filter((app) => {
+                      if (!app.appliedDate) return false;
+
+                      const appDate = new Date(app.appliedDate);
+                      const appDateStr = appDate.toISOString().split('T')[0];
+
+                      // 👉 DEFAULT: no filters → show ALL applications
+                      if (!clientDateRange.startDate && !clientDateRange.endDate) {
+                        return true;
+                      }
+
+                      // 👉 If filters are set → use From / To range
+                      const start = clientDateRange.startDate ? new Date(clientDateRange.startDate) : null;
+                      const end = clientDateRange.endDate ? new Date(clientDateRange.endDate) : null;
+
+                      if (start) {
+                        start.setHours(0, 0, 0, 0);
+                      }
+                      if (end) {
+                        end.setHours(23, 59, 59, 999);
+                      }
+
+                      return (!start || appDate >= start) && (!end || appDate <= end);
+                    });
+
+                    // --- 2. Pagination (5 per page) ---
+
+                    const totalPages = Math.max(1, Math.ceil(filteredApps.length / CLIENT_APPS_PAGE_SIZE));
+                    const safePage = Math.min(clientAppsPage, totalPages);
+                    const startIndex = (safePage - 1) * CLIENT_APPS_PAGE_SIZE;
+                    const endIndex = startIndex + CLIENT_APPS_PAGE_SIZE;
+                    const paginatedApps = filteredApps.slice(startIndex, endIndex);
+                    return (
+                      <div className="applications-tab-content">
+                        <div className="date-filter" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <label>From: </label>
+                          <input
+                            type="date"
+                            value={clientDateRange.startDate}
+                            onChange={(e) =>
+                              setClientDateRange((prev) => ({ ...prev, startDate: e.target.value }))
+                            }
+                          />
+                          <label style={{ marginLeft: '1rem' }}>To: </label>
+                          <input
+                            type="date"
+                            value={clientDateRange.endDate}
+                            onChange={(e) =>
+                              setClientDateRange((prev) => ({ ...prev, endDate: e.target.value }))
+                            }
+                          />
+                        </div>
+
+                        <table className="client-table">
+                          <thead>
+                            <tr>
+                              <th>Employee Name</th>
+                              <th>Client Name</th>
+                              <th>Applied Date</th>
+                              <th>Company</th>
+                              <th>Job Title</th>
+                              <th>Job ID</th>
+                              <th>Job Boards</th>
+                              <th>Description Link</th>
+                              <th>Applied Time</th>
+                              <th>Status</th>
+                              <th>Actions</th>
                             </tr>
-                          ))}
-                        {clientApplications.length === 0 && (
-                          <tr>
-                            <td colSpan="11" style={{ textAlign: 'center' }}>
-                              No applications found
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                          </thead>
+                          <tbody>
+                            {paginatedApps.map((app, idx) => (
+                              <tr key={idx}>
+                                <td>{app.employeeName || '-'}</td>
+                                <td>{selectedClientForDetails?.firstName || '-'}</td>
+                                <td>{app.appliedDate || '-'}</td>
+                                <td>{app.company || '-'}</td>
+                                <td>{app.jobTitle || '-'}</td>
+                                <td>{app.jobId || '-'}</td>
+                                <td>{app.jobBoards || '-'}</td>
+                                <td>
+                                  {app.jobDescriptionUrl ? (
+                                    <a href={app.jobDescriptionUrl} target="_blank" rel="noreferrer" style={{ color: 'Blue', textAlign: "center" }}>
+                                      Link
+                                    </a>
+                                  ) : (
+                                    '-'
+                                  )}
+                                </td>
+                                <td>{app.timestamp || '-'}</td>
+                                <td>{app.status || '-'}</td>
+                                <td>
+                                  <i
+                                    className="fa fa-eye action-icon view"
+                                    title="View"
+                                    onClick={() => {
+                                      setSelectedApplication(app);
+                                      setIsAppViewModalOpen(true);
+                                    }}
+                                    style={{ cursor: 'pointer', marginRight: '10px', color: '#007bff' }}
+                                  />
+                                  <i
+                                    className="fa fa-edit action-icon edit"
+                                    title="Edit"
+                                    onClick={() => {
+                                      setSelectedApplication(app);
+                                      setIsAppEditModalOpen(true);
+                                    }}
+                                    style={{ cursor: 'pointer', marginRight: '10px', color: '#28a745' }}
+                                  />
+                                  <i
+                                    className="fa fa-trash action-icon delete"
+                                    title="Delete"
+                                    onClick={() => {
+                                      setSelectedApplication(app);
+                                      setIsAppDeleteConfirmOpen(true);
+                                    }}
+                                    style={{ cursor: 'pointer', color: '#dc3545' }}
+                                  />
+                                </td>
+                              </tr>
+                            ))}
+                            {filteredApps.length === 0 && (
+                              <tr>
+                                <td colSpan="11" style={{ textAlign: 'center' }}>
+                                  No applications found
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
 
-                {/* --- Interviews Tab --- */}
+                        {/* Pagination controls (always 5 per page) */}
+                        {filteredApps.length > 0 && (
+                          <div
+                            style={{
+                              marginTop: '12px',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              fontSize: '0.875rem',
+                            }}
+                          >
+                            <div>
+                              Showing{' '}
+                              <strong>
+                                {filteredApps.length === 0 ? 0 : startIndex + 1} –{' '}
+                                {Math.min(endIndex, filteredApps.length)}
+                              </strong>{' '}
+                              of <strong>{filteredApps.length}</strong> applications
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <button
+                                onClick={() => setClientAppsPage((p) => Math.max(1, p - 1))}
+                                disabled={safePage === 1}
+                                style={{
+                                  padding: '6px 10px',
+                                  borderRadius: '4px',
+                                  border: '1px solid #d1d5db',
+                                  backgroundColor: safePage === 1 ? '#e5e7eb' : '#ffffff',
+                                  cursor: safePage === 1 ? 'not-allowed' : 'pointer',
+                                }}
+                              >
+                                Previous
+                              </button>
+                              <span>
+                                Page <strong>{safePage}</strong> of <strong>{totalPages}</strong>
+                              </span>
+                              <button
+                                onClick={() =>
+                                  setClientAppsPage((p) => Math.min(totalPages, p + 1))
+                                }
+                                disabled={safePage === totalPages}
+                                style={{
+                                  padding: '6px 10px',
+                                  borderRadius: '4px',
+                                  border: '1px solid #d1d5db',
+                                  backgroundColor: safePage === totalPages ? '#e5e7eb' : '#ffffff',
+                                  cursor: safePage === totalPages ? 'not-allowed' : 'pointer',
+                                }}
+                              >
+                                Next
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                {/* INTERVIEWS TAB – reuse existing table component */}
                 {activeClientDetailsTab === 'Interviews' && (
                   <div className="interviews-tab-content">
                     <table className="client-table">
@@ -2771,8 +2721,1167 @@ const ClientManagement = () => {
                 )}
               </>
             )}
+          </section>
+        </div>
+      </div>
+    );
+  }
 
 
+
+  return (
+    <div className="ad-body-container">
+      <style>{`
+        /* Import Inter font from Google Fonts */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        :root {
+          --bg-body: #f3f4f6;
+          --bg-card: #ffffff;
+          --text-primary: #1f2937;
+          --text-secondary: #6b7280;
+          --border-color: #e5e7eb;
+          --shadow-color-1: rgba(0, 0, 0, 0.05);
+          --shadow-color-3: rgba(0, 0, 0, 0.04);
+          --modal-overlay-bg: rgba(0, 0, 0, 0.5);
+          --modal-bg: #ffffff;
+          --modal-border: #e5e7eb;
+          --modal-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+          --modal-title-color: #1f2937;
+          --modal-subtitle-color: #6b7280;
+          --modal-close-btn-color: #6b7280;
+          --modal-close-btn-hover: #1f2937;
+          --modal-input-border: #d1d5db;
+          --modal-input-bg: #ffffff;
+          --modal-input-text: #1f2937;
+          --modal-focus-border: #2563eb;
+          --modal-label-color: #374151;
+          --dept-table-header-bg: #f9fafb;
+          --dept-table-header-text: #6b7280;
+          --dept-table-row-hover-bg: #f9fafb;
+          --action-btn-border: #e5e7eb;
+          --action-btn-text: #4b5563;
+          --action-btn-hover-bg: #f9fafb;
+          --delete-btn-bg: #EF4444;
+          --delete-btn-hover-bg: #DC2626;
+          --delete-btn-text: #ffffff;
+          --confirm-modal-cancel-btn-bg: #e5e7eb;
+          --confirm-modal-cancel-btn-text: #4b5563;
+          --confirm-modal-cancel-btn-hover: #d1d5db;
+          --modal-create-btn-bg: #2563eb;
+          --modal-create-btn-text: #ffffff;
+          --modal-create-btn-hover: #1d4ed8;
+
+          /* Client Management Specific Colors */
+          --client-filter-tab-bg-active-registered: #E6F0FF;
+          --client-filter-tab-text-active-registered: #3A60EE;
+          --client-filter-tab-badge-registered: #3A60EE;
+          --client-filter-tab-bg-active-unassigned: #FEF3C7;
+          --client-filter-tab-text-active-unassigned: #B45309;
+          --client-filter-tab-badge-unassigned: #B45309;
+          --client-filter-tab-bg-active-active: #D9F5E6;
+          --client-filter-tab-text-active-active: #28A745;
+          --client-filter-tab-badge-active: #28A745;
+          --client-filter-tab-bg-active-rejected: #FFEDEE;
+          --client-filter-tab-text-active-rejected: #DC3545;
+          --client-filter-tab-badge-rejected: #DC3545;
+          --client-filter-tab-bg-active-restored: #F0E6FF;
+          --client-filter-tab-text-active-restored: #6A40EE;
+          --client-filter-tab-badge-restored: #6A40EE;
+        }
+
+        .ad-body-container {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-body);
+            min-height: 100vh;
+            flex-direction: column;
+            color: var(--text-primary);
+        }
+
+        /* Client Management Styles */
+
+        .client-details-tabs {
+  display: flex;
+  justify-content: center;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 1rem;
+}
+
+.tab-button {
+  flex: 1;
+  padding: 0.75rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+}
+
+.scroll-btn {
+  position: fixed;
+  bottom: 90px;
+  right: 25px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: #007bff;
+  color: #fff;
+  font-size: 1.5rem;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0px 4px 10px rgba(0,0,0,0.15);
+  transition: background 0.3s ease;
+  z-index: 9999;
+}
+
+.scroll-btn:hover {
+  background: #0058c9;
+}
+
+
+.tab-button:hover {
+  background-color: var(--bg-body);
+}
+
+.tab-button.active {
+  color: #007bff;
+  border-bottom: 3px solid #007bff;
+  font-weight: 600;
+}
+
+.action-icon {
+  font-size: 1.1rem;
+  transition: transform 0.2s ease;
+}
+
+.action-icon.view { color: #007bff; }
+.action-icon.edit { color: #28a745; }
+.action-icon.delete { color: #dc3545; }
+
+.action-icon:hover {
+  transform: scale(1.2);
+}
+
+
+        .client-management-container {
+           padding: 0 1.5rem 1.5rem;
+        }
+
+        .client-management-box {
+            background-color: var(--bg-card);
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px var(--shadow-color-1), 0 2px 4px -1px var(--shadow-color-3);
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+             margin-top: 2.9rem;
+        }
+
+        .client-management-header-section {
+            display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+        }
+
+        .client-management-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            
+        }
+
+        .client-details-page {
+  margin-top: 24px;
+  padding: 20px;
+  background: var(--bg-color);
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+}
+
+.client-details-page-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.back-to-list-button {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--primary-color);
+}
+
+
+        .client-filter-tabs {
+            position: relative;
+            display: flex;
+            border-radius: 0.5rem;
+            background-color: #EEE;
+            box-shadow: 0 0 0px 1px rgba(0, 0, 0, 0.06);
+            padding: 0.25rem;
+            width: 100%;
+            font-size: 14px;
+            margin: 0 auto 20px auto;
+            overflow-x: auto;
+            white-space: nowrap;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .client-filter-tab-item {
+            flex-shrink: 0;
+            flex-grow: 1;
+            text-align: center;
+            display: flex;
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.5rem;
+            border: none;
+            padding: .5rem 10px;
+            transition: all .15s ease-in-out;
+            color: rgba(51, 65, 85, 1);
+            font-weight: normal;
+            margin: 0 2px 5px 2px;
+        }
+
+        .client-filter-tab-item input[type="radio"] {
+            display: none;
+        }
+
+        .client-filter-tab-item input[type="radio"]:checked + .client-filter-tab-label {
+            font-weight: 600;
+        }
+        
+        .client-filter-tab-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            border-radius: 0.5rem;
+            padding: 0.3rem;
+        }
+
+        .client-filter-tab-item .badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            color: white;
+            font-size: 0.75em;
+            font-weight: bold;
+            padding: 0 6px;
+            margin-left: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: background-color 0.15s ease;
+        }
+
+        .client-filter-tab-item.registered input[type="radio"]:checked + .client-filter-tab-label { background-color: var(--client-filter-tab-bg-active-registered); color: var(--client-filter-tab-text-active-registered); }
+        .client-filter-tab-item.registered .badge { background-color: var(--client-filter-tab-badge-registered); }
+        .client-filter-tab-item.unassigned input[type="radio"]:checked ~ .client-filter-tab-label { background-color: var(--client-filter-tab-bg-active-unassigned); color: var(--client-filter-tab-text-active-unassigned); }
+        .client-filter-tab-item.unassigned .badge { background-color: var(--client-filter-tab-badge-unassigned); }
+        .client-filter-tab-item.active input[type="radio"]:checked ~ .client-filter-tab-label { background-color: var(--client-filter-tab-bg-active-active); color: var(--client-filter-tab-text-active-active); }
+        .client-filter-tab-item.active .badge { background-color: var(--client-filter-tab-badge-active); }
+        .client-filter-tab-item.rejected input[type="radio"]:checked ~ .client-filter-tab-label { background-color: var(--client-filter-tab-bg-active-rejected); color: var(--client-filter-tab-text-active-rejected); }
+        .client-filter-tab-item.rejected .badge { background-color: var(--client-filter-tab-badge-rejected); }
+        .client-filter-tab-item.restored input[type="radio"]:checked ~ .client-filter-tab-label { background-color: var(--client-filter-tab-bg-active-restored); color: var(--client-filter-tab-text-active-restored); }
+        .client-filter-tab-item.restored .badge { background-color: var(--client-filter-tab-badge-restored); }
+
+        .client-search-and-filter-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            align-items: flex-end;
+        }
+
+        .client-search-input-group {
+            display: flex;
+            align-items: center;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            overflow: hidden;
+            background-color: var(--bg-card);
+            flex-grow: 1;
+            min-width: 200px;
+        }
+
+        .client-search-input-group .search-icon-wrapper {
+            padding: 0.75rem 1rem;
+            color: var(--text-secondary);
+            background-color: var(--bg-card);
+            border-right: 1px solid var(--border-color);
+        }
+
+        .client-search-input-group .client-search-input {
+            flex-grow: 1;
+            padding: 0.75rem 1rem;
+            border: none;
+            outline: none;
+            background-color: var(--bg-card);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+
+        .pagination-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin: 25px 0;
+  font-size: 1rem;
+}
+
+.pagination-btn {
+  background-color: #3b82f6; /* Blue */
+  color: #ffffff;
+  border: none;
+  padding: 10px 18px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.25s ease-in-out;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.35);
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background-color: #2563eb;
+  transform: translateY(-2px);
+}
+
+.pagination-btn:disabled {
+  background-color: #cccccc;
+  color: #666666;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.pagination-info {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: rgba(59, 130, 246, 0.08);
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+
+        .service-filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            flex-grow: 1;
+            min-width: 180px;
+        }
+
+        .service-filter-group .form-label {
+            font-size: 1.25rem;
+            font-weight: 500;
+            color: var(--modal-label-color);
+        }
+
+        .service-filter-group .form-select {
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--modal-input-border);
+            border-radius: 0.5rem;
+            background-color: var(--modal-input-bg);
+            color: var(--modal-input-text);
+            font-size: 0.9rem;
+            width: 100%;
+        }
+
+        .client-table-title {
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            text-align: center;
+        }
+
+        .client-table-container {
+            overflow-x: auto;
+        }
+
+        .client-table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: var(--bg-card);
+        }
+
+        .client-table th, .client-table td {
+            padding: 1rem;
+            text-align: left;
+            white-space: nowrap;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .client-table thead th {
+            background-color: var(--dept-table-header-bg);
+            color: var(--dept-table-header-text);
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+          
+        }
+
+        .client-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .client-table tbody tr:nth-child(even) {
+            background-color: var(--bg-body);
+        }
+
+        .client-table tbody tr:hover {
+            background-color: var(--dept-table-row-hover-bg);
+        }
+        
+        .client-table .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-start;
+            align-items: center;
+        }
+
+        .client-table .action-button {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 600;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: all 0.2s ease;
+        }
+        
+        .client-table .action-button:hover {
+            transform: translateY(-1px);
+        }
+        
+        .client-table .action-button.view { background-color: #e0e7ff; color: #3730a3; }
+        .client-table .action-button.accept { background-color: #28a745; color: white; }
+        .client-table .action-button.decline { background-color: #dc3545; color: white; }
+        .client-table .action-button.assign { background-color: #007bff; color: white; }
+        .client-table .action-button.restore { background-color: #6f42c1; color: white; }
+        .client-table .action-button.edit-manager { background-color: #007bff; color: white; }
+        .client-table .action-button.save { background-color: #28a745; color: white; }
+        .client-table .action-button.cancel { background-color: #6c757d; color: white; }
+        .client-table .action-button.delete-btn { background-color: var(--delete-btn-bg); color: var(--delete-btn-text); }
+         .client-table td .action-button.send-payment-link {
+         background-color: #28a745; /* Green color for payment link */
+           color: white;
+           display: flex;
+           align-items: center;
+           gap: 0.5rem;
+           }
+          .client-table td .action-button.send-payment-link:hover {
+          background-color: #218838;
+           } 
+
+        .client-table .manager-select {
+            padding: 6px 8px;
+            border-radius: 5px;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-card);
+            color: var(--text-primary);
+            font-size: 0.85em;
+            width: 100%;
+        }
+
+        .all-services-list {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            margin-top: 1.5rem;
+        }
+
+        .service-table-list-item {
+            background-color: var(--bg-card);
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px var(--shadow-color-1), 0 2px 4px -1px var(--shadow-color-3);
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+            width: 100%;
+        }
+
+        .client-table .action-button.select-manager {
+            background-color: #f0f0f0;
+            color: #333;
+            border: 1px solid #ccc;
+        }
+        
+        /* Manager Select Modal Styles */
+        .manager-select-modal {
+            max-width: 450px;
+        }
+             .manager-search-container {
+            margin-top: 1rem;
+        }
+        .manager-search-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--modal-input-border);
+            border-radius: 0.5rem;
+            font-size: 1rem;
+        }
+        .manager-list {
+             display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-top: 1rem;
+            max-height: 300px; /* Add max-height for scrollability */
+            overflow-y: auto;
+        }
+        .manager-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        .manager-item:hover {
+            background-color: var(--dept-table-row-hover-bg);
+        }
+        .manager-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #007bff;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+        .manager-info {
+            display: flex;
+            flex-direction: column;
+        }
+        .manager-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .manager-email {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--modal-overlay-bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .modal-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background-color: var(--modal-bg);
+            border-radius: 0.75rem;
+            box-shadow: var(--modal-shadow);
+            border: 1px solid var(--modal-border);
+            width: 90%;
+            max-width: 500px;
+            padding: 1.5rem;
+            position: relative;
+            transform: translateY(-20px);
+            opacity: 0;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+        
+        .modal-overlay.open .modal-content {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--modal-title-color);
+        }
+        
+        .modal-subtitle {
+            font-size: 0.875rem;
+            color: var(--modal-subtitle-color);
+            margin-top: 0.25rem;
+        }
+
+        .modal-close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--modal-close-btn-color);
+            cursor: pointer;
+        }
+        
+        .confirm-modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+        }
+
+        .confirm-cancel-btn, .confirm-delete-btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+        }
+
+        .confirm-cancel-btn {
+            background-color: var(--confirm-modal-cancel-btn-bg);
+            color: var(--confirm-modal-cancel-btn-text);
+        }
+        
+        .confirm-delete-btn {
+            background-color: var(--delete-btn-bg);
+            color: var(--delete-btn-text);
+        }
+
+        .assign-modal-content {
+            background-color: var(--modal-bg);
+            border-radius: 0.75rem;
+            width: 90%;
+            max-width: 900px; 
+            padding: 1.5rem;
+            position: relative;
+            overflow-y: auto;
+            max-height: 90vh;
+        }
+
+        .assign-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+        }
+
+        .assign-modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--modal-title-color);
+        }
+
+        .assign-modal-close-button {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--modal-close-btn-color);
+            cursor: pointer;
+        }
+
+        .client-preview-grid-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (min-width: 768px) {
+            .client-preview-grid-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .client-preview-section {
+            background-color: var(--bg-body);
+            border-radius: 0.5rem;
+            border: 1px solid var(--border-color);
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .client-preview-section-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .assign-form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .assign-form-group label {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+        
+        .assign-form-group input, .assign-form-group select, .assign-form-group textarea, .read-only-value {
+            width: 100%;
+            padding: 0.6rem 0.8rem;
+            border: 1px solid var(--modal-input-border);
+            border-radius: 0.4rem;
+            background-color: var(--modal-input-bg);
+            color: var(--modal-input-text);
+            font-size: 0.9rem;
+            box-sizing: border-box;
+        }
+        
+        .read-only-value {
+            background-color: var(--bg-body);
+            min-height: 38px;
+            display: flex;
+            align-items: center;
+        }
+
+        .client-preview-skills-section {
+            grid-column: 1 / -1;
+            background-color: var(--bg-body);
+            border-radius: 0.5rem;
+            border: 1px solid var(--border-color);
+            padding: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        .assign-form-actions {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+        }
+        
+        .assign-form-button {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .assign-form-button.cancel {
+            background-color: var(--confirm-modal-cancel-btn-bg);
+            color: var(--confirm-modal-cancel-btn-text);
+        }
+
+        .assign-form-button.assign {
+            background-color: var(--modal-create-btn-bg);
+            color: var(--modal-create-btn-text);
+        }
+
+        .payment-status-tag {
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+    display: inline-block; /* Ensure it respects padding and background */
+}
+
+/* Payment Management Modal Specific Styles */
+.payment-modal-content {
+    max-width: 500px; /* Adjust max-width for payment modal */
+    padding: 1.25rem; /* Reduced padding */
+}
+
+.payment-modal-client-details {
+    background-color: var(--bg-body);
+    border-radius: 0.5rem;
+    padding: 0.75rem; /* Reduced padding */
+    margin-top: 0.75rem; /* Reduced margin */
+    border: 1px solid var(--border-color);
+}
+
+.payment-modal-client-details p {
+    margin: 0.15rem 0; /* Reduced margin */
+    font-size: 0.85rem; /* Slightly smaller font */
+    color: var(--text-primary);
+}
+
+.payment-modal-client-details strong {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.payment-modal-options {
+    margin-top: 1rem; /* Reduced margin */
+    padding-top: 0.75rem; /* Reduced padding */
+    border-top: 1px solid var(--border-color);
+}
+
+.payment-modal-options h4 {
+    font-size: 0.95rem; /* Slightly smaller font */
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem; /* Reduced margin */
+}
+
+.payment-modal-option-item {
+    font-size: 0.8rem; /* Smaller font */
+    color: var(--text-secondary);
+    margin-bottom: 0.3rem; /* Reduced margin */
+}
+
+.payment-modal-option-item strong {
+    color: var(--text-primary);
+}
+
+.modal-form .form-group {
+    gap: 0.4rem; /* Reduced gap between label and input */
+}
+
+.modal-form .form-label {
+    margin-bottom: 0; /* Remove default margin */
+}
+
+.modal-footer {
+    margin-top: 1rem; /* Reduced margin */
+    gap: 0.6rem; /* Reduced gap between buttons */
+    /* Added for equal sizing and filling space */
+    display: flex;
+    justify-content: flex-end; /* Changed to flex-end */
+    flex-wrap: wrap; /* Allow buttons to wrap on smaller screens */
+}
+
+.modal-footer button {
+    flex-grow: 0; /* Changed to 0 */
+    flex-basis: auto; /* Allow buttons to shrink as needed */
+    min-width: unset; /* Reset min-width */
+    padding: 0.75rem 1.5rem; /* Consistent padding */
+    font-size: 0.9rem; /* Consistent font size */
+}
+
+.pay-now-btn {
+    background-color: #007bff; /* Blue for Pay Now button */
+    color: #ffffff;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: flex; /* Ensure icon and text are aligned */
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem; /* Space between icon and text */
+}
+
+.pay-now-btn:hover {
+    background-color: #0056b3; /* Darker blue on hover */
+}
+
+/* Generated Link Section */
+.generated-link-section {
+    margin-top: 1rem; /* Reduced margin-top */
+    padding-top: 0.75rem; /* Reduced padding-top */
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem; /* Reduced gap */
+}
+
+.generated-link-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #28a745; /* Green for success */
+    font-weight: 600;
+    font-size: 0.9rem; /* Slightly smaller font */
+}
+
+.generated-link-input-group {
+    display: flex;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    overflow: hidden;
+    background-color: var(--modal-input-bg);
+}
+
+.generated-link-input {
+    flex-grow: 1;
+    padding: 0.6rem 0.8rem; /* Reduced padding */
+    border: none;
+    outline: none;
+    background-color: transparent;
+    color: var(--modal-input-text);
+    font-size: 0.85rem; /* Slightly smaller font */
+    white-space: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch; /* For smooth scrolling on iOS */
+    max-height: 3.5rem; /* Reduced max-height for scrollability */
+    overflow-y: auto; /* Make it scrollable vertically */
+}
+
+.generated-link-actions {
+    display: flex;
+    gap: 0.4rem; /* Reduced gap */
+    padding: 0.4rem; /* Reduced padding */
+    border-left: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.generated-link-action-btn {
+    padding: 0.5rem 0.7rem; /* Reduced padding */
+    border-radius: 0.5rem;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-card);
+    color: var(--text-primary);
+    font-size: 0.75rem; /* Slightly smaller font */
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem; /* Reduced gap */
+    white-space: nowrap;
+}
+
+.generated-link-action-btn:hover {
+    background-color: var(--bg-nav-link-hover);
+}
+
+.generated-link-close-btn {
+    width: 100%;
+    padding: 0.75rem 1.5rem;
+    background-color: var(--confirm-modal-cancel-btn-bg);
+    color: var(--confirm-modal-cancel-btn-text);
+    border-radius: 0.5rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-top: 0.75rem; /* Reduced margin-top */
+}
+
+.generated-link-close-btn:hover {
+    background-color: var(--confirm-modal-cancel-btn-hover);
+}
+       .payment-modal-content .generated-link-input-group {
+                flex-direction: column;
+            }
+
+            .payment-modal-content .generated-link-action-btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            
+
+      `}
+      </style>
+
+      <main >
+        <div className="client-management-container">
+          <div className="client-management-box">
+            <div className="client-management-header-section">
+              <h2 className="client-management-title">Client Details Management</h2>
+            </div>
+
+            {/* Client Filter Tabs */}
+            <div className="client-filter-tabs">
+              {[
+                {
+                  label: 'Registered Clients',
+                  value: 'registered',
+                  count: derivedCounts.registered,
+                  activeBg: 'var(--client-filter-tab-bg-active-registered)',
+                  activeColor: 'var(--client-filter-tab-text-active-registered)',
+                  badgeBg: 'var(--client-filter-tab-badge-registered)'
+                },
+                {
+                  label: 'Unassigned Clients',
+                  value: 'unassigned',
+                  count: derivedCounts.unassigned,
+                  activeBg: 'var(--client-filter-tab-bg-active-unassigned)',
+                  activeColor: 'var(--client-filter-tab-text-active-unassigned)',
+                  badgeBg: 'var(--client-filter-tab-badge-unassigned)'
+                },
+                {
+                  label: 'Active Clients',
+                  value: 'active',
+                  count: derivedCounts.active,
+                  activeBg: 'var(--client-filter-tab-bg-active-active)',
+                  activeColor: 'var(--client-filter-tab-text-active-active)',
+                  badgeBg: 'var(--client-filter-tab-badge-active)'
+                },
+                {
+                  label: 'Rejected Clients',
+                  value: 'rejected',
+                  count: derivedCounts.rejected,
+                  activeBg: 'var(--client-filter-tab-bg-active-rejected)',
+                  activeColor: 'var(--client-filter-tab-text-active-rejected)',
+                  badgeBg: 'var(--client-filter-tab-badge-rejected)'
+                },
+              ].map((option) => (
+                <label
+                  key={option.value}
+                  className={`client-filter-tab-item ${option.value}`}
+                  style={{
+                    backgroundColor: clientFilter === option.value ? option.activeBg : 'transparent',
+                    color: clientFilter === option.value ? option.activeColor : 'rgba(51, 65, 85, 1)',
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="client-filter"
+                    value={option.value}
+                    checked={clientFilter === option.value}
+                    onChange={(e) => {
+                      setClientFilter(e.target.value);
+                      setClientSearchTerm('');
+                      // selectedServiceFilter state is intentionally NOT reset here, to maintain selection across tabs
+                    }}
+                  />
+                  <span className="client-filter-tab-label">{option.label}</span>
+                  <span className="badge" style={{ backgroundColor: clientFilter === option.value ? option.badgeBg : '#9AA0A6' }}>
+                    {option.count}
+                  </span>
+                </label>
+              ))}
+            </div>
+
+            {/* Search Input and Service Dropdown */}
+            <div className="client-search-and-filter-group">
+              <div className="client-search-input-group">
+                <span className="search-icon-wrapper">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" style={{ width: '1rem', height: '1rem' }}>
+                    <path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.1-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z" />
+                  </svg>
+                </span>
+                <input
+                  type="text"
+                  id="clientSearch"
+                  placeholder="Search clients by name, email, mobile, job, or country"
+                  className="client-search-input"
+                  value={clientSearchTerm}
+                  onChange={handleClientSearchChange}
+                />
+              </div>
+
+
+              <div className="service-filter-group">
+                <label htmlFor="serviceFilter" className="form-label" style={{ fontSize: '20px' }}>Services:</label>
+                <select
+                  id="serviceFilter"
+                  name="serviceFilter"
+
+
+                  className="form-select"
+                  value={selectedServiceFilter}
+                  onChange={(e) => setSelectedServiceFilter(e.target.value)}
+                >
+                  {serviceOptions.map(option => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+            </div>
+
+            {selectedServiceFilter === 'All' ? (
+              renderAllServiceTables()
+            ) : (
+              <>
+                <h4 className="client-table-title">
+                  {selectedServiceFilter} Clients ({filteredClients.length})
+                </h4>
+                {renderClientTable(paginatedClients, selectedServiceFilter, clientFilter)}
+              </>
+            )}
+
+          </div>
+        </div>
+      </main>
+
+      {/* Delete Client Confirmation Modal */}
+      {isDeleteClientConfirmModalOpen && (
+        <div className="modal-overlay open">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3 className="modal-title">Confirm Deletion</h3>
+              <button className="modal-close-btn" onClick={handleCancelClientDelete}>&times;</button>
+            </div>
+            <p className="modal-subtitle">Are you sure you want to delete this client? This action cannot be undone.</p>
+            <div className="confirm-modal-buttons">
+              <button type="button" className="confirm-cancel-btn" onClick={handleCancelClientDelete}>Cancel</button>
+              <button type="button" className="confirm-delete-btn" onClick={handleConfirmClientDelete}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isManagerModalOpen && registrationForManager && (
+        <div className="modal-overlay open">
+          <div className="modal-content manager-select-modal">
+            <div className="modal-header">
+              <h3 className="modal-title">Select Manager for {registrationForManager.firstName}</h3>
+              <button className="modal-close-btn" onClick={handleCloseManagerModal}>&times;</button>
+            </div>
+
+            <div className="manager-search-container">
+              <input
+                type="text"
+                placeholder="Search managers by name..."
+                className="manager-search-input"
+                value={managerSearchTerm}
+                onChange={(e) => setManagerSearchTerm(e.target.value)}
+              />
+            </div>
+
+            <div className="manager-list">
+              {managerList
+                .filter(manager =>
+                  `${manager.firstName} ${manager.lastName}`.toLowerCase().includes(managerSearchTerm.toLowerCase())
+                )
+                .map(manager => (
+                  <div key={manager.firebaseKey} className="manager-item" onClick={() => handleSelectManager(manager)}>
+                    <div className="manager-avatar">{`${(manager.firstName || ' ').charAt(0)}${(manager.lastName || ' ').charAt(0)}`}</div>
+                    <div className="manager-info">
+                      <div className="manager-name">{`${manager.firstName} ${manager.lastName}`}</div>
+                      <div className="manager-email">{manager.workEmail || manager.email}</div>
+                    </div>
+                  </div>
+                ))
+              }
+              {managerList.length === 0 && (
+                <p style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>No managers found.</p>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -3289,33 +4398,38 @@ const ClientManagement = () => {
                       const clientKey = selectedClientForDetails.clientFirebaseKey;
                       const regKey = selectedClientForDetails.registrationKey;
 
-                      // 1. Find the specific key for this application ID
-                      const jobAppsRef = ref(database, `clients/${clientKey}/serviceRegistrations/${regKey}/jobApplications`);
-                      const snapshot = await get(jobAppsRef);
+                      const jobApplicationsRef = ref(
+                        database,
+                        `clients/${clientKey}/serviceRegistrations/${regKey}/jobApplications`
+                      );
 
-                      if (snapshot.exists()) {
-                        const apps = snapshot.val();
-                        const targetFirebaseKey = Object.keys(apps).find(key => apps[key].id === selectedApplication.id);
+                      const snapshot = await get(jobApplicationsRef);
+                      const applicationsObj = snapshot.val();
 
-                        if (targetFirebaseKey) {
-                          // 2. Update ONLY this specific application
-                          const specificAppRef = ref(database, `clients/${clientKey}/serviceRegistrations/${regKey}/jobApplications/${targetFirebaseKey}`);
-                          await update(specificAppRef, selectedApplication);
-
-                          // Update local state (Optimistic update)
-                          setClientApplications(prev => prev.map(app =>
-                            app.id === selectedApplication.id ? selectedApplication : app
-                          ));
-
-                          console.log("✅ Application updated safely");
-                          setIsAppEditModalOpen(false);
-                        } else {
-                          alert("Error: Could not find original application record.");
-                        }
+                      if (!applicationsObj) {
+                        console.error("❌ No applications found");
+                        return;
                       }
+
+                      // Convert object → array of { key, ...data }
+                      const entries = Object.entries(applicationsObj); // [[key1, {...}], [key2, {...}]]
+                      const updatedEntries = entries.map(([key, value]) => {
+                        if (value.id === selectedApplication.id) {
+                          return [key, selectedApplication]; // replace updated one
+                        }
+                        return [key, value];
+                      });
+
+                      // Convert back to object
+                      const updatedObj = Object.fromEntries(updatedEntries);
+
+                      // Push updated object back to Firebase
+                      await set(jobApplicationsRef, updatedObj);
+
+                      console.log("✅ Application updated successfully");
+                      setIsAppEditModalOpen(false);
                     } catch (error) {
                       console.error("Error updating application:", error);
-                      alert("Update failed: " + error.message);
                     }
                   }}
                 >
@@ -3503,7 +4617,7 @@ const ClientManagement = () => {
                 <div className="modal-footer modal-form-full-width">
                   <button type="button" className="confirm-cancel-btn" onClick={handleClosePaymentModal}>Cancel</button>
 
-                  <button type="submit" className="pay-now-btn" style={{ width: 'auto', padding: '0.75rem 1.5rem' }}>
+                  <button type="submit" className="create-employee-btn">
 
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '0.9rem', height: '0.9rem' }}>
                       <path d="M12 4H10C7.79086 4 6 5.79086 6 8C6 10.2091 7.79086 12 10 12H12V14H10C6.68629 14 4 11.3137 4 8C4 4.68629 6.68629 2 10 2H12V4ZM14 10H12C9.79086 10 8 11.7909 8 14C8 16.2091 9.79086 18 12 18H14V20H12C8.68629 20 6 17.3137 6 14C6 10.6863 8.68629 8 12 8H14V10ZM18 6H16V8H18C21.3137 8 24 10.6863 24 14C24 17.3137 21.3137 20 18 20H16V18H18C20.2091 18 22 16.2091 22 14C22 11.7909 20.2091 10 18 10H16V6Z" />
