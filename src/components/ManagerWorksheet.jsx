@@ -89,11 +89,11 @@ const ManagerWorkSheet = () => {
   // --- ADD THESE MISSING STATES & FUNCTIONS ---
 
   // 1. Missing State for Editing Employee
-// ✅ KEEP THIS ONE (At the top)
-const [currentEmployeeToEdit, setCurrentEmployeeToEdit] = useState(null);
-// Note: You might need to add isAddEmployeeModalOpen here if you deleted it below and it wasn't at the top
-const [isEditEmployeeModalOpen, setIsEditEmployeeModalOpen] = useState(false); 
-const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false); // Ensure this is here too
+  // ✅ KEEP THIS ONE (At the top)
+  const [currentEmployeeToEdit, setCurrentEmployeeToEdit] = useState(null);
+  // Note: You might need to add isAddEmployeeModalOpen here if you deleted it below and it wasn't at the top
+  const [isEditEmployeeModalOpen, setIsEditEmployeeModalOpen] = useState(false);
+  const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false); // Ensure this is here too
 
   // 2. Missing Function to Close Edit Modal
   const handleCloseEditEmployeeModal = () => {
@@ -638,7 +638,7 @@ const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false); // 
 
 
   // ✅ Second useEffect – depends on managerFirebaseKey
-// In ManagerWorksheet.jsx
+  // In ManagerWorksheet.jsx
 
   // ✅ Second useEffect – Fetch ONLY Assigned Clients (Reverse Indexing Optimized)
   useEffect(() => {
@@ -673,37 +673,37 @@ const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false); // 
 
         // 2. Loop through the index and fetch specific client data (Parallel Fetch)
         Object.values(assignments).forEach(item => {
-            const clientRef = ref(database, `clients/${item.clientFirebaseKey}`);
-            
-            // We fetch the root client node to ensure we get email/mobile + registrations
-            // Fetching one specific client node is small (~5KB).
-            promises.push(get(clientRef).then(snap => {
-                if(snap.exists()) {
-                    const clientRoot = snap.val();
-                    const reg = clientRoot.serviceRegistrations?.[item.registrationKey];
-                    
-                    if(reg) {
-                        // Flatten job applications
-                        const jobApplicationsArray = Array.isArray(reg.jobApplications)
-                        ? reg.jobApplications
-                        : Object.values(reg.jobApplications || {});
+          const clientRef = ref(database, `clients/${item.clientFirebaseKey}`);
 
-                        return {
-                            ...reg,
-                            jobApplications: jobApplicationsArray,
-                            clientFirebaseKey: item.clientFirebaseKey,
-                            registrationKey: item.registrationKey,
-                            // Ensure we have root profile data
-                            email: clientRoot.email,
-                            mobile: clientRoot.mobile,
-                            firstName: reg.firstName || clientRoot.firstName,
-                            lastName: reg.lastName || clientRoot.lastName,
-                            name: `${reg.firstName || ''} ${reg.lastName || ''}`.trim()
-                        };
-                    }
-                }
-                return null;
-            }));
+          // We fetch the root client node to ensure we get email/mobile + registrations
+          // Fetching one specific client node is small (~5KB).
+          promises.push(get(clientRef).then(snap => {
+            if (snap.exists()) {
+              const clientRoot = snap.val();
+              const reg = clientRoot.serviceRegistrations?.[item.registrationKey];
+
+              if (reg) {
+                // Flatten job applications
+                const jobApplicationsArray = Array.isArray(reg.jobApplications)
+                  ? reg.jobApplications
+                  : Object.values(reg.jobApplications || {});
+
+                return {
+                  ...reg,
+                  jobApplications: jobApplicationsArray,
+                  clientFirebaseKey: item.clientFirebaseKey,
+                  registrationKey: item.registrationKey,
+                  // Ensure we have root profile data
+                  email: clientRoot.email,
+                  mobile: clientRoot.mobile,
+                  firstName: reg.firstName || clientRoot.firstName,
+                  lastName: reg.lastName || clientRoot.lastName,
+                  name: `${reg.firstName || ''} ${reg.lastName || ''}`.trim()
+                };
+              }
+            }
+            return null;
+          }));
         });
 
         // 3. Resolve all data
@@ -732,7 +732,7 @@ const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false); // 
               break;
             default:
               // Fallback for weird statuses, usually goes to active or unassigned
-              if(!reg.assignedTo) unassigned.push(reg);
+              if (!reg.assignedTo) unassigned.push(reg);
               else assigned.push(reg);
           }
         }
@@ -762,7 +762,7 @@ const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false); // 
 
         setApplicationData(appData);
         setInterviewData(interviewData);
-        
+
       } catch (err) {
         console.error("Failed to fetch clients:", err);
       } finally {
@@ -902,76 +902,75 @@ const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false); // 
     setClientToChangeStatus(null);
   };
 
- const handleUpdateClientStatus = async () => {
-  if (!clientToChangeStatus) return;
+  const handleUpdateClientStatus = async () => {
+    if (!clientToChangeStatus) return;
 
-  const client = clientToChangeStatus;
-  const targetStatus =
-    client.assignmentStatus === 'active' ? 'inactive' : 'active';
+    const client = clientToChangeStatus;
+    const targetStatus =
+      client.assignmentStatus === 'active' ? 'inactive' : 'active';
 
-  const registrationRef = ref(
-    database,
-    `clients/${client.clientFirebaseKey}/serviceRegistrations/${client.registrationKey}`
-  );
-
-  try {
-    // 1. Update in Firebase
-    await update(registrationRef, {
-      assignmentStatus: targetStatus,
-    });
-
-    // 2. Update local IndexedDB cache as well (so future reads are consistent)
-    await updateLocalClientCache(
-      client.clientFirebaseKey,
-      client.registrationKey,
-      null, // null => merge object
-      { assignmentStatus: targetStatus }
+    const registrationRef = ref(
+      database,
+      `clients/${client.clientFirebaseKey}/serviceRegistrations/${client.registrationKey}`
     );
 
-    // 3. Optimistically update local React state
-    const matcher = (c) =>
-      c.clientFirebaseKey === client.clientFirebaseKey &&
-      c.registrationKey === client.registrationKey;
+    try {
+      // 1. Update in Firebase
+      await update(registrationRef, {
+        assignmentStatus: targetStatus,
+      });
 
-    const updatedClient = { ...client, assignmentStatus: targetStatus };
+      // 2. Update local IndexedDB cache as well (so future reads are consistent)
+      await updateLocalClientCache(
+        client.clientFirebaseKey,
+        client.registrationKey,
+        null, // null => merge object
+        { assignmentStatus: targetStatus }
+      );
 
-    // Move between assignedClients and inactiveAssignedClients
-    setAssignedClients((prev) => {
-      const without = prev.filter((c) => !matcher(c));
+      // 3. Optimistically update local React state
+      const matcher = (c) =>
+        c.clientFirebaseKey === client.clientFirebaseKey &&
+        c.registrationKey === client.registrationKey;
 
-      // assignedClients should contain 'pending_acceptance' + 'active'
-      if (targetStatus === 'active' || targetStatus === 'pending_acceptance') {
-        return [...without, updatedClient];
-      }
-      // if made inactive, just remove from this list
-      return without;
-    });
+      const updatedClient = { ...client, assignmentStatus: targetStatus };
 
-    setInactiveAssignedClients((prev) => {
-      const without = prev.filter((c) => !matcher(c));
+      // Move between assignedClients and inactiveAssignedClients
+      setAssignedClients((prev) => {
+        const without = prev.filter((c) => !matcher(c));
 
-      if (targetStatus === 'inactive') {
-        return [...without, updatedClient];
-      }
-      // if made active, just ensure it's removed from inactive
-      return without;
-    });
+        // assignedClients should contain 'pending_acceptance' + 'active'
+        if (targetStatus === 'active' || targetStatus === 'pending_acceptance') {
+          return [...without, updatedClient];
+        }
+        // if made inactive, just remove from this list
+        return without;
+      });
 
-    setClientToChangeStatus(null);
+      setInactiveAssignedClients((prev) => {
+        const without = prev.filter((c) => !matcher(c));
 
-    setSuccessMessage(
-      `Client ${client.name} successfully moved to ${
-        targetStatus === 'active' ? 'Assigned' : 'Inactive'
-      } Clients.`
-    );
-    setShowSuccessModal(true);
-  } catch (error) {
-    console.error(`Failed to update client status to ${targetStatus}:`, error);
-    alert(`Error updating client status.`);
-  } finally {
-    handleCloseStatusConfirmModal();
-  }
-};
+        if (targetStatus === 'inactive') {
+          return [...without, updatedClient];
+        }
+        // if made active, just ensure it's removed from inactive
+        return without;
+      });
+
+      setClientToChangeStatus(null);
+
+      setSuccessMessage(
+        `Client ${client.name} successfully moved to ${targetStatus === 'active' ? 'Assigned' : 'Inactive'
+        } Clients.`
+      );
+      setShowSuccessModal(true);
+    } catch (error) {
+      console.error(`Failed to update client status to ${targetStatus}:`, error);
+      alert(`Error updating client status.`);
+    } finally {
+      handleCloseStatusConfirmModal();
+    }
+  };
 
 
 
@@ -1401,7 +1400,7 @@ const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false); // 
 
 
   // Handler for "Assign Client" or "Reassign Client" button submission
- // Handler for "Assign Client" or "Reassign Client" button submission
+  // Handler for "Assign Client" or "Reassign Client" button submission
   const handleAssignmentSubmit = async () => {
     const clientToProcess = clientToReassign || selectedClientToAssign;
 
@@ -1436,12 +1435,12 @@ const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false); // 
       // ---------------------------------------------------------
       const assignmentKey = `${clientToProcess.clientFirebaseKey}_${clientToProcess.registrationKey}`;
       const employeeAssignmentRef = ref(database, `employee_assignments/${employeeInfo.firebaseKey}/${assignmentKey}`);
-      
+
       await set(employeeAssignmentRef, {
-          clientFirebaseKey: clientToProcess.clientFirebaseKey,
-          registrationKey: clientToProcess.registrationKey,
-          clientName: clientToProcess.name || clientToProcess.firstName,
-          status: 'pending_acceptance'
+        clientFirebaseKey: clientToProcess.clientFirebaseKey,
+        registrationKey: clientToProcess.registrationKey,
+        clientName: clientToProcess.name || clientToProcess.firstName,
+        status: 'pending_acceptance'
       });
       // ---------------------------------------------------------
 
@@ -1449,10 +1448,10 @@ const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false); // 
       await updateLocalClientCache(
         clientToProcess.clientFirebaseKey,
         clientToProcess.registrationKey,
-        null, 
+        null,
         updates
       );
-      
+
       const updatedClient = { ...clientToProcess, ...updates };
       const isReassigning = !!clientToReassign;
 
@@ -1572,42 +1571,42 @@ const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false); // 
   }, [interviewData, interviewSearchQuery, interviewFilterRound, interviewFilterDateRange, sortOrder, allEmployees]);
 
   // --- Interviews pagination (5 per page) ---
-const INTERVIEWS_PAGE_SIZE = 5;
-const [interviewsPage, setInterviewsPage] = useState(0);
+  const INTERVIEWS_PAGE_SIZE = 5;
+  const [interviewsPage, setInterviewsPage] = useState(0);
 
-const totalInterviewPages = useMemo(() => {
-  return Math.max(
-    1,
-    Math.ceil(filteredInterviewData.length / INTERVIEWS_PAGE_SIZE)
-  );
-}, [filteredInterviewData.length]);
+  const totalInterviewPages = useMemo(() => {
+    return Math.max(
+      1,
+      Math.ceil(filteredInterviewData.length / INTERVIEWS_PAGE_SIZE)
+    );
+  }, [filteredInterviewData.length]);
 
-const paginatedInterviewData = useMemo(() => {
-  const start = interviewsPage * INTERVIEWS_PAGE_SIZE;
-  const end = start + INTERVIEWS_PAGE_SIZE;
-  return filteredInterviewData.slice(start, end);
-}, [filteredInterviewData, interviewsPage]);
+  const paginatedInterviewData = useMemo(() => {
+    const start = interviewsPage * INTERVIEWS_PAGE_SIZE;
+    const end = start + INTERVIEWS_PAGE_SIZE;
+    return filteredInterviewData.slice(start, end);
+  }, [filteredInterviewData, interviewsPage]);
 
-const handleNextInterviewsPage = () => {
-  setInterviewsPage(prev =>
-    prev + 1 < totalInterviewPages ? prev + 1 : prev
-  );
-};
+  const handleNextInterviewsPage = () => {
+    setInterviewsPage(prev =>
+      prev + 1 < totalInterviewPages ? prev + 1 : prev
+    );
+  };
 
-const handlePrevInterviewsPage = () => {
-  setInterviewsPage(prev => (prev > 0 ? prev - 1 : 0));
-};
+  const handlePrevInterviewsPage = () => {
+    setInterviewsPage(prev => (prev > 0 ? prev - 1 : 0));
+  };
 
-// Reset to first page whenever filters/search change
-useEffect(() => {
-  setInterviewsPage(0);
-}, [
-  interviewSearchQuery,
-  interviewFilterRound,
-  interviewFilterDateRange.startDate,
-  interviewFilterDateRange.endDate,
-  sortOrder,
-]);
+  // Reset to first page whenever filters/search change
+  useEffect(() => {
+    setInterviewsPage(0);
+  }, [
+    interviewSearchQuery,
+    interviewFilterRound,
+    interviewFilterDateRange.startDate,
+    interviewFilterDateRange.endDate,
+    sortOrder,
+  ]);
 
 
 
@@ -2145,12 +2144,12 @@ Please provide a summary no longer than 150 words.`;
 
     const [isInternalClick, setIsInternalClick] = useState(false);
 
-   const APPLICATIONS_PAGE_SIZE = 5;
-   const [applicationsPage, setApplicationsPage] = useState(0);
+    const APPLICATIONS_PAGE_SIZE = 5;
+    const [applicationsPage, setApplicationsPage] = useState(0);
 
-   // NEW: child pagination (per employee+client group)
-const CHILD_APPLICATIONS_PAGE_SIZE = 5;
-const [childPagesByGroup, setChildPagesByGroup] = useState({});
+    // NEW: child pagination (per employee+client group)
+    const CHILD_APPLICATIONS_PAGE_SIZE = 5;
+    const [childPagesByGroup, setChildPagesByGroup] = useState({});
 
 
     const handleLocalSearchChange = (e) => {
@@ -2165,151 +2164,151 @@ const [childPagesByGroup, setChildPagesByGroup] = useState({});
       return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
     };
 
-  // Map employees for quick lookup
-  const employeeMap = useMemo(
-    () => new Map(employees.map(emp => [emp.firebaseKey, emp])),
-    [employees]
-  );
-
-  // USE GLOBAL SEARCH from parent (applicationSearchQuery)
-  const filteredBySearch = useMemo(() => {
-    const lowerCaseSearch = (applicationSearchQuery || '').toLowerCase();
-
-    return applicationData.filter(app => {
-      const employee = employeeMap.get(app.assignedTo);
-      const employeeName = employee
-        ? `${employee.firstName} ${employee.lastName}`.toLowerCase()
-        : '';
-
-      return (
-        employeeName.includes(lowerCaseSearch) ||
-        (app.clientName || '').toLowerCase().includes(lowerCaseSearch) ||
-        (app.jobTitle || '').toLowerCase().includes(lowerCaseSearch) ||
-        (app.company || '').toLowerCase().includes(lowerCaseSearch) ||
-        (app.jobId || '').toLowerCase().includes(lowerCaseSearch)
-      );
-    });
-  }, [applicationData, applicationSearchQuery, employeeMap]);
-
-  // Group by client (for the expanded rows)
-  const groupedByClient = useMemo(() => {
-    return filteredBySearch.reduce((acc, app) => {
-      if (!acc[app.clientName]) {
-        acc[app.clientName] = {
-          apps: [],
-          employeeKey: app.assignedTo,
-        };
-      }
-      acc[app.clientName].apps.push(app);
-      return acc;
-    }, {});
-  }, [filteredBySearch]);
-
-  // Group by employee + client for the main table rows
-  const groupedByEmployeeAndClient = useMemo(() => {
-    const result = [];
-
-    Object.keys(groupedByClient).forEach(clientName => {
-      const group = groupedByClient[clientName];
-      const employee = employeeMap.get(group.employeeKey);
-
-      if (!employee) return;
-
-      const employeeName = `${employee.firstName || ''} ${employee.lastName || ''}`.trim();
-
-      // derive a representative applied date (latest)
-      const latestApp = [...group.apps].sort(
-        (a, b) => new Date(b.appliedDate || 0) - new Date(a.appliedDate || 0)
-      )[0];
-
-      result.push({
-        key: `${group.employeeKey}-${clientName}`,
-        employeeKey: group.employeeKey,
-        employeeName,
-        clientName,
-        appliedDate: latestApp?.appliedDate || '',
-        applicationsCount: group.apps.length,
-        apps: group.apps,
-      });
-    });
-
-    // (Optional) further filtering by employee/client/status/date/quickFilter can
-    // be applied here if you already had such logic elsewhere.
-    // For now we assume that existing filters were applied before building applicationData.
-
-    return result;
-  }, [groupedByClient, employeeMap]);
-
-  // Group by date (for the small date cards on top, if you are using them)
-  const groupedByDate = useMemo(() => {
-    return applicationData.reduce((acc, app) => {
-      const dateKey = getLocalDateString(new Date(app.appliedDate));
-      if (!acc[dateKey]) {
-        acc[dateKey] = [];
-      }
-      acc[dateKey].push(app);
-      return acc;
-    }, {});
-  }, [applicationData]);
-
-  const sortedDates = Object.keys(groupedByDate).sort(
-    (a, b) => new Date(b) - new Date(a)
-  );
-
-  // --- Pagination derived from groupedByEmployeeAndClient ---
-  const totalApplicationPages = Math.max(
-    1,
-    Math.ceil(groupedByEmployeeAndClient.length / APPLICATIONS_PAGE_SIZE)
-  );
-
-  const paginatedGroups = useMemo(() => {
-    const start = applicationsPage * APPLICATIONS_PAGE_SIZE;
-    const end = start + APPLICATIONS_PAGE_SIZE;
-    return groupedByEmployeeAndClient.slice(start, end);
-  }, [groupedByEmployeeAndClient, applicationsPage]);
-
-
-
-  // Reset to first page when filters/search change
-  useEffect(() => {
-    setApplicationsPage(0);
-    setChildPagesByGroup({});
-  }, [
-    applicationSearchQuery,
-    applicationFilterEmployee,
-    applicationFilterClient,
-    clientStatusFilter,
-    filterDateRange?.startDate,
-    filterDateRange?.endDate,
-    sortOrder,
-    quickFilter,
-  ]);
-
-  const handleNextApplicationsPage = () => {
-    setApplicationsPage(prev =>
-      prev + 1 < totalApplicationPages ? prev + 1 : prev
+    // Map employees for quick lookup
+    const employeeMap = useMemo(
+      () => new Map(employees.map(emp => [emp.firebaseKey, emp])),
+      [employees]
     );
-  };
 
-  const handlePrevApplicationsPage = () => {
-    setApplicationsPage(prev => (prev > 0 ? prev - 1 : prev));
-  };
+    // USE GLOBAL SEARCH from parent (applicationSearchQuery)
+    const filteredBySearch = useMemo(() => {
+      const lowerCaseSearch = (applicationSearchQuery || '').toLowerCase();
 
-  const handleChildNextPage = (groupKey, totalPages) => {
-  setChildPagesByGroup(prev => {
-    const current = prev[groupKey] ?? 0;
-    if (current + 1 >= totalPages) return prev;
-    return { ...prev, [groupKey]: current + 1 };
-  });
-};
+      return applicationData.filter(app => {
+        const employee = employeeMap.get(app.assignedTo);
+        const employeeName = employee
+          ? `${employee.firstName} ${employee.lastName}`.toLowerCase()
+          : '';
 
-const handleChildPrevPage = (groupKey) => {
-  setChildPagesByGroup(prev => {
-    const current = prev[groupKey] ?? 0;
-    if (current <= 0) return prev;
-    return { ...prev, [groupKey]: current - 1 };
-  });
-};
+        return (
+          employeeName.includes(lowerCaseSearch) ||
+          (app.clientName || '').toLowerCase().includes(lowerCaseSearch) ||
+          (app.jobTitle || '').toLowerCase().includes(lowerCaseSearch) ||
+          (app.company || '').toLowerCase().includes(lowerCaseSearch) ||
+          (app.jobId || '').toLowerCase().includes(lowerCaseSearch)
+        );
+      });
+    }, [applicationData, applicationSearchQuery, employeeMap]);
+
+    // Group by client (for the expanded rows)
+    const groupedByClient = useMemo(() => {
+      return filteredBySearch.reduce((acc, app) => {
+        if (!acc[app.clientName]) {
+          acc[app.clientName] = {
+            apps: [],
+            employeeKey: app.assignedTo,
+          };
+        }
+        acc[app.clientName].apps.push(app);
+        return acc;
+      }, {});
+    }, [filteredBySearch]);
+
+    // Group by employee + client for the main table rows
+    const groupedByEmployeeAndClient = useMemo(() => {
+      const result = [];
+
+      Object.keys(groupedByClient).forEach(clientName => {
+        const group = groupedByClient[clientName];
+        const employee = employeeMap.get(group.employeeKey);
+
+        if (!employee) return;
+
+        const employeeName = `${employee.firstName || ''} ${employee.lastName || ''}`.trim();
+
+        // derive a representative applied date (latest)
+        const latestApp = [...group.apps].sort(
+          (a, b) => new Date(b.appliedDate || 0) - new Date(a.appliedDate || 0)
+        )[0];
+
+        result.push({
+          key: `${group.employeeKey}-${clientName}`,
+          employeeKey: group.employeeKey,
+          employeeName,
+          clientName,
+          appliedDate: latestApp?.appliedDate || '',
+          applicationsCount: group.apps.length,
+          apps: group.apps,
+        });
+      });
+
+      // (Optional) further filtering by employee/client/status/date/quickFilter can
+      // be applied here if you already had such logic elsewhere.
+      // For now we assume that existing filters were applied before building applicationData.
+
+      return result;
+    }, [groupedByClient, employeeMap]);
+
+    // Group by date (for the small date cards on top, if you are using them)
+    const groupedByDate = useMemo(() => {
+      return applicationData.reduce((acc, app) => {
+        const dateKey = getLocalDateString(new Date(app.appliedDate));
+        if (!acc[dateKey]) {
+          acc[dateKey] = [];
+        }
+        acc[dateKey].push(app);
+        return acc;
+      }, {});
+    }, [applicationData]);
+
+    const sortedDates = Object.keys(groupedByDate).sort(
+      (a, b) => new Date(b) - new Date(a)
+    );
+
+    // --- Pagination derived from groupedByEmployeeAndClient ---
+    const totalApplicationPages = Math.max(
+      1,
+      Math.ceil(groupedByEmployeeAndClient.length / APPLICATIONS_PAGE_SIZE)
+    );
+
+    const paginatedGroups = useMemo(() => {
+      const start = applicationsPage * APPLICATIONS_PAGE_SIZE;
+      const end = start + APPLICATIONS_PAGE_SIZE;
+      return groupedByEmployeeAndClient.slice(start, end);
+    }, [groupedByEmployeeAndClient, applicationsPage]);
+
+
+
+    // Reset to first page when filters/search change
+    useEffect(() => {
+      setApplicationsPage(0);
+      setChildPagesByGroup({});
+    }, [
+      applicationSearchQuery,
+      applicationFilterEmployee,
+      applicationFilterClient,
+      clientStatusFilter,
+      filterDateRange?.startDate,
+      filterDateRange?.endDate,
+      sortOrder,
+      quickFilter,
+    ]);
+
+    const handleNextApplicationsPage = () => {
+      setApplicationsPage(prev =>
+        prev + 1 < totalApplicationPages ? prev + 1 : prev
+      );
+    };
+
+    const handlePrevApplicationsPage = () => {
+      setApplicationsPage(prev => (prev > 0 ? prev - 1 : prev));
+    };
+
+    const handleChildNextPage = (groupKey, totalPages) => {
+      setChildPagesByGroup(prev => {
+        const current = prev[groupKey] ?? 0;
+        if (current + 1 >= totalPages) return prev;
+        return { ...prev, [groupKey]: current + 1 };
+      });
+    };
+
+    const handleChildPrevPage = (groupKey) => {
+      setChildPagesByGroup(prev => {
+        const current = prev[groupKey] ?? 0;
+        if (current <= 0) return prev;
+        return { ...prev, [groupKey]: current - 1 };
+      });
+    };
 
 
 
@@ -2419,48 +2418,48 @@ const handleChildPrevPage = (groupKey) => {
                 <th>Details</th>
               </tr>
             </thead>
-               <tbody>
-       {paginatedGroups.length > 0 ? (
-        paginatedGroups.map(group => {
-          const isExpanded = expandedRowKey === group.key;
+            <tbody>
+              {paginatedGroups.length > 0 ? (
+                paginatedGroups.map(group => {
+                  const isExpanded = expandedRowKey === group.key;
 
-                // NEW: child pagination per group
-      const childPage = childPagesByGroup[group.key] ?? 0;
-      const totalChildPages = Math.max(
-        1,
-        Math.ceil(group.apps.length / CHILD_APPLICATIONS_PAGE_SIZE)
-      );
-      const childStart = childPage * CHILD_APPLICATIONS_PAGE_SIZE;
-      const childEnd = childStart + CHILD_APPLICATIONS_PAGE_SIZE;
-      const paginatedChildApps = group.apps.slice(childStart, childEnd);
+                  // NEW: child pagination per group
+                  const childPage = childPagesByGroup[group.key] ?? 0;
+                  const totalChildPages = Math.max(
+                    1,
+                    Math.ceil(group.apps.length / CHILD_APPLICATIONS_PAGE_SIZE)
+                  );
+                  const childStart = childPage * CHILD_APPLICATIONS_PAGE_SIZE;
+                  const childEnd = childStart + CHILD_APPLICATIONS_PAGE_SIZE;
+                  const paginatedChildApps = group.apps.slice(childStart, childEnd);
 
-          return (
-            <React.Fragment key={group.key}>
-              {/* Parent Row - Toggles expansion */}
-              <tr
-                onClick={() => {
-                  // If an action button was just clicked, ignore this event.
-                  if (isInternalClick) {
-                    setIsInternalClick(false); // Reset the flag immediately
-                    return;
-                  }
+                  return (
+                    <React.Fragment key={group.key}>
+                      {/* Parent Row - Toggles expansion */}
+                      <tr
+                        onClick={() => {
+                          // If an action button was just clicked, ignore this event.
+                          if (isInternalClick) {
+                            setIsInternalClick(false); // Reset the flag immediately
+                            return;
+                          }
 
-                  setExpandedRowKey(isExpanded ? null : group.key);
-                }}
-              >
-                <td>
-                  {/* Employee avatar + name (same as your existing code) */}
-                  {/* use getInitials(group.employeeName) etc */}
-                  {group.employeeName}
-                </td>
-                <td>{group.clientName}</td>
-                <td>{group.appliedDate || 'N/A'}</td>
-                <td>{group.applicationsCount}</td>
-                <td>
-                  {/* whatever action buttons you already had; 
+                          setExpandedRowKey(isExpanded ? null : group.key);
+                        }}
+                      >
+                        <td>
+                          {/* Employee avatar + name (same as your existing code) */}
+                          {/* use getInitials(group.employeeName) etc */}
+                          {group.employeeName}
+                        </td>
+                        <td>{group.clientName}</td>
+                        <td>{group.appliedDate || 'N/A'}</td>
+                        <td>{group.applicationsCount}</td>
+                        <td>
+                          {/* whatever action buttons you already had; 
                       when you click them, remember to call setIsInternalClick(true)
                       before doing the actual action so the row doesn’t toggle */}
-                  {/* Example:
+                          {/* Example:
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -2471,286 +2470,286 @@ const handleChildPrevPage = (groupKey) => {
                     View
                   </button>
                   */}
-                </td>
-              </tr>
+                        </td>
+                      </tr>
 
-          {/* Expanded row for the child applications table (now paginated) */}
-          {isExpanded && (
-            <tr>
-              <td
-                colSpan="5"
-                style={{ padding: '0 15px', backgroundColor: 'var(--bg-color)' }}
+                      {/* Expanded row for the child applications table (now paginated) */}
+                      {isExpanded && (
+                        <tr>
+                          <td
+                            colSpan="5"
+                            style={{ padding: '0 15px', backgroundColor: 'var(--bg-color)' }}
+                          >
+                            <div
+                              style={{
+                                padding: '15px',
+                                border: '1px solid var(--header-border-color)',
+                                borderRadius: '8px',
+                                margin: '10px 0',
+                              }}
+                            >
+                              <table className="applications-table" style={{ minWidth: 'auto' }}>
+                                <thead>
+                                  <tr>
+                                    <th>Company</th>
+                                    <th>Job Title</th>
+                                    <th>Job ID</th>
+                                    <th>Job Boards</th>
+                                    <th>Job Type</th>
+                                    <th>Description Link</th>
+                                    <th>Applied Date</th>
+                                    <th>Applied Time</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {paginatedChildApps.map((app, index) => {
+                                    const { date, time } = formatDateTime(app.appliedTimestamp);
+
+                                    return (
+                                      <tr key={app.id || index}>
+                                        <td>{app.company}</td>
+                                        <td>{app.jobTitle}</td>
+                                        <td>{app.jobId}</td>
+                                        <td>{app.jobBoards}</td>
+                                        <td>{app.jobType}</td>
+                                        <td>
+                                          {app.jobDescriptionUrl ? (
+                                            <a
+                                              href={app.jobDescriptionUrl}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                            >
+                                              View
+                                            </a>
+                                          ) : (
+                                            'N/A'
+                                          )}
+                                        </td>
+                                        <td>{formatDateToDDMMYYYY(app.appliedDate)}</td>
+                                        <td>{formatDateTime(app.timestamp).time}</td>
+                                        <td>{app.status}</td>
+                                        {/* ACTIONS CELL */}
+                                        <td
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
+                                          <div className="action-buttons">
+                                            <button
+                                              className="action-button"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setIsInternalClick(true);
+                                                openApplicationDetailModal(app);
+                                              }}
+                                              title="View Details"
+                                            >
+                                              <i className="fas fa-eye"></i>
+                                            </button>
+                                            <button
+                                              className="action-button"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setIsInternalClick(true);
+                                                openEditApplicationModal(app);
+                                              }}
+                                              title="Edit"
+                                            >
+                                              <i className="fas fa-edit"></i>
+                                            </button>
+                                            <button
+                                              className="action-button"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setIsInternalClick(true);
+                                                handleDeleteApplication(app);
+                                              }}
+                                              title="Delete"
+                                            >
+                                              <i className="fas fa-trash"></i>
+                                            </button>
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+
+                              {/* NEW: Child pagination controls (per client) */}
+                              {group.apps.length > CHILD_APPLICATIONS_PAGE_SIZE && (
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    marginTop: '12px',
+                                  }}
+                                >
+                                  <span
+                                    style={{
+                                      fontSize: '0.85rem',
+                                      color: '#64748b',
+                                    }}
+                                  >
+                                    Showing{' '}
+                                    {childPage * CHILD_APPLICATIONS_PAGE_SIZE + 1}
+                                    {' - '}
+                                    {Math.min(
+                                      (childPage + 1) * CHILD_APPLICATIONS_PAGE_SIZE,
+                                      group.apps.length
+                                    )}{' '}
+                                    of {group.apps.length} applications
+                                  </span>
+
+                                  <div
+                                    style={{
+                                      display: 'flex',
+                                      gap: '8px',
+                                    }}
+                                  >
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleChildPrevPage(group.key);
+                                      }}
+                                      disabled={childPage === 0}
+                                      style={{
+                                        padding: '6px 10px',
+                                        borderRadius: '6px',
+                                        border: '1px solid #cbd5e1',
+                                        backgroundColor:
+                                          childPage === 0 ? '#e2e8f0' : '#ffffff',
+                                        cursor:
+                                          childPage === 0 ? 'not-allowed' : 'pointer',
+                                        fontSize: '0.85rem',
+                                      }}
+                                    >
+                                      Prev
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleChildNextPage(group.key, totalChildPages);
+                                      }}
+                                      disabled={childPage + 1 >= totalChildPages}
+                                      style={{
+                                        padding: '6px 10px',
+                                        borderRadius: '6px',
+                                        border: '1px solid #cbd5e1',
+                                        backgroundColor:
+                                          childPage + 1 >= totalChildPages
+                                            ? '#e2e8f0'
+                                            : '#ffffff',
+                                        cursor:
+                                          childPage + 1 >= totalChildPages
+                                            ? 'not-allowed'
+                                            : 'pointer',
+                                        fontSize: '0.85rem',
+                                      }}
+                                    >
+                                      Next
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td
+                    colSpan="5"
+                    style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}
+                  >
+                    No applications found for the selected filters.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+
+
+          </table>
+          {groupedByEmployeeAndClient.length > APPLICATIONS_PAGE_SIZE && (
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginTop: '12px',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: '0.85rem',
+                  color: '#64748b',
+                }}
               >
-                <div
+                Showing{' '}
+                {applicationsPage * APPLICATIONS_PAGE_SIZE + 1}
+                {' - '}
+                {Math.min(
+                  (applicationsPage + 1) * APPLICATIONS_PAGE_SIZE,
+                  groupedByEmployeeAndClient.length
+                )}{' '}
+                of {groupedByEmployeeAndClient.length} application groups
+              </span>
+
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '8px',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={handlePrevApplicationsPage}
+                  disabled={applicationsPage === 0}
                   style={{
-                    padding: '15px',
-                    border: '1px solid var(--header-border-color)',
-                    borderRadius: '8px',
-                    margin: '10px 0',
+                    padding: '6px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    backgroundColor:
+                      applicationsPage === 0 ? '#e2e8f0' : '#ffffff',
+                    cursor:
+                      applicationsPage === 0 ? 'not-allowed' : 'pointer',
+                    fontSize: '0.85rem',
                   }}
                 >
-                  <table className="applications-table" style={{ minWidth: 'auto' }}>
-                    <thead>
-                      <tr>
-                        <th>Company</th>
-                        <th>Job Title</th>
-                        <th>Job ID</th>
-                        <th>Job Boards</th>
-                        <th>Job Type</th>
-                        <th>Description Link</th>
-                        <th>Applied Date</th>
-                        <th>Applied Time</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {paginatedChildApps.map((app, index) => {
-                        const { date, time } = formatDateTime(app.appliedTimestamp);
-
-                        return (
-                          <tr key={app.id || index}>
-                            <td>{app.company}</td>
-                            <td>{app.jobTitle}</td>
-                            <td>{app.jobId}</td>
-                            <td>{app.jobBoards}</td>
-                            <td>{app.jobType}</td>
-                            <td>
-                              {app.jobDescriptionUrl ? (
-                                <a
-                                  href={app.jobDescriptionUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  View
-                                </a>
-                              ) : (
-                                'N/A'
-                              )}
-                            </td>
-                            <td>{formatDateToDDMMYYYY(app.appliedDate)}</td>
-                            <td>{formatDateTime(app.timestamp).time}</td>
-                            <td>{app.status}</td>
-                            {/* ACTIONS CELL */}
-                            <td
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <div className="action-buttons">
-                                <button
-                                  className="action-button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setIsInternalClick(true);
-                                    openApplicationDetailModal(app);
-                                  }}
-                                  title="View Details"
-                                >
-                                  <i className="fas fa-eye"></i>
-                                </button>
-                                <button
-                                  className="action-button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setIsInternalClick(true);
-                                    openEditApplicationModal(app);
-                                  }}
-                                  title="Edit"
-                                >
-                                  <i className="fas fa-edit"></i>
-                                </button>
-                                <button
-                                  className="action-button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setIsInternalClick(true);
-                                    handleDeleteApplication(app);
-                                  }}
-                                  title="Delete"
-                                >
-                                  <i className="fas fa-trash"></i>
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-
-                  {/* NEW: Child pagination controls (per client) */}
-                  {group.apps.length > CHILD_APPLICATIONS_PAGE_SIZE && (
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        marginTop: '12px',
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontSize: '0.85rem',
-                          color: '#64748b',
-                        }}
-                      >
-                        Showing{' '}
-                        {childPage * CHILD_APPLICATIONS_PAGE_SIZE + 1}
-                        {' - '}
-                        {Math.min(
-                          (childPage + 1) * CHILD_APPLICATIONS_PAGE_SIZE,
-                          group.apps.length
-                        )}{' '}
-                        of {group.apps.length} applications
-                      </span>
-
-                      <div
-                        style={{
-                          display: 'flex',
-                          gap: '8px',
-                        }}
-                      >
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleChildPrevPage(group.key);
-                          }}
-                          disabled={childPage === 0}
-                          style={{
-                            padding: '6px 10px',
-                            borderRadius: '6px',
-                            border: '1px solid #cbd5e1',
-                            backgroundColor:
-                              childPage === 0 ? '#e2e8f0' : '#ffffff',
-                            cursor:
-                              childPage === 0 ? 'not-allowed' : 'pointer',
-                            fontSize: '0.85rem',
-                          }}
-                        >
-                          Prev
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleChildNextPage(group.key, totalChildPages);
-                          }}
-                          disabled={childPage + 1 >= totalChildPages}
-                          style={{
-                            padding: '6px 10px',
-                            borderRadius: '6px',
-                            border: '1px solid #cbd5e1',
-                            backgroundColor:
-                              childPage + 1 >= totalChildPages
-                                ? '#e2e8f0'
-                                : '#ffffff',
-                            cursor:
-                              childPage + 1 >= totalChildPages
-                                ? 'not-allowed'
-                                : 'pointer',
-                            fontSize: '0.85rem',
-                          }}
-                        >
-                          Next
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </td>
-            </tr>
+                  Prev
+                </button>
+                <button
+                  type="button"
+                  onClick={handleNextApplicationsPage}
+                  disabled={applicationsPage + 1 >= totalApplicationPages}
+                  style={{
+                    padding: '6px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    backgroundColor:
+                      applicationsPage + 1 >= totalApplicationPages
+                        ? '#e2e8f0'
+                        : '#ffffff',
+                    cursor:
+                      applicationsPage + 1 >= totalApplicationPages
+                        ? 'not-allowed'
+                        : 'pointer',
+                    fontSize: '0.85rem',
+                  }}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
           )}
-        </React.Fragment>
-      );
-    })
-  ) : (
-    <tr>
-      <td
-        colSpan="5"
-        style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}
-      >
-        No applications found for the selected filters.
-      </td>
-    </tr>
-  )}
-</tbody>
 
-
-                              </table>
-                                    {groupedByEmployeeAndClient.length > APPLICATIONS_PAGE_SIZE && (
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginTop: '12px',
-          }}
-        >
-          <span
-            style={{
-              fontSize: '0.85rem',
-              color: '#64748b',
-            }}
-          >
-            Showing{' '}
-            {applicationsPage * APPLICATIONS_PAGE_SIZE + 1}
-            {' - '}
-            {Math.min(
-              (applicationsPage + 1) * APPLICATIONS_PAGE_SIZE,
-              groupedByEmployeeAndClient.length
-            )}{' '}
-            of {groupedByEmployeeAndClient.length} application groups
-          </span>
-
-          <div
-            style={{
-              display: 'flex',
-              gap: '8px',
-            }}
-          >
-            <button
-              type="button"
-              onClick={handlePrevApplicationsPage}
-              disabled={applicationsPage === 0}
-              style={{
-                padding: '6px 10px',
-                borderRadius: '6px',
-                border: '1px solid #cbd5e1',
-                backgroundColor:
-                  applicationsPage === 0 ? '#e2e8f0' : '#ffffff',
-                cursor:
-                  applicationsPage === 0 ? 'not-allowed' : 'pointer',
-                fontSize: '0.85rem',
-              }}
-            >
-              Prev
-            </button>
-            <button
-              type="button"
-              onClick={handleNextApplicationsPage}
-              disabled={applicationsPage + 1 >= totalApplicationPages}
-              style={{
-                padding: '6px 10px',
-                borderRadius: '6px',
-                border: '1px solid #cbd5e1',
-                backgroundColor:
-                  applicationsPage + 1 >= totalApplicationPages
-                    ? '#e2e8f0'
-                    : '#ffffff',
-                cursor:
-                  applicationsPage + 1 >= totalApplicationPages
-                    ? 'not-allowed'
-                    : 'pointer',
-                fontSize: '0.85rem',
-              }}
-            >
-              Next
-            </button>
-          </div>
         </div>
-      )}
-
-               </div>
       </section>
     );
   };
@@ -5787,144 +5786,144 @@ const handleChildPrevPage = (groupKey) => {
                   <th>DATE</th>
                   <th>STATUS</th>
                 </tr></thead>
-<tbody>
-  {paginatedInterviewData.map((interview) => {
-    // Find the assigned employee object using the 'assignedTo' key
-    const assignedEmployee = allEmployees.find(
-      (emp) => emp.firebaseKey === interview.assignedTo
-    );
+                <tbody>
+                  {paginatedInterviewData.map((interview) => {
+                    // Find the assigned employee object using the 'assignedTo' key
+                    const assignedEmployee = allEmployees.find(
+                      (emp) => emp.firebaseKey === interview.assignedTo
+                    );
 
-    // Safely get the employee's name and initials, providing a fallback
-    const employeeName = assignedEmployee
-      ? `${assignedEmployee.firstName} ${assignedEmployee.lastName}`
-      : 'N/A';
-    const employeeInitials = assignedEmployee
-      ? getInitials(employeeName)
-      : '??';
+                    // Safely get the employee's name and initials, providing a fallback
+                    const employeeName = assignedEmployee
+                      ? `${assignedEmployee.firstName} ${assignedEmployee.lastName}`
+                      : 'N/A';
+                    const employeeInitials = assignedEmployee
+                      ? getInitials(employeeName)
+                      : '??';
 
-    return (
-      <tr key={interview.id}>
-        <td className="employee-cell">
-          <div className="employee-avatar">{employeeInitials}</div>
-          {employeeName}
-        </td>
-        <td>{interview.clientName}</td>
-        <td>{interview.jobTitle}</td>
-        <td>{interview.company}</td>
-        <td>
-          <span className="round-badge">{interview.round}</span>
-        </td>
-        <td className="action-buttons">
-          {interview.attachments && interview.attachments.length > 0 ? (
-            <button
-              onClick={() => handleAttachmentClick(interview.attachments)}
-              className="action-button"
-              title="View Attachments"
-            >
-              <i className="fas fa-paperclip"></i> ({interview.attachments.length})
-            </button>
-          ) : (
-            <span style={{ color: 'var(--text-color)', opacity: 0.6 }}>N/A</span>
-          )}
-        </td>
-        <td className="date-cell">
-          {formatDateToDDMMYYYY(interview.interviewTime)}
-        </td>
-        <td className="date-cell">
-          {formatDateToDDMMYYYY(interview.interviewDate)}
-        </td>
-        <td>
-          {interview.status}
-        </td>
-      </tr>
-    );
-  })}
+                    return (
+                      <tr key={interview.id}>
+                        <td className="employee-cell">
+                          <div className="employee-avatar">{employeeInitials}</div>
+                          {employeeName}
+                        </td>
+                        <td>{interview.clientName}</td>
+                        <td>{interview.jobTitle}</td>
+                        <td>{interview.company}</td>
+                        <td>
+                          <span className="round-badge">{interview.round}</span>
+                        </td>
+                        <td className="action-buttons">
+                          {interview.attachments && interview.attachments.length > 0 ? (
+                            <button
+                              onClick={() => handleAttachmentClick(interview.attachments)}
+                              className="action-button"
+                              title="View Attachments"
+                            >
+                              <i className="fas fa-paperclip"></i> ({interview.attachments.length})
+                            </button>
+                          ) : (
+                            <span style={{ color: 'var(--text-color)', opacity: 0.6 }}>N/A</span>
+                          )}
+                        </td>
+                        <td className="date-cell">
+                          {formatDateToDDMMYYYY(interview.interviewTime)}
+                        </td>
+                        <td className="date-cell">
+                          {formatDateToDDMMYYYY(interview.interviewDate)}
+                        </td>
+                        <td>
+                          {interview.status}
+                        </td>
+                      </tr>
+                    );
+                  })}
 
-  {filteredInterviewData.length === 0 && (
-    <tr>
-      <td
-        colSpan="9"
-        style={{ textAlign: 'center', color: 'var(--text-color)' }}
-      >
-        No interviews to display matching your criteria.
-      </td>
-    </tr>
-  )}
-</tbody>
+                  {filteredInterviewData.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan="9"
+                        style={{ textAlign: 'center', color: 'var(--text-color)' }}
+                      >
+                        No interviews to display matching your criteria.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
 
               </table>
               {filteredInterviewData.length > INTERVIEWS_PAGE_SIZE && (
-  <div
-    style={{
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginTop: '12px',
-    }}
-  >
-    <span
-      style={{
-        fontSize: '0.85rem',
-        color: '#64748b',
-      }}
-    >
-      Showing{' '}
-      {interviewsPage * INTERVIEWS_PAGE_SIZE + 1}
-      {' - '}
-      {Math.min(
-        (interviewsPage + 1) * INTERVIEWS_PAGE_SIZE,
-        filteredInterviewData.length
-      )}{' '}
-      of {filteredInterviewData.length} interviews
-    </span>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginTop: '12px',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: '0.85rem',
+                      color: '#64748b',
+                    }}
+                  >
+                    Showing{' '}
+                    {interviewsPage * INTERVIEWS_PAGE_SIZE + 1}
+                    {' - '}
+                    {Math.min(
+                      (interviewsPage + 1) * INTERVIEWS_PAGE_SIZE,
+                      filteredInterviewData.length
+                    )}{' '}
+                    of {filteredInterviewData.length} interviews
+                  </span>
 
-    <div
-      style={{
-        display: 'flex',
-        gap: '8px',
-      }}
-    >
-      <button
-        type="button"
-        onClick={handlePrevInterviewsPage}
-        disabled={interviewsPage === 0}
-        style={{
-          padding: '6px 10px',
-          borderRadius: '6px',
-          border: '1px solid #cbd5e1',
-          backgroundColor:
-            interviewsPage === 0 ? '#e2e8f0' : '#ffffff',
-          cursor:
-            interviewsPage === 0 ? 'not-allowed' : 'pointer',
-          fontSize: '0.85rem',
-        }}
-      >
-        Prev
-      </button>
-      <button
-        type="button"
-        onClick={handleNextInterviewsPage}
-        disabled={interviewsPage + 1 >= totalInterviewPages}
-        style={{
-          padding: '6px 10px',
-          borderRadius: '6px',
-          border: '1px solid #cbd5e1',
-          backgroundColor:
-            interviewsPage + 1 >= totalInterviewPages
-              ? '#e2e8f0'
-              : '#ffffff',
-          cursor:
-            interviewsPage + 1 >= totalInterviewPages
-              ? 'not-allowed'
-              : 'pointer',
-          fontSize: '0.85rem',
-        }}
-      >
-        Next
-      </button>
-    </div>
-  </div>
-)}
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: '8px',
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={handlePrevInterviewsPage}
+                      disabled={interviewsPage === 0}
+                      style={{
+                        padding: '6px 10px',
+                        borderRadius: '6px',
+                        border: '1px solid #cbd5e1',
+                        backgroundColor:
+                          interviewsPage === 0 ? '#e2e8f0' : '#ffffff',
+                        cursor:
+                          interviewsPage === 0 ? 'not-allowed' : 'pointer',
+                        fontSize: '0.85rem',
+                      }}
+                    >
+                      Prev
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleNextInterviewsPage}
+                      disabled={interviewsPage + 1 >= totalInterviewPages}
+                      style={{
+                        padding: '6px 10px',
+                        borderRadius: '6px',
+                        border: '1px solid #cbd5e1',
+                        backgroundColor:
+                          interviewsPage + 1 >= totalInterviewPages
+                            ? '#e2e8f0'
+                            : '#ffffff',
+                        cursor:
+                          interviewsPage + 1 >= totalInterviewPages
+                            ? 'not-allowed'
+                            : 'pointer',
+                        fontSize: '0.85rem',
+                      }}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
 
             </div>
           </section>
