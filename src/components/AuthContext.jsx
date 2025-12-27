@@ -1,55 +1,34 @@
-// src/components/AuthContext.jsx
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { onAuthStateChanged, signOut } from "firebase/auth";
-import { auth } from "../firebase";
+// src/context/AuthContext.js
+
+import React, { createContext, useState, useContext } from 'react';
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // Initialize state from localStorage to keep user logged in on refresh
+  const [user, setUser] = useState(JSON.parse(localStorage.getItem('user')));
+  
+  const isLoggedIn = !!user;
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      if (!firebaseUser) {
-        // 🔥 Firebase session ended
-        setUser(null);
-        sessionStorage.clear();
-        localStorage.clear();
-      } else {
-        // ⚠️ Do NOT auto-login from storage
-        // user data must be set only during login
-      }
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
+  // Login function now accepts user data
   const login = (userData) => {
-    setUser(userData); // ONLY memory
+    localStorage.setItem('user', JSON.stringify(userData));
+    setUser(userData);
   };
 
-  const logout = async () => {
-    await signOut(auth);
+  // Logout function clears user data
+  const logout = () => {
+    localStorage.removeItem('user');
     setUser(null);
-    sessionStorage.clear();
-    localStorage.clear();
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isLoggedIn: !!user,
-        login,
-        logout,
-        loading,
-      }}
-    >
-      {!loading && children}
+    <AuthContext.Provider value={{ isLoggedIn, user, login, logout }}>
+      {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  return useContext(AuthContext);
+};
