@@ -37,12 +37,11 @@ import ManagerWorksheet from './components/ManagerWorksheet';
 import AdminPage from './components/AdminWorkSheet/AdminPage';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
-  const { isLoggedIn, user, loading } = useAuth();
+  const { isLoggedIn, user } = useAuth();
   if (!isLoggedIn) {
     // If user is not logged in, redirect to the login page
     return <Navigate to="/login" replace />;
   }
-  if (loading) return null;
 
   // Check if the user's roles are allowed for this route
   const isAuthorized = user && user.roles && user.roles.some(role => allowedRoles.includes(role));
@@ -79,7 +78,7 @@ const App = () => {
             <Route path="/services/cyber-security" element={<CyberSecurity />} />
             <Route path="/services/job-contact-form" element={<ProtectedRoute allowedRoles={['client']}><JobSupportContactForm /></ProtectedRoute>} />
             <Route path="/services/servicesForm" element={<ProtectedRoute allowedRoles={['client']}><ServicesForm /></ProtectedRoute>} />
-
+            
             {/* DashBoards */}
             {/* --- Protected Routes with Role-Based Access --- */}
             <Route path="/clientdashboard" element={<ProtectedRoute allowedRoles={['client']}><ClientDashboard /></ProtectedRoute>} />
@@ -93,10 +92,10 @@ const App = () => {
             <Route path="/employee-registration-form" element={<ProtectedRoute allowedRoles={['admin']}><EmployeeRegistrationForm /></ProtectedRoute>} />
             <Route path="/employee-onboarding-sheet" element={<ProtectedRoute allowedRoles={['admin']}><EmployeeOnboardingWorkSheet /></ProtectedRoute>} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-            <Route path="/terms-of-service" element={<TermsOfService />} />
-            <Route path="/cookie-policy" element={<CookiePolicy />} />
+        <Route path="/terms-of-service" element={<TermsOfService />} />
+        <Route path="/cookie-policy" element={<CookiePolicy />} />
 
-          </Routes>
+          </Routes> 
           {/* <--- CLOSED Routes here */}
 
           {/* Place WhatsAppFloat HERE (Outside Routes, inside Providers) */}
