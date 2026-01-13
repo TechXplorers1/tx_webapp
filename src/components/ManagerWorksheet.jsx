@@ -63,7 +63,7 @@ const ManagerWorkSheet = () => {
 
       if (cached) {
         const { data, timestamp } = cached;
-        const isFresh = (new Date().getTime() - timestamp) < (durationMinutes * 5 * 1000);
+        const isFresh = (new Date().getTime() - timestamp) < (durationMinutes * 60 * 1000);
         if (isFresh) {
           console.log(`Using cached data (IDB) for ${storageKey}`);
           return data;
@@ -669,10 +669,54 @@ const ManagerWorkSheet = () => {
         }
 
         const assignments = indexSnapshot.val();
+
+        // --- NEW: Load Client Cache from IDB ---
+        const cachedWrapper = await dbGet('cache_clients_full');
+        let clientCache = {};
+        let isCacheValid = false;
+
+        if (cachedWrapper && cachedWrapper.data) {
+          const age = new Date().getTime() - (cachedWrapper.timestamp || 0);
+          if (age < 60 * 60 * 1000) { // 1 hour cache validity
+            clientCache = cachedWrapper.data;
+            isCacheValid = true;
+            console.log("Using cached client data from IDB");
+          } else {
+            console.log("Client cache expired, fetching fresh data...");
+          }
+        } else {
+          console.log("No client cache found.");
+        }
+
         const promises = [];
+        let fetchedNewData = false;
 
         // 2. Loop through the index and fetch specific client data (Parallel Fetch)
         Object.values(assignments).forEach(item => {
+
+          // Check if valid in cache
+          if (isCacheValid && clientCache[item.clientFirebaseKey]) {
+            const cachedRoot = clientCache[item.clientFirebaseKey];
+            // Proceed with cached data logic (copy-paste of the transform logic below)
+            const reg = cachedRoot.serviceRegistrations?.[item.registrationKey];
+            if (reg) {
+              const jobApplicationsArray = Array.isArray(reg.jobApplications) ? reg.jobApplications : Object.values(reg.jobApplications || {});
+              promises.push(Promise.resolve({
+                ...reg,
+                jobApplications: jobApplicationsArray,
+                clientFirebaseKey: item.clientFirebaseKey,
+                registrationKey: item.registrationKey,
+                email: cachedRoot.email,
+                mobile: cachedRoot.mobile,
+                firstName: reg.firstName || cachedRoot.firstName,
+                lastName: reg.lastName || cachedRoot.lastName,
+                name: `${reg.firstName || cachedRoot.firstName || ''} ${reg.lastName || cachedRoot.lastName || ''}`.trim()
+              }));
+              return;
+            }
+          }
+
+          // If not in cache or cache invalid, fetch from network
           const clientRef = ref(database, `clients/${item.clientFirebaseKey}`);
 
           // We fetch the root client node to ensure we get email/mobile + registrations
@@ -680,6 +724,11 @@ const ManagerWorkSheet = () => {
           promises.push(get(clientRef).then(snap => {
             if (snap.exists()) {
               const clientRoot = snap.val();
+
+              // Add to cache for next time
+              clientCache[item.clientFirebaseKey] = clientRoot;
+              fetchedNewData = true;
+
               const reg = clientRoot.serviceRegistrations?.[item.registrationKey];
 
               if (reg) {
@@ -711,6 +760,12 @@ const ManagerWorkSheet = () => {
         const results = await Promise.all(promises);
         const allRegistrations = results.filter(r => r !== null);
 
+        // --- NEW: Save updated cache to IDB if we fetched anything new ---
+        if (fetchedNewData) {
+          await dbSet('cache_clients_full', { timestamp: new Date().getTime(), data: clientCache });
+          console.log("Updated IDB Client Cache");
+        }
+
         // 4. Sort into buckets (Same logic as before)
         const unassigned = [];
         const assigned = [];
@@ -718,11 +773,7 @@ const ManagerWorkSheet = () => {
 
         for (const reg of allRegistrations) {
           // Double check assignment matches (sanity check)
-          if (reg.name.includes("James")) {
-            console.log("DEBUG: Checking James:", reg.name, reg.assignmentStatus, reg.assignedManager, managerFirebaseKey, reg.assignedTo);
-          }
           if (reg.assignedManager !== managerFirebaseKey) {
-            if (reg.name.includes("James")) console.log("DEBUG: James skipped due to manager mismatch");
             continue;
           }
 
@@ -781,11 +832,11 @@ const ManagerWorkSheet = () => {
     let cancelledUsersFetch = false;
     (async () => {
       try {
-        const usersData = await getCachedData('users', 'cache_users_full', 1440); //24 hours cache
+        const usersData = await getCachedData('users', 'cache_users_full', 60); // 1 hour cache
         if (cancelledUsersFetch) return;
         if (usersData) {
           const employees = Object.entries(usersData)
-            .filter(([_, user]) => user.roles && user.roles.includes('employee'))
+            .filter(([_, user]) => user.roles && user.roles.includes('employee') && user.accountStatus !== 'Inactive')
             .map(([key, user]) => ({
               firebaseKey: key,
               ...user,
