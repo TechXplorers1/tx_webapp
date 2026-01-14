@@ -233,6 +233,7 @@ const ManagerWorkSheet = () => {
   const [userProfile, setUserProfile] = useState({});
 
   const [displayEmployees, setDisplayEmployees] = useState([]);
+  const [assignedEmployeeSearchQuery, setAssignedEmployeeSearchQuery] = useState('');
 
   const [selectedApplication, setSelectedApplication] = useState(null);
   const [isApplicationDetailModalOpen, setIsApplicationDetailModalOpen] = useState(false);
@@ -836,7 +837,7 @@ const ManagerWorkSheet = () => {
         if (cancelledUsersFetch) return;
         if (usersData) {
           const employees = Object.entries(usersData)
-            .filter(([_, user]) => user.roles && user.roles.includes('employee') && user.accountStatus !== 'Inactive')
+            .filter(([_, user]) => user.roles && user.roles.includes('employee') && (user.accountStatus || 'Active').toLowerCase() !== 'inactive')
             .map(([key, user]) => ({
               firebaseKey: key,
               ...user,
@@ -914,7 +915,7 @@ const ManagerWorkSheet = () => {
 
 
   // NEW STATE: Search query for Assigned tab employees
-  const [assignedEmployeeSearchQuery, setAssignedEmployeeSearchQuery] = useState(''); // New state for employee search
+
 
   // NEW STATE: For Client Preview Modal
   const [isClientPreviewModalOpen, setIsClientPreviewModalOpen] = useState(false);
@@ -1401,6 +1402,8 @@ const ManagerWorkSheet = () => {
     setFilterPriority(event.target.value);
   };
 
+
+
   // Handler for search input change in Unassigned Clients modal
   const handleUnassignedSearchChange = (event) => {
     setUnassignedSearchQuery(event.target.value);
@@ -1692,6 +1695,26 @@ const ManagerWorkSheet = () => {
   };
 
 
+  // Filter employees based on search query
+  // Filter employees based on search query and assignment status
+  const filteredEmployees = useMemo(() => {
+    // First, filter to ensure they have assigned clients
+    let result = displayEmployees.filter(employee => {
+      const clientsForEmployee = assignedClients.filter(c => c.assignedTo === employee.firebaseKey);
+      return clientsForEmployee.length > 0;
+    });
+
+    // Then filter by search query if it exists
+    if (assignedEmployeeSearchQuery) {
+      const lowerCaseQuery = assignedEmployeeSearchQuery.toLowerCase();
+      result = result.filter(employee =>
+        (employee.fullName || '').toLowerCase().includes(lowerCaseQuery) ||
+        (employee.role || '').toLowerCase().includes(lowerCaseQuery)
+      );
+    }
+    return result;
+  }, [displayEmployees, assignedClients, assignedEmployeeSearchQuery]);
+
   const filteredApplicationData = useMemo(() => {
     // Helper to get employee name, as it's needed for searching
     const getEmployeeName = (employeeKey) => {
@@ -1857,12 +1880,7 @@ const ManagerWorkSheet = () => {
     setAssignedEmployeeSearchQuery(event.target.value);
   };
 
-  // Filtered employees for the "Assigned" tab
-  const filteredEmployees = displayEmployees.filter(employee => {
-    // Only show employees that have at least one client assigned by this manager
-    const clientsForEmployee = assignedClients.filter(c => c.assignedTo === employee.firebaseKey);
-    return clientsForEmployee.length > 0;
-  });
+
 
   const [employeesForAssignment, setEmployeesForAssignment] = useState([]);
 
