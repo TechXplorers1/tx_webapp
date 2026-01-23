@@ -7607,7 +7607,7 @@ Please provide a summary no longer than 150 words.`;
               </div>
               <div className="form-group">
                 <label>Job Description URL</label>
-                <input type="jobDescriptionUrl" name="" value={editableApplication.jobDescriptionUrl} onChange={handleApplicationChange} />
+                <input type="url" name="jobDescriptionUrl" value={editableApplication.jobDescriptionUrl} onChange={handleApplicationChange} />
               </div>
               <div className="form-group">
                 <label>Status</label>

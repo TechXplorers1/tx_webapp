@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useRazorpay } from "react-razorpay";
 import { getDatabase, ref, update, remove, set, get } from "firebase/database";
 import { database } from '../../firebase';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -8,6 +9,9 @@ import { useNavigate } from 'react-router-dom';
 
 const ClientManagement = () => {
   const navigate = useNavigate();
+
+  // --- Razorpay Hook ---
+  const { Razorpay, isLoading: isRazorpayLoading, error: razorpayError } = useRazorpay();
 
   // --- Client Management States ---
   const [managerList, setManagerList] = useState([]);
@@ -41,6 +45,14 @@ const ClientManagement = () => {
   const [isManagerModalOpen, setIsManagerModalOpen] = useState(false);
   const [registrationForManager, setRegistrationForManager] = useState(null);
   const [managerSearchTerm, setManagerSearchTerm] = useState('');
+
+  // --- Payment Modal State ---
+  const [activePaymentTab, setActivePaymentTab] = useState('pay_now'); // 'pay_now', 'link'
+  const [cardDetails, setCardDetails] = useState({ number: '', name: '', expiry: '', cvv: '' });
+  const [upiId, setUpiId] = useState('');
+  const [selectedBank, setSelectedBank] = useState('');
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [coverLetterFile, setCoverLetterFile] = useState(null);
@@ -114,8 +126,10 @@ const ClientManagement = () => {
         setLoading(true);
 
         // --- 1. Try to read from IndexedDB cache first ---
+
+        let cached = null;
         try {
-          const cached = await dbGet(CLIENT_MGMT_CACHE_KEY);
+          cached = await dbGet(CLIENT_MGMT_CACHE_KEY);
           if (!cancelled && cached && Array.isArray(cached.serviceRegistrations)) {
             setServiceRegistrations(cached.serviceRegistrations);
             setManagerList(cached.managerList || []);
@@ -415,6 +429,76 @@ const ClientManagement = () => {
     console.log('Processing immediate payment with details:', paymentDetails, ' for client:', selectedClientForPayment);
 
     handleClosePaymentModal();
+  };
+
+
+
+  const handleProcessPayment = async () => {
+    if (!paymentDetails.amount) {
+      alert('Please enter an amount');
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      // 1. Call your Firebase Function to create an order
+      // Note: In production, use the environment variable or a configuration file for the URL
+      const functionUrl = `${import.meta.env.VITE_FUNCTION_BASE_URL}/createPaymentOrder`;
+      console.log("Attempting to fetch payment order from:", functionUrl);
+
+      const response = await fetch(functionUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: paymentDetails.amount })
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create order. Ensure backend function is deployed.");
+      }
+
+      const order = await response.json();
+
+      // 2. Open Razorpay Checkout
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: order.currency,
+        name: "TechXplorers",
+        description: paymentDetails.description,
+        order_id: order.id,
+        handler: function (response) {
+          console.log("Payment Successful:", response);
+          setPaymentSuccess(true);
+          // TODO: Call backend to verify payment signature here
+        },
+        prefill: {
+          name: `${selectedClientForPayment.firstName} ${selectedClientForPayment.lastName}`,
+          email: selectedClientForPayment.email,
+          contact: selectedClientForPayment.mobile,
+        },
+        theme: {
+          color: "#2563eb",
+        },
+      };
+
+      const rzp1 = new Razorpay(options);
+      rzp1.on("payment.failed", function (response) {
+        alert("Payment Failed: " + response.error.description);
+      });
+      rzp1.open();
+
+    } catch (err) {
+      console.error("Payment Error:", err);
+      alert("Error initializing payment. " + err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCardChange = (e) => {
+    const { name, value } = e.target;
+    setCardDetails(prev => ({ ...prev, [name]: value }));
   };
 
   const handleCopyLink = () => {
@@ -4538,121 +4622,139 @@ const ClientManagement = () => {
             <div className="modal-header">
               <div>
                 <h3 className="modal-title">Payment Management</h3>
-                <p className="modal-subtitle">Create payment links or process immediate payments for {selectedClientForPayment.firstName} {selectedClientForPayment.lastName}</p>
+                <p className="modal-subtitle">Process payment for {selectedClientForPayment.firstName} {selectedClientForPayment.lastName}</p>
               </div>
               <button className="modal-close-btn" onClick={handleClosePaymentModal}>&times;</button>
             </div>
-            <form className="modal-form" onSubmit={(e) => { e.preventDefault(); handleGeneratePaymentLink(); }}>
-              <div className="form-group modal-form-full-width">
-                <label htmlFor="paymentAmount" className="form-label">Amount *</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ color: 'var(--text-secondary)', fontSize: '1rem', fontWeight: '500' }}>USD</span>
+
+            {paymentSuccess ? (
+              <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+                <div style={{ fontSize: '4rem', marginBottom: '20px' }}>✅</div>
+                <h3>Payment Successful!</h3>
+                <p>Transaction has been processed.</p>
+                <button className="confirm-cancel-btn" onClick={handleClosePaymentModal} style={{ marginTop: '20px' }}>Close</button>
+              </div>
+            ) : (
+              <form className="modal-form" onSubmit={(e) => { e.preventDefault(); }}>
+                <div className="form-group modal-form-full-width">
+                  <label htmlFor="paymentAmount" className="form-label">Amount *</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ color: 'var(--text-secondary)', fontSize: '1rem', fontWeight: '500' }}>INR</span>
+                    <input
+                      type="number"
+                      id="paymentAmount"
+                      name="amount"
+                      className="form-input"
+                      placeholder="0.00"
+                      value={paymentDetails.amount}
+                      onChange={handlePaymentDetailsChange}
+                      step="1"
+                      min="1"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="form-group modal-form-full-width">
+                  <label htmlFor="paymentDescription" className="form-label">Description *</label>
                   <input
-                    type="number"
-                    id="paymentAmount"
-                    name="amount"
+                    type="text"
+                    id="paymentDescription"
+                    name="description"
                     className="form-input"
-                    placeholder="0.00"
-                    value={paymentDetails.amount}
+                    placeholder="e.g., Service charges, Consultation fee"
+                    value={paymentDetails.description}
                     onChange={handlePaymentDetailsChange}
-                    step="0.01"
-                    min="0"
                     required
                   />
                 </div>
-              </div>
-              <div className="form-group modal-form-full-width">
-                <label htmlFor="paymentDescription" className="form-label">Description *</label>
-                <input
-                  type="text"
-                  id="paymentDescription"
-                  name="description"
-                  className="form-input"
-                  placeholder="e.g., Service charges, Consultation fee"
-                  value={paymentDetails.description}
-                  onChange={handlePaymentDetailsChange}
-                  required
-                />
-              </div>
-              <div className="form-group modal-form-full-width">
-                <label htmlFor="transactionDate" className="form-label">Transaction Date</label>
-                <input
-                  type="date"
-                  id="transactionDate"
-                  name="transactionDate"
-                  className="form-input"
-                  value={paymentDetails.transactionDate}
-                  readOnly
-                />
-              </div>
-              <div className="payment-modal-client-details modal-form-full-width">
-                <p><strong>Client Details:</strong></p>
-                <p>Name: {selectedClientForPayment.firstName} {selectedClientForPayment.lastName}</p>
-                <p>Email: {selectedClientForPayment.email}</p>
-                <p>Phone: {selectedClientForPayment.mobile}</p>
-              </div>
-              {generatedPaymentLink ? (
-                <div className="generated-link-section modal-form-full-width">
-                  <div className="generated-link-header">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2ZM16.7071 9.29289C17.0976 8.90237 17.0976 8.26921 16.7071 7.87869C16.3166 7.48816 15.6834 7.48816 15.2929 7.87869L10.5 12.6716L8.70711 10.8787C8.31658 10.4882 7.68342 10.4882 7.29289 10.8787C6.90237 11.2692 6.90237 11.9024 7.29289 12.2929L9.87869 14.8787C10.2692 15.2692 10.9024 15.2692 11.2929 14.8787L16.7071 9.46447V9.29289Z" />
-                    </svg>
-                    Payment Link Generated:
+
+                {/* Payment Method Tabs */}
+                <div className="modal-form-full-width" style={{ marginTop: '10px' }}>
+                  <label className="form-label" style={{ marginBottom: '10px', display: 'block' }}>Payment Action</label>
+                  <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', marginBottom: '20px' }}>
+                    {['pay_now', 'link'].map(tab => (
+                      <button
+                        key={tab}
+                        type="button"
+                        onClick={() => setActivePaymentTab(tab)}
+                        style={{
+                          padding: '10px 20px',
+                          background: 'none',
+                          border: 'none',
+                          borderBottom: activePaymentTab === tab ? '2px solid #2563eb' : '2px solid transparent',
+                          color: activePaymentTab === tab ? '#2563eb' : '#6b7280',
+                          fontWeight: activePaymentTab === tab ? '600' : '500',
+                          cursor: 'pointer',
+                          textTransform: 'capitalize'
+                        }}
+                      >
+                        {tab === 'link' ? 'Generate Link' : 'Pay Now'}
+                      </button>
+                    ))}
                   </div>
-                  <div className="generated-link-input-group">
-                    <input
-                      type="text"
-                      className="generated-link-input"
-                      value={generatedPaymentLink}
-                      readOnly
-                    />
-                    <div className="generated-link-actions">
-                      <button type="button" className="generated-link-action-btn" onClick={handleCopyLink}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M16 1H4C2.89543 1 2 1.89543 2 3V17H4V3H16V1ZM18 5H8C6.89543 5 6 5.89543 6 7V21C6 22.1046 6.89543 23 8 23H18C19.1046 23 20 22.1046 20 21V7C20 5.89543 19.1046 5 18 5ZM8 7H18V21H8V7Z" />
-                        </svg>
-                        Copy Link
-                      </button>
-                      <button type="button" className="generated-link-action-btn" onClick={handleSendEmail}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M22 2L11 13M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                        Send Email
-                      </button>
-                      <button type="button" className="generated-link-action-btn" onClick={handlePreviewLink}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M10 6H6C4.89543 6 4 6.89543 4 8V18C4 19.1046 4.89543 20 6 20H16C17.1046 20 18 19.1046 18 18V14M14 4L20 4M20 4V10M20 4L10 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                        Preview
-                      </button>
+
+                  {/* Tab: Generate Link (Existing User Flow) */}
+                  {activePaymentTab === 'link' && (
+                    <div className="payment-tab-content">
+                      {generatedPaymentLink ? (
+                        <div className="generated-link-section">
+                          <div className="generated-link-header">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2ZM16.7071 9.29289C17.0976 8.90237 17.0976 8.26921 16.7071 7.87869C16.3166 7.48816 15.6834 7.48816 15.2929 7.87869L10.5 12.6716L8.70711 10.8787C8.31658 10.4882 7.68342 10.4882 7.29289 10.8787C6.90237 11.2692 6.90237 11.9024 7.29289 12.2929L9.87869 14.8787C10.2692 15.2692 10.9024 15.2692 11.2929 14.8787L16.7071 9.46447V9.29289Z" />
+                            </svg>
+                            Payment Link Generated:
+                          </div>
+                          <div className="generated-link-input-group">
+                            <input type="text" className="generated-link-input" value={generatedPaymentLink} readOnly />
+                            <div className="generated-link-actions">
+                              <button type="button" className="generated-link-action-btn" onClick={handleCopyLink}>Copy</button>
+                              <button type="button" className="generated-link-action-btn" onClick={handleSendEmail}>Email</button>
+                              <button type="button" className="generated-link-action-btn" onClick={handlePreviewLink}>Preview</button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ padding: '20px', textAlign: 'center', background: '#f9fafb', borderRadius: '8px' }}>
+                          <p style={{ color: '#6b7280' }}>Generate a secure link to share with the client.</p>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  <button type="button" className="generated-link-close-btn" onClick={handleClosePaymentModal}>Close</button>
+                  )}
+
+                  {/* Tab: Pay Now Info */}
+                  {activePaymentTab === 'pay_now' && (
+                    <div className="payment-tab-content" style={{ padding: '20px', background: '#f0f9ff', borderRadius: '8px', border: '1px solid #bae6fd' }}>
+                      <p style={{ color: '#0369a1', margin: 0 }}>
+                        <strong style={{ display: 'block', marginBottom: '5px' }}>Secure Checkout</strong>
+                        You will be redirected to Razorpay's secure payment gateway to complete the transaction via Credit/Debit Card, UPI, or Netbanking.
+                      </p>
+                    </div>
+                  )}
                 </div>
-              ) : (
+
                 <div className="modal-footer modal-form-full-width">
                   <button type="button" className="confirm-cancel-btn" onClick={handleClosePaymentModal}>Cancel</button>
 
-                  <button type="submit" className="create-employee-btn">
-
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '0.9rem', height: '0.9rem' }}>
-                      <path d="M12 4H10C7.79086 4 6 5.79086 6 8C6 10.2091 7.79086 12 10 12H12V14H10C6.68629 14 4 11.3137 4 8C4 4.68629 6.68629 2 10 2H12V4ZM14 10H12C9.79086 10 8 11.7909 8 14C8 16.2091 9.79086 18 12 18H14V20H12C8.68629 20 6 17.3137 6 14C6 10.6863 8.68629 8 12 8H14V10ZM18 6H16V8H18C21.3137 8 24 10.6863 24 14C24 17.3137 21.3137 20 18 20H16V18H18C20.2091 18 22 16.2091 22 14C22 11.7909 20.2091 10 18 10H16V6Z" />
-                    </svg>
-                    Generate Link
-                  </button>
+                  {activePaymentTab === 'link' ? (
+                    !generatedPaymentLink && (
+                      <button type="button" onClick={handleGeneratePaymentLink} className="create-employee-btn">
+                        Generate Link
+                      </button>
+                    )
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleProcessPayment}
+                      className="create-employee-btn"
+                      style={{ backgroundColor: '#28a745' }}
+                      disabled={isSaving}
+                    >
+                      {isSaving ? 'Processing...' : 'Proceed to Payment'}
+                    </button>
+                  )}
                 </div>
-              )}
-
-              <div className="payment-modal-options modal-form-full-width">
-                <h4>Payment Options:</h4>
-                <p className="payment-modal-option-item">
-                  • <strong>Pay Now:</strong> Opens secure payment gateway for immediate processing
-                </p>
-                <p className="payment-modal-option-item">
-                  • <strong>Generate Link:</strong> Creates shareable payment link for client use
-                </p>
-              </div>
-            </form>
+              </form>
+            )}
           </div>
         </div>
       )}
