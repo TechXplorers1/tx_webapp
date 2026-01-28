@@ -616,7 +616,7 @@ const EmployeeData = () => {
       }
     })();
 
-  // 4) Fetch ONLY Assigned Clients (Optimized Reverse Indexing)
+    // 4) Fetch ONLY Assigned Clients (Optimized Reverse Indexing)
     (async () => {
       try {
         if (!employeeFirebaseKey) return;
@@ -626,10 +626,10 @@ const EmployeeData = () => {
         const assignmentsSnapshot = await get(assignmentsRef);
 
         if (!assignmentsSnapshot.exists()) {
-            setNewClients([]);
-            setActiveClients([]);
-            setInactiveClients([]);
-            return;
+          setNewClients([]);
+          setActiveClients([]);
+          setInactiveClients([]);
+          return;
         }
 
         const assignments = assignmentsSnapshot.val();
@@ -637,32 +637,32 @@ const EmployeeData = () => {
 
         // B. Fetch ONLY the specific client records needed (Parallel Fetch)
         Object.values(assignments).forEach(assignment => {
-            const specificClientRef = ref(database, `clients/${assignment.clientFirebaseKey}/serviceRegistrations/${assignment.registrationKey}`);
-            
-            promises.push(get(specificClientRef).then(snap => {
-                if(snap.exists()) {
-                    const registration = snap.val();
-                    
-                    // Flatten jobApplications
-                    const jobApplicationsArray = registration.jobApplications
-                    ? Object.values(registration.jobApplications)
-                    : [];
+          const specificClientRef = ref(database, `clients/${assignment.clientFirebaseKey}/serviceRegistrations/${assignment.registrationKey}`);
 
-                    // Reconstruct the data structure the UI expects
-                    return { 
-                        ...registration,
-                        jobApplications: jobApplicationsArray,
-                        clientFirebaseKey: assignment.clientFirebaseKey, 
-                        registrationKey: assignment.registrationKey,
-                        // Ensure names and initials are generated correctly
-                        firstName: registration.firstName,
-                        lastName: registration.lastName,
-                        name: `${(registration.firstName || '')} ${(registration.lastName || '')}`.trim(),
-                        initials: `${(registration.firstName || 'C').charAt(0)}${(registration.lastName || 'L').charAt(0)}`
-                    };
-                }
-                return null;
-            }));
+          promises.push(get(specificClientRef).then(snap => {
+            if (snap.exists()) {
+              const registration = snap.val();
+
+              // Flatten jobApplications
+              const jobApplicationsArray = registration.jobApplications
+                ? Object.values(registration.jobApplications)
+                : [];
+
+              // Reconstruct the data structure the UI expects
+              return {
+                ...registration,
+                jobApplications: jobApplicationsArray,
+                clientFirebaseKey: assignment.clientFirebaseKey,
+                registrationKey: assignment.registrationKey,
+                // Ensure names and initials are generated correctly
+                firstName: registration.firstName,
+                lastName: registration.lastName,
+                name: `${(registration.firstName || '')} ${(registration.lastName || '')}`.trim(),
+                initials: `${(registration.firstName || 'C').charAt(0)}${(registration.lastName || 'L').charAt(0)}`
+              };
+            }
+            return null;
+          }));
         });
 
         // C. Resolve all promises
@@ -1326,15 +1326,15 @@ const EmployeeData = () => {
     setShowAddApplicationModal(true);
     // Reset form data and errors on open
     setNewApplicationFormData({
-      jobTitle: '', company: '', jobType: '', jobBoards: '', jobDescriptionUrl: '', location: '', jobId: '', role: ''
+      jobTitle: '', company: '', employment: '', jobType: '', jobBoards: '', jobDescriptionUrl: '', location: '', jobId: '', role: ''
     });
     setNewApplicationErrors({});
     setCurrentModalStep(1);
   };
 
   const handleNextStep = () => {
-    // Job ID is NOT mandatory. Mandatory fields are now just jobTitle and company.
-    const mandatoryFieldsStep1 = ['jobTitle', 'company'];
+    // Job ID is NOT mandatory. Mandatory fields are now just jobTitle, company, and employment.
+    const mandatoryFieldsStep1 = ['jobTitle', 'company', 'employment'];
     const errors = {};
     let hasError = false;
 
@@ -1598,14 +1598,14 @@ const EmployeeData = () => {
     };
   }, [handlePasteAttachment]);
 
-// Use this to open the confirmation modal for a specific application
-const handleDeleteApplication = (app) => {
-  // We need the parent client as well – that's the currently selected client
-  if (!selectedClient) return;
+  // Use this to open the confirmation modal for a specific application
+  const handleDeleteApplication = (app) => {
+    // We need the parent client as well – that's the currently selected client
+    if (!selectedClient) return;
 
-  // This will set applicationToDelete and open the confirmation modal
-  handleRequestDeleteApplication(selectedClient, app);
-};
+    // This will set applicationToDelete and open the confirmation modal
+    handleRequestDeleteApplication(selectedClient, app);
+  };
 
 
   // Function to filter and sort job applications
@@ -1973,63 +1973,63 @@ const handleDeleteApplication = (app) => {
     return filtered;
   };
 
-// In EmployeeData.jsx (around line 980)
+  // In EmployeeData.jsx (around line 980)
 
-const handleAcceptClient = async (clientToAccept) => {
+  const handleAcceptClient = async (clientToAccept) => {
     // Ensure the client has the necessary keys
     const { clientFirebaseKey, registrationKey } = clientToAccept;
 
     if (!clientFirebaseKey || !registrationKey) {
-        alert("Error: Missing client keys for acceptance.");
-        return;
+      alert("Error: Missing client keys for acceptance.");
+      return;
     }
 
     const registrationRef = ref(database, `clients/${clientFirebaseKey}/serviceRegistrations/${registrationKey}`);
-    
+
     // Create the updated client object for local state (must be done before Firebase update)
     const updatedClient = {
-        ...clientToAccept,
-        assignmentStatus: 'active', // The new status
+      ...clientToAccept,
+      assignmentStatus: 'active', // The new status
     };
 
     try {
-        // 1. Update status in Firebase Realtime Database
-        await update(registrationRef, { assignmentStatus: 'active' });
+      // 1. Update status in Firebase Realtime Database
+      await update(registrationRef, { assignmentStatus: 'active' });
 
-        // 2. Update the local IndexedDB cache immediately (crucial for cost/performance)
-        await updateLocalClientCache(
-            clientFirebaseKey,
-            registrationKey,
-            'assignmentStatus',
-            'active'
-        );
+      // 2. Update the local IndexedDB cache immediately (crucial for cost/performance)
+      await updateLocalClientCache(
+        clientFirebaseKey,
+        registrationKey,
+        'assignmentStatus',
+        'active'
+      );
 
-        // 3. Update local state arrays for immediate UI refresh
-        setNewClients(prev =>
-            prev.filter(c => c.registrationKey !== registrationKey) // Remove from New Clients
-        );
-        
-        setActiveClients(prev =>
-            // Add the new client to Active Clients (ensuring no duplicates, though unlikely here)
-            [...prev.filter(c => c.registrationKey !== registrationKey), updatedClient] 
-        );
+      // 3. Update local state arrays for immediate UI refresh
+      setNewClients(prev =>
+        prev.filter(c => c.registrationKey !== registrationKey) // Remove from New Clients
+      );
 
-        // No need to update inactiveClients as they were not inactive before
+      setActiveClients(prev =>
+        // Add the new client to Active Clients (ensuring no duplicates, though unlikely here)
+        [...prev.filter(c => c.registrationKey !== registrationKey), updatedClient]
+      );
 
-        // 4. Set the newly accepted client as the selected one (optional, for convenience)
-        setSelectedClient(updatedClient);
+      // No need to update inactiveClients as they were not inactive before
 
-        // 5. Provide feedback
-        triggerNotification(`Client ${clientToAccept.name} has been moved to Active Clients!`);
+      // 4. Set the newly accepted client as the selected one (optional, for convenience)
+      setSelectedClient(updatedClient);
 
-        // OPTIONAL: Switch tab to Active Clients immediately
-        setActiveTab('Active Clients');
+      // 5. Provide feedback
+      triggerNotification(`Client ${clientToAccept.name} has been moved to Active Clients!`);
+
+      // OPTIONAL: Switch tab to Active Clients immediately
+      setActiveTab('Active Clients');
 
     } catch (error) {
-        console.error("Failed to accept client:", error);
-        alert("Error accepting client. Please check your network connection or Firebase rules.");
+      console.error("Failed to accept client:", error);
+      alert("Error accepting client. Please check your network connection or Firebase rules.");
     }
-};
+  };
 
   const formatDateTime = (timestamp) => {
     if (!timestamp) return { date: 'N/A', time: 'N/A' };
@@ -2452,7 +2452,7 @@ const handleAcceptClient = async (clientToAccept) => {
     }).sort((a, b) => new Date(b.requestedDate) - new Date(a.requestedDate)); // Keep sorting by newest first
   }, [leaveRequests, searchQuery, filterFromDate, filterToDate]);
 
-      // --- Applications pagination (page size = 5) ---
+  // --- Applications pagination (page size = 5) ---
   const APPLICATIONS_PAGE_SIZE = 5;
   const [applicationsPage, setApplicationsPage] = useState(0);
 
@@ -3328,6 +3328,7 @@ const handleAcceptClient = async (clientToAccept) => {
                                   <th style={applicationTableHeaderCellStyle}>S.No</th>
                                   <th style={applicationTableHeaderCellStyle}>Job Title</th>
                                   <th style={applicationTableHeaderCellStyle}>Company</th>
+                                  <th style={applicationTableHeaderCellStyle}>Employment Type</th>
                                   <th style={applicationTableHeaderCellStyle}>Job Boards</th>
                                   <th style={applicationTableHeaderCellStyle}>Job ID</th>
                                   <th style={applicationTableHeaderCellStyle}>Job Description Link</th>
@@ -3336,227 +3337,230 @@ const handleAcceptClient = async (clientToAccept) => {
                                   <th style={applicationTableHeaderCellStyle}>Actions</th>
                                 </tr>
                               </thead>
-                                                      <tbody>
-                          {allFilteredApplications.length === 0 ? (
-                            <tr>
-                              <td
-                                colSpan="9"
+                              <tbody>
+                                {allFilteredApplications.length === 0 ? (
+                                  <tr>
+                                    <td
+                                      colSpan="10"
+                                      style={{
+                                        textAlign: 'center',
+                                        padding: '20px',
+                                        color: '#64748b',
+                                      }}
+                                    >
+                                      No applications found for this client.
+                                    </td>
+                                  </tr>
+                                ) : (
+                                  paginatedApplications.map((app, index) => {
+                                    // Global S.No (descending across all pages)
+                                    const globalIndex =
+                                      allFilteredApplications.length -
+                                      (applicationsPage * APPLICATIONS_PAGE_SIZE + index);
+
+                                    return (
+                                      <tr key={app.id}>
+                                        <td style={applicationTableDataCellStyle}>
+                                          {globalIndex}
+                                        </td>
+                                        <td style={applicationTableDataCellStyle}>
+                                          {app.jobTitle}
+                                        </td>
+                                        <td style={applicationTableDataCellStyle}>
+                                          {app.company}
+                                        </td>
+                                        <td style={applicationTableDataCellStyle}>
+                                          {app.employment || '-'}
+                                        </td>
+                                        <td style={applicationTableDataCellStyle}>
+                                          {app.jobBoards}
+                                        </td>
+                                        <td style={applicationTableDataCellStyle}>
+                                          {app.jobId || '-'}
+                                        </td>
+                                        <td style={applicationTableDataCellStyle}>
+                                          {app.jobDescriptionUrl && (
+                                            <a
+                                              href={app.jobDescriptionUrl}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              style={{
+                                                color: '#3b82f6',
+                                                textDecoration: 'underline',
+                                              }}
+                                            >
+                                              Description Link
+                                            </a>
+                                          )}
+                                        </td>
+                                        <td style={applicationTableDataCellStyle}>
+                                          {app.appliedDate}
+                                        </td>
+                                        <td style={applicationTableDataCellStyle}>
+                                          {app.attachments && app.attachments.length > 0 ? (
+                                            <button
+                                              onClick={() => {
+                                                setViewedApplication(app);
+                                                setShowViewApplicationModal(true);
+                                              }}
+                                              style={{
+                                                background: 'none',
+                                                border: 'none',
+                                                color: '#3b82f6',
+                                                textDecoration: 'underline',
+                                                cursor: 'pointer',
+                                              }}
+                                            >
+                                              View ({app.attachments.length})
+                                            </button>
+                                          ) : (
+                                            'N/A'
+                                          )}
+                                        </td>
+                                        <td style={applicationTableDataCellStyle}>
+                                          <button
+                                            onClick={() => handleViewApplication(app)}
+                                            style={actionButtonAppStyle}
+                                          >
+                                            {/* existing view icon */}
+                                            <svg
+                                              width="18"
+                                              height="18"
+                                              viewBox="0 0 24 24"
+                                              fill="none"
+                                              stroke="currentColor"
+                                              strokeWidth="2"
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                            >
+                                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                              <circle cx="12" cy="12" r="3"></circle>
+                                            </svg>
+                                          </button>
+                                          <button
+                                            onClick={() => handleEditApplication(app)}
+                                            style={actionButtonSecondaryStyle}
+                                          >
+                                            {/* existing edit icon */}
+                                            <svg
+                                              width="18"
+                                              height="18"
+                                              viewBox="0 0 24 24"
+                                              fill="none"
+                                              stroke="currentColor"
+                                              strokeWidth="2"
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                            >
+                                              <path d="M12 20h9"></path>
+                                              <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z"></path>
+                                            </svg>
+                                          </button>
+                                          <button
+                                            onClick={() => handleDeleteApplication(app)}
+                                            style={deleteButtonStyle}
+                                          >
+                                            {/* existing delete icon */}
+                                            <svg
+                                              width="18"
+                                              height="18"
+                                              viewBox="0 0 24 24"
+                                              fill="none"
+                                              stroke="currentColor"
+                                              strokeWidth="2"
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                            >
+                                              <polyline points="3 6 5 6 21 6"></polyline>
+                                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                              <line x1="10" y1="11" x2="10" y2="17"></line>
+                                              <line x1="14" y1="11" x2="14" y2="17"></line>
+                                            </svg>
+                                          </button>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })
+                                )}
+                              </tbody>
+                            </table>
+
+                            {/* Pagination controls for applications */}
+                            {allFilteredApplications.length > APPLICATIONS_PAGE_SIZE && (
+                              <div
                                 style={{
-                                  textAlign: 'center',
-                                  padding: '20px',
-                                  color: '#64748b',
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  marginTop: '12px',
                                 }}
                               >
-                                No applications found for this client.
-                              </td>
-                            </tr>
-                          ) : (
-                            paginatedApplications.map((app, index) => {
-                              // Global S.No (descending across all pages)
-                              const globalIndex =
-                                allFilteredApplications.length -
-                                (applicationsPage * APPLICATIONS_PAGE_SIZE + index);
+                                <span
+                                  style={{
+                                    fontSize: '0.85rem',
+                                    color: '#64748b',
+                                  }}
+                                >
+                                  Showing{' '}
+                                  {applicationsPage * APPLICATIONS_PAGE_SIZE + 1}
+                                  {' - '}
+                                  {Math.min(
+                                    (applicationsPage + 1) * APPLICATIONS_PAGE_SIZE,
+                                    allFilteredApplications.length
+                                  )}{' '}
+                                  of {allFilteredApplications.length} applications
+                                </span>
 
-                              return (
-                                <tr key={app.id}>
-                                  <td style={applicationTableDataCellStyle}>
-                                    {globalIndex}
-                                  </td>
-                                  <td style={applicationTableDataCellStyle}>
-                                    {app.jobTitle}
-                                  </td>
-                                  <td style={applicationTableDataCellStyle}>
-                                    {app.company}
-                                  </td>
-                                  <td style={applicationTableDataCellStyle}>
-                                    {app.jobBoards}
-                                  </td>
-                                  <td style={applicationTableDataCellStyle}>
-                                    {app.jobId || '-'}
-                                  </td>
-                                  <td style={applicationTableDataCellStyle}>
-                                    {app.jobDescriptionUrl && (
-                                      <a
-                                        href={app.jobDescriptionUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        style={{
-                                          color: '#3b82f6',
-                                          textDecoration: 'underline',
-                                        }}
-                                      >
-                                        Description Link
-                                      </a>
-                                    )}
-                                  </td>
-                                  <td style={applicationTableDataCellStyle}>
-                                    {app.appliedDate}
-                                  </td>
-                                  <td style={applicationTableDataCellStyle}>
-                                    {app.attachments && app.attachments.length > 0 ? (
-                                      <button
-                                        onClick={() => {
-                                          setViewedApplication(app);
-                                          setShowViewApplicationModal(true);
-                                        }}
-                                        style={{
-                                          background: 'none',
-                                          border: 'none',
-                                          color: '#3b82f6',
-                                          textDecoration: 'underline',
-                                          cursor: 'pointer',
-                                        }}
-                                      >
-                                        View ({app.attachments.length})
-                                      </button>
-                                    ) : (
-                                      'N/A'
-                                    )}
-                                  </td>
-                                  <td style={applicationTableDataCellStyle}>
-                                    <button
-                                      onClick={() => handleViewApplication(app)}
-                                      style={actionButtonAppStyle}
-                                    >
-                                      {/* existing view icon */}
-                                      <svg
-                                        width="18"
-                                        height="18"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="2"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                      >
-                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                        <circle cx="12" cy="12" r="3"></circle>
-                                      </svg>
-                                    </button>
-                                    <button
-                                      onClick={() => handleEditApplication(app)}
-                                      style={actionButtonSecondaryStyle}
-                                    >
-                                      {/* existing edit icon */}
-                                      <svg
-                                        width="18"
-                                        height="18"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="2"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                      >
-                                        <path d="M12 20h9"></path>
-                                        <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z"></path>
-                                      </svg>
-                                    </button>
-                                    <button
-                                      onClick={() => handleDeleteApplication(app)}
-                                      style={deleteButtonStyle}
-                                    >
-                                      {/* existing delete icon */}
-                                      <svg
-                                        width="18"
-                                        height="18"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="2"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                      >
-                                        <polyline points="3 6 5 6 21 6"></polyline>
-                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                        <line x1="10" y1="11" x2="10" y2="17"></line>
-                                        <line x1="14" y1="11" x2="14" y2="17"></line>
-                                      </svg>
-                                    </button>
-                                  </td>
-                                </tr>
-                              );
-                            })
-                          )}
-                        </tbody>
-                      </table>
-
-                      {/* Pagination controls for applications */}
-                      {allFilteredApplications.length > APPLICATIONS_PAGE_SIZE && (
-                        <div
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            marginTop: '12px',
-                          }}
-                        >
-                          <span
-                            style={{
-                              fontSize: '0.85rem',
-                              color: '#64748b',
-                            }}
-                          >
-                            Showing{' '}
-                            {applicationsPage * APPLICATIONS_PAGE_SIZE + 1}
-                            {' - '}
-                            {Math.min(
-                              (applicationsPage + 1) * APPLICATIONS_PAGE_SIZE,
-                              allFilteredApplications.length
-                            )}{' '}
-                            of {allFilteredApplications.length} applications
-                          </span>
-
-                          <div
-                            style={{
-                              display: 'flex',
-                              gap: '8px',
-                            }}
-                          >
-                            <button
-                              type="button"
-                              onClick={handlePrevApplicationsPage}
-                              disabled={applicationsPage === 0}
-                              style={{
-                                padding: '6px 10px',
-                                borderRadius: '6px',
-                                border: '1px solid #cbd5e1',
-                                backgroundColor:
-                                  applicationsPage === 0 ? '#e2e8f0' : '#ffffff',
-                                cursor:
-                                  applicationsPage === 0
-                                    ? 'not-allowed'
-                                    : 'pointer',
-                                fontSize: '0.85rem',
-                              }}
-                            >
-                              Prev
-                            </button>
-                            <button
-                              type="button"
-                              onClick={handleNextApplicationsPage}
-                              disabled={applicationsPage + 1 >= totalApplicationPages}
-                              style={{
-                                padding: '6px 10px',
-                                borderRadius: '6px',
-                                border: '1px solid #cbd5e1',
-                                backgroundColor:
-                                  applicationsPage + 1 >= totalApplicationPages
-                                    ? '#e2e8f0'
-                                    : '#ffffff',
-                                cursor:
-                                  applicationsPage + 1 >= totalApplicationPages
-                                    ? 'not-allowed'
-                                    : 'pointer',
-                                fontSize: '0.85rem',
-                              }}
-                            >
-                              Next
-                            </button>
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    gap: '8px',
+                                  }}
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={handlePrevApplicationsPage}
+                                    disabled={applicationsPage === 0}
+                                    style={{
+                                      padding: '6px 10px',
+                                      borderRadius: '6px',
+                                      border: '1px solid #cbd5e1',
+                                      backgroundColor:
+                                        applicationsPage === 0 ? '#e2e8f0' : '#ffffff',
+                                      cursor:
+                                        applicationsPage === 0
+                                          ? 'not-allowed'
+                                          : 'pointer',
+                                      fontSize: '0.85rem',
+                                    }}
+                                  >
+                                    Prev
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={handleNextApplicationsPage}
+                                    disabled={applicationsPage + 1 >= totalApplicationPages}
+                                    style={{
+                                      padding: '6px 10px',
+                                      borderRadius: '6px',
+                                      border: '1px solid #cbd5e1',
+                                      backgroundColor:
+                                        applicationsPage + 1 >= totalApplicationPages
+                                          ? '#e2e8f0'
+                                          : '#ffffff',
+                                      cursor:
+                                        applicationsPage + 1 >= totalApplicationPages
+                                          ? 'not-allowed'
+                                          : 'pointer',
+                                      fontSize: '0.85rem',
+                                    }}
+                                  >
+                                    Next
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      )}
-                    </div>
                         ))}
 
                       {selectedClient.jobApplications && selectedClient.jobApplications.length === 0 && (
@@ -4622,8 +4626,8 @@ const handleAcceptClient = async (clientToAccept) => {
                         </div>
                       )}
                     </div>
-                    </div>
                   </div>
+                </div>
               )}
 
               {/* Files Tab Content for Inactive Clients */}
@@ -5091,51 +5095,70 @@ const handleAcceptClient = async (clientToAccept) => {
               Apply for a job on behalf of {selectedClient.name}.
             </p>
             <div style={modalFormGridStyle}>
-              {/* --- STEP 1 FIELDS (Always visible on step 1) --- */}
-              <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Job Title <span style={{ color: 'red' }}>*</span></label>
-                <input
-                  type="text"
-                  name="jobTitle"
-                  value={newApplicationFormData.jobTitle}
-                  onChange={handleNewApplicationFormChange}
-                  style={{ ...modalInputStyle, borderColor: newApplicationErrors.jobTitle ? 'red' : '#cbd5e1' }}
-                  placeholder="e.g., Senior Frontend Developer"
-                  required
-                />
-                {newApplicationErrors.jobTitle && <p style={errorTextStyle}>{newApplicationErrors.jobTitle}</p>}
-              </div>
+              {/* --- STEP 1 FIELDS (Only visible on step 1) --- */}
+              {currentModalStep === 1 && (
+                <>
+                  <div style={modalFormFieldGroupStyle}>
+                    <label style={modalLabelStyle}>Job Title <span style={{ color: 'red' }}>*</span></label>
+                    <input
+                      type="text"
+                      name="jobTitle"
+                      value={newApplicationFormData.jobTitle}
+                      onChange={handleNewApplicationFormChange}
+                      style={{ ...modalInputStyle, borderColor: newApplicationErrors.jobTitle ? 'red' : '#cbd5e1' }}
+                      placeholder="e.g., Senior Frontend Developer"
+                      required
+                    />
+                    {newApplicationErrors.jobTitle && <p style={errorTextStyle}>{newApplicationErrors.jobTitle}</p>}
+                  </div>
 
-              <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Company <span style={{ color: 'red' }}>*</span></label>
-                <input
-                  type="text"
-                  name="company"
-                  value={newApplicationFormData.company}
-                  onChange={handleNewApplicationFormChange}
-                  style={{ ...modalInputStyle, borderColor: newApplicationErrors.company ? 'red' : '#cbd5e1' }}
-                  placeholder="e.g., TechCorp"
-                  required
-                />
-                {newApplicationErrors.company && <p style={errorTextStyle}>{newApplicationErrors.company}</p>}
-              </div>
+                  <div style={modalFormFieldGroupStyle}>
+                    <label style={modalLabelStyle}>Company <span style={{ color: 'red' }}>*</span></label>
+                    <input
+                      type="text"
+                      name="company"
+                      value={newApplicationFormData.company}
+                      onChange={handleNewApplicationFormChange}
+                      style={{ ...modalInputStyle, borderColor: newApplicationErrors.company ? 'red' : '#cbd5e1' }}
+                      placeholder="e.g., TechCorp"
+                      required
+                    />
+                    {newApplicationErrors.company && <p style={errorTextStyle}>{newApplicationErrors.company}</p>}
+                  </div>
 
-              <div style={modalFormFieldGroupStyle}>
-                <label style={modalLabelStyle}>Job ID</label>
-                <input
-                  type="text"
-                  name="jobId"
-                  value={newApplicationFormData.jobId}
-                  onChange={handleNewApplicationFormChange}
-                  style={{ ...modalInputStyle, borderColor: newApplicationErrors.jobId ? 'red' : '#cbd5e1' }}
-                  placeholder="e.g., ABC-12345"
+                  <div style={modalFormFieldGroupStyle}>
+                    <label style={modalLabelStyle}>Employment Type <span style={{ color: 'red' }}>*</span></label>
+                    <select
+                      name="employment"
+                      value={newApplicationFormData.employment}
+                      onChange={handleNewApplicationFormChange}
+                      style={{ ...modalSelectStyle, borderColor: newApplicationErrors.employment ? 'red' : '#cbd5e1' }}
+                      required
+                    >
+                      <option value="">Select Employment Type</option>
+                      <option value="W2">W2</option>
+                      <option value="C2C">C2C</option>
+                      <option value="Other">Other</option>
+                    </select>
+                    {newApplicationErrors.employment && <p style={errorTextStyle}>{newApplicationErrors.employment}</p>}
+                  </div>
 
-                />
-                {newApplicationErrors.jobId && <p style={errorTextStyle}>{newApplicationErrors.jobId}</p>}
-              </div>
+                  <div style={modalFormFieldGroupStyle}>
+                    <label style={modalLabelStyle}>Job ID</label>
+                    <input
+                      type="text"
+                      name="jobId"
+                      value={newApplicationFormData.jobId}
+                      onChange={handleNewApplicationFormChange}
+                      style={{ ...modalInputStyle, borderColor: newApplicationErrors.jobId ? 'red' : '#cbd5e1' }}
+                      placeholder="e.g., ABC-12345"
 
-              {/* Empty slot for alignment in Step 1 */}
-              <div style={modalFormFieldGroupStyle}></div>
+                    />
+                    {newApplicationErrors.jobId && <p style={errorTextStyle}>{newApplicationErrors.jobId}</p>}
+                  </div>
+
+                </>
+              )}
 
 
               {/* --- STEP 2 FIELDS (Only visible on step 2) --- */}
@@ -5206,8 +5229,7 @@ const handleAcceptClient = async (clientToAccept) => {
                       placeholder="e.g., San Francisco, CA"
                     />
                   </div>
-                  {/* Empty slot for alignment */}
-                  <div style={modalFormFieldGroupStyle}></div>
+
                 </>
               )}
             </div>
@@ -5260,6 +5282,7 @@ const handleAcceptClient = async (clientToAccept) => {
             <div style={modalViewDetailsGridStyle}>
               <p style={modalViewDetailItemStyle}><strong>Job Title:</strong> {viewedApplication.jobTitle}</p>
               <p style={modalViewDetailItemStyle}><strong>Company:</strong> {viewedApplication.company}</p>
+              <p style={modalViewDetailItemStyle}><strong>Employment Type:</strong> {viewedApplication.employment || '-'}</p>
               <p style={modalViewDetailItemStyle}><strong>Job Boards:</strong> {viewedApplication.jobBoards}</p>
               <p style={modalViewDetailItemStyle}><strong>Job ID:</strong> {viewedApplication.jobId || '-'}</p> {/* Display Job ID */}
               <p style={modalViewDetailItemStyle}><strong>Job Description URL:</strong> <a href={viewedApplication.jobDescriptionUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6' }}>{viewedApplication.jobDescriptionUrl}</a></p>

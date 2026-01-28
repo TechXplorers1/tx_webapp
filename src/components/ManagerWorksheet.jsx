@@ -2569,6 +2569,7 @@ Please provide a summary no longer than 150 words.`;
                                   <tr>
                                     <th>Company</th>
                                     <th>Job Title</th>
+                                    <th>Employment Type</th>
                                     <th>Job ID</th>
                                     <th>Job Boards</th>
                                     <th>Job Type</th>
@@ -2587,6 +2588,7 @@ Please provide a summary no longer than 150 words.`;
                                       <tr key={app.id || index}>
                                         <td>{app.company}</td>
                                         <td>{app.jobTitle}</td>
+                                        <td>{app.employment || '-'}</td>
                                         <td>{app.jobId}</td>
                                         <td>{app.jobBoards}</td>
                                         <td>{app.jobType}</td>
@@ -7562,6 +7564,7 @@ Please provide a summary no longer than 150 words.`;
               <p className="modal-view-detail-item"><strong>Created Employee:</strong> {selectedApplication?.employeeName || 'N/A'}</p>
               <p className="modal-view-detail-item"><strong>Job Title:</strong> {selectedApplication.jobTitle}</p>
               <p className="modal-view-detail-item"><strong>Company:</strong> {selectedApplication.company}</p>
+              <p className="modal-view-detail-item"><strong>Employment Type:</strong> {selectedApplication.employment || '-'}</p>
               <p className="modal-view-detail-item"><strong>Job ID:</strong> {selectedApplication.jobId}</p>
               <p className="modal-view-detail-item"><strong>Job Boards:</strong> {selectedApplication.jobBoards}</p>
               <p className="modal-view-detail-item"><strong>Job Type:</strong> {selectedApplication.jobType}</p>
@@ -7600,6 +7603,15 @@ Please provide a summary no longer than 150 words.`;
               <div className="form-group">
                 <label>Company</label>
                 <input type="text" name="company" value={editableApplication.company} onChange={handleApplicationChange} />
+              </div>
+              <div className="form-group">
+                <label>Employment Type</label>
+                <select name="employment" value={editableApplication.employment || ''} onChange={handleApplicationChange}>
+                  <option value="">Select...</option>
+                  <option value="W2">W2</option>
+                  <option value="C2C">C2C</option>
+                  <option value="Other">Other</option>
+                </select>
               </div>
               <div className="form-group">
                 <label>Job Boards</label>
