@@ -5138,7 +5138,6 @@ const EmployeeData = () => {
                       <option value="">Select Employment Type</option>
                       <option value="W2">W2</option>
                       <option value="C2C">C2C</option>
-                      <option value="Other">Other</option>
                     </select>
                     {newApplicationErrors.employment && <p style={errorTextStyle}>{newApplicationErrors.employment}</p>}
                   </div>
