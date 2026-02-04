@@ -2170,6 +2170,7 @@ const EmployeeData = () => {
       'Client Email': selectedClient.email || '-',
       'Job Title': app.jobTitle || '-',
       'Company': app.company || '-',
+      'Employment Type': app.employment || '-',
       'Job Boards': app.jobBoards || '-',
       'Applied Date': app.appliedDate || '-',
       'Status': app.status || '-',

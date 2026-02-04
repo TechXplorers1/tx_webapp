@@ -1828,6 +1828,7 @@ const ManagerWorkSheet = () => {
         'Job Title': app.jobTitle,
         'Job ID': app.jobId,
         'Company': app.company,
+        'Employment Type': app.employment || 'N/A',
         'Job Description Link': app.jobDescriptionUrl,
         'Status': app.status,
         'Employee Name (Creator)': app.employeeName || 'N/A',
