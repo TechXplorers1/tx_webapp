@@ -1346,21 +1346,40 @@ const EmployeeData = () => {
       }
     });
 
-    const { jobId, company } = newApplicationFormData;
+    const { jobTitle, company, jobId } = newApplicationFormData;
 
-    // 2. Conflict Check: If Job ID is provided, check for a duplicate (Company + Job ID)
-    if (jobId && jobId.trim() !== '' && company && company.trim() !== '' && selectedClient?.jobApplications) {
-      const lowerCaseJobId = jobId.trim().toLowerCase();
-      const lowerCaseCompany = company.trim().toLowerCase();
+    // 2. Conflict Check
+    if (selectedClient?.jobApplications) {
+      const lowerCaseJobTitle = jobTitle ? jobTitle.trim().toLowerCase() : '';
+      const lowerCaseCompany = company ? company.trim().toLowerCase() : '';
+      const lowerCaseJobId = jobId ? jobId.trim().toLowerCase() : '';
 
-      const existingApp = selectedClient.jobApplications.find(app =>
-        app.jobId && app.jobId.toLowerCase() === lowerCaseJobId &&
-        app.company && app.company.toLowerCase() === lowerCaseCompany
-      );
+      // Check for Job Title + Company
+      if (lowerCaseJobTitle && lowerCaseCompany) {
+        const duplicateTitleCompany = selectedClient.jobApplications.find(app =>
+          app.jobTitle && app.jobTitle.toLowerCase() === lowerCaseJobTitle &&
+          app.company && app.company.toLowerCase() === lowerCaseCompany
+        );
 
-      if (existingApp && existingApp.id !== newApplicationFormData.id) {
-        errors.jobId = `You have already applied for the same Job ID on ${existingApp.appliedDate}.`;
-        hasError = true;
+        if (duplicateTitleCompany && duplicateTitleCompany.id !== newApplicationFormData.id) {
+          errors.jobTitle = 'You have already applied the job.';
+          errors.company = 'You have already applied the job.';
+          hasError = true;
+        }
+      }
+
+      // Check for Job Title + Company + Job ID
+      if (lowerCaseJobId && lowerCaseCompany && lowerCaseJobTitle) {
+        const duplicateAll = selectedClient.jobApplications.find(app =>
+          app.jobId && app.jobId.toLowerCase() === lowerCaseJobId &&
+          app.company && app.company.toLowerCase() === lowerCaseCompany &&
+          app.jobTitle && app.jobTitle.toLowerCase() === lowerCaseJobTitle
+        );
+
+        if (duplicateAll && duplicateAll.id !== newApplicationFormData.id) {
+          errors.jobId = 'You have already applied the job.';
+          hasError = true;
+        }
       }
     }
 
@@ -1385,34 +1404,63 @@ const EmployeeData = () => {
       setNewApplicationErrors(prev => ({ ...prev, [name]: '' }));
     }
 
-    // Special validation check for Job ID conflict (only runs if both fields are non-empty)
-    if (name === 'jobId' || name === 'company') {
-      const jobIdCheck = newFormData.jobId;
-      const companyCheck = newFormData.company;
+    // Validation check for Conflicts on Job Title, Company, or Job ID
+    if (['jobTitle', 'company', 'jobId'].includes(name)) {
+      const jobTitleCheck = newFormData.jobTitle ? newFormData.jobTitle.trim().toLowerCase() : '';
+      const companyCheck = newFormData.company ? newFormData.company.trim().toLowerCase() : '';
+      const jobIdCheck = newFormData.jobId ? newFormData.jobId.trim().toLowerCase() : '';
 
-      if (jobIdCheck && jobIdCheck.trim() !== '' && companyCheck && companyCheck.trim() !== '' && selectedClient?.jobApplications) {
-        const lowerCaseJobId = jobIdCheck.trim().toLowerCase();
-        const lowerCaseCompany = companyCheck.trim().toLowerCase();
+      let newErrors = { ...newApplicationErrors };
 
-        const existingApp = selectedClient.jobApplications.find(app =>
-          app.jobId && app.jobId.toLowerCase() === lowerCaseJobId &&
-          app.company && app.company.toLowerCase() === lowerCaseCompany
-        );
+      // Clear errors first to re-eval
+      if (name === 'jobTitle') delete newErrors.jobTitle;
+      if (name === 'company') delete newErrors.company;
+      if (name === 'jobId') delete newErrors.jobId;
 
-        if (existingApp) {
-          // Set error only on the Job ID field for visibility
-          setNewApplicationErrors(prev => ({
-            ...prev,
-            jobId: `You have already applied for the same Job ID on ${existingApp.appliedDate}.`,
-          }));
-        } else if (newApplicationErrors.jobId) {
-          // Clear the error if the conflict is resolved
-          setNewApplicationErrors(prev => ({ ...prev, jobId: '' }));
+      if (selectedClient?.jobApplications) {
+        let isDuplicate = false;
+
+        // Check 1: Job Title + Company
+        if (jobTitleCheck && companyCheck) {
+          const existingTitleCompany = selectedClient.jobApplications.find(app =>
+            app.jobTitle && app.jobTitle.toLowerCase() === jobTitleCheck &&
+            app.company && app.company.toLowerCase() === companyCheck
+          );
+
+          if (existingTitleCompany) {
+            newErrors.jobTitle = 'You have already applied the job.';
+            newErrors.company = 'You have already applied the job.';
+            isDuplicate = true;
+          }
         }
-      } else if (newApplicationErrors.jobId) {
-        // Clear the error if one of the required fields becomes empty
-        setNewApplicationErrors(prev => ({ ...prev, jobId: '' }));
+
+        // Check 2: Job Title + Company + Job ID
+        if (jobIdCheck && jobTitleCheck && companyCheck) {
+          const existingAll = selectedClient.jobApplications.find(app =>
+            app.jobId && app.jobId.toLowerCase() === jobIdCheck &&
+            app.company && app.company.toLowerCase() === companyCheck &&
+            app.jobTitle && app.jobTitle.toLowerCase() === jobTitleCheck
+          );
+
+          if (existingAll) {
+            newErrors.jobId = 'You have already applied the job.';
+            isDuplicate = true;
+          }
+        }
+
+        // If no duplicates found, clear potentially lingering errors (handled by delete newErrors above mostly)
+        // But if user fixed one field, we need to unsure others are cleared if they were part of the error group?
+        // E.g. changing Company might fix Job Title error.
+
+        if (!isDuplicate) {
+          if (companyCheck && jobTitleCheck) {
+            // If we have both and no duplicate, make sure errors are gone
+            delete newErrors.jobTitle;
+            delete newErrors.company;
+          }
+        }
       }
+      setNewApplicationErrors(newErrors);
     }
   };
 
