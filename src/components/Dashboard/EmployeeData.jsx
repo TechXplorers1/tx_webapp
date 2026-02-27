@@ -875,6 +875,7 @@ const EmployeeData = () => {
     jobTitle: '', company: '', jobType: '', jobBoards: '', jobDescriptionUrl: '', location: '', jobDesc: '', jobId: '', role: '' // Added jobId
   });
   const [selectedClientForApplication, setSelectedClientForApplication] = useState(null);
+  const [isSubmittingApplication, setIsSubmittingApplication] = useState(false);
 
   const [showViewApplicationModal, setShowViewApplicationModal] = useState(false);
   const [viewedApplication, setViewedApplication] = useState(null);
@@ -1487,6 +1488,7 @@ const EmployeeData = () => {
       return;
     }
 
+    setIsSubmittingApplication(true);
     const newApp = {
       id: Date.now(),
       ...newApplicationFormData,
@@ -1517,6 +1519,8 @@ const EmployeeData = () => {
     } catch (error) {
       console.error("Failed to save new application:", error);
       alert("Error saving application.");
+    } finally {
+      setIsSubmittingApplication(false);
     }
   };
 
@@ -1681,8 +1685,11 @@ const EmployeeData = () => {
       const start = filterDateRange.startDate;
       const end = filterDateRange.endDate;
 
-      if (start || end) {
-        // CASE 1: Date range filter is active (show applications within the custom range)
+      if (searchTerm) {
+        // CASE 1: Search term is active — search across ALL dates
+        matchesDateRange = true;
+      } else if (start || end) {
+        // CASE 2: Date range filter is active (show applications within the custom range)
         const appDate = new Date(app.appliedDate);
         const startDate = start ? new Date(start) : null;
         const endDate = end ? new Date(end) : null;
@@ -1695,7 +1702,7 @@ const EmployeeData = () => {
           (!endDate || appDate <= endDate);
 
       } else {
-        // CASE 2: No date range is set (DEFAULT to showing ONLY TODAY's applications)
+        // CASE 3: No search and no date range — default to showing ONLY TODAY's applications
         matchesDateRange = app.appliedDate === todayFormatted;
       }
 
@@ -5305,14 +5312,33 @@ const EmployeeData = () => {
                 <button
                   onClick={() => setCurrentModalStep(1)}
                   style={modalCancelButtonStyle}
+                  disabled={isSubmittingApplication}
                 >
                   Back
                 </button>
                 <button
                   onClick={handleSaveNewApplication}
-                  style={modalAddButtonPrimaryStyle}
+                  style={{
+                    ...modalAddButtonPrimaryStyle,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    opacity: isSubmittingApplication ? 0.7 : 1,
+                    pointerEvents: isSubmittingApplication ? 'none' : 'auto'
+                  }}
+                  disabled={isSubmittingApplication}
                 >
-                  Submit
+                  {isSubmittingApplication && (
+                    <Spinner
+                      as="span"
+                      animation="border"
+                      size="sm"
+                      role="status"
+                      aria-hidden="true"
+                      style={{ width: '16px', height: '16px' }}
+                    />
+                  )}
+                  {isSubmittingApplication ? 'Submitting...' : 'Submit'}
                 </button>
               </>
             )}
