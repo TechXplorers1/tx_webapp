@@ -1395,75 +1395,71 @@ const EmployeeData = () => {
     setCurrentModalStep(2);
   };
 
-  const handleNewApplicationFormChange = (e) => {
+  // Optimized: Fast form change handler (no validation on every keystroke)
+  const handleNewApplicationFormChange = useCallback((e) => {
     const { name, value } = e.target;
-    const newFormData = { ...newApplicationFormData, [name]: value };
-
-    setNewApplicationFormData(newFormData);
-    // Clear the specific error when the user starts typing
+    setNewApplicationFormData(prev => ({ ...prev, [name]: value }));
+    // Only clear the error for this field
     if (newApplicationErrors[name]) {
       setNewApplicationErrors(prev => ({ ...prev, [name]: '' }));
     }
+  }, [newApplicationErrors]);
 
-    // Validation check for Conflicts on Job Title, Company, or Job ID
-    if (['jobTitle', 'company', 'jobId'].includes(name)) {
-      const jobTitleCheck = newFormData.jobTitle ? newFormData.jobTitle.trim().toLowerCase() : '';
-      const companyCheck = newFormData.company ? newFormData.company.trim().toLowerCase() : '';
-      const jobIdCheck = newFormData.jobId ? newFormData.jobId.trim().toLowerCase() : '';
+  // Optimized: Run duplicate validation only on blur (not on every keystroke)
+  const validateApplicationConflicts = useCallback((fieldName, formData) => {
+    if (!['jobTitle', 'company', 'jobId'].includes(fieldName)) return;
 
-      let newErrors = { ...newApplicationErrors };
+    const jobTitleCheck = formData.jobTitle ? formData.jobTitle.trim().toLowerCase() : '';
+    const companyCheck = formData.company ? formData.company.trim().toLowerCase() : '';
+    const jobIdCheck = formData.jobId ? formData.jobId.trim().toLowerCase() : '';
 
-      // Clear errors first to re-eval
-      if (name === 'jobTitle') delete newErrors.jobTitle;
-      if (name === 'company') delete newErrors.company;
-      if (name === 'jobId') delete newErrors.jobId;
+    let newErrors = { ...newApplicationErrors };
 
-      if (selectedClient?.jobApplications) {
-        let isDuplicate = false;
+    // Clear errors first to re-eval
+    if (fieldName === 'jobTitle') delete newErrors.jobTitle;
+    if (fieldName === 'company') delete newErrors.company;
+    if (fieldName === 'jobId') delete newErrors.jobId;
 
-        // Check 1: Job Title + Company
-        if (jobTitleCheck && companyCheck) {
-          const existingTitleCompany = selectedClient.jobApplications.find(app =>
-            app.jobTitle && app.jobTitle.toLowerCase() === jobTitleCheck &&
-            app.company && app.company.toLowerCase() === companyCheck
-          );
+    if (selectedClient?.jobApplications) {
+      let isDuplicate = false;
 
-          if (existingTitleCompany) {
-            newErrors.jobTitle = 'You have already applied the job.';
-            newErrors.company = 'You have already applied the job.';
-            isDuplicate = true;
-          }
-        }
+      // Check 1: Job Title + Company
+      if (jobTitleCheck && companyCheck) {
+        const existingTitleCompany = selectedClient.jobApplications.find(app =>
+          app.jobTitle && app.jobTitle.toLowerCase() === jobTitleCheck &&
+          app.company && app.company.toLowerCase() === companyCheck
+        );
 
-        // Check 2: Job Title + Company + Job ID
-        if (jobIdCheck && jobTitleCheck && companyCheck) {
-          const existingAll = selectedClient.jobApplications.find(app =>
-            app.jobId && app.jobId.toLowerCase() === jobIdCheck &&
-            app.company && app.company.toLowerCase() === companyCheck &&
-            app.jobTitle && app.jobTitle.toLowerCase() === jobTitleCheck
-          );
-
-          if (existingAll) {
-            newErrors.jobId = 'You have already applied the job.';
-            isDuplicate = true;
-          }
-        }
-
-        // If no duplicates found, clear potentially lingering errors (handled by delete newErrors above mostly)
-        // But if user fixed one field, we need to unsure others are cleared if they were part of the error group?
-        // E.g. changing Company might fix Job Title error.
-
-        if (!isDuplicate) {
-          if (companyCheck && jobTitleCheck) {
-            // If we have both and no duplicate, make sure errors are gone
-            delete newErrors.jobTitle;
-            delete newErrors.company;
-          }
+        if (existingTitleCompany) {
+          newErrors.jobTitle = 'You have already applied the job.';
+          newErrors.company = 'You have already applied the job.';
+          isDuplicate = true;
         }
       }
-      setNewApplicationErrors(newErrors);
+
+      // Check 2: Job Title + Company + Job ID
+      if (jobIdCheck && jobTitleCheck && companyCheck) {
+        const existingAll = selectedClient.jobApplications.find(app =>
+          app.jobId && app.jobId.toLowerCase() === jobIdCheck &&
+          app.company && app.company.toLowerCase() === companyCheck &&
+          app.jobTitle && app.jobTitle.toLowerCase() === jobTitleCheck
+        );
+
+        if (existingAll) {
+          newErrors.jobId = 'You have already applied the job.';
+          isDuplicate = true;
+        }
+      }
+
+      if (!isDuplicate) {
+        if (companyCheck && jobTitleCheck) {
+          delete newErrors.jobTitle;
+          delete newErrors.company;
+        }
+      }
     }
-  };
+    setNewApplicationErrors(newErrors);
+  }, [newApplicationErrors, selectedClient]);
 
   const handleSaveNewApplication = async () => {
     if (!selectedClient) return;
@@ -5161,6 +5157,7 @@ const EmployeeData = () => {
                       name="jobTitle"
                       value={newApplicationFormData.jobTitle}
                       onChange={handleNewApplicationFormChange}
+                      onBlur={() => validateApplicationConflicts('jobTitle', newApplicationFormData)}
                       style={{ ...modalInputStyle, borderColor: newApplicationErrors.jobTitle ? 'red' : '#cbd5e1' }}
                       placeholder="e.g., Senior Frontend Developer"
                       required
@@ -5175,6 +5172,7 @@ const EmployeeData = () => {
                       name="company"
                       value={newApplicationFormData.company}
                       onChange={handleNewApplicationFormChange}
+                      onBlur={() => validateApplicationConflicts('company', newApplicationFormData)}
                       style={{ ...modalInputStyle, borderColor: newApplicationErrors.company ? 'red' : '#cbd5e1' }}
                       placeholder="e.g., TechCorp"
                       required
@@ -5205,6 +5203,7 @@ const EmployeeData = () => {
                       name="jobId"
                       value={newApplicationFormData.jobId}
                       onChange={handleNewApplicationFormChange}
+                      onBlur={() => validateApplicationConflicts('jobId', newApplicationFormData)}
                       style={{ ...modalInputStyle, borderColor: newApplicationErrors.jobId ? 'red' : '#cbd5e1' }}
                       placeholder="e.g., ABC-12345"
 
