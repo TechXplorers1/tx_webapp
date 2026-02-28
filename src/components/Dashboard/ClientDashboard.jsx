@@ -6182,7 +6182,7 @@ html.dark-mode .notify-success-message {
               {/* Content for main dashboard tabs */}
               {activeTab === "Dashboard" && (
                 <div>
-                  <h1 style={{ textAlign: 'center', marginBottom: '32px' }} className="brand-full">Welcome, {clientUserName} </h1>
+                  {/* <h1 style={{ textAlign: 'center', marginBottom: '32px' }} className="brand-full">Welcome, {clientUserName} </h1> */}
 
                   {/* <div style={{ textAlign: 'center', marginBottom: '32px' }}>
             <button
@@ -6217,7 +6217,7 @@ html.dark-mode .notify-success-message {
          display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 2rem;
-  padding: 3rem 2rem;
+  padding: 1rem 1rem;
   background: linear-gradient(180deg, #f8faff 0%, #eef2ff 100%);
         
     }
@@ -6316,7 +6316,7 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
 
                     /* New Carousel Styles to match video/image */
                     .client-dashboard-carousel .carousel-item {
-                        height: 250px; /* Adjust height as needed */
+                        height: 400px; /* Adjust height as needed */
                         border-radius: 12px;
                         overflow: hidden;
                         position: relative;
@@ -6394,7 +6394,7 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
                     </style>
 
                     {/* --- START CAROUSEL SECTION --- */}
-                    <div className="carousel-wrapper" style={{ maxWidth: '1200px', margin: '0 auto 20px auto', padding: '0 20px' }}>
+                    <div className="carousel-wrapper" style={{ maxWidth: '1400px', margin: '0 auto 20px auto', padding: '0 20px' }}>
                       <Carousel
                         className="client-dashboard-carousel"
                         interval={5000}
@@ -6407,7 +6407,7 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
                             <Carousel.Item key={ad.id} onClick={() => ad.linkUrl ? window.open(ad.linkUrl, '_blank') : null} style={{ cursor: ad.linkUrl ? 'pointer' : 'default' }}>
 
                               {/* Main Container: Flexbox for 50/50 split */}
-                              <div style={{ height: '320px', background: '#ffffff', borderRadius: '16px', overflow: 'hidden', display: 'flex', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
+                              <div style={{ height: '400px', background: '#ffffff', borderRadius: '16px', overflow: 'hidden', display: 'flex', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
 
                                 {/* LEFT HALF: IMAGE (50%) */}
                                 <div style={{ width: '50%', position: 'relative', overflow: 'hidden' }}>
@@ -6423,7 +6423,7 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
                                 {/* RIGHT HALF: CONTENT (50%) */}
                                 <div style={{
                                   width: '50%',
-                                  padding: '40px',
+                                  padding: '90px',
                                   display: 'flex',
                                   flexDirection: 'column',
                                   justifyContent: 'flex-start', /* Aligns content to top */
@@ -6467,7 +6467,7 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
                           // 2. FALLBACK: SHOW DEFAULT CONTENT IF NO ADS
                           <div>
                             <Carousel.Item>
-                              <div style={{ height: '320px', background: '#ffffff', borderRadius: '16px', overflow: 'hidden', display: 'flex', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
+                              <div style={{ height: '400px', background: '#ffffff', borderRadius: '16px', overflow: 'hidden', display: 'flex', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
                                 <div style={{ width: '50%', position: 'relative' }}>
                                   <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                     <span style={{ fontSize: '4rem', opacity: 0.3 }}>👋</span>
@@ -6487,7 +6487,7 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
                               </div>
                             </Carousel.Item>
                             <Carousel.Item>
-                              <div style={{ height: '320px', background: '#ffffff', borderRadius: '16px', overflow: 'hidden', display: 'flex', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
+                              <div style={{ height: '400px', background: '#ffffff', borderRadius: '16px', overflow: 'hidden', display: 'flex', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
                                 <div style={{ width: '50%', position: 'relative' }}>
                                   <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                     <span style={{ fontSize: '4rem', opacity: 0.3 }}>🚀</span>
@@ -6515,11 +6515,11 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
 
 
                     {/* 1. All Services Grid */}
-                    <div className="all-services-section" style={{ maxWidth: '1200px', margin: '0 auto', padding: '50px 0' }}>
+                    <div className="all-services-section" style={{ maxWidth: '1200px', margin: '0 auto', padding: '10px 0' }}>
                       {/* New Header Design */}
                       <div style={{
                         textAlign: 'center',
-                        marginBottom: '30px'
+                        marginBottom: '10px'
                       }}>
                         {/* Premium Services Badge */}
                         <div style={{
@@ -6532,7 +6532,7 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
                           borderRadius: '20px',
                           fontSize: '0.85rem',
                           fontWeight: '600',
-                          marginBottom: '16px'
+                          marginBottom: '6px'
                         }}>
                           <div style={{
                             width: '8px',
