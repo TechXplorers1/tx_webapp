@@ -2595,13 +2595,13 @@ const ClientDashboard = () => {
     setShowPopupModal(false);
   };
 
-  // NEW: Reappear popup every 10 seconds even if closed
+  // NEW: Reappear popup every 1 hour even if closed
   useEffect(() => {
     if (activePopupAds.length === 0) return; // Don't set interval if no popups
 
     const popupTimerId = setInterval(() => {
       setShowPopupModal(true);
-    }, 10000); // 10000ms = 10 seconds
+    }, 3600000); // 3600000ms = 1 hour
 
     return () => clearInterval(popupTimerId); // Cleanup on unmount or when activePopupAds changes
   }, [activePopupAds]);
@@ -6429,12 +6429,13 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
                                 {/* RIGHT HALF: CONTENT (50%) */}
                                 <div style={{
                                   width: '50%',
-                                  padding: '90px',
+                                  padding: '20px 40px',
                                   display: 'flex',
                                   flexDirection: 'column',
-                                  justifyContent: 'flex-start', /* Aligns content to top */
+                                  justifyContent: 'center', /* Centers content vertically */
                                   alignItems: 'flex-start',
-                                  backgroundColor: '#fff'
+                                  backgroundColor: '#fff',
+                                  overflow: 'hidden'
                                 }}>
 
                                   {/* Optional Badge */}
@@ -6445,11 +6446,11 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
                                     Announcement
                                   </span>
 
-                                  <h3 style={{ color: '#1e293b', fontWeight: '800', marginBottom: '12px', fontSize: '1.8rem', lineHeight: '1.2' }}>
+                                  <h3 style={{ color: '#1e293b', fontWeight: '800', marginBottom: '8px', fontSize: '1.6rem', lineHeight: '1.2', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                                     {ad.title}
                                   </h3>
 
-                                  <p style={{ color: '#64748b', fontSize: '1.05rem', marginBottom: '20px', lineHeight: '1.6', maxWidth: '95%' }}>
+                                  <p style={{ color: '#64748b', fontSize: '1rem', marginBottom: '16px', lineHeight: '1.5', maxWidth: '95%', display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                     {ad.message}
                                   </p>
 
