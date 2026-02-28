@@ -40,20 +40,33 @@ const AdminPage = () => {
 
   // useEffect to get logged-in user data from sessionStorage
   useEffect(() => {
-    const loggedInUserData = sessionStorage.getItem('loggedInEmployee');
-    if (loggedInUserData) {
-      const userData = JSON.parse(loggedInUserData);
-      // Ensure all profile fields have values
-      // Set the full user object to state
-      const completeUserData = {
-        ...userProfile, // Use defaults as fallback
-        ...userData,    // Override with actual user data
-        // Make sure name is properly split if needed
-        firstName: userData.firstName || (userData.name ? userData.name.split(' ')[0] : 'Admin'),
-        lastName: userData.lastName || (userData.name && userData.name.split(' ').length > 1
-          ? userData.name.split(' ').slice(1).join(' ') : 'User')
-      };
-      setUserProfile(completeUserData);
+    try {
+      const raw = sessionStorage.getItem('loggedInEmployee');
+      if (!raw) return;
+
+      let userData = null;
+      try {
+        userData = JSON.parse(raw);
+      } catch (parseErr) {
+        console.warn('AdminPage: failed to parse loggedInEmployee from sessionStorage', parseErr);
+        return; // Avoid crashing the component if data is malformed
+      }
+
+      if (userData) {
+        // Ensure all profile fields have values and set the full user object to state
+        const completeUserData = {
+          ...userProfile, // Use defaults as fallback
+          ...userData,    // Override with actual user data
+          // Make sure name is properly split if needed
+          firstName: userData.firstName || (userData.name ? userData.name.split(' ')[0] : 'Admin'),
+          lastName: userData.lastName || (userData.name && userData.name.split(' ').length > 1
+            ? userData.name.split(' ').slice(1).join(' ') : 'User')
+        };
+        setUserProfile(completeUserData);
+      }
+    } catch (e) {
+      // sessionStorage may not be available in some environments/browsers
+      console.warn('AdminPage: sessionStorage unavailable or access error', e);
     }
   }, []);
 

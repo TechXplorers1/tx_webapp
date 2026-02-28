@@ -2590,15 +2590,21 @@ const ClientDashboard = () => {
   }, []);
 
 
-  // CHANGE 3: Update close handler to mark ALL displayed popups as closed
+  // CHANGE 3: Update close handler to just hide the modal (will reappear every 1 minute)
   const handleClosePopup = () => {
-    // Loop through all currently active popups and mark them as seen locally
-    // so they don't appear again on refresh
-    activePopupAds.forEach(ad => {
-      markAdAsClosed(ad.id);
-    });
     setShowPopupModal(false);
   };
+
+  // NEW: Reappear popup every 10 seconds even if closed
+  useEffect(() => {
+    if (activePopupAds.length === 0) return; // Don't set interval if no popups
+
+    const popupTimerId = setInterval(() => {
+      setShowPopupModal(true);
+    }, 10000); // 10000ms = 10 seconds
+
+    return () => clearInterval(popupTimerId); // Cleanup on unmount or when activePopupAds changes
+  }, [activePopupAds]);
   // --- END NEW ADS LOGIC ---
   // --- START: ADD NEW STATE FOR LEAVES ---
   const [employeeLeaves, setEmployeeLeaves] = useState([]);
