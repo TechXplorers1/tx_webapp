@@ -19,6 +19,10 @@ import {
 } from "firebase/auth";
 import { ref, get, child, set, update } from "firebase/database";
 
+// Add any admin emails here (lowercase). Replace with real admin emails.
+const ADMIN_EMAIL_ALLOWLIST = [
+  'your.admin@example.com'
+];
 export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -36,6 +40,8 @@ export default function LoginPage() {
   const processLogin = async (user) => {
     try {
       const { uid, email, photoURL } = user;
+      const normalizedEmail = (email || '').toLowerCase();
+      const isAllowlistedAdmin = ADMIN_EMAIL_ALLOWLIST.includes(normalizedEmail);
 
       // ✅ Use direct path reference instead of child() on root
       const userRef = ref(database, `users/${uid}`);
@@ -46,9 +52,10 @@ export default function LoginPage() {
       if (snapshot.exists()) {
         userDataFromDb = snapshot.val();
       } else {
-        // ✅ Batch both writes into one atomic update
+        // Batch both writes into one atomic update
+        const defaultRoles = isAllowlistedAdmin ? ['admin'] : ['client'];
         const updates = {
-          [`users/${uid}`]: { email, roles: ['client'] },
+          [`users/${uid}`]: { email, roles: defaultRoles },
           [`clients/${uid}`]: {
             email,
             firstName: email.split('@')[0],
@@ -65,11 +72,22 @@ export default function LoginPage() {
         firebaseKey: uid,
         uid,
         email,
-        roles: userDataFromDb.roles || ['client'],
+        roles: userDataFromDb.roles || (isAllowlistedAdmin ? ['admin'] : ['client']),
         avatar:
           photoURL ||
           `https://placehold.co/40x40/007bff/white?text=${email.charAt(0).toUpperCase()}`,
       };
+
+      // If the email is in the allowlist but DB doesn't yet include 'admin', persist it.
+      if (isAllowlistedAdmin && !Array.isArray(finalUserData.roles || []).includes('admin')) {
+        const newRoles = Array.from(new Set([...(finalUserData.roles || []), 'admin']));
+        finalUserData.roles = newRoles;
+        try {
+          await update(ref(database, `users/${uid}`), { roles: newRoles });
+        } catch (e) {
+          console.error('Failed to persist admin role for allowlisted email:', e);
+        }
+      }
 
 
       sessionStorage.setItem('loggedInClient', JSON.stringify(finalUserData));
