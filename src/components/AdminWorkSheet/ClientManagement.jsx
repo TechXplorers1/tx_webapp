@@ -6,6 +6,43 @@ import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "fire
 import { Spinner } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 
+// --- IndexedDB Helper Functions ---
+const IDB_CONFIG = { name: 'AppCacheDB', version: 1, store: 'firebase_cache' };
+
+const openDB = () => {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(IDB_CONFIG.name, IDB_CONFIG.version);
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(IDB_CONFIG.store)) {
+        db.createObjectStore(IDB_CONFIG.store);
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+};
+
+const dbGet = async (key) => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(IDB_CONFIG.store, 'readonly');
+    const request = transaction.objectStore(IDB_CONFIG.store).get(key);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+};
+
+const dbSet = async (key, val) => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(IDB_CONFIG.store, 'readwrite');
+    const request = transaction.objectStore(IDB_CONFIG.store).put(val, key);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+};
+// --- End IndexedDB Helpers ---
 
 const ClientManagement = () => {
   const navigate = useNavigate();
