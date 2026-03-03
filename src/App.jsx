@@ -47,8 +47,14 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   const isAuthorized = user && user.roles && user.roles.some(role => allowedRoles.includes(role));
 
   if (!isAuthorized) {
-    // If logged in but not authorized, redirect to a default/home page
-    return <Navigate to="/login" replace />;
+    // If logged in but not authorized, show an access denied message
+    // (redirecting to login would otherwise display a blank page and confuse the user)
+    return (
+      <div style={{ padding: '2rem', textAlign: 'center' }}>
+        <h2>Access Denied</h2>
+        <p>You do not have permission to view this page. Please contact your administrator.</p>
+      </div>
+    );
   }
 
   return children;
