@@ -167,7 +167,10 @@ const ClientManagement = () => {
         let cached = null;
         try {
           cached = await dbGet(CLIENT_MGMT_CACHE_KEY);
-          if (!cancelled && cached && Array.isArray(cached.serviceRegistrations)) {
+          // Set cache validity to 5 minutes (300000 ms)
+          const isCacheValid = cached && cached.cachedAt && (Date.now() - cached.cachedAt < 300000);
+          
+          if (!cancelled && cached && Array.isArray(cached.serviceRegistrations) && isCacheValid) {
             setServiceRegistrations(cached.serviceRegistrations);
             setManagerList(cached.managerList || []);
             setError(null);
@@ -262,6 +265,17 @@ const ClientManagement = () => {
       cancelled = true;
     };
   }, []);
+
+  // Sync cache when local state changes (optimistic updates)
+  useEffect(() => {
+    if (serviceRegistrations.length > 0) {
+      dbSet(CLIENT_MGMT_CACHE_KEY, {
+        serviceRegistrations,
+        managerList,
+        cachedAt: Date.now(),
+      }).catch(err => console.warn('Sync to cache failed', err));
+    }
+  }, [serviceRegistrations, managerList]);
 
   // 2) Compute today's applications COUNT from in-memory data (NO DB calls)
   useEffect(() => {
