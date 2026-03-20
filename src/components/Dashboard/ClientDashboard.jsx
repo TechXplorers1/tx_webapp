@@ -1422,54 +1422,54 @@ const Applications = ({
 }) => {
 
   const renderPageButtons = () => {
-  const buttons = [];
-  const maxVisible = 5; // how many numbers to show in the middle
-  let start = 1;
-  let end = totalPages;
+    const buttons = [];
+    const maxVisible = 5; // how many numbers to show in the middle
+    let start = 1;
+    let end = totalPages;
 
-  if (totalPages > maxVisible) {
-    const half = Math.floor(maxVisible / 2);
-    start = Math.max(1, currentPage - half);
-    end = start + maxVisible - 1;
+    if (totalPages > maxVisible) {
+      const half = Math.floor(maxVisible / 2);
+      start = Math.max(1, currentPage - half);
+      end = start + maxVisible - 1;
 
-    if (end > totalPages) {
-      end = totalPages;
-      start = end - maxVisible + 1;
+      if (end > totalPages) {
+        end = totalPages;
+        start = end - maxVisible + 1;
+      }
     }
-  }
 
-  for (let page = start; page <= end; page++) {
-    buttons.push(
-      <Button
-        key={page}
-        variant={page === currentPage ? "primary" : "outline-secondary"}
-        onClick={() => handlePageChange(page)}
-        style={{ padding: '6px 12px', fontSize: '0.85rem' }}
-      >
-        {page}
-      </Button>
-    );
-  }
+    for (let page = start; page <= end; page++) {
+      buttons.push(
+        <Button
+          key={page}
+          variant={page === currentPage ? "primary" : "outline-secondary"}
+          onClick={() => handlePageChange(page)}
+          style={{ padding: '6px 12px', fontSize: '0.85rem' }}
+        >
+          {page}
+        </Button>
+      );
+    }
 
-  // If there are more pages beyond the visible range, show "..."
-  if (end < totalPages) {
-    buttons.push(
-      <span key="ellipsis" style={{ padding: '0 4px', color: '#666' }}>...</span>
-    );
-    buttons.push(
-      <Button
-        key={totalPages}
-        variant={currentPage === totalPages ? "primary" : "outline-secondary"}
-        onClick={() => handlePageChange(totalPages)}
-        style={{ padding: '6px 12px', fontSize: '0.85rem' }}
-      >
-        {totalPages}
-      </Button>
-    );
-  }
+    // If there are more pages beyond the visible range, show "..."
+    if (end < totalPages) {
+      buttons.push(
+        <span key="ellipsis" style={{ padding: '0 4px', color: '#666' }}>...</span>
+      );
+      buttons.push(
+        <Button
+          key={totalPages}
+          variant={currentPage === totalPages ? "primary" : "outline-secondary"}
+          onClick={() => handlePageChange(totalPages)}
+          style={{ padding: '6px 12px', fontSize: '0.85rem' }}
+        >
+          {totalPages}
+        </Button>
+      );
+    }
 
-  return buttons;
-};
+    return buttons;
+  };
 
 
 
@@ -1775,17 +1775,17 @@ const Applications = ({
                     <td style={{ padding: '12px' }}>
                       {/* FIX 4: Ensure the href attribute is using the correct, mapped property */}
                       {app.link ? (
-                  <a
-                    href={app.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: '#007bff', textDecoration: 'none' }}
-                  >
-                    Link
-                  </a>
-                ) : (
-                  'N/A'
-                )}
+                        <a
+                          href={app.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: '#007bff', textDecoration: 'none' }}
+                        >
+                          Link
+                        </a>
+                      ) : (
+                        'N/A'
+                      )}
                     </td>
                     {/* <td style={{ padding: '12px' }}>
                       <Button
@@ -1812,87 +1812,87 @@ const Applications = ({
         )}
         {/* --- START: PAGINATION CONTROLS (Moved here from previous step for visual confirmation) --- */}
         {totalPages > 1 && (
-  <div style={{
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: '20px',
-    padding: '10px 20px',
-    borderTop: '1px solid #eee',
-    backgroundColor: '#fff',
-    borderRadius: '0 0 8px 8px',
-    boxShadow: '0 -2px 4px rgba(0,0,0,0.05)'
-  }}>
-    <div style={{ color: '#666', fontSize: '0.9rem' }}>
-      Page {currentPage} of {totalPages}
-    </div>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginTop: '20px',
+            padding: '10px 20px',
+            borderTop: '1px solid #eee',
+            backgroundColor: '#fff',
+            borderRadius: '0 0 8px 8px',
+            boxShadow: '0 -2px 4px rgba(0,0,0,0.05)'
+          }}>
+            <div style={{ color: '#666', fontSize: '0.9rem' }}>
+              Page {currentPage} of {totalPages}
+            </div>
 
-    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-      {/* Previous */}
-      <Button
-        variant="outline-primary"
-        onClick={handlePreviousPage}
-        disabled={currentPage === 1}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '5px',
-          padding: '6px 12px',
-          fontSize: '0.85rem',
-        }}
-      >
-        Previous
-      </Button>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              {/* Previous */}
+              <Button
+                variant="outline-primary"
+                onClick={handlePreviousPage}
+                disabled={currentPage === 1}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: '6px 12px',
+                  fontSize: '0.85rem',
+                }}
+              >
+                Previous
+              </Button>
 
-      {/* Numbered page buttons */}
-      {[...Array(totalPages)].map((_, index) => {
-        const page = index + 1;
-        const isActive = page === currentPage;
+              {/* Numbered page buttons */}
+              {[...Array(totalPages)].map((_, index) => {
+                const page = index + 1;
+                const isActive = page === currentPage;
 
-        return (
-          <button
-            key={page}
-            type="button"
-                  onClick={() => {
-        if (!isActive && typeof onPageChange === 'function') {
-          onPageChange(page);      // ✅ safe call
-        }
-      }}
-            disabled={isActive}
-            style={{
-              minWidth: '32px',
-              padding: '6px 10px',
-              fontSize: '0.85rem',
-              borderRadius: '4px',
-              border: isActive ? '1px solid #007bff' : '1px solid #ddd',
-              backgroundColor: isActive ? '#007bff' : '#fff',
-              color: isActive ? '#fff' : '#333',
-              cursor: isActive ? 'default' : 'pointer',
-            }}
-          >
-            {page}
-          </button>
-        );
-      })}
+                return (
+                  <button
+                    key={page}
+                    type="button"
+                    onClick={() => {
+                      if (!isActive && typeof onPageChange === 'function') {
+                        onPageChange(page);      // ✅ safe call
+                      }
+                    }}
+                    disabled={isActive}
+                    style={{
+                      minWidth: '32px',
+                      padding: '6px 10px',
+                      fontSize: '0.85rem',
+                      borderRadius: '4px',
+                      border: isActive ? '1px solid #007bff' : '1px solid #ddd',
+                      backgroundColor: isActive ? '#007bff' : '#fff',
+                      color: isActive ? '#fff' : '#333',
+                      cursor: isActive ? 'default' : 'pointer',
+                    }}
+                  >
+                    {page}
+                  </button>
+                );
+              })}
 
-      {/* Next */}
-      <Button
-        variant="outline-primary"
-        onClick={handleNextPage}
-        disabled={currentPage === totalPages}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '5px',
-          padding: '6px 12px',
-          fontSize: '0.85rem',
-        }}
-      >
-        Next
-      </Button>
-    </div>
-  </div>
-)}
+              {/* Next */}
+              <Button
+                variant="outline-primary"
+                onClick={handleNextPage}
+                disabled={currentPage === totalPages}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: '6px 12px',
+                  fontSize: '0.85rem',
+                }}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
         {/* --- END: PAGINATION CONTROLS --- */}
       </div>
 
@@ -2290,10 +2290,10 @@ const WorksheetView = ({ setActiveTab, activeWorksheetTab, setActiveWorksheetTab
   activeSubTab, setActiveSubTab, clientData, // New prop to pass sub-tab state for Documents
   setIsInWorksheetView, onImageView, // New prop to allow WorksheetView to set its own visibility
   scheduledInterviews, handleAttachmentClick, closeAttachmentModal, currentAttachments, showAttachmentModal,
-  employeeLeaves, totalPages,      
-    currentPage,       
-    handleNextPage,    
-    handlePreviousPage, handlePageChange,
+  employeeLeaves, totalPages,
+  currentPage,
+  handleNextPage,
+  handlePreviousPage, handlePageChange,
 }) => {
   return (
     <div style={{
@@ -2469,11 +2469,11 @@ const WorksheetView = ({ setActiveTab, activeWorksheetTab, setActiveWorksheetTab
           activeWorksheetTab={activeWorksheetTab} // Pass down
           setActiveWorksheetTab={setActiveWorksheetTab} // Pass down
           employeeLeaves={employeeLeaves}
-          totalPages={totalPages}      
-        currentPage={currentPage}     
-        handleNextPage={handleNextPage}    
-        handlePreviousPage={handlePreviousPage}
-        onPageChange={handlePageChange}
+          totalPages={totalPages}
+          currentPage={currentPage}
+          handleNextPage={handleNextPage}
+          handlePreviousPage={handlePreviousPage}
+          onPageChange={handlePageChange}
         />
       )}
 
@@ -2508,12 +2508,12 @@ const ClientDashboard = () => {
 
   // --- UPDATED ADS & BANNERS LOGIC ---
   const [activeBannerAds, setActiveBannerAds] = useState([]);
-  
+
   // CHANGE 1: State is now an array, not a single object
-  const [activePopupAds, setActivePopupAds] = useState([]); 
+  const [activePopupAds, setActivePopupAds] = useState([]);
   const [showPopupModal, setShowPopupModal] = useState(false);
 
-    // ---- Welcome card state ----
+  // ---- Welcome card state ----
   const [welcomeCardData, setWelcomeCardData] = useState(null);
   const [showWelcomeCardModal, setShowWelcomeCardModal] = useState(false);
 
@@ -2550,7 +2550,7 @@ const ClientDashboard = () => {
     }
   };
 
-// --- FIX: FETCH ADS (ONCE ONLY - LOW COST) ---
+  // --- FIX: FETCH ADS (ONCE ONLY - LOW COST) ---
   useEffect(() => {
     const fetchAds = async () => {
       try {
@@ -2934,114 +2934,114 @@ const ClientDashboard = () => {
 
 
   useEffect(() => {
-  const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInClient'));
-  if (!loggedInUserData || !loggedInUserData.firebaseKey) return;
-  const clientKey = loggedInUserData.firebaseKey;
-  const clientRef = ref(database, `clients/${clientKey}`);
+    const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInClient'));
+    if (!loggedInUserData || !loggedInUserData.firebaseKey) return;
+    const clientKey = loggedInUserData.firebaseKey;
+    const clientRef = ref(database, `clients/${clientKey}`);
 
-  // 1. Set up the real-time listener
-  // This listener acts as both the initial fetch and the real-time cache updater.
-  const unsubscribe = onValue(clientRef, (snapshot) => {
-    const data = snapshot.exists() ? snapshot.val() : null;
-    console.log("Client Data Fetched/Updated:", data);
+    // 1. Set up the real-time listener
+    // This listener acts as both the initial fetch and the real-time cache updater.
+    const unsubscribe = onValue(clientRef, (snapshot) => {
+      const data = snapshot.exists() ? snapshot.val() : null;
+      console.log("Client Data Fetched/Updated:", data);
 
-    if (!data) {
-      // Handle case where data is removed or non-existent
-      setClientData(null);
-      setAllFiles([]);
-      setApplicationsData({});
-      setScheduledInterviews([]);
-      setActiveServices([]);
-      setInactiveServices([]);
-      return;
-    }
+      if (!data) {
+        // Handle case where data is removed or non-existent
+        setClientData(null);
+        setAllFiles([]);
+        setApplicationsData({});
+        setScheduledInterviews([]);
+        setActiveServices([]);
+        setInactiveServices([]);
+        return;
+      }
 
-    // 2. Process and set the new data (This runs on initial fetch AND every update)
-    setClientData(data); // <-- Client data is 'cached' in component state
+      // 2. Process and set the new data (This runs on initial fetch AND every update)
+      setClientData(data); // <-- Client data is 'cached' in component state
 
-    // IMPORTANT: Move ALL data processing logic that previously followed 'setClientData(data)' 
-    // into this callback, so it runs whenever the data is updated.
-    
-const registrations = data.serviceRegistrations ? Object.values(data.serviceRegistrations) : [];
-    
-    // B. Extract and group applications (Optimization: use a single loop)
-    let allApplications = [];
-    let interviews = [];
-    const groupedApplications = {};
-    let generalFiles = [];
-    let applicationAttachments = [];
+      // IMPORTANT: Move ALL data processing logic that previously followed 'setClientData(data)' 
+      // into this callback, so it runs whenever the data is updated.
 
-    registrations.forEach(reg => {
+      const registrations = data.serviceRegistrations ? Object.values(data.serviceRegistrations) : [];
+
+      // B. Extract and group applications (Optimization: use a single loop)
+      let allApplications = [];
+      let interviews = [];
+      const groupedApplications = {};
+      let generalFiles = [];
+      let applicationAttachments = [];
+
+      registrations.forEach(reg => {
         // Collect files attached to the service registration itself
         generalFiles = generalFiles.concat(reg.files || []);
 
         (reg.jobApplications || []).forEach(app => {
-            // Collect all applications for flattening
-            allApplications.push(app); 
+          // Collect all applications for flattening
+          allApplications.push(app);
 
-            // Collect attachments from applications
-            applicationAttachments = applicationAttachments.concat(app.attachments || []);
+          // Collect attachments from applications
+          applicationAttachments = applicationAttachments.concat(app.attachments || []);
 
-            // Group applications by date for the ribbon
-            const dateKey = formatDate(app.appliedDate);
-            const entry = { 
-                id: app.id, 
-                jobId: app.jobId, 
-                website: app.jobBoards, 
-                position: app.jobTitle, 
-                company: app.company, 
-                // FIX: Ensure you are using the correct field name for the link
-                link: app.jobDescriptionUrl || app.link || '', // Use 'link' for display, fallback to 'jobDescriptionUrl' if name is inconsistent
-            };
-            
-            if (!groupedApplications[dateKey]) {
-                groupedApplications[dateKey] = [];
-            }
-            groupedApplications[dateKey].push(entry);
+          // Group applications by date for the ribbon
+          const dateKey = formatDate(app.appliedDate);
+          const entry = {
+            id: app.id,
+            jobId: app.jobId,
+            website: app.jobBoards,
+            position: app.jobTitle,
+            company: app.company,
+            // FIX: Ensure you are using the correct field name for the link
+            link: app.jobDescriptionUrl || app.link || '', // Use 'link' for display, fallback to 'jobDescriptionUrl' if name is inconsistent
+          };
 
-            // Filter interviews directly
-            if (app.status === 'Interview') {
-                interviews.push(app);
-            }
+          if (!groupedApplications[dateKey]) {
+            groupedApplications[dateKey] = [];
+          }
+          groupedApplications[dateKey].push(entry);
+
+          // Filter interviews directly
+          if (app.status === 'Interview') {
+            interviews.push(app);
+          }
         });
-    });
-    
-    setScheduledInterviews(interviews);
-    setApplicationsData(groupedApplications); // Use the efficiently created map
+      });
 
-    // C. Combine and set all files
-    const allFilesMap = new Map();
-    [...generalFiles, ...applicationAttachments].forEach(file => {
-      if (file && file.downloadUrl) {
-        allFilesMap.set(file.downloadUrl, file);
-      }
-    });
-    setAllFiles(Array.from(allFilesMap.values()));
+      setScheduledInterviews(interviews);
+      setApplicationsData(groupedApplications); // Use the efficiently created map
 
-    // D. Update Active/Inactive Services
-    const allServices = [
+      // C. Combine and set all files
+      const allFilesMap = new Map();
+      [...generalFiles, ...applicationAttachments].forEach(file => {
+        if (file && file.downloadUrl) {
+          allFilesMap.set(file.downloadUrl, file);
+        }
+      });
+      setAllFiles(Array.from(allFilesMap.values()));
+
+      // D. Update Active/Inactive Services
+      const allServices = [
         { title: "Mobile Development", path: "/services/mobile-app-development" },
         { title: "Web Development", path: "/services/web-app-development" },
         { title: "Digital Marketing", path: "/services/digital-marketing" },
         { title: "IT Talent Supply", path: "/services/it-talent-supply" },
         { title: "Job Supporting", path: "/services/job-contact-form" },
         { title: "Cyber Security", path: "/services/cyber-security" },
-    ];
-    const registeredServiceNames = registrations.map(
-          reg => reg.service || ''
-        );
-    setActiveServices(allServices.filter(s => registeredServiceNames.includes(s.title)));
-    setInactiveServices(allServices.filter(s => !registeredServiceNames.includes(s.title)));
-    
-  }, (error) => {
-    console.error("Firebase Read Error:", error);
-  });
+      ];
+      const registeredServiceNames = registrations.map(
+        reg => reg.service || ''
+      );
+      setActiveServices(allServices.filter(s => registeredServiceNames.includes(s.title)));
+      setInactiveServices(allServices.filter(s => !registeredServiceNames.includes(s.title)));
 
-  return () => {
-    unsubscribe();
-  };
-  
-}, []);
+    }, (error) => {
+      console.error("Firebase Read Error:", error);
+    });
+
+    return () => {
+      unsubscribe();
+    };
+
+  }, []);
 
   const handleActiveServiceClick = (service) => {
     if (clientData && clientData.serviceRegistrations) {
@@ -3565,7 +3565,7 @@ const registrations = data.serviceRegistrations ? Object.values(data.serviceRegi
 
   const handleViewDashboardClick = (serviceName) => {
     const service = allServices.find(s => s.title === serviceName);
-      if (!service) {
+    if (!service) {
       if (serviceName === 'Job Application') {
         setIsInWorksheetView(true);
         setActiveWorksheetTab("Applications");
@@ -3656,7 +3656,7 @@ const registrations = data.serviceRegistrations ? Object.values(data.serviceRegi
   }, [selectedDate, applicationsData, filterWebsites, filterPositions, filterCompanies, searchTerm, startDateFilter, endDateFilter, allApplicationsFlattened, isGlobalFilterActive]);
 
 
-    // ---------- PAGINATION FOR APPLICATIONS TABLE ----------
+  // ---------- PAGINATION FOR APPLICATIONS TABLE ----------
   const totalPages = useMemo(() => {
     if (!filteredApplicationsForDisplay || filteredApplicationsForDisplay.length === 0) return 1;
     return Math.ceil(filteredApplicationsForDisplay.length / applicationsPerPage);
@@ -5944,7 +5944,7 @@ html.dark-mode .notify-success-message {
         />
       )}
 
-     {/* --- UPDATED ADS POPUP MODAL (AUTO-SLIDE ENABLED) --- */}
+      {/* --- UPDATED ADS POPUP MODAL (AUTO-SLIDE ENABLED) --- */}
       {activePopupAds.length > 0 && (
         <Modal
           show={showPopupModal}
@@ -5959,7 +5959,7 @@ html.dark-mode .notify-success-message {
               Welcome / Announcements
             </Modal.Title>
           </Modal.Header>
-          
+
           <Modal.Body className="p-0">
             <Carousel
               interval={3000} // <--- CHANGED: Set to 3000ms (3 seconds) for auto-slide
@@ -5971,7 +5971,7 @@ html.dark-mode .notify-success-message {
               {activePopupAds.map((ad) => (
                 <Carousel.Item key={ad.id}>
                   <div style={{ padding: '20px', textAlign: 'center', minHeight: '350px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-                    
+
                     {/* Title */}
                     <h4 style={{ color: '#1e293b', fontWeight: '700', marginBottom: '15px' }}>
                       {ad.title}
@@ -5982,10 +5982,10 @@ html.dark-mode .notify-success-message {
                       <img
                         src={ad.imageUrl}
                         alt={ad.title}
-                        style={{ 
-                          maxWidth: '100%', 
-                          maxHeight: '250px', 
-                          borderRadius: '8px', 
+                        style={{
+                          maxWidth: '100%',
+                          maxHeight: '250px',
+                          borderRadius: '8px',
                           objectFit: 'contain',
                           marginBottom: '15px'
                         }}
@@ -5999,8 +5999,8 @@ html.dark-mode .notify-success-message {
 
                     {/* Button */}
                     {ad.linkUrl && (
-                      <Button 
-                        variant="success" 
+                      <Button
+                        variant="success"
                         onClick={() => window.open(ad.linkUrl, '_blank')}
                         style={{ fontWeight: '600' }}
                       >
@@ -6012,7 +6012,7 @@ html.dark-mode .notify-success-message {
               ))}
             </Carousel>
           </Modal.Body>
-          
+
           <Modal.Footer>
             <Button variant="secondary" onClick={handleClosePopup}>
               Close All
@@ -6684,274 +6684,274 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
                                     }}
                                   >
                                     {/* Render metrics based on the service type */}
-{/* Render metrics based on the service type */}
-{service.key === 'Job Application' && serviceMetrics && (
-  <>
-    {/* Applied Today */}
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#60A5FA' }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.appliedToday}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Applied Today</div>
-    </div>
+                                    {/* Render metrics based on the service type */}
+                                    {service.key === 'Job Application' && serviceMetrics && (
+                                      <>
+                                        {/* Applied Today */}
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#60A5FA' }} />
+                                            <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                              {serviceMetrics.appliedToday}
+                                            </div>
+                                          </div>
+                                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Applied Today</div>
+                                        </div>
 
-    {/* Total Applications */}
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#3B82F6' }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.totalApplications}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Total Applications</div>
-    </div>
+                                        {/* Total Applications */}
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#3B82F6' }} />
+                                            <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                              {serviceMetrics.totalApplications}
+                                            </div>
+                                          </div>
+                                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Total Applications</div>
+                                        </div>
 
-    {/* Interviews Scheduled */}
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10B981' }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.interviewsScheduled}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Interviews Scheduled</div>
-    </div>
+                                        {/* Interviews Scheduled */}
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10B981' }} />
+                                            <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                              {serviceMetrics.interviewsScheduled}
+                                            </div>
+                                          </div>
+                                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Interviews Scheduled</div>
+                                        </div>
 
-    {/* Response Rate */}
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#93C5FD' }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.responseRate}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Response Rate</div>
-    </div>
-  </>
-)}
+                                        {/* Response Rate */}
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#93C5FD' }} />
+                                            <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                              {serviceMetrics.responseRate}
+                                            </div>
+                                          </div>
+                                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Response Rate</div>
+                                        </div>
+                                      </>
+                                    )}
 
-{service.key === 'Mobile Development' && serviceMetrics && (
-  <>
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[0] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.activeProjects}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Active Projects</div>
-    </div>
+                                    {service.key === 'Mobile Development' && serviceMetrics && (
+                                      <>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[0] }} />
+                                            <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                              {serviceMetrics.activeProjects}
+                                            </div>
+                                          </div>
+                                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Active Projects</div>
+                                        </div>
 
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[1] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.appsDeployed}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Apps Deployed</div>
-    </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[1] }} />
+                                            <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                              {serviceMetrics.appsDeployed}
+                                            </div>
+                                          </div>
+                                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Apps Deployed</div>
+                                        </div>
 
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[2] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.clientsSatisfied}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Clients Satisfied</div>
-    </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[2] }} />
+                                            <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                              {serviceMetrics.clientsSatisfied}
+                                            </div>
+                                          </div>
+                                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Clients Satisfied</div>
+                                        </div>
 
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[3] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.avgRating}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Avg Rating</div>
-    </div>
-  </>
-)}
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[3] }} />
+                                            <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                              {serviceMetrics.avgRating}
+                                            </div>
+                                          </div>
+                                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Avg Rating</div>
+                                        </div>
+                                      </>
+                                    )}
 
-{service.key === 'Web Development' && serviceMetrics && (
-  <>
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[0] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.sitesBuilt}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Sites Built</div>
-    </div>
+                                    {service.key === 'Web Development' && serviceMetrics && (
+                                      <>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[0] }} />
+                                            <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                              {serviceMetrics.sitesBuilt}
+                                            </div>
+                                          </div>
+                                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Sites Built</div>
+                                        </div>
 
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[1] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.domainsManaged}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Domains Managed</div>
-    </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[1] }} />
+                                            <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                              {serviceMetrics.domainsManaged}
+                                            </div>
+                                          </div>
+                                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Domains Managed</div>
+                                        </div>
 
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[2] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.uptime}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Uptime</div>
-    </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[2] }} />
+                                            <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                              {serviceMetrics.uptime}
+                                            </div>
+                                          </div>
+                                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Uptime</div>
+                                        </div>
 
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[3] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.performanceScore}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Performance Score</div>
-    </div>
-  </>
-)}
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[3] }} />
+                                            <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                              {serviceMetrics.performanceScore}
+                                            </div>
+                                          </div>
+                                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Performance Score</div>
+                                        </div>
+                                      </>
+                                    )}
 
-{service.key === 'Digital Marketing' && serviceMetrics && (
-  <>
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[0] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.activeCampaigns}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Active Campaigns</div>
-    </div>
+                                    {service.key === 'Digital Marketing' && serviceMetrics && (
+                                      <>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[0] }} />
+                                            <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                              {serviceMetrics.activeCampaigns}
+                                            </div>
+                                          </div>
+                                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Active Campaigns</div>
+                                        </div>
 
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[1] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.leadsGenerated}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Leads Generated</div>
-    </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[1] }} />
+                                            <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                              {serviceMetrics.leadsGenerated}
+                                            </div>
+                                          </div>
+                                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Leads Generated</div>
+                                        </div>
 
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[2] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.conversionRate}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Conversion Rate</div>
-    </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[2] }} />
+                                            <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                              {serviceMetrics.conversionRate}
+                                            </div>
+                                          </div>
+                                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Conversion Rate</div>
+                                        </div>
 
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[3] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.roi}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>ROI</div>
-    </div>
-  </>
-)}
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[3] }} />
+                                            <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                              {serviceMetrics.roi}
+                                            </div>
+                                          </div>
+                                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>ROI</div>
+                                        </div>
+                                      </>
+                                    )}
 
-{service.key === 'IT Talent Supply' && serviceMetrics && (
-  <>
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[0] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.candidatesPlaced}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Candidates Placed</div>
-    </div>
+                                    {service.key === 'IT Talent Supply' && serviceMetrics && (
+                                      <>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[0] }} />
+                                            <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                              {serviceMetrics.candidatesPlaced}
+                                            </div>
+                                          </div>
+                                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Candidates Placed</div>
+                                        </div>
 
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[1] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.interviewsToday}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Interviews Today</div>
-    </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[1] }} />
+                                            <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                              {serviceMetrics.interviewsToday}
+                                            </div>
+                                          </div>
+                                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Interviews Today</div>
+                                        </div>
 
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[2] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.activePositions}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Active Positions</div>
-    </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[2] }} />
+                                            <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                              {serviceMetrics.activePositions}
+                                            </div>
+                                          </div>
+                                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Active Positions</div>
+                                        </div>
 
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[3] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.placementRate}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Placement Rate</div>
-    </div>
-  </>
-)}
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[3] }} />
+                                            <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                              {serviceMetrics.placementRate}
+                                            </div>
+                                          </div>
+                                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Placement Rate</div>
+                                        </div>
+                                      </>
+                                    )}
 
-{service.key === 'Cyber Security' && serviceMetrics && (
-  <>
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[0] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.threatsBlocked}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Threats Blocked</div>
-    </div>
+                                    {service.key === 'Cyber Security' && serviceMetrics && (
+                                      <>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[0] }} />
+                                            <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                              {serviceMetrics.threatsBlocked}
+                                            </div>
+                                          </div>
+                                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Threats Blocked</div>
+                                        </div>
 
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[1] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.securityScans}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Security Scans</div>
-    </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[1] }} />
+                                            <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                              {serviceMetrics.securityScans}
+                                            </div>
+                                          </div>
+                                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Security Scans</div>
+                                        </div>
 
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[2] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.vulnerabilitiesFixed}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Vulnerabilities Fixed</div>
-    </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[2] }} />
+                                            <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                              {serviceMetrics.vulnerabilitiesFixed}
+                                            </div>
+                                          </div>
+                                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Vulnerabilities Fixed</div>
+                                        </div>
 
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[3] }} />
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {serviceMetrics.systemsProtected}
-        </div>
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Systems Protected</div>
-    </div>
-  </>
-)}
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: serviceMetrics.colors[3] }} />
+                                            <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                              {serviceMetrics.systemsProtected}
+                                            </div>
+                                          </div>
+                                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Systems Protected</div>
+                                        </div>
+                                      </>
+                                    )}
 
                                   </div>
 
