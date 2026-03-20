@@ -1423,7 +1423,7 @@ const Applications = ({
 
   const renderPageButtons = () => {
     const buttons = [];
-    const maxVisible = 5; // how many numbers to show in the middle
+    const maxVisible = 5;
     let start = 1;
     let end = totalPages;
 
@@ -1436,36 +1436,52 @@ const Applications = ({
         end = totalPages;
         start = end - maxVisible + 1;
       }
+      if (start < 1) start = 1;
+    }
+
+    const getButtonStyle = (isActive) => ({
+      minWidth: '32px',
+      padding: '6px 10px',
+      fontSize: '0.85rem',
+      borderRadius: '4px',
+      border: isActive ? '1px solid #007bff' : '1px solid #ddd',
+      backgroundColor: isActive ? '#007bff' : '#fff',
+      color: isActive ? '#fff' : '#333',
+      cursor: isActive ? 'default' : 'pointer',
+    });
+
+    const createButton = (page) => (
+      <button
+        key={page}
+        type="button"
+        onClick={() => {
+          if (page !== currentPage && typeof onPageChange === 'function') {
+            onPageChange(page);
+          }
+        }}
+        disabled={page === currentPage}
+        style={getButtonStyle(page === currentPage)}
+      >
+        {page}
+      </button>
+    );
+
+    if (start > 1) {
+      buttons.push(createButton(1));
+      if (start > 2) {
+        buttons.push(<span key="ellipsis-start" style={{ padding: '0 4px', color: '#666' }}>...</span>);
+      }
     }
 
     for (let page = start; page <= end; page++) {
-      buttons.push(
-        <Button
-          key={page}
-          variant={page === currentPage ? "primary" : "outline-secondary"}
-          onClick={() => handlePageChange(page)}
-          style={{ padding: '6px 12px', fontSize: '0.85rem' }}
-        >
-          {page}
-        </Button>
-      );
+      buttons.push(createButton(page));
     }
 
-    // If there are more pages beyond the visible range, show "..."
     if (end < totalPages) {
-      buttons.push(
-        <span key="ellipsis" style={{ padding: '0 4px', color: '#666' }}>...</span>
-      );
-      buttons.push(
-        <Button
-          key={totalPages}
-          variant={currentPage === totalPages ? "primary" : "outline-secondary"}
-          onClick={() => handlePageChange(totalPages)}
-          style={{ padding: '6px 12px', fontSize: '0.85rem' }}
-        >
-          {totalPages}
-        </Button>
-      );
+      if (end < totalPages - 1) {
+        buttons.push(<span key="ellipsis-end" style={{ padding: '0 4px', color: '#666' }}>...</span>);
+      }
+      buttons.push(createButton(totalPages));
     }
 
     return buttons;
@@ -1845,35 +1861,7 @@ const Applications = ({
               </Button>
 
               {/* Numbered page buttons */}
-              {[...Array(totalPages)].map((_, index) => {
-                const page = index + 1;
-                const isActive = page === currentPage;
-
-                return (
-                  <button
-                    key={page}
-                    type="button"
-                    onClick={() => {
-                      if (!isActive && typeof onPageChange === 'function') {
-                        onPageChange(page);      // ✅ safe call
-                      }
-                    }}
-                    disabled={isActive}
-                    style={{
-                      minWidth: '32px',
-                      padding: '6px 10px',
-                      fontSize: '0.85rem',
-                      borderRadius: '4px',
-                      border: isActive ? '1px solid #007bff' : '1px solid #ddd',
-                      backgroundColor: isActive ? '#007bff' : '#fff',
-                      color: isActive ? '#fff' : '#333',
-                      cursor: isActive ? 'default' : 'pointer',
-                    }}
-                  >
-                    {page}
-                  </button>
-                );
-              })}
+              {renderPageButtons()}
 
               {/* Next */}
               <Button
@@ -2293,7 +2281,7 @@ const WorksheetView = ({ setActiveTab, activeWorksheetTab, setActiveWorksheetTab
   employeeLeaves, totalPages,
   currentPage,
   handleNextPage,
-  handlePreviousPage, handlePageChange,
+  handlePreviousPage, onPageChange,
 }) => {
   return (
     <div style={{
@@ -2473,7 +2461,7 @@ const WorksheetView = ({ setActiveTab, activeWorksheetTab, setActiveWorksheetTab
           currentPage={currentPage}
           handleNextPage={handleNextPage}
           handlePreviousPage={handlePreviousPage}
-          onPageChange={handlePageChange}
+          onPageChange={onPageChange}
         />
       )}
 
@@ -2602,15 +2590,21 @@ const ClientDashboard = () => {
   }, []);
 
 
-  // CHANGE 3: Update close handler to mark ALL displayed popups as closed
+  // CHANGE 3: Update close handler to just hide the modal (will reappear every 1 minute)
   const handleClosePopup = () => {
-    // Loop through all currently active popups and mark them as seen locally
-    // so they don't appear again on refresh
-    activePopupAds.forEach(ad => {
-      markAdAsClosed(ad.id);
-    });
     setShowPopupModal(false);
   };
+
+  // NEW: Reappear popup every 1 hour even if closed
+  useEffect(() => {
+    if (activePopupAds.length === 0) return; // Don't set interval if no popups
+
+    const popupTimerId = setInterval(() => {
+      setShowPopupModal(true);
+    }, 3600000); // 3600000ms = 1 hour
+
+    return () => clearInterval(popupTimerId); // Cleanup on unmount or when activePopupAds changes
+  }, [activePopupAds]);
   // --- END NEW ADS LOGIC ---
   // --- START: ADD NEW STATE FOR LEAVES ---
   const [employeeLeaves, setEmployeeLeaves] = useState([]);
@@ -6194,7 +6188,7 @@ html.dark-mode .notify-success-message {
               {/* Content for main dashboard tabs */}
               {activeTab === "Dashboard" && (
                 <div>
-                  <h1 style={{ textAlign: 'center', marginBottom: '32px' }} className="brand-full">Welcome, {clientUserName} </h1>
+                  {/* <h1 style={{ textAlign: 'center', marginBottom: '32px' }} className="brand-full">Welcome, {clientUserName} </h1> */}
 
                   {/* <div style={{ textAlign: 'center', marginBottom: '32px' }}>
             <button
@@ -6229,7 +6223,7 @@ html.dark-mode .notify-success-message {
          display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 2rem;
-  padding: 3rem 2rem;
+  padding: 1rem 1rem;
   background: linear-gradient(180deg, #f8faff 0%, #eef2ff 100%);
         
     }
@@ -6328,7 +6322,7 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
 
                     /* New Carousel Styles to match video/image */
                     .client-dashboard-carousel .carousel-item {
-                        height: 250px; /* Adjust height as needed */
+                        height: 400px; /* Adjust height as needed */
                         border-radius: 12px;
                         overflow: hidden;
                         position: relative;
@@ -6406,7 +6400,7 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
                     </style>
 
                     {/* --- START CAROUSEL SECTION --- */}
-                    <div className="carousel-wrapper" style={{ maxWidth: '1200px', margin: '0 auto 20px auto', padding: '0 20px' }}>
+                    <div className="carousel-wrapper" style={{ maxWidth: '1400px', margin: '0 auto 20px auto', padding: '0 20px' }}>
                       <Carousel
                         className="client-dashboard-carousel"
                         interval={5000}
@@ -6419,7 +6413,7 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
                             <Carousel.Item key={ad.id} onClick={() => ad.linkUrl ? window.open(ad.linkUrl, '_blank') : null} style={{ cursor: ad.linkUrl ? 'pointer' : 'default' }}>
 
                               {/* Main Container: Flexbox for 50/50 split */}
-                              <div style={{ height: '320px', background: '#ffffff', borderRadius: '16px', overflow: 'hidden', display: 'flex', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
+                              <div style={{ height: '400px', background: '#ffffff', borderRadius: '16px', overflow: 'hidden', display: 'flex', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
 
                                 {/* LEFT HALF: IMAGE (50%) */}
                                 <div style={{ width: '50%', position: 'relative', overflow: 'hidden' }}>
@@ -6435,12 +6429,13 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
                                 {/* RIGHT HALF: CONTENT (50%) */}
                                 <div style={{
                                   width: '50%',
-                                  padding: '40px',
+                                  padding: '20px 40px',
                                   display: 'flex',
                                   flexDirection: 'column',
-                                  justifyContent: 'flex-start', /* Aligns content to top */
+                                  justifyContent: 'center', /* Centers content vertically */
                                   alignItems: 'flex-start',
-                                  backgroundColor: '#fff'
+                                  backgroundColor: '#fff',
+                                  overflow: 'hidden'
                                 }}>
 
                                   {/* Optional Badge */}
@@ -6451,11 +6446,11 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
                                     Announcement
                                   </span>
 
-                                  <h3 style={{ color: '#1e293b', fontWeight: '800', marginBottom: '12px', fontSize: '1.8rem', lineHeight: '1.2' }}>
+                                  <h3 style={{ color: '#1e293b', fontWeight: '800', marginBottom: '8px', fontSize: '1.6rem', lineHeight: '1.2', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                                     {ad.title}
                                   </h3>
 
-                                  <p style={{ color: '#64748b', fontSize: '1.05rem', marginBottom: '20px', lineHeight: '1.6', maxWidth: '95%' }}>
+                                  <p style={{ color: '#64748b', fontSize: '1rem', marginBottom: '16px', lineHeight: '1.5', maxWidth: '95%', display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                     {ad.message}
                                   </p>
 
@@ -6479,7 +6474,7 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
                           // 2. FALLBACK: SHOW DEFAULT CONTENT IF NO ADS
                           <div>
                             <Carousel.Item>
-                              <div style={{ height: '320px', background: '#ffffff', borderRadius: '16px', overflow: 'hidden', display: 'flex', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
+                              <div style={{ height: '400px', background: '#ffffff', borderRadius: '16px', overflow: 'hidden', display: 'flex', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
                                 <div style={{ width: '50%', position: 'relative' }}>
                                   <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                     <span style={{ fontSize: '4rem', opacity: 0.3 }}>👋</span>
@@ -6499,7 +6494,7 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
                               </div>
                             </Carousel.Item>
                             <Carousel.Item>
-                              <div style={{ height: '320px', background: '#ffffff', borderRadius: '16px', overflow: 'hidden', display: 'flex', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
+                              <div style={{ height: '400px', background: '#ffffff', borderRadius: '16px', overflow: 'hidden', display: 'flex', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
                                 <div style={{ width: '50%', position: 'relative' }}>
                                   <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                     <span style={{ fontSize: '4rem', opacity: 0.3 }}>🚀</span>
@@ -6527,11 +6522,11 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
 
 
                     {/* 1. All Services Grid */}
-                    <div className="all-services-section" style={{ maxWidth: '1200px', margin: '0 auto', padding: '50px 0' }}>
+                    <div className="all-services-section" style={{ maxWidth: '1200px', margin: '0 auto', padding: '10px 0' }}>
                       {/* New Header Design */}
                       <div style={{
                         textAlign: 'center',
-                        marginBottom: '30px'
+                        marginBottom: '10px'
                       }}>
                         {/* Premium Services Badge */}
                         <div style={{
@@ -6544,7 +6539,7 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
                           borderRadius: '20px',
                           fontSize: '0.85rem',
                           fontWeight: '600',
-                          marginBottom: '16px'
+                          marginBottom: '6px'
                         }}>
                           <div style={{
                             width: '8px',
@@ -7571,6 +7566,7 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
               currentPage={currentPage}
               handleNextPage={handleNextPage}
               handlePreviousPage={handlePreviousPage}
+              onPageChange={handlePageChange}
             />
           )
         )}

@@ -63,7 +63,7 @@ const ManagerWorkSheet = () => {
 
       if (cached) {
         const { data, timestamp } = cached;
-        const isFresh = (new Date().getTime() - timestamp) < (durationMinutes * 5 * 1000);
+        const isFresh = (new Date().getTime() - timestamp) < (durationMinutes * 60 * 1000);
         if (isFresh) {
           console.log(`Using cached data (IDB) for ${storageKey}`);
           return data;
@@ -233,6 +233,7 @@ const ManagerWorkSheet = () => {
   const [userProfile, setUserProfile] = useState({});
 
   const [displayEmployees, setDisplayEmployees] = useState([]);
+  const [assignedEmployeeSearchQuery, setAssignedEmployeeSearchQuery] = useState('');
 
   const [selectedApplication, setSelectedApplication] = useState(null);
   const [isApplicationDetailModalOpen, setIsApplicationDetailModalOpen] = useState(false);
@@ -669,10 +670,54 @@ const ManagerWorkSheet = () => {
         }
 
         const assignments = indexSnapshot.val();
+
+        // --- NEW: Load Client Cache from IDB ---
+        const cachedWrapper = await dbGet('cache_clients_full');
+        let clientCache = {};
+        let isCacheValid = false;
+
+        if (cachedWrapper && cachedWrapper.data) {
+          const age = new Date().getTime() - (cachedWrapper.timestamp || 0);
+          if (age < 60 * 60 * 1000) { // 1 hour cache validity
+            clientCache = cachedWrapper.data;
+            isCacheValid = true;
+            console.log("Using cached client data from IDB");
+          } else {
+            console.log("Client cache expired, fetching fresh data...");
+          }
+        } else {
+          console.log("No client cache found.");
+        }
+
         const promises = [];
+        let fetchedNewData = false;
 
         // 2. Loop through the index and fetch specific client data (Parallel Fetch)
         Object.values(assignments).forEach(item => {
+
+          // Check if valid in cache
+          if (isCacheValid && clientCache[item.clientFirebaseKey]) {
+            const cachedRoot = clientCache[item.clientFirebaseKey];
+            // Proceed with cached data logic (copy-paste of the transform logic below)
+            const reg = cachedRoot.serviceRegistrations?.[item.registrationKey];
+            if (reg) {
+              const jobApplicationsArray = Array.isArray(reg.jobApplications) ? reg.jobApplications : Object.values(reg.jobApplications || {});
+              promises.push(Promise.resolve({
+                ...reg,
+                jobApplications: jobApplicationsArray,
+                clientFirebaseKey: item.clientFirebaseKey,
+                registrationKey: item.registrationKey,
+                email: cachedRoot.email,
+                mobile: cachedRoot.mobile,
+                firstName: reg.firstName || cachedRoot.firstName,
+                lastName: reg.lastName || cachedRoot.lastName,
+                name: `${reg.firstName || cachedRoot.firstName || ''} ${reg.lastName || cachedRoot.lastName || ''}`.trim()
+              }));
+              return;
+            }
+          }
+
+          // If not in cache or cache invalid, fetch from network
           const clientRef = ref(database, `clients/${item.clientFirebaseKey}`);
 
           // We fetch the root client node to ensure we get email/mobile + registrations
@@ -680,6 +725,11 @@ const ManagerWorkSheet = () => {
           promises.push(get(clientRef).then(snap => {
             if (snap.exists()) {
               const clientRoot = snap.val();
+
+              // Add to cache for next time
+              clientCache[item.clientFirebaseKey] = clientRoot;
+              fetchedNewData = true;
+
               const reg = clientRoot.serviceRegistrations?.[item.registrationKey];
 
               if (reg) {
@@ -711,6 +761,12 @@ const ManagerWorkSheet = () => {
         const results = await Promise.all(promises);
         const allRegistrations = results.filter(r => r !== null);
 
+        // --- NEW: Save updated cache to IDB if we fetched anything new ---
+        if (fetchedNewData) {
+          await dbSet('cache_clients_full', { timestamp: new Date().getTime(), data: clientCache });
+          console.log("Updated IDB Client Cache");
+        }
+
         // 4. Sort into buckets (Same logic as before)
         const unassigned = [];
         const assigned = [];
@@ -718,11 +774,7 @@ const ManagerWorkSheet = () => {
 
         for (const reg of allRegistrations) {
           // Double check assignment matches (sanity check)
-          if (reg.name.includes("James")) {
-            console.log("DEBUG: Checking James:", reg.name, reg.assignmentStatus, reg.assignedManager, managerFirebaseKey, reg.assignedTo);
-          }
           if (reg.assignedManager !== managerFirebaseKey) {
-            if (reg.name.includes("James")) console.log("DEBUG: James skipped due to manager mismatch");
             continue;
           }
 
@@ -781,11 +833,11 @@ const ManagerWorkSheet = () => {
     let cancelledUsersFetch = false;
     (async () => {
       try {
-        const usersData = await getCachedData('users', 'cache_users_full', 1440); //24 hours cache
+        const usersData = await getCachedData('users', 'cache_users_full', 60); // 1 hour cache
         if (cancelledUsersFetch) return;
         if (usersData) {
           const employees = Object.entries(usersData)
-            .filter(([_, user]) => user.roles && user.roles.includes('employee'))
+            .filter(([_, user]) => user.roles && user.roles.includes('employee') && (user.accountStatus || 'Active').toLowerCase() !== 'inactive')
             .map(([key, user]) => ({
               firebaseKey: key,
               ...user,
@@ -863,7 +915,7 @@ const ManagerWorkSheet = () => {
 
 
   // NEW STATE: Search query for Assigned tab employees
-  const [assignedEmployeeSearchQuery, setAssignedEmployeeSearchQuery] = useState(''); // New state for employee search
+
 
   // NEW STATE: For Client Preview Modal
   const [isClientPreviewModalOpen, setIsClientPreviewModalOpen] = useState(false);
@@ -1350,6 +1402,8 @@ const ManagerWorkSheet = () => {
     setFilterPriority(event.target.value);
   };
 
+
+
   // Handler for search input change in Unassigned Clients modal
   const handleUnassignedSearchChange = (event) => {
     setUnassignedSearchQuery(event.target.value);
@@ -1641,6 +1695,26 @@ const ManagerWorkSheet = () => {
   };
 
 
+  // Filter employees based on search query
+  // Filter employees based on search query and assignment status
+  const filteredEmployees = useMemo(() => {
+    // First, filter to ensure they have assigned clients
+    let result = displayEmployees.filter(employee => {
+      const clientsForEmployee = assignedClients.filter(c => c.assignedTo === employee.firebaseKey);
+      return clientsForEmployee.length > 0;
+    });
+
+    // Then filter by search query if it exists
+    if (assignedEmployeeSearchQuery) {
+      const lowerCaseQuery = assignedEmployeeSearchQuery.toLowerCase();
+      result = result.filter(employee =>
+        (employee.fullName || '').toLowerCase().includes(lowerCaseQuery) ||
+        (employee.role || '').toLowerCase().includes(lowerCaseQuery)
+      );
+    }
+    return result;
+  }, [displayEmployees, assignedClients, assignedEmployeeSearchQuery]);
+
   const filteredApplicationData = useMemo(() => {
     // Helper to get employee name, as it's needed for searching
     const getEmployeeName = (employeeKey) => {
@@ -1754,6 +1828,7 @@ const ManagerWorkSheet = () => {
         'Job Title': app.jobTitle,
         'Job ID': app.jobId,
         'Company': app.company,
+        'Employment Type': app.employment || 'N/A',
         'Job Description Link': app.jobDescriptionUrl,
         'Status': app.status,
         'Employee Name (Creator)': app.employeeName || 'N/A',
@@ -1806,12 +1881,7 @@ const ManagerWorkSheet = () => {
     setAssignedEmployeeSearchQuery(event.target.value);
   };
 
-  // Filtered employees for the "Assigned" tab
-  const filteredEmployees = displayEmployees.filter(employee => {
-    // Only show employees that have at least one client assigned by this manager
-    const clientsForEmployee = assignedClients.filter(c => c.assignedTo === employee.firebaseKey);
-    return clientsForEmployee.length > 0;
-  });
+
 
   const [employeesForAssignment, setEmployeesForAssignment] = useState([]);
 
@@ -2500,6 +2570,7 @@ Please provide a summary no longer than 150 words.`;
                                   <tr>
                                     <th>Company</th>
                                     <th>Job Title</th>
+                                    <th>Employment Type</th>
                                     <th>Job ID</th>
                                     <th>Job Boards</th>
                                     <th>Job Type</th>
@@ -2518,6 +2589,7 @@ Please provide a summary no longer than 150 words.`;
                                       <tr key={app.id || index}>
                                         <td>{app.company}</td>
                                         <td>{app.jobTitle}</td>
+                                        <td>{app.employment || '-'}</td>
                                         <td>{app.jobId}</td>
                                         <td>{app.jobBoards}</td>
                                         <td>{app.jobType}</td>
@@ -7493,6 +7565,7 @@ Please provide a summary no longer than 150 words.`;
               <p className="modal-view-detail-item"><strong>Created Employee:</strong> {selectedApplication?.employeeName || 'N/A'}</p>
               <p className="modal-view-detail-item"><strong>Job Title:</strong> {selectedApplication.jobTitle}</p>
               <p className="modal-view-detail-item"><strong>Company:</strong> {selectedApplication.company}</p>
+              <p className="modal-view-detail-item"><strong>Employment Type:</strong> {selectedApplication.employment || '-'}</p>
               <p className="modal-view-detail-item"><strong>Job ID:</strong> {selectedApplication.jobId}</p>
               <p className="modal-view-detail-item"><strong>Job Boards:</strong> {selectedApplication.jobBoards}</p>
               <p className="modal-view-detail-item"><strong>Job Type:</strong> {selectedApplication.jobType}</p>
@@ -7533,12 +7606,21 @@ Please provide a summary no longer than 150 words.`;
                 <input type="text" name="company" value={editableApplication.company} onChange={handleApplicationChange} />
               </div>
               <div className="form-group">
+                <label>Employment Type</label>
+                <select name="employment" value={editableApplication.employment || ''} onChange={handleApplicationChange}>
+                  <option value="">Select...</option>
+                  <option value="W2">W2</option>
+                  <option value="C2C">C2C</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div className="form-group">
                 <label>Job Boards</label>
                 <input type="text" name="jobBoards" value={editableApplication.jobBoards} onChange={handleApplicationChange} />
               </div>
               <div className="form-group">
                 <label>Job Description URL</label>
-                <input type="jobDescriptionUrl" name="" value={editableApplication.jobDescriptionUrl} onChange={handleApplicationChange} />
+                <input type="url" name="jobDescriptionUrl" value={editableApplication.jobDescriptionUrl} onChange={handleApplicationChange} />
               </div>
               <div className="form-group">
                 <label>Status</label>
