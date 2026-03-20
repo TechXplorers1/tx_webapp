@@ -60,6 +60,10 @@ const ClientManagement = () => {
   const [clientToDelete, setClientToDelete] = useState(null);
   const [isUnacceptClientConfirmModalOpen, setIsUnacceptClientConfirmModalOpen] = useState(false);
   const [clientToUnaccept, setClientToUnaccept] = useState(null);
+  const [isDeclineClientConfirmModalOpen, setIsDeclineClientConfirmModalOpen] = useState(false);
+  const [clientToDecline, setClientToDecline] = useState(null);
+  const [isRestoreClientConfirmModalOpen, setIsRestoreClientConfirmModalOpen] = useState(false);
+  const [clientToRestore, setClientToRestore] = useState(null);
   const [isClientDetailsModalOpen, setIsClientDetailsModalOpen] = useState(false);
   const [selectedClientForDetails, setSelectedClientForDetails] = useState(null);
   const [isEditClientModalOpen, setIsEditClientModalOpen] = useState(false);
@@ -345,25 +349,37 @@ const ClientManagement = () => {
       }));
     }
   };
-  const handleDeclineClient = async (registration) => {
-    if (!registration || !registration.clientFirebaseKey || !registration.registrationKey) {
+  const handleDeclineClientClick = (registration) => {
+    setClientToDecline(registration);
+    setIsDeclineClientConfirmModalOpen(true);
+  };
+
+  const handleCancelDecline = () => {
+    setIsDeclineClientConfirmModalOpen(false);
+    setClientToDecline(null);
+  };
+
+  const handleConfirmDeclineClient = async () => {
+    if (!clientToDecline || !clientToDecline.clientFirebaseKey || !clientToDecline.registrationKey) {
       console.error("Missing registration details to decline client.");
       return;
     }
     try {
       const updates = {};
-      const indexKey = `service_registrations_index/${registration.clientFirebaseKey}_${registration.registrationKey}`;
+      const indexKey = `service_registrations_index/${clientToDecline.clientFirebaseKey}_${clientToDecline.registrationKey}`;
 
-      updates[`clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}/assignmentStatus`] = 'rejected';
+      updates[`clients/${clientToDecline.clientFirebaseKey}/serviceRegistrations/${clientToDecline.registrationKey}/assignmentStatus`] = 'rejected';
       updates[`${indexKey}/assignmentStatus`] = 'rejected';
 
       await update(ref(database), updates);
 
-      console.log(`Client ${registration.firstName} declined and moved to rejected.`);
+      console.log(`Client ${clientToDecline.firstName} declined and moved to rejected.`);
       // OPTIMISTIC UPDATE: update local state immediately
       setServiceRegistrations(prevRegistrations => prevRegistrations.map(reg =>
-        reg.registrationKey === registration.registrationKey ? { ...reg, assignmentStatus: 'rejected' } : reg
+        reg.registrationKey === clientToDecline.registrationKey ? { ...reg, assignmentStatus: 'rejected' } : reg
       ));
+      setIsDeclineClientConfirmModalOpen(false);
+      setClientToDecline(null);
     } catch (error) {
       console.error("Failed to decline client registration:", error);
     }
@@ -660,25 +676,37 @@ const ClientManagement = () => {
   };
 
 
-  const handleRestoreClient = async (registration) => {
-    if (!registration || !registration.clientFirebaseKey || !registration.registrationKey) {
+  const handleRestoreClientClick = (registration) => {
+    setClientToRestore(registration);
+    setIsRestoreClientConfirmModalOpen(true);
+  };
+
+  const handleCancelRestore = () => {
+    setIsRestoreClientConfirmModalOpen(false);
+    setClientToRestore(null);
+  };
+
+  const handleConfirmRestoreClient = async () => {
+    if (!clientToRestore || !clientToRestore.clientFirebaseKey || !clientToRestore.registrationKey) {
       console.error("Missing registration details to restore client.");
       return;
     }
     try {
       const updates = {};
-      const indexKey = `service_registrations_index/${registration.clientFirebaseKey}_${registration.registrationKey}`;
+      const indexKey = `service_registrations_index/${clientToRestore.clientFirebaseKey}_${clientToRestore.registrationKey}`;
 
-      updates[`clients/${registration.clientFirebaseKey}/serviceRegistrations/${registration.registrationKey}/assignmentStatus`] = 'pending_manager';
+      updates[`clients/${clientToRestore.clientFirebaseKey}/serviceRegistrations/${clientToRestore.registrationKey}/assignmentStatus`] = 'pending_manager';
       updates[`${indexKey}/assignmentStatus`] = 'pending_manager';
 
       await update(ref(database), updates);
 
-      console.log(`Client ${registration.firstName} restored and moved to unassigned.`);
+      console.log(`Client ${clientToRestore.firstName} restored and moved to unassigned.`);
       // OPTIMISTIC UPDATE: update local state immediately
       setServiceRegistrations(prevRegistrations => prevRegistrations.map(reg =>
-        reg.registrationKey === registration.registrationKey ? { ...reg, assignmentStatus: 'pending_manager' } : reg
+        reg.registrationKey === clientToRestore.registrationKey ? { ...reg, assignmentStatus: 'pending_manager' } : reg
       ));
+      setIsRestoreClientConfirmModalOpen(false);
+      setClientToRestore(null);
     } catch (error) {
       console.error("Failed to restore client registration:", error);
     }
@@ -1186,20 +1214,20 @@ const ClientManagement = () => {
                       {currentClientFilter === 'registered' && (
                         <>
                           <button onClick={() => handleAcceptClient(registration)} className="action-button accept">Accept</button>
-                          <button onClick={() => handleDeclineClient(registration)} className="action-button decline">Decline</button>
+                          <button onClick={() => handleDeclineClientClick(registration)} className="action-button decline">Decline</button>
                         </>
                       )}
                       {(currentClientFilter === 'unassigned' || currentClientFilter === 'restored') && (
                         <>
                           {/* Unaccept button added here for Unassigned Clients */}
-                          <button onClick={() => handleUnacceptClientClick(registration)} className="action-button cancel">Unaccept</button>
+                          <button onClick={() => handleUnacceptClientClick(registration)} className="action-button decline">Unaccept</button>
                           <button onClick={() => handleAssignClient(registration)} className="action-button assign" disabled={!registration.manager}>Save</button>
                         </>
                       )}
                       {currentClientFilter === 'active' && (<button onClick={() => handleOpenManagerModal(registration)} className="action-button edit-manager">Edit Manager</button>)}
                       {currentClientFilter === 'rejected' && (
                         <>
-                          <button onClick={() => handleRestoreClient(registration)} className="action-button restore">Restore</button>
+                          <button onClick={() => handleRestoreClientClick(registration)} className="action-button restore">Restore</button>
                           {/* Delete button confirmed here for Rejected Clients */}
                           <button onClick={() => handleDeleteRejectedClient(registration)} className="action-button delete-btn">Delete</button>
                         </>
@@ -4424,6 +4452,30 @@ const ClientManagement = () => {
         </div>
       )}
 
+      {/* Restore Confirmation Modal (Rejected -> Unassigned) */}
+      <div className={`modal-overlay ${isRestoreClientConfirmModalOpen ? 'open' : ''}`}>
+        <div className="modal-content confirm-modal-content">
+          <h3 className="modal-title">Confirm Restore Client</h3>
+          <p className="modal-subtitle">Are you sure you want to restore **{clientToRestore?.firstName} {clientToRestore?.lastName}**? This client will be moved back to the 'Unassigned Clients' tab.</p>
+          <div className="confirm-modal-buttons">
+            <button onClick={handleCancelRestore} className="confirm-cancel-btn">Cancel</button>
+            <button onClick={handleConfirmRestoreClient} className="confirm-delete-btn" style={{ backgroundColor: '#6f42c1', color: 'white' }}>Restore</button>
+          </div>
+        </div>
+      </div>
+
+      {/* Decline Confirmation Modal (Registered -> Rejected) */}
+      <div className={`modal-overlay ${isDeclineClientConfirmModalOpen ? 'open' : ''}`}>
+        <div className="modal-content confirm-modal-content">
+          <h3 className="modal-title">Confirm Decline Client</h3>
+          <p className="modal-subtitle">Are you sure you want to decline **{clientToDecline?.firstName} {clientToDecline?.lastName}**? This client will be moved to the 'Rejected Clients' tab.</p>
+          <div className="confirm-modal-buttons">
+            <button onClick={handleCancelDecline} className="confirm-cancel-btn">Cancel</button>
+            <button onClick={handleConfirmDeclineClient} className="confirm-delete-btn">Decline</button>
+          </div>
+        </div>
+      </div>
+
       {/* Unaccept Confirmation Modal (Unassigned -> Registered) */}
       <div className={`modal-overlay ${isUnacceptClientConfirmModalOpen ? 'open' : ''}`}>
         <div className="modal-content confirm-modal-content">
@@ -4431,7 +4483,7 @@ const ClientManagement = () => {
           <p className="modal-subtitle">Are you sure you want to unaccept **{clientToUnaccept?.firstName} {clientToUnaccept?.lastName}**? This will move the client back to the 'Registered Clients' tab.</p>
           <div className="confirm-modal-buttons">
             <button onClick={handleCancelUnaccept} className="confirm-cancel-btn">Cancel</button>
-            <button onClick={handleConfirmUnaccept} className="action-button decline">Unaccept</button>
+            <button onClick={handleConfirmUnaccept} className="confirm-delete-btn">Unaccept</button>
           </div>
         </div>
       </div>

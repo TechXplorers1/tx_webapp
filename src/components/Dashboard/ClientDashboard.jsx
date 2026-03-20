@@ -2933,11 +2933,10 @@ const ClientDashboard = () => {
     const clientKey = loggedInUserData.firebaseKey;
     const clientRef = ref(database, `clients/${clientKey}`);
 
-    // 1. Set up the real-time listener
-    // This listener acts as both the initial fetch and the real-time cache updater.
-    const unsubscribe = onValue(clientRef, (snapshot) => {
+    // 1. Fetch data ONCE using get to avoid massive background bandwidth usage
+    get(clientRef).then((snapshot) => {
       const data = snapshot.exists() ? snapshot.val() : null;
-      console.log("Client Data Fetched/Updated:", data);
+      console.log("Client Data Fetched:", data);
 
       if (!data) {
         // Handle case where data is removed or non-existent
@@ -3027,13 +3026,9 @@ const ClientDashboard = () => {
       setActiveServices(allServices.filter(s => registeredServiceNames.includes(s.title)));
       setInactiveServices(allServices.filter(s => !registeredServiceNames.includes(s.title)));
 
-    }, (error) => {
+    }).catch((error) => {
       console.error("Firebase Read Error:", error);
     });
-
-    return () => {
-      unsubscribe();
-    };
 
   }, []);
 
