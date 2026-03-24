@@ -351,7 +351,6 @@ const handleConfirmAndSubmit = async (e) => {
         firstName: formData.firstName,
         lastName: formData.lastName,
         mobile: `${formData.countryCode} ${formData.mobile}`,
-        email: formData.email,
     };
         
         

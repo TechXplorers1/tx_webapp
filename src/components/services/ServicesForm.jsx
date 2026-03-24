@@ -75,7 +75,6 @@ const ServicesForm = () => {
             firstName: formData.firstName,
             lastName: formData.lastName,
             mobile: formData.mobile,
-            email: formData.email,
         };
 
         try {

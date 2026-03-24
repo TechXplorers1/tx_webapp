@@ -103,7 +103,7 @@ export default function SignupPage() {
     if (!hasError) {
         setIsSigningUp(true); // NEW: Start loading
         try {
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const userCredential = await createUserWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
             const user = userCredential.user;
 
             const userRecord = {
