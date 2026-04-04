@@ -1495,10 +1495,15 @@ const EmployeeData = () => {
       attachments: []
     };
     const existingApplications = selectedClient.jobApplications || [];
-    const updatedApplications = [newApp, ...existingApplications];
-    const registrationRef = ref(database, `clients/${selectedClient.clientFirebaseKey}/serviceRegistrations/${selectedClient.registrationKey}/jobApplications`);
+    const newIndex = existingApplications.length;
+    const jobApplicationsRef = ref(
+      database,
+      `clients/${selectedClient.clientFirebaseKey}/serviceRegistrations/${selectedClient.registrationKey}/jobApplications`
+    );
+    const updatedApplications = [...existingApplications, newApp];
     try {
-      await set(registrationRef, updatedApplications);
+      // Granular write: only the new row. Avoids set() replacing the whole array (slow for large clients).
+      await update(jobApplicationsRef, { [newIndex]: newApp });
       const updatedClient = { ...selectedClient, jobApplications: updatedApplications };
       setSelectedClient(updatedClient);
       const updateClientList = (prevClients) => prevClients.map(c => c.registrationKey === updatedClient.registrationKey ? updatedClient : c);
