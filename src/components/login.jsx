@@ -124,7 +124,7 @@ export default function LoginPage() {
     }
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
       await processLogin(userCredential.user);
     } catch (error) {
       if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
@@ -159,7 +159,7 @@ export default function LoginPage() {
       return;
     }
     try {
-      await sendPasswordResetEmail(auth, forgotEmail);
+      await sendPasswordResetEmail(auth, forgotEmail.trim().toLowerCase());
       setModalAlert({ type: "success", message: `A password reset link has been sent to ${forgotEmail}.` });
     } catch (error) {
       setModalAlert({ type: "danger", message: "Could not send password reset email. Please check the address and try again." });
