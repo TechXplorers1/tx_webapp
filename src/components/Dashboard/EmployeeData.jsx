@@ -1347,7 +1347,7 @@ const EmployeeData = () => {
 
     const { jobTitle, company, jobId } = newApplicationFormData;
 
-    // 2. Conflict Check
+    // 2. Conflict Check against local data (UI feedback)
     if (selectedClient?.jobApplications) {
       const lowerCaseJobTitle = jobTitle ? jobTitle.trim().toLowerCase() : '';
       const lowerCaseCompany = company ? company.trim().toLowerCase() : '';
@@ -1356,8 +1356,8 @@ const EmployeeData = () => {
       // Check for Job Title + Company
       if (lowerCaseJobTitle && lowerCaseCompany) {
         const duplicateTitleCompany = selectedClient.jobApplications.find(app =>
-          app.jobTitle && app.jobTitle.toLowerCase() === lowerCaseJobTitle &&
-          app.company && app.company.toLowerCase() === lowerCaseCompany
+          app.jobTitle && app.jobTitle.trim().toLowerCase() === lowerCaseJobTitle &&
+          app.company && app.company.trim().toLowerCase() === lowerCaseCompany
         );
 
         if (duplicateTitleCompany && duplicateTitleCompany.id !== newApplicationFormData.id) {
@@ -1370,9 +1370,9 @@ const EmployeeData = () => {
       // Check for Job Title + Company + Job ID
       if (lowerCaseJobId && lowerCaseCompany && lowerCaseJobTitle) {
         const duplicateAll = selectedClient.jobApplications.find(app =>
-          app.jobId && app.jobId.toLowerCase() === lowerCaseJobId &&
-          app.company && app.company.toLowerCase() === lowerCaseCompany &&
-          app.jobTitle && app.jobTitle.toLowerCase() === lowerCaseJobTitle
+          app.jobId && app.jobId.trim().toLowerCase() === lowerCaseJobId &&
+          app.company && app.company.trim().toLowerCase() === lowerCaseCompany &&
+          app.jobTitle && app.jobTitle.trim().toLowerCase() === lowerCaseJobTitle
         );
 
         if (duplicateAll && duplicateAll.id !== newApplicationFormData.id) {
@@ -1421,11 +1421,11 @@ const EmployeeData = () => {
     if (selectedClient?.jobApplications) {
       let isDuplicate = false;
 
-      // Check 1: Job Title + Company
+      // Check 1: Job Title + Company - exact match with normalized comparison
       if (jobTitleCheck && companyCheck) {
         const existingTitleCompany = selectedClient.jobApplications.find(app =>
-          app.jobTitle && app.jobTitle.toLowerCase() === jobTitleCheck &&
-          app.company && app.company.toLowerCase() === companyCheck
+          app.jobTitle && app.jobTitle.trim().toLowerCase() === jobTitleCheck &&
+          app.company && app.company.trim().toLowerCase() === companyCheck
         );
 
         if (existingTitleCompany) {
@@ -1435,12 +1435,12 @@ const EmployeeData = () => {
         }
       }
 
-      // Check 2: Job Title + Company + Job ID
+      // Check 2: Job Title + Company + Job ID - exact match with normalized comparison
       if (jobIdCheck && jobTitleCheck && companyCheck) {
         const existingAll = selectedClient.jobApplications.find(app =>
-          app.jobId && app.jobId.toLowerCase() === jobIdCheck &&
-          app.company && app.company.toLowerCase() === companyCheck &&
-          app.jobTitle && app.jobTitle.toLowerCase() === jobTitleCheck
+          app.jobId && app.jobId.trim().toLowerCase() === jobIdCheck &&
+          app.company && app.company.trim().toLowerCase() === companyCheck &&
+          app.jobTitle && app.jobTitle.trim().toLowerCase() === jobTitleCheck
         );
 
         if (existingAll) {
@@ -1492,11 +1492,49 @@ const EmployeeData = () => {
       employeeName: employeeName,
       attachments: []
     };
-    const existingApplications = selectedClient.jobApplications || [];
-    const updatedApplications = [newApp, ...existingApplications];
+
     const registrationRef = ref(database, `clients/${selectedClient.clientFirebaseKey}/serviceRegistrations/${selectedClient.registrationKey}/jobApplications`);
     try {
+      // CRITICAL FIX: Fetch the latest jobApplications from Firebase to catch concurrent duplicates
+      const latestSnapshot = await get(registrationRef);
+      const latestApplications = latestSnapshot.exists()
+        ? (Array.isArray(latestSnapshot.val()) ? latestSnapshot.val() : Object.values(latestSnapshot.val() || {}))
+        : [];
+
+      // Perform final duplicate check against FRESH data from Firebase
+      const jobTitleNorm = newApp.jobTitle ? newApp.jobTitle.trim().toLowerCase() : '';
+      const companyNorm = newApp.company ? newApp.company.trim().toLowerCase() : '';
+      const jobIdNorm = newApp.jobId ? newApp.jobId.trim().toLowerCase() : '';
+
+      // Check for duplicates in the fresh data
+      const isDuplicate = latestApplications.some(app => {
+        const existingJobTitle = app.jobTitle ? app.jobTitle.trim().toLowerCase() : '';
+        const existingCompany = app.company ? app.company.trim().toLowerCase() : '';
+        const existingJobId = app.jobId ? app.jobId.trim().toLowerCase() : '';
+
+        // Check Job Title + Company match
+        if (jobTitleNorm && companyNorm && existingJobTitle === jobTitleNorm && existingCompany === companyNorm) {
+          return true;
+        }
+
+        // Check Job Title + Company + Job ID match
+        if (jobIdNorm && jobTitleNorm && companyNorm &&
+            existingJobId === jobIdNorm && existingJobTitle === jobTitleNorm && existingCompany === companyNorm) {
+          return true;
+        }
+
+        return false;
+      });
+
+      if (isDuplicate) {
+        triggerNotification("You have already applied for this job. Duplicate application rejected.");
+        setIsSubmittingApplication(false);
+        return;
+      }
+
+      const updatedApplications = [newApp, ...latestApplications];
       await set(registrationRef, updatedApplications);
+
       const updatedClient = { ...selectedClient, jobApplications: updatedApplications };
       setSelectedClient(updatedClient);
       const updateClientList = (prevClients) => prevClients.map(c => c.registrationKey === updatedClient.registrationKey ? updatedClient : c);
@@ -1512,7 +1550,7 @@ const EmployeeData = () => {
       triggerNotification("Application added successfully!");
     } catch (error) {
       console.error("Failed to save new application:", error);
-      alert("Error saving application.");
+      alert("Error saving application. Please try again.");
     } finally {
       setIsSubmittingApplication(false);
     }
