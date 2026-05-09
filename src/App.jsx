@@ -1,88 +1,161 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
+import { Routes, Route } from 'react-router-dom';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import { ThemeProvider } from './context/ThemeContext';
-import { AuthProvider, useAuth } from './components/AuthContext';
+import { AuthProvider } from './components/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
+import WhatsAppFloat from './components/WhatsAppFloat';
 
+// ─── EAGERLY LOADED (public-facing, must be instant) ────────────────────────
 import LandingPage from './components/LandingPage';
-import AboutUs from './components/AboutUs';
-import ContactPage from './components/Contact';
 import LoginPage from './components/login';
 import SignupPage from './components/signup';
-import Careers from './components/Careers';
-import ClientDashboard from './components/Dashboard/ClientDashboard';
-import WebAppDev from './components/services/WebAppDev';
-import MobileAppDev from './components/services/MobileAppDev';
-import ITTalentSupply from './components/services/ItTalentSupply';
-import DigitalMarketing from './components/services/DigitalMarketing';
-import JobSupport from './components/services/JobSupport';
-import CyberSecurity from './components/services/CyberSecurity';
-import JobSupportContactForm from './components/services/JobSupportContactForm';
-import EmployeeData from './components/Dashboard/EmployeeData';
-import Reports from './components/Reports';
-import WorkGroups from './components/workgroups';
-import AssetsWorksheet from './components/AssetWorksheet';
-import EmployeeRegistrationForm from './components/employeeRegistrationForm';
-import EmployeeOnboardingWorkSheet from './components/employeeOnboardingSheet';
-import ServicesForm from './components/services/ServicesForm';
-import Projects from './components/Projects';
-import WhatsAppFloat from './components/WhatsAppFloat';
-import PrivacyPolicy from './components/PrivacyPolicy';
-import TermsOfService from './components/TermsOfService';
-import CookiePolicy from './components/CookiePolicy';
-
-
-// import AdminWorksheet from './components/AdminWorksheet';
-import ManagerWorksheet from './components/ManagerWorksheet';
-
-import AdminPage from './components/AdminWorkSheet/AdminPage';
-import ProtectedRoute from './components/ProtectedRoute';
 import Unauthorized from './components/Unauthorized';
+
+// ─── LAZY LOADED (only downloaded when user navigates to that page) ──────────
+const AboutUs            = lazy(() => import('./components/AboutUs'));
+const ContactPage        = lazy(() => import('./components/Contact'));
+const Careers            = lazy(() => import('./components/Careers'));
+const Projects           = lazy(() => import('./components/Projects'));
+const PrivacyPolicy      = lazy(() => import('./components/PrivacyPolicy'));
+const TermsOfService     = lazy(() => import('./components/TermsOfService'));
+const CookiePolicy       = lazy(() => import('./components/CookiePolicy'));
+
+// Services (lazy — only loaded when user clicks a service)
+const WebAppDev          = lazy(() => import('./components/services/WebAppDev'));
+const MobileAppDev       = lazy(() => import('./components/services/MobileAppDev'));
+const ITTalentSupply     = lazy(() => import('./components/services/ItTalentSupply'));
+const DigitalMarketing   = lazy(() => import('./components/services/DigitalMarketing'));
+const JobSupport         = lazy(() => import('./components/services/JobSupport'));
+const CyberSecurity      = lazy(() => import('./components/services/CyberSecurity'));
+const JobSupportContactForm = lazy(() => import('./components/services/JobSupportContactForm'));
+const ServicesForm       = lazy(() => import('./components/services/ServicesForm'));
+
+// Dashboards (lazy — only downloaded when user logs in and navigates)
+const ClientDashboard    = lazy(() => import('./components/Dashboard/ClientDashboard'));
+const EmployeeData       = lazy(() => import('./components/Dashboard/EmployeeData'));
+const Reports            = lazy(() => import('./components/Reports'));
+const WorkGroups         = lazy(() => import('./components/workgroups'));
+const AssetsWorksheet    = lazy(() => import('./components/AssetWorksheet'));
+const ManagerWorksheet   = lazy(() => import('./components/ManagerWorksheet'));
+const EmployeeRegistrationForm = lazy(() => import('./components/employeeRegistrationForm'));
+const EmployeeOnboardingWorkSheet = lazy(() => import('./components/employeeOnboardingSheet'));
+const AdminPage          = lazy(() => import('./components/AdminWorkSheet/AdminPage'));
+
+// ─── Loading Fallback ────────────────────────────────────────────────────────
+const PageLoader = () => (
+  <div style={{
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100vh',
+    background: '#f9fafb',
+    flexDirection: 'column',
+    gap: '16px',
+  }}>
+    <div style={{
+      width: '48px',
+      height: '48px',
+      border: '4px solid #e5e7eb',
+      borderTopColor: '#6D28D9',
+      borderRadius: '50%',
+      animation: 'spin 0.8s linear infinite',
+    }} />
+    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    <p style={{ color: '#6b7280', fontSize: '0.95rem', margin: 0 }}>Loading...</p>
+  </div>
+);
 
 const App = () => {
   return (
     <div>
       <AuthProvider>
         <ThemeProvider>
-          {/* Routes acts as a switch. It only renders ONE Route at a time. */}
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/aboutus" element={<AboutUs />} />
-            <Route path="/contactus" element={<ContactPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/signup" element={<SignupPage />} />
-            <Route path="/careers" element={<Careers />} />
-            <Route path="/projects" element={<Projects />} />
-            <Route path="/unauthorized" element={<Unauthorized />} />
-            {/* Services-Path */}
-            <Route path="/services/mobile-app-development" element={<MobileAppDev />} />
-            <Route path="/services/web-app-development" element={<WebAppDev />} />
-            <Route path="/services/digital-marketing" element={<DigitalMarketing />} />
-            <Route path="/services/it-talent-supply" element={<ITTalentSupply />} />
-            <Route path="/services/job-support" element={<JobSupport />} />
-            <Route path="/services/cyber-security" element={<CyberSecurity />} />
-            <Route path="/services/job-contact-form" element={<ProtectedRoute allowedRoles={['client']}><JobSupportContactForm /></ProtectedRoute>} />
-            <Route path="/services/servicesForm" element={<ProtectedRoute allowedRoles={['client']}><ServicesForm /></ProtectedRoute>} />
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
 
-            {/* DashBoards */}
-            {/* --- Protected Routes with Role-Based Access --- */}
-            <Route path="/clientdashboard" element={<ProtectedRoute allowedRoles={['client']}><ClientDashboard /></ProtectedRoute>} />
-            <Route path="/assetworksheet" element={<ProtectedRoute allowedRoles={['asset']}><AssetsWorksheet /></ProtectedRoute>} />
-            <Route path="/reports" element={<ProtectedRoute allowedRoles={['admin', 'manager']}><Reports /></ProtectedRoute>} />
-            <Route path="/employees" element={<ProtectedRoute allowedRoles={['employee']}><EmployeeData /></ProtectedRoute>} />
-            <Route path="/workgroups" element={<ProtectedRoute allowedRoles={['admin', 'manager']}><WorkGroups /></ProtectedRoute>} />
-            <Route path="/adminpage" element={<ProtectedRoute allowedRoles={['admin']}><AdminPage /></ProtectedRoute>} />
-            {/* <Route path="/adminworksheet" element={<ProtectedRoute allowedRoles={['admin']}><AdminWorksheet /></ProtectedRoute>} /> */}
-            <Route path="/managerworksheet" element={<ProtectedRoute allowedRoles={['manager']}><ManagerWorksheet /></ProtectedRoute>} />
-            <Route path="/employee-registration-form" element={<ProtectedRoute allowedRoles={['admin']}><EmployeeRegistrationForm /></ProtectedRoute>} />
-            <Route path="/employee-onboarding-sheet" element={<ProtectedRoute allowedRoles={['admin']}><EmployeeOnboardingWorkSheet /></ProtectedRoute>} />
-            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-            <Route path="/terms-of-service" element={<TermsOfService />} />
-            <Route path="/cookie-policy" element={<CookiePolicy />} />
+              {/* ── Public Routes ─────────────────────────────────── */}
+              <Route path="/"              element={<LandingPage />} />
+              <Route path="/aboutus"       element={<AboutUs />} />
+              <Route path="/contactus"     element={<ContactPage />} />
+              <Route path="/login"         element={<LoginPage />} />
+              <Route path="/signup"        element={<SignupPage />} />
+              <Route path="/careers"       element={<Careers />} />
+              <Route path="/projects"      element={<Projects />} />
+              <Route path="/unauthorized"  element={<Unauthorized />} />
+              <Route path="/privacy-policy"   element={<PrivacyPolicy />} />
+              <Route path="/terms-of-service" element={<TermsOfService />} />
+              <Route path="/cookie-policy"    element={<CookiePolicy />} />
 
-          </Routes>
-          {/* <--- CLOSED Routes here */}
+              {/* ── Service Routes ────────────────────────────────── */}
+              <Route path="/services/mobile-app-development" element={<MobileAppDev />} />
+              <Route path="/services/web-app-development"    element={<WebAppDev />} />
+              <Route path="/services/digital-marketing"      element={<DigitalMarketing />} />
+              <Route path="/services/it-talent-supply"       element={<ITTalentSupply />} />
+              <Route path="/services/job-support"            element={<JobSupport />} />
+              <Route path="/services/cyber-security"         element={<CyberSecurity />} />
+              <Route path="/services/job-contact-form" element={
+                <ProtectedRoute allowedRoles={['client']}>
+                  <JobSupportContactForm />
+                </ProtectedRoute>
+              } />
+              <Route path="/services/servicesForm" element={
+                <ProtectedRoute allowedRoles={['client']}>
+                  <ServicesForm />
+                </ProtectedRoute>
+              } />
 
-          {/* Place WhatsAppFloat HERE (Outside Routes, inside Providers) */}
+              {/* ── Protected Dashboard Routes ────────────────────── */}
+              <Route path="/clientdashboard" element={
+                <ProtectedRoute allowedRoles={['client']}>
+                  <ClientDashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/assetworksheet" element={
+                <ProtectedRoute allowedRoles={['asset']}>
+                  <AssetsWorksheet />
+                </ProtectedRoute>
+              } />
+              <Route path="/reports" element={
+                <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                  <Reports />
+                </ProtectedRoute>
+              } />
+              <Route path="/employees" element={
+                <ProtectedRoute allowedRoles={['employee']}>
+                  <EmployeeData />
+                </ProtectedRoute>
+              } />
+              <Route path="/workgroups" element={
+                <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                  <WorkGroups />
+                </ProtectedRoute>
+              } />
+              <Route path="/adminpage" element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/managerworksheet" element={
+                <ProtectedRoute allowedRoles={['manager']}>
+                  <ManagerWorksheet />
+                </ProtectedRoute>
+              } />
+              <Route path="/employee-registration-form" element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <EmployeeRegistrationForm />
+                </ProtectedRoute>
+              } />
+              <Route path="/employee-onboarding-sheet" element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <EmployeeOnboardingWorkSheet />
+                </ProtectedRoute>
+              } />
+
+            </Routes>
+          </Suspense>
+
+          {/* WhatsApp float shown on all pages */}
           <WhatsAppFloat />
 
         </ThemeProvider>
@@ -90,4 +163,5 @@ const App = () => {
     </div>
   );
 };
+
 export default App;

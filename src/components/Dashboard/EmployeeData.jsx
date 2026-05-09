@@ -1047,9 +1047,11 @@ const EmployeeData = () => {
   }, [activeTab, newClients, activeClients, inactiveClients, selectedClient]);
 
 
-  // Combined activities for the timeline
-  // This will now only include activities for the selected client if one is chosen
-  const allActivities = (selectedClient ? [selectedClient] : []).flatMap(client => {
+  // Combined activities for the timeline.
+  // Memoize this because it can be expensive for clients with many applications/files/resume updates.
+  const allActivities = useMemo(() => {
+    if (!selectedClient) return [];
+
     const clientActivities = [];
 
     const formatTimestamp = (isoString) => {
@@ -1066,61 +1068,57 @@ const EmployeeData = () => {
     };
 
     // Job application activities
-    (client.jobApplications || []).forEach(app => {
-      const timestamp = formatTimestamp(app.appliedDate);
-
+    (selectedClient.jobApplications || []).forEach(app => {
       clientActivities.push({
-        clientId: client.id,
-        initials: client.initials,
-        name: client.name,
+        clientId: selectedClient.id,
+        initials: selectedClient.initials,
+        name: selectedClient.name,
         description: `Applied for ${app.jobTitle} position at ${app.company}`,
         type: 'job application',
         timestamp: app.timestamp || new Date(app.appliedDate).toISOString(),
         status: app.status === 'Interview' ? 'Active' : 'Completed',
       });
       if (app.status === 'Interview') {
-        const interviewTimestamp = formatTimestamp(app.interviewDate || app.appliedDate);
         clientActivities.push({
-          clientId: client.id,
-          initials: client.initials,
-          name: client.name,
+          clientId: selectedClient.id,
+          initials: selectedClient.initials,
+          name: selectedClient.name,
           description: `Interview scheduled with ${app.company} for ${app.jobTitle} position (Round: ${app.round || 'N/A'}, Mail: ${app.recruiterMail || 'N/A'})`,
           type: 'interview scheduled',
-          timestamp: app.timestamp || new Date(app.appliedDate).toISOString(), // FIX: Use new timestamp
+          timestamp: app.timestamp || new Date(app.appliedDate).toISOString(),
           status: 'Active',
         });
       }
     });
 
     // File activities
-    (client.files || []).forEach(file => {
-      const timestamp = formatTimestamp(file.uploadDate);
+    (selectedClient.files || []).forEach(file => {
       clientActivities.push({
-        clientId: client.id,
-        initials: client.initials,
-        name: client.name,
-        description: `Uploaded ${file.type} for ${client.name} position`,
+        clientId: selectedClient.id,
+        initials: selectedClient.initials,
+        name: selectedClient.name,
+        description: `Uploaded ${file.type} for ${selectedClient.name} position`,
         type: 'file upload',
-        timestamp: file.timestamp || new Date(file.uploadDate).toISOString(), // FIX: Use new timestamp
+        timestamp: file.timestamp || new Date(file.uploadDate).toISOString(),
         status: 'Active',
       });
     });
 
     // Resume update activities
-    (client.resumeUpdates || []).forEach(update => {
+    (selectedClient.resumeUpdates || []).forEach(update => {
       clientActivities.push({
-        clientId: client.id,
-        initials: client.initials,
-        name: client.name,
+        clientId: selectedClient.id,
+        initials: selectedClient.initials,
+        name: selectedClient.name,
         description: `Resume update: ${update.details}`,
         type: 'resume update',
-        timestamp: update.timestamp || new Date(update.date).toISOString(), // FIX: Use new timestamp
+        timestamp: update.timestamp || new Date(update.date).toISOString(),
         status: update.status,
       });
     });
 
-    return clientActivities;
-  }).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); // FIX: Sort by new timestamp property
+    return clientActivities.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  }, [selectedClient]);
 
 
   // Helper function to get the latest resume update date for a client
@@ -1349,7 +1347,7 @@ const EmployeeData = () => {
 
     const { jobTitle, company, jobId } = newApplicationFormData;
 
-    // 2. Conflict Check
+    // 2. Conflict Check against local data (UI feedback)
     if (selectedClient?.jobApplications) {
       const lowerCaseJobTitle = jobTitle ? jobTitle.trim().toLowerCase() : '';
       const lowerCaseCompany = company ? company.trim().toLowerCase() : '';
@@ -1358,8 +1356,8 @@ const EmployeeData = () => {
       // Check for Job Title + Company
       if (lowerCaseJobTitle && lowerCaseCompany) {
         const duplicateTitleCompany = selectedClient.jobApplications.find(app =>
-          app.jobTitle && app.jobTitle.toLowerCase() === lowerCaseJobTitle &&
-          app.company && app.company.toLowerCase() === lowerCaseCompany
+          app.jobTitle && app.jobTitle.trim().toLowerCase() === lowerCaseJobTitle &&
+          app.company && app.company.trim().toLowerCase() === lowerCaseCompany
         );
 
         if (duplicateTitleCompany && duplicateTitleCompany.id !== newApplicationFormData.id) {
@@ -1372,9 +1370,9 @@ const EmployeeData = () => {
       // Check for Job Title + Company + Job ID
       if (lowerCaseJobId && lowerCaseCompany && lowerCaseJobTitle) {
         const duplicateAll = selectedClient.jobApplications.find(app =>
-          app.jobId && app.jobId.toLowerCase() === lowerCaseJobId &&
-          app.company && app.company.toLowerCase() === lowerCaseCompany &&
-          app.jobTitle && app.jobTitle.toLowerCase() === lowerCaseJobTitle
+          app.jobId && app.jobId.trim().toLowerCase() === lowerCaseJobId &&
+          app.company && app.company.trim().toLowerCase() === lowerCaseCompany &&
+          app.jobTitle && app.jobTitle.trim().toLowerCase() === lowerCaseJobTitle
         );
 
         if (duplicateAll && duplicateAll.id !== newApplicationFormData.id) {
@@ -1423,11 +1421,11 @@ const EmployeeData = () => {
     if (selectedClient?.jobApplications) {
       let isDuplicate = false;
 
-      // Check 1: Job Title + Company
+      // Check 1: Job Title + Company - exact match with normalized comparison
       if (jobTitleCheck && companyCheck) {
         const existingTitleCompany = selectedClient.jobApplications.find(app =>
-          app.jobTitle && app.jobTitle.toLowerCase() === jobTitleCheck &&
-          app.company && app.company.toLowerCase() === companyCheck
+          app.jobTitle && app.jobTitle.trim().toLowerCase() === jobTitleCheck &&
+          app.company && app.company.trim().toLowerCase() === companyCheck
         );
 
         if (existingTitleCompany) {
@@ -1437,12 +1435,12 @@ const EmployeeData = () => {
         }
       }
 
-      // Check 2: Job Title + Company + Job ID
+      // Check 2: Job Title + Company + Job ID - exact match with normalized comparison
       if (jobIdCheck && jobTitleCheck && companyCheck) {
         const existingAll = selectedClient.jobApplications.find(app =>
-          app.jobId && app.jobId.toLowerCase() === jobIdCheck &&
-          app.company && app.company.toLowerCase() === companyCheck &&
-          app.jobTitle && app.jobTitle.toLowerCase() === jobTitleCheck
+          app.jobId && app.jobId.trim().toLowerCase() === jobIdCheck &&
+          app.company && app.company.trim().toLowerCase() === companyCheck &&
+          app.jobTitle && app.jobTitle.trim().toLowerCase() === jobTitleCheck
         );
 
         if (existingAll) {
@@ -1494,6 +1492,7 @@ const EmployeeData = () => {
       employeeName: employeeName,
       attachments: []
     };
+<<<<<<< HEAD
     const existingApplications = selectedClient.jobApplications || [];
     const newIndex = existingApplications.length;
     const jobApplicationsRef = ref(
@@ -1504,6 +1503,51 @@ const EmployeeData = () => {
     try {
       // Granular write: only the new row. Avoids set() replacing the whole array (slow for large clients).
       await update(jobApplicationsRef, { [newIndex]: newApp });
+=======
+
+    const registrationRef = ref(database, `clients/${selectedClient.clientFirebaseKey}/serviceRegistrations/${selectedClient.registrationKey}/jobApplications`);
+    try {
+      // CRITICAL FIX: Fetch the latest jobApplications from Firebase to catch concurrent duplicates
+      const latestSnapshot = await get(registrationRef);
+      const latestApplications = latestSnapshot.exists()
+        ? (Array.isArray(latestSnapshot.val()) ? latestSnapshot.val() : Object.values(latestSnapshot.val() || {}))
+        : [];
+
+      // Perform final duplicate check against FRESH data from Firebase
+      const jobTitleNorm = newApp.jobTitle ? newApp.jobTitle.trim().toLowerCase() : '';
+      const companyNorm = newApp.company ? newApp.company.trim().toLowerCase() : '';
+      const jobIdNorm = newApp.jobId ? newApp.jobId.trim().toLowerCase() : '';
+
+      // Check for duplicates in the fresh data
+      const isDuplicate = latestApplications.some(app => {
+        const existingJobTitle = app.jobTitle ? app.jobTitle.trim().toLowerCase() : '';
+        const existingCompany = app.company ? app.company.trim().toLowerCase() : '';
+        const existingJobId = app.jobId ? app.jobId.trim().toLowerCase() : '';
+
+        // Check Job Title + Company match
+        if (jobTitleNorm && companyNorm && existingJobTitle === jobTitleNorm && existingCompany === companyNorm) {
+          return true;
+        }
+
+        // Check Job Title + Company + Job ID match
+        if (jobIdNorm && jobTitleNorm && companyNorm &&
+            existingJobId === jobIdNorm && existingJobTitle === jobTitleNorm && existingCompany === companyNorm) {
+          return true;
+        }
+
+        return false;
+      });
+
+      if (isDuplicate) {
+        triggerNotification("You have already applied for this job. Duplicate application rejected.");
+        setIsSubmittingApplication(false);
+        return;
+      }
+
+      const updatedApplications = [newApp, ...latestApplications];
+      await set(registrationRef, updatedApplications);
+
+>>>>>>> 2308f40276375e6f2b195d59c9d024fd74a184fa
       const updatedClient = { ...selectedClient, jobApplications: updatedApplications };
       setSelectedClient(updatedClient);
       const updateClientList = (prevClients) => prevClients.map(c => c.registrationKey === updatedClient.registrationKey ? updatedClient : c);
@@ -1519,7 +1563,7 @@ const EmployeeData = () => {
       triggerNotification("Application added successfully!");
     } catch (error) {
       console.error("Failed to save new application:", error);
-      alert("Error saving application.");
+      alert("Error saving application. Please try again.");
     } finally {
       setIsSubmittingApplication(false);
     }
@@ -2029,6 +2073,10 @@ const EmployeeData = () => {
     return filtered;
   };
 
+  const filteredActivities = useMemo(() => {
+    return getFilteredAndSortedActivities(allActivities);
+  }, [allActivities, searchTerm, activityTypeFilter, filterDateRange, sortOrder]);
+
   // In EmployeeData.jsx (around line 980)
 
   const handleAcceptClient = async (clientToAccept) => {
@@ -2519,6 +2567,18 @@ const EmployeeData = () => {
     // reuse the existing filter/sort function so behaviour stays same
     return getFilteredAndSortedApplications(selectedClient.jobApplications || []);
   }, [selectedClient, searchTerm, statusFilter, filterDateRange, sortOrder]);
+
+  const applicationsByDate = useMemo(() => {
+    const grouped = {};
+    allFilteredApplications.forEach(app => {
+      const dateKey = app.appliedDate || 'Unknown Date';
+      if (!grouped[dateKey]) grouped[dateKey] = [];
+      grouped[dateKey].push(app);
+    });
+    return Object.keys(grouped)
+      .sort((a, b) => new Date(b) - new Date(a))
+      .map(dateKey => ({ dateKey, applications: grouped[dateKey] }));
+  }, [allFilteredApplications]);
 
   const totalApplicationPages = Math.max(
     1,
@@ -3354,35 +3414,26 @@ const EmployeeData = () => {
                     {/* Date-wise Application Table */}
                     <div style={applicationTableWrapperStyle}>
                       {/* Get filtered and sorted applications, then group by date */}
-                      {Object.keys(getFilteredAndSortedApplications(selectedClient.jobApplications || [])
-                        .reduce((acc, app) => {
-                          const dateKey = app.appliedDate;
-                          if (!acc[dateKey]) {
-                            acc[dateKey] = [];
-                          }
-                          acc[dateKey].push(app);
-                          return acc;
-                        }, {})).sort((a, b) => new Date(b) - new Date(a)) // Sort dates newest first
-                        .map(dateKey => (
-                          <div key={dateKey} style={{ marginBottom: '20px' }}>
-                            <div style={{
-                              background: '#f1f5f9',
-                              color: '#475569',
-                              padding: '12px 16px',
-                              borderRadius: '8px',
-                              marginBottom: '10px',
-                              fontWeight: '600'
-                            }}>
-                              {dateKey}
-                              <span style={{ float: 'right' }}>
-                                {getFilteredAndSortedApplications(selectedClient.jobApplications || []).filter(app => app.appliedDate === dateKey).length} application(s)
-                              </span>
-                            </div>
+                      {applicationsByDate.map(({ dateKey, applications }) => (
+                        <div key={dateKey} style={{ marginBottom: '20px' }}>
+                          <div style={{
+                            background: '#f1f5f9',
+                            color: '#475569',
+                            padding: '12px 16px',
+                            borderRadius: '8px',
+                            marginBottom: '10px',
+                            fontWeight: '600'
+                          }}>
+                            {dateKey}
+                            <span style={{ float: 'right' }}>
+                              {applications.length} application(s)
+                            </span>
+                          </div>
 
-                            <table style={applicationTableStyle}>
-                              <thead>
-                                <tr>
-                                  <th style={applicationTableHeaderCellStyle}>S.No</th>
+                          <table style={applicationTableStyle}>
+                            <thead>
+                              <tr>
+                                <th style={applicationTableHeaderCellStyle}>S.No</th>
                                   <th style={applicationTableHeaderCellStyle}>Job Title</th>
                                   <th style={applicationTableHeaderCellStyle}>Company</th>
                                   <th style={applicationTableHeaderCellStyle}>Employment Type</th>
@@ -3912,12 +3963,12 @@ const EmployeeData = () => {
                     Recent Activity Timeline
                   </h2>
                   <div style={activityTimelineContainerStyle}>
-                    {getFilteredAndSortedActivities(allActivities).length === 0 ? (
+                    {filteredActivities.length === 0 ? (
                       <div style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>
                         No activities found for this client.
                       </div>
                     ) : (
-                      getFilteredAndSortedActivities(allActivities).map((activity, index) => (
+                      filteredActivities.map((activity, index) => (
                         <div key={index} style={activityItemStyle}>
                           <div style={activityIconContainerStyle}>
                             <div style={initialsCircleSmallStyle}>{activity.initials}</div>
@@ -4970,12 +5021,12 @@ const EmployeeData = () => {
                     Recent Activity Timeline
                   </h2>
                   <div style={activityTimelineContainerStyle}>
-                    {getFilteredAndSortedActivities(allActivities).length === 0 ? (
+                    {filteredActivities.length === 0 ? (
                       <div style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>
                         No activities found for this client.
                       </div>
                     ) : (
-                      getFilteredAndSortedActivities(allActivities).map((activity, index) => (
+                      filteredActivities.map((activity, index) => (
                         <div key={index} style={activityItemStyle}>
                           <div style={activityIconContainerStyle}>
                             <div style={initialsCircleSmallStyle}>{activity.initials}</div>

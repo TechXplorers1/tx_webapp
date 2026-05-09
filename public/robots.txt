@@ -1,0 +1,5 @@
+User-agent: *
+Disallow: /
+
+# This file tells search engines and automated crawlers not to index or crawl any pages.
+# It is a soft request; it helps well-behaved bots avoid the site.
