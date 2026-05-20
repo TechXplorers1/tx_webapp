@@ -45,7 +45,7 @@ body {
 }
 
 .cyber-security-container {
- margin-top: 50px;
+ margin-top: 70px; /* Navbar height offset */
 }
 
 /* Animate Image */

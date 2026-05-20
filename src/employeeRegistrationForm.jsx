@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Button } from 'react-bootstrap';
 import { Country, State, City } from 'country-state-city';
-import successImage from './assets/successImage.jpeg'; // Adjust path as needed
+import successImage from './assets/successImage.jpg'; // Fixed extension
 
 const EmployeeRegistrationForm = ({ onFormSubmit }) => {
   // Styles for various elements to achieve a modern look

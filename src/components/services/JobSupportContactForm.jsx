@@ -358,6 +358,84 @@ const handleConfirmAndSubmit = async (e) => {
     
     const clientProfileRef = ref(database, `clients/${user.firebaseKey}`);
     await update(clientProfileRef, clientProfileUpdate);
+
+    // FIX: Also update the optimized service_registrations_index so it appears immediately in Admin Dashboard
+    const indexKey = `${user.firebaseKey}_${registrationKey}`;
+    const indexRef = ref(database, `service_registrations_index/${indexKey}`);
+    const indexEntry = {
+        clientFirebaseKey: user.firebaseKey,
+        registrationKey: registrationKey,
+
+        // Basic Info
+        firstName: formData.firstName || '',
+        middleName: formData.middleName || '',
+        lastName: formData.lastName || '',
+        dob: formData.dob || '',
+        gender: formData.gender || '',
+        ethnicity: formData.ethnicity || '',
+        mobile: `${formData.countryCode} ${formData.mobile}` || '',
+        email: formData.email || '',
+
+        // Address
+        address: formData.address || '',
+        county: formData.county || '',
+        zipCode: formData.zipCode || '',
+        country: countryName || '',
+        countryCode: formData.countryCode || '+1',
+
+        // Professional Info
+        service: 'Job Supporting',
+        assignmentStatus: 'registered',
+        currentCompany: formData.currentCompany || '',
+        currentDesignation: formData.currentDesignation || '',
+        yearsOfExperience: formData.yearsOfExperience || '',
+        currentSalary: formData.currentSalary || '',
+        expectedSalary: formData.expectedSalary || '',
+        noticePeriod: formData.noticePeriod || '',
+
+        // Job Preferences & Visa
+        jobsToApply: formData.jobsToApply || '',
+        workPreference: formData.workPreference || '',
+        willingToRelocate: formData.willingToRelocate || '',
+        restrictedCompanies: formData.restrictedCompanies || '',
+        preferredInterviewTime: formData.preferredInterviewTime || '',
+        earliestJoiningDate: formData.earliestJoiningDate || '',
+        relievingDate: formData.relievingDate || '',
+
+        // Clearance
+        securityClearance: formData.securityClearance || '',
+        clearanceLevel: formData.clearanceLevel || '',
+
+        // Visa
+        visaStatus: formData.visaStatus === 'other' ? formData.otherVisaStatus : formData.visaStatus || '',
+        otherVisaStatus: formData.visaStatus === 'other' ? formData.otherVisaStatus : '',
+
+        // Education (Array)
+        educationDetails: formData.educationDetails || [],
+
+        // References
+        referenceName: formData.referenceName || '',
+        referencePhone: formData.referencePhone || '',
+        referenceAddress: formData.referenceAddress || '',
+        referenceEmail: formData.referenceEmail || '',
+        referenceRole: formData.referenceRole || '',
+
+        // Account
+        jobPortalAccountNameandCredentials: formData.jobPortalAccountNameandCredentials || '',
+
+        // Files (URLs/Metadata only)
+        resume: resumesData || [],
+        coverLetter: coverLetterUrl || '',
+
+        // Dates
+        appliedDate: new Date().toISOString().split('T')[0],
+        registeredDate: new Date().toISOString().split('T')[0],
+
+        // Manager Info
+        manager: null,
+        assignedManager: null,
+    };
+    await set(indexRef, indexEntry);
     
     console.log("Job Support registration saved successfully.");
     setSubmitStatus({ success: true, message: 'Form submitted successfully!' });

@@ -3,6 +3,12 @@ import { database, storage } from '../../firebase';
 import { ref, push, serverTimestamp, remove, update, get, query, orderByChild, limitToLast } from "firebase/database";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage"; 
 import { Modal, Button, Form, Card, Badge, Spinner, Container, Row, Col } from 'react-bootstrap';
+import { dbGet, dbSet, dbDelete } from '../../utils/idbCache';
+
+// Cache keys shared with ClientDashboard so both sides stay in sync
+const ADS_ADMIN_CACHE_KEY = 'cache_ads_admin_list';
+const ADS_CLIENT_CACHE_KEY = 'cache_welcome_cards'; // same key ClientDashboard reads
+const ADS_CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 
 const AdsManagement = () => {
     // --- STATES ---
@@ -28,34 +34,38 @@ const AdsManagement = () => {
     const [deleteAdKey, setDeleteAdKey] = useState(null);
     const [isDeleteConfirmModalOpen, setIsDeleteConfirmModalOpen] = useState(false);
 
-    // --- DATA FETCHING ---
-    const loadAds = async () => {
+    // --- DATA FETCHING with IDB Cache ---
+    const loadAds = async (forceRefresh = false) => {
         try {
-            // Note: Ensure '.indexOn': ['createdAt'] is in your Firebase Rules
+            // 1. Check cache first (unless force-refresh)
+            if (!forceRefresh) {
+                const cached = await dbGet(ADS_ADMIN_CACHE_KEY);
+                if (cached && (Date.now() - cached.timestamp) < ADS_CACHE_TTL) {
+                    console.log('[IDB Cache HIT] ads admin list');
+                    setPostedAds(cached.data || []);
+                    return;
+                }
+            }
+
+            // 2. Fetch from Firebase
+            console.log('[IDB Cache MISS] Fetching ads from Firebase...');
             const adsQuery = query(
                 ref(database, "welcomeCards"),
                 orderByChild("createdAt"),
                 limitToLast(50)
             );
-
             const snapshot = await get(adsQuery);
-            
+
             if (snapshot.exists()) {
                 const data = snapshot.val();
-                const list = Object.keys(data).map(key => ({
-                    id: key,
-                    ...data[key]
-                }));
-
-                // Sort newest first (Javascript sort as backup)
-                list.sort((a, b) => {
-                    const dateA = a.createdAt || 0;
-                    const dateB = b.createdAt || 0;
-                    return dateB - dateA;
-                });
+                const list = Object.keys(data).map(key => ({ id: key, ...data[key] }));
+                list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
                 setPostedAds(list);
+                // 3. Store in admin cache
+                await dbSet(ADS_ADMIN_CACHE_KEY, { data: list, timestamp: Date.now() });
             } else {
                 setPostedAds([]);
+                await dbSet(ADS_ADMIN_CACHE_KEY, { data: [], timestamp: Date.now() });
             }
         } catch (err) {
             console.error("Failed to load ads:", err);
@@ -63,7 +73,7 @@ const AdsManagement = () => {
     };
 
     useEffect(() => {
-        loadAds();
+        loadAds(false);
     }, []);
 
     // --- HANDLERS ---
@@ -112,7 +122,13 @@ const AdsManagement = () => {
                 createdAt: serverTimestamp(),
             });
 
-            // Reset Form & Reload
+            // 3. Bust both caches so clients + admin see fresh data immediately
+            await Promise.all([
+                dbDelete(ADS_ADMIN_CACHE_KEY),
+                dbDelete(ADS_CLIENT_CACHE_KEY),
+            ]);
+
+            // Reset Form & Reload (force-fresh from Firebase)
             setNewAd({
                 title: '', message: '', imageUrl: '', linkUrl: '', buttonText: '',
                 targetDate: new Date().toISOString().split('T')[0],
@@ -120,7 +136,7 @@ const AdsManagement = () => {
             });
             setImageFile(null); 
             setShowCreateModal(false); 
-            await loadAds(); 
+            await loadAds(true); 
 
         } catch (error) {
             console.error("Error posting ad:", error);
@@ -175,8 +191,14 @@ const AdsManagement = () => {
                 type: adToEdit.type
             });
 
+            // Bust both caches so clients see updated ad immediately
+            await Promise.all([
+                dbDelete(ADS_ADMIN_CACHE_KEY),
+                dbDelete(ADS_CLIENT_CACHE_KEY),
+            ]);
+
             setIsEditModalOpen(false);
-            await loadAds(); 
+            await loadAds(true); 
         } catch (error) {
             console.error("Error updating ad:", error);
             if (error.code === 'storage/quota-exceeded') {
@@ -199,8 +221,15 @@ const AdsManagement = () => {
         setLoading(true);
         try {
             await remove(ref(database, `welcomeCards/${deleteAdKey}`));
+
+            // Bust both caches so clients no longer see the deleted ad
+            await Promise.all([
+                dbDelete(ADS_ADMIN_CACHE_KEY),
+                dbDelete(ADS_CLIENT_CACHE_KEY),
+            ]);
+
             setIsDeleteConfirmModalOpen(false);
-            await loadAds(); 
+            await loadAds(true); 
         } catch (error) {
             console.error(error);
             alert("Delete failed.");

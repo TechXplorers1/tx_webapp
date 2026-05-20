@@ -1,67 +1,19 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Container, Row, Col, Carousel } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'; 
-import 'leaflet/dist/leaflet.css';
+
 import CustomNavbar from './Navbar';
 import Footer from './Footer';
+import CaptchaGate from './CaptchaGate';
 import '../styles/LandingPage.css';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../components/AuthContext'; 
 import { database } from '../firebase';
 import { ref, get } from "firebase/database";
 import { useInView } from 'react-intersection-observer'; 
-import L from 'leaflet';
-import icon from 'leaflet/dist/images/marker-icon.png';
-import iconRetina from 'leaflet/dist/images/marker-icon-2x.png';
-import shadow from 'leaflet/dist/images/marker-shadow.png';
 
-// --- IndexedDB Helper (Stops the 17MB Download) ---
-const IDB_CONFIG = { name: 'AppCacheDB', version: 1, store: 'firebase_cache' };
-
-const openDB = () => {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(IDB_CONFIG.name, IDB_CONFIG.version);
-    request.onupgradeneeded = (e) => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains(IDB_CONFIG.store)) {
-        db.createObjectStore(IDB_CONFIG.store);
-      }
-    };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-};
-
-const dbGet = async (key) => {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(IDB_CONFIG.store, 'readonly');
-    const request = transaction.objectStore(IDB_CONFIG.store).get(key);
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-};
-
-const dbSet = async (key, val) => {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(IDB_CONFIG.store, 'readwrite');
-    const request = transaction.objectStore(IDB_CONFIG.store).put(val, key);
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error);
-  });
-};
-// -----------------------------------------------------------
-
-// === Leaflet Icon Fix ===
-delete L.Icon.Default.prototype._getIconUrl;
-
-L.Icon.Default.mergeOptions({
-    iconRetinaUrl: iconRetina,
-    iconUrl: icon,
-    shadowUrl: shadow,
-});
+// --- Shared IndexedDB cache utility ---
+import { getCachedData } from '../utils/idbCache';
 
 // --- Icon Components ---
 const StarIcon = () => (
@@ -105,38 +57,6 @@ const LandingPage = () => {
   const [globalStatsRef, globalStatsInView] = useInView({ triggerOnce: true, threshold: 0.1 });
   const [worldRef, worldInView] = useInView({ triggerOnce: true, threshold: 0.1 });
 
-  // --- NEW: Function to cache and fetch ---
-  const getCachedData = async (dbPath, storageKey, durationMinutes = 60) => {
-    try {
-      // 1. Check Cache
-      const cached = await dbGet(storageKey);
-      if (cached) {
-        const { data, timestamp } = cached;
-        const isFresh = (new Date().getTime() - timestamp) < (durationMinutes * 60 * 1000);
-        if (isFresh) {
-          console.log(`Using cached data (IDB) for ${storageKey}`);
-          return data;
-        }
-      }
-
-      // 2. Fetch Fresh if needed
-      const snapshot = await get(ref(database, dbPath));
-      const data = snapshot.exists() ? snapshot.val() : null;
-      
-      if (data) {
-        // 3. Save to Cache
-        await dbSet(storageKey, {
-          data,
-          timestamp: new Date().getTime()
-        });
-      }
-      return data;
-    } catch (err) {
-      console.error("Cache Error:", err);
-      return null;
-    }
-  };
-
   useEffect(() => {
     if (!isLoggedIn || !user?.firebaseKey) {
       setServiceRegistrations(null);
@@ -144,9 +64,9 @@ const LandingPage = () => {
     }
 
     const fetchServiceRegistrationsOnce = async () => {
-      // USE CACHE HERE:
       const data = await getCachedData(
-        `clients/${user.firebaseKey}/serviceRegistrations`, 
+        () => get(ref(database, `clients/${user.firebaseKey}/serviceRegistrations`))
+              .then(snap => snap.exists() ? snap.val() : null),
         `cache_registrations_${user.firebaseKey}`,
         60 // 60 minutes cache
       );
@@ -162,12 +82,36 @@ const LandingPage = () => {
   // but ensure you keep the `return (...)` block exactly as it was.
 
   const offices = [
-    { name: 'USA', position: [40.7128, -74.006] },
-    { name: 'Canada', position: [43.6532, -79.3832] },
-    { name: 'Nigeria', position: [6.5244, 3.3792] },
-    { name: 'Australia', position: [-33.8688, 151.2093] },
-    { name: 'India', position: [14.6663, 77.5900] },
-    { name: 'UK', position: [51.5074, -0.1278] },
+    {
+      flag: '🇺🇸', country: 'United States', city: 'New York, NY',
+      timezone: 'EST (UTC−5)', services: ['Job Support', 'Web Development', 'IT Talent Supply'],
+      highlight: 'Primary HQ',
+    },
+    {
+      flag: '🇨🇦', country: 'Canada', city: 'Toronto, ON',
+      timezone: 'EST (UTC−5)', services: ['Mobile Development', 'IT Consulting', 'Cyber Security'],
+      highlight: 'North America Hub',
+    },
+    {
+      flag: '🇬🇧', country: 'United Kingdom', city: 'London',
+      timezone: 'GMT (UTC+0)', services: ['Web Development', 'Cyber Security', 'Digital Marketing'],
+      highlight: 'Europe Hub',
+    },
+    {
+      flag: '🇮🇳', country: 'India', city: 'Andhra Pradesh',
+      timezone: 'IST (UTC+5:30)', services: ['Full-Stack Development', 'Digital Marketing', 'QA & Testing'],
+      highlight: 'Asia Hub',
+    },
+    {
+      flag: '🇳🇬', country: 'Nigeria', city: 'Lagos',
+      timezone: 'WAT (UTC+1)', services: ['IT Talent Supply', 'Digital Marketing', 'Web Development'],
+      highlight: 'Africa Hub',
+    },
+    {
+      flag: '🇦🇺', country: 'Australia', city: 'Sydney, NSW',
+      timezone: 'AEST (UTC+10)', services: ['Cyber Security', 'IT Consulting', 'Mobile Development'],
+      highlight: 'Pacific Hub',
+    },
   ];
 
   const servicesData = [
@@ -305,7 +249,7 @@ const LandingPage = () => {
   }, [serviceRegistrations]);
 
   return (
-    <>
+    <CaptchaGate>
       <style>{`
             :root {
                 /* Light Mode */
@@ -579,11 +523,31 @@ const LandingPage = () => {
                 flex-shrink: 0;
             }
 
-            .leaflet-map {
-                filter: grayscale(20%) contrast(110%);
-                transition: transform 0.4s ease;
-            }
-            .leaflet-map:hover { transform: scale(1.01); }
+            /* Where We Operate Section */
+            .world-services-modern { padding: 80px 0; background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%); }
+            .operate-section-header { text-align: center; margin-bottom: 56px; }
+            .operate-section-header .pill-badge { background: linear-gradient(90deg, #3b82f6, #8b5cf6); color: white; padding: 6px 20px; border-radius: 50px; font-size: 0.8rem; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; display: inline-block; margin-bottom: 16px; }
+            .operate-section-header h2 { font-size: 2.2rem; font-weight: 800; color: #fff; margin-bottom: 12px; }
+            .operate-section-header p { color: #94a3b8; font-size: 1.05rem; max-width: 560px; margin: 0 auto; }
+            .offices-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; padding: 0 40px; }
+            @media (max-width: 900px) { .offices-grid { grid-template-columns: repeat(2, 1fr); padding: 0 20px; } }
+            @media (max-width: 580px) { .offices-grid { grid-template-columns: 1fr; padding: 0 16px; } }
+            .office-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 28px 24px; display: flex; flex-direction: column; gap: 16px; transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease; position: relative; overflow: hidden; }
+            .office-card::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(59,130,246,0.08) 0%, transparent 60%); opacity: 0; transition: opacity 0.3s; border-radius: 20px; }
+            .office-card:hover { transform: translateY(-6px); border-color: rgba(59,130,246,0.4); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+            .office-card:hover::before { opacity: 1; }
+            .office-card-header { display: flex; align-items: center; gap: 14px; }
+            .office-flag { font-size: 2.6rem; line-height: 1; }
+            .office-country-info h4 { color: #fff; font-size: 1.1rem; font-weight: 700; margin: 0 0 2px; }
+            .office-country-info span { color: #64748b; font-size: 0.82rem; }
+            .office-highlight-badge { position: absolute; top: 16px; right: 16px; background: linear-gradient(90deg, #3b82f6, #8b5cf6); color: white; font-size: 0.68rem; font-weight: 700; padding: 3px 10px; border-radius: 50px; letter-spacing: 0.5px; text-transform: uppercase; }
+            .office-timezone { display: flex; align-items: center; gap: 8px; color: #94a3b8; font-size: 0.82rem; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px; }
+            .office-timezone svg { color: #3b82f6; flex-shrink: 0; }
+            .office-services { display: flex; flex-wrap: wrap; gap: 6px; }
+            .office-service-tag { background: rgba(59,130,246,0.12); color: #93c5fd; border: 1px solid rgba(59,130,246,0.2); font-size: 0.72rem; font-weight: 500; padding: 4px 10px; border-radius: 50px; }
+            .live-dot { display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 0.78rem; color: #4ade80; }
+            .live-dot-pulse { width: 7px; height: 7px; background: #4ade80; border-radius: 50%; animation: pulse-green 1.5s infinite; }
+            @keyframes pulse-green { 0%,100%{box-shadow:0 0 0 0 rgba(74,222,128,0.5)} 50%{box-shadow:0 0 0 6px rgba(74,222,128,0)} }
 
             .learn-more-link {
                 color: #3b82f6; 
@@ -1044,54 +1008,66 @@ const LandingPage = () => {
             </Container>
         </section>
 
-        {/* World Services Section */}
+        {/* Where We Operate Section */}
         <section
           ref={worldRef}
           className={`world-services-modern ${worldInView ? 'slide-up-section' : ''}`}
           id="world"
           style={{ opacity: worldInView ? 1 : 0 }}
         >
-          <Container fluid className="px-0">
-            <div className="map-container-modern">
-              <MapContainer
-                center={[20.0, 0.0]}
-                zoom={2}
-                scrollWheelZoom={false}
-                className="leaflet-map"
+          <div className="operate-section-header">
+            <span className="pill-badge">Global Presence</span>
+            <h2>Where We Operate</h2>
+            <p>Delivering world-class IT solutions with dedicated hubs across 6 countries and 6 continents.</p>
+          </div>
+
+          <div className="offices-grid">
+            {offices.map((office, index) => (
+              <div
+                key={index}
+                className="office-card"
+                style={{ animationDelay: worldInView ? `${0.1 + index * 0.1}s` : '0s' }}
               >
-                <MapRefresher worldInView={worldInView} />
+                {/* Highlight badge */}
+                <span className="office-highlight-badge">{office.highlight}</span>
 
-                <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
-                  url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.jpeg"
-                />
-                {offices.map((office, index) => (
-                  <Marker key={index} position={office.position}>
-                    <Popup>{office.name}</Popup>
-                  </Marker>
-                ))}
-              </MapContainer>
+                {/* Flag + Country */}
+                <div className="office-card-header">
+                  <span className="office-flag">{office.flag}</span>
+                  <div className="office-country-info">
+                    <h4>{office.country}</h4>
+                    <span>📍 {office.city}</span>
+                  </div>
+                </div>
 
-              <div className="operate-overlay">
-                <h3 className="operate-title">We operate in:</h3>
-                <div className="country-grid">
-                  <div className="country-item">United States</div>
-                  <div className="country-item">Canada</div>
-                  <div className="country-item">United Kingdom</div>
-                  <div className="country-item">Nigeria</div>
-                  <div className="country-item">Australia</div>
-                  <div className="country-item">India</div>
+                {/* Live indicator */}
+                <div className="live-dot">
+                  <span className="live-dot-pulse"></span>
+                  Active Office
+                </div>
+
+                {/* Timezone */}
+                <div className="office-timezone">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  {office.timezone}
+                </div>
+
+                {/* Services offered */}
+                <div className="office-services">
+                  {office.services.map((svc, i) => (
+                    <span key={i} className="office-service-tag">{svc}</span>
+                  ))}
                 </div>
               </div>
-            </div>
-          </Container>
+            ))}
+          </div>
         </section>
 
         {/* Footer Component */}
         <Footer />
         
       </div>
-    </>
+    </CaptchaGate>
   );
 };
 

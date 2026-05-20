@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { database } from '../../firebase'; 
-import { ref, get, update, remove, query, limitToLast } from "firebase/database"; // Added query and limitToLast
+import { ref, get, update, remove, query, limitToLast } from "firebase/database";
+import { dbGet, dbSet } from '../../utils/idbCache';
 
 const RequestManagement = () => {
   // --- Request Management States ---
@@ -24,68 +25,59 @@ const RequestManagement = () => {
   const [careerSubmissions, setCareerSubmissions] = useState([]);
   const [contactSubmissions, setContactSubmissions] = useState([]);
 
-  // --- OPTIMIZED DATA FETCHING ---
-  useEffect(() => {
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const REQ_CACHE_KEY = 'cache_request_submissions';
+  const REQ_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+
+  const fetchSubmissions = useCallback(async (forceRefresh = false) => {
     let cancelled = false;
-
-    const fetchSubmissions = async () => {
-      try {
-        // 1. Fetch only the last 50 Career Submissions
-        const careerQuery = query(
-            ref(database, "submissions/career_submissions"),
-            limitToLast(50)
-        );
-
-        // 2. Fetch only the last 50 Contact Messages
-        const contactQuery = query(
-            ref(database, "submissions/contactMessages"),
-            limitToLast(50)
-        );
-
-        // Run both small requests in parallel
-        const [careerSnap, contactSnap] = await Promise.all([
-            get(careerQuery),
-            get(contactQuery)
-        ]);
-
-        if (cancelled) return;
-
-        // Process Career Data
-        if (careerSnap.exists()) {
-            const data = careerSnap.val();
-            const formatted = Object.keys(data).map(key => ({
-                firebaseKey: key,
-                ...data[key],
-            })).reverse(); // Reverse to show newest first
-            setCareerSubmissions(formatted);
-        } else {
-            setCareerSubmissions([]);
-        }
-
-        // Process Contact Data
-        if (contactSnap.exists()) {
-            const data = contactSnap.val();
-            const formatted = Object.keys(data).map(key => ({
-                firebaseKey: key,
-                ...data[key],
-            })).reverse(); // Reverse to show newest first
-            setContactSubmissions(formatted);
-        } else {
-            setContactSubmissions([]);
-        }
-
-      } catch (err) {
-        if (!cancelled) {
-          console.error("Failed to load submissions:", err);
+    setIsRefreshing(true);
+    try {
+      // 1. Check cache first (unless forced)
+      if (!forceRefresh) {
+        const cached = await dbGet(REQ_CACHE_KEY);
+        if (cached && (Date.now() - cached.timestamp) < REQ_CACHE_TTL) {
+          console.log('[IDB Cache HIT] request submissions');
+          setCareerSubmissions(cached.career || []);
+          setContactSubmissions(cached.contact || []);
+          return;
         }
       }
-    };
 
-    fetchSubmissions();
-    return () => {
-      cancelled = true;
-    };
+      // 2. Fetch only the last 50 of each (already using limitToLast)
+      console.log('[IDB Cache MISS] Fetching submissions from Firebase...');
+      const careerQuery = query(ref(database, "submissions/career_submissions"), limitToLast(50));
+      const contactQuery = query(ref(database, "submissions/contactMessages"), limitToLast(50));
+
+      const [careerSnap, contactSnap] = await Promise.all([get(careerQuery), get(contactQuery)]);
+
+      if (cancelled) return;
+
+      const career = careerSnap.exists()
+        ? Object.keys(careerSnap.val()).map(key => ({ firebaseKey: key, ...careerSnap.val()[key] })).reverse()
+        : [];
+      const contact = contactSnap.exists()
+        ? Object.keys(contactSnap.val()).map(key => ({ firebaseKey: key, ...contactSnap.val()[key] })).reverse()
+        : [];
+
+      setCareerSubmissions(career);
+      setContactSubmissions(contact);
+
+      // 3. Store in cache
+      await dbSet(REQ_CACHE_KEY, { career, contact, timestamp: Date.now() });
+
+    } catch (err) {
+      if (!cancelled) console.error('Failed to load submissions:', err);
+    } finally {
+      if (!cancelled) setIsRefreshing(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchSubmissions(false);
+  }, [fetchSubmissions]);
+
 
   // Handler to download the resume file
   const handleDownloadResume = (submission) => {
@@ -391,18 +383,17 @@ const RequestManagement = () => {
         }
       `}</style>
       <div className="request-management-container">
-        <div className="request-tabs">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <div className="request-tabs" style={{ marginBottom: 0 }}>
+            <button className={`request-tab-btn ${requestTab === 'career' ? 'active' : ''}`} onClick={() => setRequestTab('career')}>Career Applications</button>
+            <button className={`request-tab-btn ${requestTab === 'contactUs' ? 'active' : ''}`} onClick={() => setRequestTab('contactUs')}>Contact Us Messages</button>
+          </div>
           <button
-            className={`request-tab-btn ${requestTab === 'career' ? 'active' : ''}`}
-            onClick={() => setRequestTab('career')}
+            onClick={() => fetchSubmissions(true)}
+            disabled={isRefreshing}
+            style={{ padding: '0.5rem 1rem', background: '#2563eb', color: 'white', border: 'none', borderRadius: '0.5rem', fontWeight: 500, cursor: isRefreshing ? 'not-allowed' : 'pointer', opacity: isRefreshing ? 0.7 : 1 }}
           >
-            Career Applications
-          </button>
-          <button
-            className={`request-tab-btn ${requestTab === 'contactUs' ? 'active' : ''}`}
-            onClick={() => setRequestTab('contactUs')}
-          >
-            Contact Us Messages
+            {isRefreshing ? '⏳ Syncing...' : '🔄 Refresh'}
           </button>
         </div>
 

@@ -8,14 +8,17 @@
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   color: #121010;
-  background-color: white; 
+  background-color: white;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
 }
 
-.mobile-app-dev-container {
- margin-top: 50px;
+/* Both class names used across different service pages */
+.mobile-app-dev-container,
+.web-app-dev-container {
+  margin-top: 70px;
+  /* Exactly matches the fixed navbar height */
 }
 
 /* Animate Image */
@@ -67,30 +70,35 @@ body {
 }
 
 .overlay-text {
-  font-size: 2.5rem; /* Example: adjust size as needed */
+  font-size: 2.5rem;
+  /* Example: adjust size as needed */
   font-weight: bold;
   text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.7);
-  margin-bottom: 1.5rem; /* Add space between title and buttons */
+  margin-bottom: 1.5rem;
+  /* Add space between title and buttons */
 }
 
 .header-button-container {
-  margin-top: 100px;
+  margin-top: 20px;
+  /* Fixed: was 100px which pushed buttons out of the hero */
   display: flex;
   justify-content: center;
-  gap: 20px;
-  flex-wrap: wrap; /* Allows buttons to stack on small screens */
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 .header-action-btn {
   padding: 12px 28px;
-  border-radius: 50px; /* Pill shape */
+  border-radius: 50px;
+  /* Pill shape */
   font-size: 1rem;
   font-weight: 600;
   border: 2px solid white;
   background-color: transparent;
   color: white;
   cursor: pointer;
-  text-decoration: none; /* For Link components if you use them */
+  text-decoration: none;
+  /* For Link components if you use them */
   display: inline-block;
   transition: all 0.3s ease;
 }
@@ -107,14 +115,19 @@ body {
   left: 0;
   width: 100%;
   height: 93%;
-  background-color: rgba(0, 0, 0, 0.426); /* A semi-transparent dark background */
-  
+  background-color: rgba(0, 0, 0, 0.426);
+  /* A semi-transparent dark background */
+
   /* The key property for the glass effect */
-  -webkit-backdrop-filter: blur(0px); /* For Safari */
-  backdrop-filter: blur(0px); /* Standard blur effect */
-  
-  border-radius: 10px; /* Match the image's border-radius */
-  z-index: 1; /* Ensure it sits between the image and the text */
+  -webkit-backdrop-filter: blur(0px);
+  /* For Safari */
+  backdrop-filter: blur(0px);
+  /* Standard blur effect */
+
+  border-radius: 10px;
+  /* Match the image's border-radius */
+  z-index: 1;
+  /* Ensure it sits between the image and the text */
 }
 
 /* Make sure the text and buttons sit on top of the mask */
@@ -123,7 +136,8 @@ body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  z-index: 2; /* Higher z-index than the mask */
+  z-index: 2;
+  /* Higher z-index than the mask */
   color: white;
   text-align: center;
   width: 100%;
@@ -132,7 +146,8 @@ body {
 
 .header-action-btn:hover {
   background-color: white;
-  color: #0d6efd; /* A common blue color */
+  color: #0d6efd;
+  /* A common blue color */
   transform: translateY(-3px);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
 }
@@ -166,6 +181,7 @@ body {
     opacity: 0;
     transform: translateY(40px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -253,4 +269,3 @@ body {
   border-radius: 12px !important;
   min-width: 110px;
 }
-

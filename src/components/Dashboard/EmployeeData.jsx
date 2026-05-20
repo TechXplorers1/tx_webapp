@@ -8,43 +8,8 @@ import { utils, writeFile } from 'xlsx';
 
 
 const simplifiedServices = ['Mobile Development', 'Web Development', 'Digital Marketing', 'IT Talent Supply', 'Cyber Security'];
-// --- IndexedDB Helper (Solves the 5MB Quota Limit) ---
-const IDB_CONFIG = { name: 'AppCacheDB', version: 1, store: 'firebase_cache' };
-
-const openDB = () => {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(IDB_CONFIG.name, IDB_CONFIG.version);
-    request.onupgradeneeded = (e) => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains(IDB_CONFIG.store)) {
-        db.createObjectStore(IDB_CONFIG.store);
-      }
-    };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-};
-
-const dbGet = async (key) => {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(IDB_CONFIG.store, 'readonly');
-    const request = transaction.objectStore(IDB_CONFIG.store).get(key);
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-};
-
-const dbSet = async (key, val) => {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(IDB_CONFIG.store, 'readwrite');
-    const request = transaction.objectStore(IDB_CONFIG.store).put(val, key);
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error);
-  });
-};
-// -----------------------------------------------------------
+// --- Shared IndexedDB cache utility ---
+import { dbGet, dbSet } from '../../utils/idbCache';
 
 // AdminHeader Component - Provided by the user
 const AdminHeader = ({
@@ -1492,49 +1457,32 @@ const EmployeeData = () => {
       employeeName: employeeName,
       attachments: []
     };
-<<<<<<< HEAD
-    const existingApplications = selectedClient.jobApplications || [];
-    const newIndex = existingApplications.length;
-    const jobApplicationsRef = ref(
-      database,
-      `clients/${selectedClient.clientFirebaseKey}/serviceRegistrations/${selectedClient.registrationKey}/jobApplications`
-    );
-    const updatedApplications = [...existingApplications, newApp];
-    try {
-      // Granular write: only the new row. Avoids set() replacing the whole array (slow for large clients).
-      await update(jobApplicationsRef, { [newIndex]: newApp });
-=======
 
     const registrationRef = ref(database, `clients/${selectedClient.clientFirebaseKey}/serviceRegistrations/${selectedClient.registrationKey}/jobApplications`);
     try {
-      // CRITICAL FIX: Fetch the latest jobApplications from Firebase to catch concurrent duplicates
+      // Fetch the latest jobApplications from Firebase to catch concurrent duplicates
       const latestSnapshot = await get(registrationRef);
       const latestApplications = latestSnapshot.exists()
         ? (Array.isArray(latestSnapshot.val()) ? latestSnapshot.val() : Object.values(latestSnapshot.val() || {}))
         : [];
 
-      // Perform final duplicate check against FRESH data from Firebase
+      // Duplicate check against FRESH data from Firebase
       const jobTitleNorm = newApp.jobTitle ? newApp.jobTitle.trim().toLowerCase() : '';
       const companyNorm = newApp.company ? newApp.company.trim().toLowerCase() : '';
       const jobIdNorm = newApp.jobId ? newApp.jobId.trim().toLowerCase() : '';
 
-      // Check for duplicates in the fresh data
       const isDuplicate = latestApplications.some(app => {
         const existingJobTitle = app.jobTitle ? app.jobTitle.trim().toLowerCase() : '';
         const existingCompany = app.company ? app.company.trim().toLowerCase() : '';
         const existingJobId = app.jobId ? app.jobId.trim().toLowerCase() : '';
 
-        // Check Job Title + Company match
         if (jobTitleNorm && companyNorm && existingJobTitle === jobTitleNorm && existingCompany === companyNorm) {
           return true;
         }
-
-        // Check Job Title + Company + Job ID match
         if (jobIdNorm && jobTitleNorm && companyNorm &&
             existingJobId === jobIdNorm && existingJobTitle === jobTitleNorm && existingCompany === companyNorm) {
           return true;
         }
-
         return false;
       });
 
@@ -1547,7 +1495,6 @@ const EmployeeData = () => {
       const updatedApplications = [newApp, ...latestApplications];
       await set(registrationRef, updatedApplications);
 
->>>>>>> 2308f40276375e6f2b195d59c9d024fd74a184fa
       const updatedClient = { ...selectedClient, jobApplications: updatedApplications };
       setSelectedClient(updatedClient);
       const updateClientList = (prevClients) => prevClients.map(c => c.registrationKey === updatedClient.registrationKey ? updatedClient : c);

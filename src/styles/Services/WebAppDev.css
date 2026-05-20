@@ -15,7 +15,7 @@ body {
 }
 
 .web-app-dev-container {
- margin-top: 50px;
+ margin-top: 70px; /* Navbar height offset */
 }
 
 /* MODIFICATION: Add this new style for the glassy mask effect */

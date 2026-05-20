@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { getDatabase, ref, query, orderByChild, equalTo, update, remove, set, get, push, onValue } from "firebase/database";
 import { database, storage } from '../../firebase'; // Import your Firebase config
+import { dbGet, dbSet } from '../../utils/idbCache';
 import { getStorage, ref as storageRef, getDownloadURL } from "firebase/storage";
 import { useTheme } from '../../context/ThemeContext';
 import {
@@ -434,13 +435,19 @@ const ClientHeader = ({
         .ad-header {
           background-color: var(--bg-header);
           box-shadow: 0 1px 2px 0 var(--shadow-color-1);
-          padding: 1rem 1.5rem;
+          padding: 0.75rem 1rem;
           display: flex;
           align-items: center;
           justify-content: space-between;
           position: sticky;
           top: 0;
           z-index: 50;
+        }
+
+        @media (min-width: 768px) {
+          .ad-header {
+            padding: 1rem 1.5rem;
+          }
         }
 
         .ad-header-left {
@@ -572,7 +579,7 @@ const ClientHeader = ({
             gap: 0.25rem;
         }
             .brand-full {
-  font-size: 1.7rem; /* Adjust size as needed */
+  font-size: 1.2rem; /* Adjusted for mobile */
   font-weight: 700;
   background: linear-gradient(90deg, #4F46E5 0%, #8B5CF6 100%); /* Purple to Violet gradient */
   -webkit-background-clip: text;
@@ -581,6 +588,19 @@ const ClientHeader = ({
   text-fill-color: transparent;
   letter-spacing: -0.5px; /* Optional: adjust spacing */
 }
+
+        .subscription-text {
+          display: none;
+        }
+
+        @media (min-width: 768px) {
+          .brand-full {
+            font-size: 1.7rem;
+          }
+          .subscription-text {
+            display: inline;
+          }
+        }
 
         /* Hamburger menu is removed, so no styles are needed for it */
         `}
@@ -593,12 +613,12 @@ const ClientHeader = ({
         </div>
 
         <div className="ad-header-right">
-          <li className="profile-dropdown-item" onClick={onSubscriptionClick}>
+          <li className="profile-dropdown-item" onClick={onSubscriptionClick} style={{ listStyle: 'none' }}>
             {/* Credit Card Icon */}
             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1rem', height: '1rem', color: 'var(--text-primary)' }}>
               <path d="M22 9H2C1.44772 9 1 9.44772 1 10V19C1 19.5523 1.44772 20 2 20H22C22.5523 20 23 19.5523 23 19V10C23 9.44772 22.5523 9 22 9ZM3 11V18H21V11H3ZM22 4H2C1.44772 4 1 4.44772 1 5V7C1 7.55228 1.44772 8 2 8H22C22.5523 8 23 7.55228 23 7V5C23 4.44772 22.5523 4 22 4Z" />
             </svg>
-            Subscription
+            <span className="subscription-text">Subscription</span>
           </li>
 
           {/* <div className="header-button-item" onMouseEnter={() => setIsServicesDropdownOpen(true)} onMouseLeave={() => setIsServicesDropdownOpen(false)}>
@@ -2283,16 +2303,105 @@ const WorksheetView = ({ setActiveTab, activeWorksheetTab, setActiveWorksheetTab
   handleNextPage,
   handlePreviousPage, onPageChange,
 }) => {
+  const navigate = useNavigate();
+
   return (
     <div style={{
-      maxWidth: '1200px',
+      display: 'flex',
+      gap: '20px',
+      maxWidth: '1600px', // Increased to accommodate sidebars
       margin: '0 auto',
       padding: '20px',
-      backgroundColor: '#f8f9fa',
-      borderRadius: '8px',
-      boxShadow: '0 4px 8px rgba(0,0,0,0.05)'
+      alignItems: 'flex-start' // Ensure columns don't stretch vertically unless desired
     }}>
-      {/* Back button for the entire worksheet view */}
+      {/* Left Container */}
+      <div 
+        onClick={() => navigate('/projects')}
+        style={{
+          flex: '0 0 250px',
+          background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)',
+          borderRadius: '12px',
+          boxShadow: '0 10px 15px -3px rgba(59, 130, 246, 0.4)',
+          padding: '24px',
+          minHeight: '400px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          cursor: 'pointer',
+          color: '#ffffff',
+          position: 'relative',
+          overflow: 'hidden',
+          transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'translateY(-5px)';
+          e.currentTarget.style.boxShadow = '0 20px 25px -5px rgba(59, 130, 246, 0.5)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(59, 130, 246, 0.4)';
+        }}
+      >
+        <div style={{ position: 'absolute', top: '-20px', right: '-20px', opacity: 0.1 }}>
+          <svg width="150" height="150" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2L2 7L12 12L22 7L12 2Z" />
+            <path d="M2 17L12 22L22 17" />
+            <path d="M2 12L12 17L22 12" />
+          </svg>
+        </div>
+        
+        <div style={{ zIndex: 1 }}>
+          <span style={{ 
+            background: 'rgba(255, 255, 255, 0.2)', 
+            padding: '4px 10px', 
+            borderRadius: '20px', 
+            fontSize: '0.75rem', 
+            fontWeight: '600',
+            textTransform: 'uppercase',
+            letterSpacing: '1px'
+          }}>Innovation</span>
+          <h3 style={{ fontSize: '1.5rem', fontWeight: '800', marginTop: '16px', lineHeight: '1.2' }}>
+            Discover Our Latest Projects
+          </h3>
+          <p style={{ marginTop: '12px', fontSize: '0.9rem', opacity: 0.9, lineHeight: '1.5' }}>
+            See how we transform ideas into powerful digital solutions for our clients globally.
+          </p>
+        </div>
+        
+        <div style={{ zIndex: 1, marginTop: '20px' }}>
+          <button style={{
+            background: '#ffffff',
+            color: '#1e3a8a',
+            border: 'none',
+            padding: '10px 16px',
+            borderRadius: '8px',
+            fontWeight: '600',
+            fontSize: '0.9rem',
+            cursor: 'pointer',
+            width: '100%',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            View Projects
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Main Content (Center Block) */}
+      <div style={{
+        flex: '1',
+        minWidth: '0', // Prevents flex child from overflowing its parent
+        backgroundColor: '#ffffff', // Set to white to match screenshot
+        borderRadius: '8px',
+        boxShadow: '0 4px 8px rgba(0,0,0,0.05)',
+        padding: '20px',
+      }}>
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -2480,6 +2589,87 @@ const WorksheetView = ({ setActiveTab, activeWorksheetTab, setActiveWorksheetTab
           onAttachmentClick={handleAttachmentClick}
         />
       )}
+      </div>
+
+      {/* Right Container */}
+      <div 
+        onClick={() => window.open('https://techxplorers-portfolios.web.app/', '_blank')}
+        style={{
+          flex: '0 0 250px',
+          background: 'linear-gradient(135deg, #4c1d95 0%, #8b5cf6 100%)',
+          borderRadius: '12px',
+          boxShadow: '0 10px 15px -3px rgba(139, 92, 246, 0.4)',
+          padding: '24px',
+          minHeight: '400px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          cursor: 'pointer',
+          color: '#ffffff',
+          position: 'relative',
+          overflow: 'hidden',
+          transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'translateY(-5px)';
+          e.currentTarget.style.boxShadow = '0 20px 25px -5px rgba(139, 92, 246, 0.5)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(139, 92, 246, 0.4)';
+        }}
+      >
+        <div style={{ position: 'absolute', bottom: '-20px', left: '-20px', opacity: 0.1 }}>
+          <svg width="150" height="150" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" />
+            <path d="M12 16L16 12L12 8" />
+            <path d="M8 12H16" />
+          </svg>
+        </div>
+        
+        <div style={{ zIndex: 1 }}>
+          <span style={{ 
+            background: 'rgba(255, 255, 255, 0.2)', 
+            padding: '4px 10px', 
+            borderRadius: '20px', 
+            fontSize: '0.75rem', 
+            fontWeight: '600',
+            textTransform: 'uppercase',
+            letterSpacing: '1px'
+          }}>Expertise</span>
+          <h3 style={{ fontSize: '1.5rem', fontWeight: '800', marginTop: '16px', lineHeight: '1.2' }}>
+            Explore Our Services Portfolio
+          </h3>
+          <p style={{ marginTop: '12px', fontSize: '0.9rem', opacity: 0.9, lineHeight: '1.5' }}>
+            From web development to AI solutions, explore what we can build for you.
+          </p>
+        </div>
+        
+        <div style={{ zIndex: 1, marginTop: '20px' }}>
+          <button style={{
+            background: '#ffffff',
+            color: '#4c1d95',
+            border: 'none',
+            padding: '10px 16px',
+            borderRadius: '8px',
+            fontWeight: '600',
+            fontSize: '0.9rem',
+            cursor: 'pointer',
+            width: '100%',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            View Portfolio
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+              <polyline points="15 3 21 3 21 9"></polyline>
+              <line x1="10" y1="14" x2="21" y2="3"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
@@ -2538,56 +2728,60 @@ const ClientDashboard = () => {
     }
   };
 
-  // --- FIX: FETCH ADS (ONCE ONLY - LOW COST) ---
+  // --- FETCH ADS — 2-hour IDB cache to avoid repeat downloads ---
+  const processAds = useCallback((data) => {
+    if (!data) {
+      setActiveBannerAds([]);
+      setActivePopupAds([]);
+      return;
+    }
+    const today = new Date().toISOString().split('T')[0];
+    const banners = [];
+    const popups = [];
+    Object.keys(data).forEach(key => {
+      const ad = { id: key, ...data[key] };
+      if (ad.type === 'banner') {
+        banners.push(ad);
+      } else if (ad.type === 'popup' && ad.targetDate === today) {
+        const isClosed = localStorage.getItem(`closed_ad_${ad.id}`) === 'true';
+        if (!isClosed) popups.push(ad);
+      }
+    });
+    banners.sort((a, b) => new Date(b.createdAt || b.targetDate) - new Date(a.createdAt || a.targetDate));
+    setActiveBannerAds(banners);
+    setActivePopupAds(popups);
+    if (popups.length > 0) setShowPopupModal(true);
+  }, []);
+
   useEffect(() => {
     const fetchAds = async () => {
       try {
-        const adsRef = ref(database, 'welcomeCards');
-        const snapshot = await get(adsRef); // <--- Changed to 'get' for one-time fetch
+        const ADS_CACHE_KEY = 'cache_welcome_cards';
+        const ADS_CACHE_TTL = 2 * 60 * 60 * 1000; // 2 hours
 
-        if (snapshot.exists()) {
-          const data = snapshot.val();
-          const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-
-          const banners = [];
-          const popups = [];
-
-          Object.keys(data).forEach(key => {
-            const ad = { id: key, ...data[key] };
-
-            if (ad.type === 'banner') {
-              banners.push(ad);
-            } else if (ad.type === 'popup') {
-              // Check if target date matches TODAY
-              if (ad.targetDate === today) {
-                const isClosed = localStorage.getItem(`closed_ad_${ad.id}`) === 'true';
-                if (!isClosed) {
-                  popups.push(ad);
-                }
-              }
-            }
-          });
-
-          // Sort banners: Newest first
-          banners.sort((a, b) => new Date(b.createdAt || b.targetDate) - new Date(a.createdAt || a.targetDate));
-
-          setActiveBannerAds(banners);
-          setActivePopupAds(popups);
-
-          if (popups.length > 0) {
-            setShowPopupModal(true);
-          }
-        } else {
-          setActiveBannerAds([]);
-          setActivePopupAds([]);
+        // 1. Check cache first
+        const cached = await dbGet(ADS_CACHE_KEY);
+        if (cached && (Date.now() - cached.timestamp) < ADS_CACHE_TTL) {
+          console.log('[IDB Cache HIT] welcomeCards');
+          processAds(cached.data);
+          return;
         }
+
+        // 2. Fetch fresh from Firebase
+        console.log('[IDB Cache MISS] Fetching welcomeCards from Firebase...');
+        const snapshot = await get(ref(database, 'welcomeCards'));
+        const data = snapshot.exists() ? snapshot.val() : null;
+
+        if (data) {
+          await dbSet(ADS_CACHE_KEY, { data, timestamp: Date.now() });
+        }
+        processAds(data);
       } catch (error) {
-        console.error("Error fetching ads:", error);
+        console.error('Error fetching ads:', error);
       }
     };
-
     fetchAds();
-  }, []);
+  }, [processAds]);
 
 
   // CHANGE 3: Update close handler to just hide the modal (will reappear every 1 minute)
@@ -2927,110 +3121,104 @@ const ClientDashboard = () => {
   // ClientDashboard.jsx
 
 
+  // --- Shared helper: process raw client data into component state ---
+  const processClientData = useCallback((data) => {
+    if (!data) {
+      setClientData(null);
+      setAllFiles([]);
+      setApplicationsData({});
+      setScheduledInterviews([]);
+      setActiveServices([]);
+      setInactiveServices([]);
+      return;
+    }
+
+    setClientData(data);
+
+    const registrations = data.serviceRegistrations ? Object.values(data.serviceRegistrations) : [];
+
+    let interviews = [];
+    const groupedApplications = {};
+    let generalFiles = [];
+    let applicationAttachments = [];
+
+    registrations.forEach(reg => {
+      generalFiles = generalFiles.concat(reg.files || []);
+      (reg.jobApplications || []).forEach(app => {
+        applicationAttachments = applicationAttachments.concat(app.attachments || []);
+        const dateKey = formatDate(app.appliedDate);
+        const entry = {
+          id: app.id,
+          jobId: app.jobId,
+          website: app.jobBoards,
+          position: app.jobTitle,
+          company: app.company,
+          link: app.jobDescriptionUrl || app.link || '',
+        };
+        if (!groupedApplications[dateKey]) groupedApplications[dateKey] = [];
+        groupedApplications[dateKey].push(entry);
+        if (app.status === 'Interview') interviews.push(app);
+      });
+    });
+
+    setScheduledInterviews(interviews);
+    setApplicationsData(groupedApplications);
+
+    const allFilesMap = new Map();
+    [...generalFiles, ...applicationAttachments].forEach(file => {
+      if (file && file.downloadUrl) allFilesMap.set(file.downloadUrl, file);
+    });
+    setAllFiles(Array.from(allFilesMap.values()));
+
+    const allSvcs = [
+      { title: "Mobile Development", path: "/services/mobile-app-development" },
+      { title: "Web Development", path: "/services/web-app-development" },
+      { title: "Digital Marketing", path: "/services/digital-marketing" },
+      { title: "IT Talent Supply", path: "/services/it-talent-supply" },
+      { title: "Job Supporting", path: "/services/job-contact-form" },
+      { title: "Cyber Security", path: "/services/cyber-security" },
+    ];
+    const registeredServiceNames = registrations.map(reg => reg.service || '');
+    setActiveServices(allSvcs.filter(s => registeredServiceNames.includes(s.title)));
+    setInactiveServices(allSvcs.filter(s => !registeredServiceNames.includes(s.title)));
+  }, []);
+
   useEffect(() => {
     const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInClient'));
     if (!loggedInUserData || !loggedInUserData.firebaseKey) return;
     const clientKey = loggedInUserData.firebaseKey;
-    const clientRef = ref(database, `clients/${clientKey}`);
+    const CLIENT_CACHE_KEY = `cache_client_data_${clientKey}`;
+    const CLIENT_CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 
-    // 1. Fetch data ONCE using get to avoid massive background bandwidth usage
-    get(clientRef).then((snapshot) => {
-      const data = snapshot.exists() ? snapshot.val() : null;
-      console.log("Client Data Fetched:", data);
-
-      if (!data) {
-        // Handle case where data is removed or non-existent
-        setClientData(null);
-        setAllFiles([]);
-        setApplicationsData({});
-        setScheduledInterviews([]);
-        setActiveServices([]);
-        setInactiveServices([]);
-        return;
-      }
-
-      // 2. Process and set the new data (This runs on initial fetch AND every update)
-      setClientData(data); // <-- Client data is 'cached' in component state
-
-      // IMPORTANT: Move ALL data processing logic that previously followed 'setClientData(data)' 
-      // into this callback, so it runs whenever the data is updated.
-
-      const registrations = data.serviceRegistrations ? Object.values(data.serviceRegistrations) : [];
-
-      // B. Extract and group applications (Optimization: use a single loop)
-      let allApplications = [];
-      let interviews = [];
-      const groupedApplications = {};
-      let generalFiles = [];
-      let applicationAttachments = [];
-
-      registrations.forEach(reg => {
-        // Collect files attached to the service registration itself
-        generalFiles = generalFiles.concat(reg.files || []);
-
-        (reg.jobApplications || []).forEach(app => {
-          // Collect all applications for flattening
-          allApplications.push(app);
-
-          // Collect attachments from applications
-          applicationAttachments = applicationAttachments.concat(app.attachments || []);
-
-          // Group applications by date for the ribbon
-          const dateKey = formatDate(app.appliedDate);
-          const entry = {
-            id: app.id,
-            jobId: app.jobId,
-            website: app.jobBoards,
-            position: app.jobTitle,
-            company: app.company,
-            // FIX: Ensure you are using the correct field name for the link
-            link: app.jobDescriptionUrl || app.link || '', // Use 'link' for display, fallback to 'jobDescriptionUrl' if name is inconsistent
-          };
-
-          if (!groupedApplications[dateKey]) {
-            groupedApplications[dateKey] = [];
-          }
-          groupedApplications[dateKey].push(entry);
-
-          // Filter interviews directly
-          if (app.status === 'Interview') {
-            interviews.push(app);
-          }
-        });
-      });
-
-      setScheduledInterviews(interviews);
-      setApplicationsData(groupedApplications); // Use the efficiently created map
-
-      // C. Combine and set all files
-      const allFilesMap = new Map();
-      [...generalFiles, ...applicationAttachments].forEach(file => {
-        if (file && file.downloadUrl) {
-          allFilesMap.set(file.downloadUrl, file);
+    const loadClientData = async () => {
+      try {
+        // 1. Try cache first (free — no Firebase read)
+        const cached = await dbGet(CLIENT_CACHE_KEY);
+        if (cached && (Date.now() - cached.timestamp) < CLIENT_CACHE_TTL) {
+          console.log('[IDB Cache HIT] client data');
+          processClientData(cached.data);
+          return;
         }
-      });
-      setAllFiles(Array.from(allFilesMap.values()));
 
-      // D. Update Active/Inactive Services
-      const allServices = [
-        { title: "Mobile Development", path: "/services/mobile-app-development" },
-        { title: "Web Development", path: "/services/web-app-development" },
-        { title: "Digital Marketing", path: "/services/digital-marketing" },
-        { title: "IT Talent Supply", path: "/services/it-talent-supply" },
-        { title: "Job Supporting", path: "/services/job-contact-form" },
-        { title: "Cyber Security", path: "/services/cyber-security" },
-      ];
-      const registeredServiceNames = registrations.map(
-        reg => reg.service || ''
-      );
-      setActiveServices(allServices.filter(s => registeredServiceNames.includes(s.title)));
-      setInactiveServices(allServices.filter(s => !registeredServiceNames.includes(s.title)));
+        // 2. Cache miss — fetch from Firebase
+        console.log('[IDB Cache MISS] Fetching client data from Firebase...');
+        const clientRef = ref(database, `clients/${clientKey}`);
+        const snapshot = await get(clientRef);
+        const data = snapshot.exists() ? snapshot.val() : null;
 
-    }).catch((error) => {
-      console.error("Firebase Read Error:", error);
-    });
+        // 3. Store in cache for next 30 minutes
+        if (data) {
+          await dbSet(CLIENT_CACHE_KEY, { data, timestamp: Date.now() });
+        }
 
-  }, []);
+        processClientData(data);
+      } catch (error) {
+        console.error('Firebase Read Error:', error);
+      }
+    };
+
+    loadClientData();
+  }, [processClientData]);
 
   const handleActiveServiceClick = (service) => {
     if (clientData && clientData.serviceRegistrations) {

@@ -171,8 +171,8 @@ const ClientManagement = () => {
         let cached = null;
         try {
           cached = await dbGet(CLIENT_MGMT_CACHE_KEY);
-          // Set cache validity to 5 minutes (300000 ms)
-          const isCacheValid = cached && cached.cachedAt && (Date.now() - cached.cachedAt < 300000);
+          // Set cache validity to 15 minutes (900000 ms)
+          const isCacheValid = cached && cached.cachedAt && (Date.now() - cached.cachedAt < 900000);
           
           if (!cancelled && cached && Array.isArray(cached.serviceRegistrations) && isCacheValid) {
             setServiceRegistrations(cached.serviceRegistrations);

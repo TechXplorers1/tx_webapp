@@ -4,43 +4,8 @@ import { ref, push, set, remove, update, get } from "firebase/database";
 // Make sure this path is correct for your project structure and that the file exports your initialized database.
 import { database } from '../firebase';
 
-// --- IndexedDB Helper (Solves 5MB Limit & Reduces Downloads) ---
-const IDB_CONFIG = { name: 'AppCacheDB', version: 1, store: 'firebase_cache' };
-
-const openDB = () => {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(IDB_CONFIG.name, IDB_CONFIG.version);
-    request.onupgradeneeded = (e) => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains(IDB_CONFIG.store)) {
-        db.createObjectStore(IDB_CONFIG.store);
-      }
-    };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-};
-
-const dbGet = async (key) => {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(IDB_CONFIG.store, 'readonly');
-    const request = transaction.objectStore(IDB_CONFIG.store).get(key);
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-};
-
-const dbSet = async (key, val) => {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(IDB_CONFIG.store, 'readwrite');
-    const request = transaction.objectStore(IDB_CONFIG.store).put(val, key);
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error);
-  });
-};
-// -----------------------------------------------------------
+// --- Shared IndexedDB cache utility ---
+import { dbGet, dbSet } from '../utils/idbCache';
 // --- Helper Functions ---
 const formatDateForInput = (dateStr) => {
   if (!dateStr || dateStr.split('/').length !== 3) return '';

@@ -24,7 +24,7 @@ const CookiePolicy       = lazy(() => import('./components/CookiePolicy'));
 // Services (lazy — only loaded when user clicks a service)
 const WebAppDev          = lazy(() => import('./components/services/WebAppDev'));
 const MobileAppDev       = lazy(() => import('./components/services/MobileAppDev'));
-const ITTalentSupply     = lazy(() => import('./components/services/ItTalentSupply'));
+const ITTalentSupply     = lazy(() => import('./components/services/ITTalentSupply'));
 const DigitalMarketing   = lazy(() => import('./components/services/DigitalMarketing'));
 const JobSupport         = lazy(() => import('./components/services/JobSupport'));
 const CyberSecurity      = lazy(() => import('./components/services/CyberSecurity'));

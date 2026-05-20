@@ -3,8 +3,10 @@ import { database, storage } from '../../firebase';
 import { ref, push, remove, update, get, query, limitToLast, set } from "firebase/database"; 
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Container, Form, Button, Table, Card, Row, Col, Badge, Modal, Spinner } from 'react-bootstrap';
+import { dbGet, dbSet } from '../../utils/idbCache';
 
-const CACHE_KEY = "admin_projects_cache";
+const CACHE_KEY = 'cache_admin_projects';
+const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 
 const ProjectManagement = () => {
   const [projects, setProjects] = useState([]);
@@ -44,28 +46,28 @@ const ProjectManagement = () => {
   const loadProjects = async (forceRefresh = false) => {
     try {
       if (!forceRefresh) {
-        const cachedData = sessionStorage.getItem(CACHE_KEY);
-        if (cachedData) {
-          setProjects(JSON.parse(cachedData));
+        // 1. Try IDB cache (survives tab close, no 5MB limit)
+        const cached = await dbGet(CACHE_KEY);
+        if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
+          console.log('[IDB Cache HIT] projects');
+          setProjects(cached.data || []);
           return;
         }
       }
 
-      const projectsRef = query(ref(database, "projects"), limitToLast(50)); 
+      // 2. Fetch fresh from Firebase
+      console.log('[IDB Cache MISS] Fetching projects from Firebase...');
+      const projectsRef = query(ref(database, "projects"), limitToLast(50));
       const snapshot = await get(projectsRef);
 
       if (!snapshot.exists()) {
         setProjects([]);
-        sessionStorage.setItem(CACHE_KEY, JSON.stringify([]));
+        await dbSet(CACHE_KEY, { data: [], timestamp: Date.now() });
         return;
       }
 
       const data = snapshot.val();
-      const projectList = Object.keys(data).map(key => ({
-        id: key,
-        ...data[key],
-      }));
-
+      const projectList = Object.keys(data).map(key => ({ id: key, ...data[key] }));
       const sortedList = projectList.sort((a, b) => {
         const orderA = a.order !== undefined ? a.order : 9999;
         const orderB = b.order !== undefined ? b.order : 9999;
@@ -73,7 +75,8 @@ const ProjectManagement = () => {
       });
 
       setProjects(sortedList);
-      sessionStorage.setItem(CACHE_KEY, JSON.stringify(sortedList));
+      // 3. Save to IDB cache
+      await dbSet(CACHE_KEY, { data: sortedList, timestamp: Date.now() });
 
     } catch (err) {
       console.error("Error loading projects:", err);
@@ -81,7 +84,7 @@ const ProjectManagement = () => {
   };
 
   useEffect(() => {
-    loadProjects(false); 
+    loadProjects(false);
   }, []);
 
   // --- DRAG AND DROP HANDLERS ---
@@ -94,7 +97,8 @@ const ProjectManagement = () => {
     dragOverItem.current = null;
     
     setProjects(_projects);
-    sessionStorage.setItem(CACHE_KEY, JSON.stringify(_projects));
+    // Update IDB cache with new order immediately (no Firebase read needed)
+    await dbSet(CACHE_KEY, { data: _projects, timestamp: Date.now() });
 
     const updates = {};
     _projects.forEach((project, index) => {

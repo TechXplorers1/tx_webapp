@@ -47,11 +47,14 @@ export default defineConfig({
           // Animation — separate so it can be cached independently
           'animation-vendor': ['framer-motion', 'aos'],
 
-          // Phone/country input — only on forms
+          // Country/state/city data — large dataset, own chunk
+          // (Loaded only on registration/contact forms)
+          'geo-vendor': ['country-state-city'],
+
+          // Small phone/date pickers — grouped together
           'form-vendor': [
             'react-phone-input-2',
             'react-datepicker',
-            'country-state-city',
           ],
         },
       },
