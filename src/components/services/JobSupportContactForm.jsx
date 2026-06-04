@@ -30,7 +30,6 @@ const JobSupportContactForm = () => {
     address: '',
     county: '',
     zipCode: '',
-    countryCode: '+1',
     mobile: '',
     email: '',
     securityClearance: '',
@@ -76,8 +75,6 @@ const JobSupportContactForm = () => {
   const [submitStatus, setSubmitStatus] = useState({ success: false, message: '' });
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
-  const [countrySearchTerm, setCountrySearchTerm] = useState('');
   
   const [validationErrors, setValidationErrors] = useState({});
   const [resumeFile, setResumeFile] = useState(null);
@@ -153,9 +150,6 @@ const handleChange = (e, index, fieldName) => {
 
       // Simple mobile number validation
       const mobileNumber = formData.mobile.replace(/[^0-9]/g, '');
-      const countryCode = formData.countryCode.replace('+', '');
-      const countryData = countryCodes.find(c => c.dialCode === formData.countryCode);
-      const expectedLength = countryData ? countryData.dialCode.length + mobileNumber.length : 10;
       
       if (formData.mobile && (mobileNumber.length < 7 || mobileNumber.length > 15)) {
             errors.mobile = 'Please enter a valid mobile number.';
@@ -249,8 +243,6 @@ const handleConfirmAndSubmit = async (e) => {
       return;
     }
     setIsSubmitting(true);
-    const countryData = countryCodes.find(c => c.dialCode === formData.countryCode);
-    const countryName = countryData ? countryData.name : 'N/A';
 
     try {
       if (!user || !user.firebaseKey) {
@@ -303,8 +295,8 @@ const handleConfirmAndSubmit = async (e) => {
         address: formData.address,
         county: formData.county,
         zipCode: formData.zipCode,
-        country: countryName,
-        mobile: `${formData.countryCode} ${formData.mobile}`,
+        country: '',
+        mobile: formData.mobile,
         email: formData.email,
 
         // Employment Information
@@ -350,7 +342,7 @@ const handleConfirmAndSubmit = async (e) => {
     const clientProfileUpdate = {
         firstName: formData.firstName,
         lastName: formData.lastName,
-        mobile: `${formData.countryCode} ${formData.mobile}`,
+        mobile: formData.mobile,
     };
         
         
@@ -373,15 +365,14 @@ const handleConfirmAndSubmit = async (e) => {
         dob: formData.dob || '',
         gender: formData.gender || '',
         ethnicity: formData.ethnicity || '',
-        mobile: `${formData.countryCode} ${formData.mobile}` || '',
+        mobile: formData.mobile || '',
         email: formData.email || '',
 
         // Address
         address: formData.address || '',
         county: formData.county || '',
         zipCode: formData.zipCode || '',
-        country: countryName || '',
-        countryCode: formData.countryCode || '+1',
+        country: '',
 
         // Professional Info
         service: 'Job Supporting',
@@ -452,9 +443,6 @@ const handleConfirmAndSubmit = async (e) => {
     }
   };
 
-  const countryCodes = [ { shortCode: 'US', dialCode: '+1', name: 'United States' }, { shortCode: 'CA', dialCode: '+1', name: 'Canada' }, { shortCode: 'GB', dialCode: '+44', name: 'United Kingdom' }, { shortCode: 'IN', dialCode: '+91', name: 'India' }, { shortCode: 'AU', dialCode: '+61', name: 'Australia' }, { shortCode: 'DE', dialCode: '+49', name: 'Germany' }, { shortCode: 'FR', dialCode: '+33', name: 'France' }, { shortCode: 'JP', dialCode: '+81', name: 'Japan' }, { shortCode: 'CN', dialCode: '+86', name: 'China' }, { shortCode: 'BR', dialCode: '+55', name: 'Brazil' }, { shortCode: 'ZA', dialCode: '+27', name: 'South Africa' }, { shortCode: 'NG', dialCode: '+234', name: 'Nigeria' }, { shortCode: 'MX', dialCode: '+52', name: 'Mexico' }, { shortCode: 'ES', dialCode: '+34', name: 'Spain' }, { shortCode: 'IT', dialCode: '+39', name: 'Italy' }, { shortCode: 'NL', dialCode: '+31', name: 'Netherlands' }, { shortCode: 'SE', dialCode: '+46', name: 'Sweden' }, { shortCode: 'NO', dialCode: '+47', name: 'Norway' }, { shortCode: 'DK', dialCode: '+45', name: 'Denmark' }, { shortCode: 'FI', dialCode: '+358', name: 'Finland' }, { shortCode: 'CH', dialCode: '+41', name: 'Switzerland' }, { shortCode: 'AT', dialCode: '+43', name: 'Austria' }, { shortCode: 'BE', dialCode: '+32', name: 'Belgium' }, { shortCode: 'IE', dialCode: '+353', name: 'Ireland' }, { shortCode: 'NZ', dialCode: '+64', name: 'New Zealand' }, { shortCode: 'SG', dialCode: '+65', name: 'Singapore' }, { shortCode: 'HK', dialCode: '+852', name: 'Hong Kong' }, { shortCode: 'KR', dialCode: '+82', name: 'South Korea' }, { shortCode: 'AE', dialCode: '+971', name: 'United Arab Emirates' }, { shortCode: 'SA', dialCode: '+966', name: 'Saudi Arabia' }, { shortCode: 'RU', dialCode: '+7', name: 'Russia' }, ];
-  const filteredCountries = countryCodes.filter(country => country.name.toLowerCase().includes(countrySearchTerm.toLowerCase()) || country.dialCode.includes(countrySearchTerm));
-  useEffect(() => { const handleClickOutside = (event) => { if (countryDropdownRef.current && !countryDropdownRef.current.contains(event.target)) { setIsCountryDropdownOpen(false); } }; document.addEventListener("mousedown", handleClickOutside); return () => document.removeEventListener("mousedown", handleClickOutside); }, []);
 
   const nextStep = () => {
     if (validateForm(currentStep)) {
@@ -788,14 +776,6 @@ const keyframes = `
                   
                 </Row>
                 <Row className="mb-3">
-                    <Form.Group as={Col} controlId="formCountryCode" ref={countryDropdownRef}>
-                    <Form.Label>Country Code <span className="text-danger">*</span></Form.Label>
-                    <div className="country-dropdown-container">
-                      <Form.Control type="text" value={isCountryDropdownOpen ? countrySearchTerm : `${countryCodes.find(c => c.dialCode === formData.countryCode)?.name || ''} (${formData.countryCode})`} onFocus={() => setIsCountryDropdownOpen(true)} onChange={(e) => setCountrySearchTerm(e.target.value)} placeholder="Search country..." isInvalid={!!validationErrors.countryCode} />
-                      {isCountryDropdownOpen && (<div className="country-dropdown-list"> {filteredCountries.map((country, index) => (<div key={index} className="country-dropdown-item" onClick={() => { setFormData(prev => ({ ...prev, countryCode: country.dialCode })); setCountrySearchTerm(''); setIsCountryDropdownOpen(false); }}> {country.name} ({country.dialCode}) </div>))} </div>)}
-                      <Form.Control.Feedback type="invalid">{validationErrors.countryCode}</Form.Control.Feedback>
-                    </div>
-                  </Form.Group>
                   <Form.Group as={Col} controlId="formMobile">
                     <Form.Label>Mobile <span className="text-danger">*</span></Form.Label>
                     <Form.Control type="text" name="mobile" value={formData.mobile} onChange={handleChange} isInvalid={!!validationErrors.mobile} required />
@@ -1139,7 +1119,7 @@ const keyframes = `
             
             <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Contact Information</h4>
             <Row className="mb-3"><Col><Form.Label>Address:</Form.Label><div style={previewValueDisplay}>{formData.address || 'N/A'}</div></Col><Col><Form.Label>County:</Form.Label><div style={previewValueDisplay}>{formData.county || 'N/A'}</div></Col><Col md={4}><Form.Label>Zip Code:</Form.Label><div style={previewValueDisplay}>{formData.zipCode || 'N/A'}</div></Col></Row>
-            <Row className="mb-3"><Col><Form.Label>Country:</Form.Label><div style={previewValueDisplay}>{countryCodes.find(c => c.dialCode === formData.countryCode)?.name || 'N/A'} ({formData.countryCode || 'N/A'})</div></Col><Col><Form.Label>Mobile:</Form.Label><div style={previewValueDisplay}>{formData.mobile || 'N/A'}</div></Col><Col><Form.Label>Email:</Form.Label><div style={previewValueDisplay}>{formData.email || 'N/A'}</div></Col></Row>
+            <Row className="mb-3"><Col><Form.Label>Mobile:</Form.Label><div style={previewValueDisplay}>{formData.mobile || 'N/A'}</div></Col><Col><Form.Label>Email:</Form.Label><div style={previewValueDisplay}>{formData.email || 'N/A'}</div></Col></Row>
             
             <h4 className="border-bottom pb-2 mb-3 mt-4" style={subHeaderStyle}>Employment Information</h4>
             <Row className="mb-3"><Col><Form.Label>Security Clearance:</Form.Label><div style={previewValueDisplay}>{formData.securityClearance || 'N/A'}</div></Col>{formData.securityClearance === 'yes' && (<Col><Form.Label>Clearance Level:</Form.Label><div style={previewValueDisplay}>{formData.clearanceLevel || 'N/A'}</div></Col>)}<Col><Form.Label>Willing to Relocate:</Form.Label><div style={previewValueDisplay}>{formData.willingToRelocate || 'N/A'}</div></Col></Row>

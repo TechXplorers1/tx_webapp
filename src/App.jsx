@@ -4,6 +4,7 @@ import 'bootstrap-icons/font/bootstrap-icons.css';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './components/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import PublicOrClientRoute from './components/PublicOrClientRoute';
 import WhatsAppFloat from './components/WhatsAppFloat';
 
 // ─── EAGERLY LOADED (public-facing, must be instant) ────────────────────────
@@ -88,12 +89,36 @@ const App = () => {
               <Route path="/cookie-policy"    element={<CookiePolicy />} />
 
               {/* ── Service Routes ────────────────────────────────── */}
-              <Route path="/services/mobile-app-development" element={<MobileAppDev />} />
-              <Route path="/services/web-app-development"    element={<WebAppDev />} />
-              <Route path="/services/digital-marketing"      element={<DigitalMarketing />} />
-              <Route path="/services/it-talent-supply"       element={<ITTalentSupply />} />
-              <Route path="/services/job-support"            element={<JobSupport />} />
-              <Route path="/services/cyber-security"         element={<CyberSecurity />} />
+              <Route path="/services/mobile-app-development" element={
+                <PublicOrClientRoute>
+                  <MobileAppDev />
+                </PublicOrClientRoute>
+              } />
+              <Route path="/services/web-app-development" element={
+                <PublicOrClientRoute>
+                  <WebAppDev />
+                </PublicOrClientRoute>
+              } />
+              <Route path="/services/digital-marketing" element={
+                <PublicOrClientRoute>
+                  <DigitalMarketing />
+                </PublicOrClientRoute>
+              } />
+              <Route path="/services/it-talent-supply" element={
+                <PublicOrClientRoute>
+                  <ITTalentSupply />
+                </PublicOrClientRoute>
+              } />
+              <Route path="/services/job-support" element={
+                <PublicOrClientRoute>
+                  <JobSupport />
+                </PublicOrClientRoute>
+              } />
+              <Route path="/services/cyber-security" element={
+                <PublicOrClientRoute>
+                  <CyberSecurity />
+                </PublicOrClientRoute>
+              } />
               <Route path="/services/job-contact-form" element={
                 <ProtectedRoute allowedRoles={['client']}>
                   <JobSupportContactForm />

@@ -38,41 +38,76 @@ const AdminPage = () => {
   const [editableProfile, setEditableProfile] = useState({});
   const [isEditingUserProfile, setIsEditingUserProfile] = useState(false);
 
-  // useEffect to get logged-in user data from sessionStorage
+  // useEffect to get logged-in user data from sessionStorage and database
   useEffect(() => {
+    const fetchAdminProfile = async (uid) => {
+      try {
+        const userRef = ref(database, `users/${uid}`);
+        const snapshot = await get(userRef);
+        if (snapshot.exists()) {
+          const dbData = snapshot.val();
+          const fname = dbData.firstName || (typeof dbData.name === 'string' ? dbData.name.split(' ')[0] : 'Admin');
+          const lname = dbData.lastName || (typeof dbData.name === 'string' && dbData.name.split(' ').length > 1 ? dbData.name.split(' ').slice(1).join(' ') : 'User');
+          
+          setUserProfile(prev => {
+            const combined = {
+              ...prev,
+              ...dbData,
+              firstName: fname,
+              lastName: lname,
+              name: dbData.name || `${fname} ${lname}`.trim(),
+              lastLogin: dbData.lastLogin || prev.lastLogin
+            };
+            
+            // Perform side effect in a microtask / deferred timeout to avoid React render-phase write errors
+            setTimeout(() => {
+              try {
+                sessionStorage.setItem('loggedInEmployee', JSON.stringify(combined));
+              } catch (storageErr) {
+                console.warn('Failed to write to sessionStorage:', storageErr);
+              }
+            }, 0);
+
+            return combined;
+          });
+        }
+      } catch (err) {
+        console.error("Error fetching admin profile from DB:", err);
+      }
+    };
+
     try {
       const raw = sessionStorage.getItem('loggedInEmployee');
       if (!raw) return;
 
-      let userData = null;
-      try {
-        userData = JSON.parse(raw);
-      } catch (parseErr) {
-        console.warn('AdminPage: failed to parse loggedInEmployee from sessionStorage', parseErr);
-        return; // Avoid crashing the component if data is malformed
-      }
-
+      const userData = JSON.parse(raw);
       if (userData) {
-        // Ensure all profile fields have values and set the full user object to state
-        const completeUserData = {
-          ...userProfile, // Use defaults as fallback
-          ...userData,    // Override with actual user data
-          // Make sure name is properly split if needed
-          firstName: userData.firstName || (userData.name ? userData.name.split(' ')[0] : 'Admin'),
-          lastName: userData.lastName || (userData.name && userData.name.split(' ').length > 1
-            ? userData.name.split(' ').slice(1).join(' ') : 'User')
+        // First set the initial data from sessionStorage
+        const fname = userData.firstName || (typeof userData.name === 'string' ? userData.name.split(' ')[0] : 'Admin');
+        const lname = userData.lastName || (typeof userData.name === 'string' && userData.name.split(' ').length > 1 ? userData.name.split(' ').slice(1).join(' ') : 'User');
+        const initialCombined = {
+          ...userProfile,
+          ...userData,
+          firstName: fname,
+          lastName: lname,
+          name: userData.name || `${fname} ${lname}`.trim()
         };
-        setUserProfile(completeUserData);
+        setUserProfile(initialCombined);
+
+        // Fetch fresh details from DB
+        const uid = userData.uid || userData.firebaseKey;
+        if (uid) {
+          fetchAdminProfile(uid);
+        }
       }
     } catch (e) {
-      // sessionStorage may not be available in some environments/browsers
-      console.warn('AdminPage: sessionStorage unavailable or access error', e);
+      console.warn('AdminPage: sessionStorage or fetch error', e);
     }
   }, []);
 
   const getInitials = (name) => {
-    if (!name) return '';
-    const nameParts = (name || '').split(' ').filter(part => part.length > 0);
+    if (!name || typeof name !== 'string') return '';
+    const nameParts = name.split(' ').filter(part => part.length > 0);
     if (nameParts.length >= 2) return (nameParts[0].charAt(0) + nameParts[nameParts.length - 1].charAt(0)).toUpperCase();
     return nameParts[0]?.charAt(0).toUpperCase() || '';
   };
@@ -111,9 +146,10 @@ const AdminPage = () => {
         name: `${editableProfile.firstName} ${editableProfile.lastName}`.trim()
       };
 
-      // If we have a firebaseKey, update in Firebase
-      if (userProfile.firebaseKey) {
-        const userRef = ref(database, `users/${userProfile.firebaseKey}`);
+      // If we have a firebaseKey or uid, update in Firebase
+      const firebaseKey = userProfile.firebaseKey || userProfile.uid;
+      if (firebaseKey) {
+        const userRef = ref(database, `users/${firebaseKey}`);
         await update(userRef, updatedProfile);
       }
 
@@ -363,7 +399,7 @@ const AdminPage = () => {
         .ad-employee-info { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
         .ad-employee-info-text { display: none;flex-direction: column;
   align-items: flex-end;
-  gap: 0.125rem;de }
+  gap: 0.125rem; }
         @media (min-width: 768px) { .ad-employee-info-text { display: flex; } }
         .ad-employee-name { font-size: 0.875rem; font-weight: 600;margin: 0;
   padding: 0;
@@ -626,9 +662,6 @@ const AdminPage = () => {
                   </button>
                 </>
               )}
-              <button className="close-button" onClick={closeUserProfileModal}>
-                Close
-              </button>
             </div>
           </div>
         </div>

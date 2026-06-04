@@ -69,12 +69,14 @@ export default function LoginPage() {
 
       // ✅ Construct user data once
       const finalUserData = {
+        ...userDataFromDb,
         firebaseKey: uid,
         uid,
         email,
         roles: userDataFromDb.roles || (isAllowlistedAdmin ? ['admin'] : ['client']),
         avatar:
           photoURL ||
+          userDataFromDb.avatar ||
           `https://placehold.co/40x40/007bff/white?text=${email.charAt(0).toUpperCase()}`,
       };
 

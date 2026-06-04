@@ -3020,25 +3020,32 @@ const EmployeeData = () => {
           </div>
           {selectedClient && selectedClient.assignmentStatus === 'active' ? (
             <>
-              <div style={{ marginTop: '20px', padding: '15px', background: '#e0effe', borderRadius: '8px', border: '1px solid #c4e0ff' }}>
-                <p style={{ fontSize: '1.1rem', fontWeight: '600', color: '#3b82f6', margin: '0 0 10px 0' }}>
+              <div style={{ marginTop: '20px', padding: '15px', background: '#e0effe', borderRadius: '8px', border: 'none', textAlign: 'center' }}>
+                <p style={{ fontSize: '1.1rem', fontWeight: '600', color: '#3b82f6', margin: '0 0 5px 0' }}>
                   Currently viewing data for: {`${selectedClient.firstName} ${selectedClient.lastName}`}
                 </p>
-                <p style={{ fontSize: '0.9rem', color: '#475569', margin: 0 }}>
+                <p style={{ fontSize: '0.9rem', color: '#64748b', margin: 0 }}>
                   Manager: {selectedClient.manager} | Job Location: {selectedClient.location} | Salary: {selectedClient.jobType}
                 </p>
               </div>
 
               {/* Sub-tabs for selected client */}
-              <div style={{ ...tabsContainerStyle, marginTop: '20px', justifyContent: 'flex-start' }}>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '20px', marginBottom: '20px', justifyContent: 'flex-start', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px' }}>
                 {['Applications', 'Client data', 'Files', 'Activity'].map(subTab => (
                   <button
                     key={subTab}
                     style={{
-                      ...tabButtonStyle,
-                      ...(activeSubTab === subTab ? tabButtonActiveStyle : {})
+                      backgroundColor: activeSubTab === subTab ? '#3b82f6' : 'transparent',
+                      color: activeSubTab === subTab ? '#ffffff' : '#64748b',
+                      border: 'none',
+                      padding: '10px 18px',
+                      borderRadius: '6px',
+                      fontSize: '0.95rem',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      outline: 'none',
+                      transition: 'all 0.2s',
                     }}
-                    className="tab-button"
                     onClick={() => setActiveSubTab(subTab)}
                   >
                     {subTab}
@@ -3211,36 +3218,37 @@ const EmployeeData = () => {
 
               {/* Applications Tab Content */}
               {activeSubTab === 'Applications' && (
-                <div style={{ ...applicationsSectionStyle, marginTop: '24px' }}>
-                  <h2 style={{ ...sectionTitleStyle, textAlign: 'center' }}>Advanced Filters</h2> {/* Centered title */}
-                  <div style={filterContainerStyle}>
-                    <div style={filterGroupStyle}>
-                      <label style={filterLabelStyle}>Date Range</label>
-                      <div style={dateRangeInputGroupStyle}>
+                <div style={{ background: '#ffffff', borderRadius: '12px', padding: '24px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', marginBottom: '32px', marginTop: '24px' }}>
+                  <h2 style={{ fontSize: '1.5rem', fontWeight: '600', color: '#1e293b', textAlign: 'center', marginBottom: '30px' }}>Advanced Filters</h2>
+                  
+                  <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '40px', marginBottom: '40px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                      <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#475569' }}>Date Range</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <input
                           type="date"
                           name="startDate"
                           value={filterDateRange.startDate}
                           onChange={handleDateRangeChange}
-                          style={dateInputStyle}
+                          style={{ padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.9rem', color: '#1e293b', outline: 'none' }}
                         />
-                        <span style={{ margin: '0 8px', color: '#64748b' }}>to</span>
+                        <span style={{ color: '#64748b' }}>to</span>
                         <input
                           type="date"
                           name="endDate"
                           value={filterDateRange.endDate}
                           onChange={handleDateRangeChange}
-                          style={dateInputStyle}
+                          style={{ padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.9rem', color: '#1e293b', outline: 'none' }}
                         />
                       </div>
                     </div>
 
-                    <div style={{ ...filterGroupStyle, marginLeft: 'auto' }}> {/* Moved Sort Order to the right */}
-                      <label style={filterLabelStyle}>Sort Order</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                      <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#475569' }}>Sort Order</label>
                       <select
                         value={sortOrder}
                         onChange={(e) => setSortOrder(e.target.value)}
-                        style={selectFilterStyle}
+                        style={{ padding: '8px 30px 8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.9rem', color: '#1e293b', outline: 'none', backgroundColor: '#fff', appearance: 'none', backgroundImage: `url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20320%20512%22%3E%3Cpath%20fill%3D%22%23475569%22%20d%3D%22M143%20352.3L7.7%20199.7c-4.7-4.7-12.3-4.7-17%200l-19.4%2019.4c-4.7%204.7-4.7%2012.3%200%2017L159%20448.3c9.4%209.4%2024.6%209.4%2033.9%200l151.3-151.3c4.7-4.7%204.7-12.3%200-17l-19.4-19.4c-4.7-4.7-12.3-4.7-17%200L160%20352.3c-9.4%209.4-24.6%209.4-33.9%200z%22%2F%3E%3C%2Fsvg%3E')`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', backgroundSize: '10px' }}
                       >
                         <option value="Newest First">Newest First</option>
                         <option value="Oldest First">Oldest First</option>
@@ -3249,36 +3257,37 @@ const EmployeeData = () => {
                       </select>
                     </div>
 
-                    <div style={filterGroupStyle}>
-                      <label style={filterLabelStyle}>Quick Filters</label>
-                      <div style={quickFilterButtonsStyle}>
-                        <button
-                          onClick={() => handleQuickFilterChange('Last 7 Days')}
-                          style={{ ...quickFilterButtonStyle, ...(quickFilter === 'Last 7 Days' ? quickFilterButtonActiveStyle : {}) }}
-                        >
-                          Last 7 Days
-                        </button>
-                        <button
-                          onClick={() => handleQuickFilterChange('Last 30 Days')}
-                          style={{ ...quickFilterButtonStyle, ...(quickFilter === 'Last 30 Days' ? quickFilterButtonActiveStyle : {}) }}
-                        >
-                          Last 30 Days
-                        </button>
-                        <button
-                          onClick={() => handleQuickFilterChange('All Time')}
-                          style={{ ...quickFilterButtonStyle, ...(quickFilter === 'All Time' ? quickFilterButtonActiveStyle : {}) }}
-                        >
-                          All Time
-                        </button>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                      <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#475569' }}>Quick Filters</label>
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        {['Last 7 Days', 'Last 30 Days', 'All Time'].map((filter) => (
+                          <button
+                            key={filter}
+                            onClick={() => handleQuickFilterChange(filter)}
+                            style={{
+                              background: quickFilter === filter ? '#e2e8f0' : '#f1f5f9',
+                              color: '#475569',
+                              border: 'none',
+                              padding: '8px 16px',
+                              borderRadius: '6px',
+                              fontSize: '0.9rem',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                              outline: 'none',
+                            }}
+                          >
+                            {filter}
+                          </button>
+                        ))}
                       </div>
                     </div>
 
-                    {areFiltersActive() && ( // Conditionally render Clear Filters button
-                      <div style={clearFiltersButtonContainerStyle}> {/* New container for positioning */}
-                        <label style={filterLabelStyle}>Actions</label>
+                    {areFiltersActive() && (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                        <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#475569' }}>Actions</label>
                         <button
                           onClick={handleClearFilters}
-                          style={clearFiltersButtonStyle}
+                          style={{ background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', padding: '8px 16px', borderRadius: '6px', fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', outline: 'none' }}
                         >
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -3290,32 +3299,32 @@ const EmployeeData = () => {
                     )}
                   </div>
 
-                  <h2 style={sectionTitleStyle}>Client Job Applications</h2>
-                  <p style={subLabelStyle}>Manage job applications for each assigned client</p>
+                  <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+                    <h2 style={{ fontSize: '1.5rem', fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>Client Job Applications</h2>
+                    <p style={{ fontSize: '1rem', color: '#64748b', margin: '0' }}>Manage job applications for each assigned client</p>
+                  </div>
 
-                  <div key={selectedClient.id} style={clientApplicationsContainerStyle}>
-                    <div style={clientApplicationsHeaderStyle}>
-                      <div style={initialsCircleStyle}>{selectedClient.initials}</div>
+                  <div key={selectedClient.id} style={{ background: '#ffffff', borderRadius: '12px', padding: '24px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', marginBottom: '24px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
+                      <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: '#e0effe', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: '600' }}>
+                        {selectedClient.initials}
+                      </div>
                       <div style={{ flexGrow: 1 }}>
-                        <p style={clientNameStyle}>
+                        <p style={{ fontSize: '1.125rem', fontWeight: '600', color: '#1e293b', margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
                           {selectedClient.name}
-                          <span style={{
-                            ...priorityBadgeStyle,
-                            backgroundColor: selectedClient.priority === 'high' ? '#fee2e2' : selectedClient.priority === 'medium' ? '#fef3c7' : '#e0f2fe',
-                            color: selectedClient.priority === 'high' ? '#dc2626' : selectedClient.priority === 'medium' ? '#d97706' : '#2563eb'
-                          }}>
+                          <span style={{ padding: '4px 10px', borderRadius: '16px', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', backgroundColor: selectedClient.priority === 'high' ? '#fee2e2' : selectedClient.priority === 'medium' ? '#fef3c7' : '#e0f2fe', color: selectedClient.priority === 'high' ? '#dc2626' : selectedClient.priority === 'medium' ? '#d97706' : '#2563eb' }}>
                             {selectedClient.priority}
                           </span>
                         </p>
-                        <p style={clientCodeStyle}>{selectedClient.role || selectedClient.position} - {selectedClient.location}</p>
+                        <p style={{ fontSize: '0.875rem', color: '#64748b', margin: 0 }}>-</p>
                       </div>
-                      <div style={clientAppStatsStyle}>
+                      <div style={{ display: 'flex', gap: '16px', fontSize: '0.9rem', color: '#475569', alignItems: 'center' }}>
                         <span>Total: <strong>{selectedClient?.jobApplications?.length ?? 0}</strong></span>
                         <span>Interviews: <strong>{selectedClient?.jobApplications?.filter(app => app.status === 'Interview').length ?? 0}</strong></span>
                         <span>Applied: <strong>{selectedClient?.jobApplications?.filter(app => app.status === 'Applied').length ?? 0}</strong></span>
                       </div>
                       <button
-                        style={addApplicationButtonStyle}
+                        style={{ background: '#3b82f6', color: '#ffffff', border: 'none', padding: '10px 18px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '16px', outline: 'none' }}
                         onClick={() => handleOpenAddApplicationModal(selectedClient)}
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -3327,18 +3336,18 @@ const EmployeeData = () => {
                     </div>
 
                     {/* Search and Filter Controls */}
-                    <div style={applicationTableControlsStyle}>
+                    <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', alignItems: 'center' }}>
                       <input
                         type="text"
                         placeholder="Search applications..."
-                        style={searchInputStyle}
+                        style={{ flexGrow: 1, padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.9rem', color: '#1e293b', maxWidth: '300px', outline: 'none' }}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                       />
                       <select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
-                        style={statusFilterSelectStyle}
+                        style={{ padding: '10px 30px 10px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.9rem', color: '#1e293b', backgroundColor: '#ffffff', appearance: 'none', backgroundImage: `url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20320%20512%22%3E%3Cpath%20fill%3D%22%23475569%22%20d%3D%22M143%20352.3L7.7%20199.7c-4.7-4.7-12.3-4.7-17%200l-19.4%2019.4c-4.7%204.7-4.7%2012.3%200%2017L159%20448.3c9.4%209.4%2024.6%209.4%2033.9%200l151.3-151.3c4.7-4.7%204.7-12.3%200-17l-19.4-19.4c-4.7-4.7-12.3-4.7-17%200L160%20352.3c-9.4%209.4-24.6%209.4-33.9%200z%22%2F%3E%3C%2Fsvg%3E')`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', backgroundSize: '10px', outline: 'none' }}
                       >
                         <option value="All Statuses">All Statuses</option>
                         <option value="Applied">Applied</option>
@@ -3347,7 +3356,7 @@ const EmployeeData = () => {
                         <option value="Offered">Offered</option>
                       </select>
                       {/* NEW DOWNLOAD BUTTON - Placed below the status filter */}
-                      <button onClick={downloadApplicationsData} style={downloadButtonStyle}>
+                      <button onClick={downloadApplicationsData} style={{ background: '#10b981', color: '#ffffff', border: 'none', padding: '10px 15px', borderRadius: '6px', fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', outline: 'none' }}>
                         {/* Download Icon */}
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
