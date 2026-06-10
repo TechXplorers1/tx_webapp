@@ -424,13 +424,70 @@ const ClientManagement = () => {
 
   const handleOpenPaymentModal = (client) => {
     setSelectedClientForPayment(client);
-    setPaymentDetails({
-      amount: '',
-      description: '',
-      transactionDate: new Date().toISOString().slice(0, 10),
-    });
-    setGeneratedPaymentLink('');
+    if (client.paymentDetails) {
+      setPaymentDetails({
+        amount: client.paymentDetails.amount || '',
+        description: client.paymentDetails.description || '',
+        transactionDate: client.paymentDetails.createdAt ? client.paymentDetails.createdAt.slice(0, 10) : new Date().toISOString().slice(0, 10),
+      });
+      if (client.paymentDetails.status === 'pending' && client.paymentDetails.link) {
+        setGeneratedPaymentLink(client.paymentDetails.link);
+      }
+    } else {
+      setPaymentDetails({
+        amount: '',
+        description: '',
+        transactionDate: new Date().toISOString().slice(0, 10),
+      });
+      setGeneratedPaymentLink('');
+    }
     setIsPaymentModalOpen(true);
+  };
+
+  const handleCancelPaymentRequest = async () => {
+    const clientFirebaseKey = selectedClientForPayment.clientFirebaseKey;
+    const registrationKey = selectedClientForPayment.registrationKey;
+    if (!clientFirebaseKey || !registrationKey) {
+      alert('Error: Client or Registration key is missing.');
+      return;
+    }
+
+    if (!window.confirm('Are you sure you want to cancel and delete this payment request?')) {
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      const updates = {};
+      updates[`clients/${clientFirebaseKey}/paymentDetails`] = null;
+      updates[`service_registrations_index/${clientFirebaseKey}_${registrationKey}/paymentDetails`] = null;
+
+      await update(ref(database), updates);
+
+      // Update local state so list is updated
+      setServiceRegistrations(prev =>
+        prev.map(reg =>
+          reg.registrationKey === registrationKey
+            ? { ...reg, paymentDetails: null }
+            : reg
+        )
+      );
+
+      setPaymentDetails({
+        amount: '',
+        description: '',
+        transactionDate: new Date().toISOString().slice(0, 10),
+      });
+      setGeneratedPaymentLink('');
+      setIsPaymentModalOpen(false);
+      alert('Payment request successfully cancelled and deleted.');
+    } catch (error) {
+      console.error('Failed to cancel payment request:', error);
+      alert('Failed to cancel payment request. ' + error.message);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleClosePaymentModal = () => {
@@ -484,12 +541,53 @@ const ClientManagement = () => {
     setCurrentClientToEdit(prev => ({ ...prev, educationDetails: updatedEducation }));
   };
 
-  const handleGeneratePaymentLink = () => {
+  const handleGeneratePaymentLink = async () => {
+    if (!paymentDetails.amount || !paymentDetails.description) {
+      alert('Please enter amount and description');
+      return;
+    }
 
+    const clientFirebaseKey = selectedClientForPayment.clientFirebaseKey;
+    const registrationKey = selectedClientForPayment.registrationKey;
+    if (!clientFirebaseKey || !registrationKey) {
+      alert('Error: Client or Registration key is missing.');
+      return;
+    }
 
-    const mockLink = `https://31228083-199d-476b-a6cb-d029dbd0ce9-figmaiframepreview.figma.site#/pay/1/INV-14752-12703`;
-    setGeneratedPaymentLink(mockLink);
-    console.log('Generating payment link with details:', paymentDetails, ' for client:', selectedClientForPayment);
+    // Generate link dynamically using the current domain name
+    const payUrl = `${window.location.origin}/clientdashboard?pay=true`;
+
+    const paymentInfo = {
+      amount: paymentDetails.amount,
+      description: paymentDetails.description,
+      status: 'pending',
+      link: payUrl,
+      registrationKey: registrationKey,
+      createdAt: new Date().toISOString()
+    };
+
+    try {
+      const updates = {};
+      updates[`clients/${clientFirebaseKey}/paymentDetails`] = paymentInfo;
+      updates[`service_registrations_index/${clientFirebaseKey}_${registrationKey}/paymentDetails`] = paymentInfo;
+
+      await update(ref(database), updates);
+
+      // Optimistic update of local state so list is updated
+      setServiceRegistrations(prev =>
+        prev.map(reg =>
+          reg.registrationKey === registrationKey
+            ? { ...reg, paymentDetails: paymentInfo }
+            : reg
+        )
+      );
+
+      setGeneratedPaymentLink(payUrl);
+      console.log('Payment link successfully generated and saved to Firebase:', paymentInfo);
+    } catch (error) {
+      console.error('Failed to generate and save payment link:', error);
+      alert('Failed to generate payment link. ' + error.message);
+    }
   };
 
   const handlePayNow = () => {
@@ -509,35 +607,50 @@ const ClientManagement = () => {
     setIsSaving(true);
 
     try {
-      // 1. Call your Firebase Function to create an order
-      // Note: In production, use the environment variable or a configuration file for the URL
-      const functionUrl = `${import.meta.env.VITE_FUNCTION_BASE_URL}/createPaymentOrder`;
-      console.log("Attempting to fetch payment order from:", functionUrl);
-
-      const response = await fetch(functionUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: paymentDetails.amount })
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to create order. Ensure backend function is deployed.");
-      }
-
-      const order = await response.json();
-
-      // 2. Open Razorpay Checkout
+      // Open Razorpay Checkout directly using Key ID (bypassing backend order creation)
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-        amount: order.amount,
-        currency: order.currency,
+        amount: Math.round(Number(paymentDetails.amount) * 100), // Convert to paise
+        currency: "INR",
         name: "TechXplorers",
         description: paymentDetails.description,
-        order_id: order.id,
-        handler: function (response) {
+        handler: async function (response) {
           console.log("Payment Successful:", response);
+          
+          const clientFirebaseKey = selectedClientForPayment.clientFirebaseKey;
+          const registrationKey = selectedClientForPayment.registrationKey;
+          if (clientFirebaseKey && registrationKey) {
+            const paymentInfo = {
+              amount: paymentDetails.amount,
+              description: paymentDetails.description,
+              status: 'paid',
+              transactionId: response.razorpay_payment_id,
+              orderId: response.razorpay_order_id || null,
+              signature: response.razorpay_signature || null,
+              registrationKey: registrationKey,
+              createdAt: new Date().toISOString()
+            };
+
+            try {
+              const updates = {};
+              updates[`clients/${clientFirebaseKey}/paymentDetails`] = paymentInfo;
+              updates[`service_registrations_index/${clientFirebaseKey}_${registrationKey}/paymentDetails`] = paymentInfo;
+
+              await update(ref(database), updates);
+
+              // Update local state so list is updated
+              setServiceRegistrations(prev =>
+                prev.map(reg =>
+                  reg.registrationKey === registrationKey
+                    ? { ...reg, paymentDetails: paymentInfo }
+                    : reg
+                )
+              );
+            } catch (error) {
+              console.error('Failed to save payment status in database:', error);
+            }
+          }
           setPaymentSuccess(true);
-          // TODO: Call backend to verify payment signature here
         },
         prefill: {
           name: `${selectedClientForPayment.firstName} ${selectedClientForPayment.lastName}`,
@@ -2155,21 +2268,127 @@ const ClientManagement = () => {
 
 /* Payment Management Modal Specific Styles */
 .payment-modal-content {
-    max-width: 500px; /* Adjust max-width for payment modal */
-    padding: 1.25rem; /* Reduced padding */
+    max-width: 500px !important;
+    padding: 24px !important;
+    border-radius: 16px !important;
+    box-shadow: var(--modal-shadow) !important;
+}
+
+.payment-modal-content .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 12px;
+}
+
+.payment-modal-content .modal-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.payment-modal-content .modal-subtitle {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin: 4px 0 0 0;
+}
+
+.payment-modal-content .modal-close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+}
+
+.payment-modal-content .modal-close-btn:hover {
+    color: var(--text-primary);
+}
+
+.payment-modal-content .modal-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    text-align: left !important;
+}
+
+.payment-modal-content .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: stretch !important;
+    text-align: left !important;
+}
+
+.payment-modal-content .form-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: left !important;
+    margin-bottom: 0;
+}
+
+.payment-modal-content .form-input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--modal-input-border);
+    border-radius: 8px;
+    background-color: var(--modal-input-bg);
+    color: var(--modal-input-text);
+    font-size: 0.9rem;
+    box-sizing: border-box;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+    text-align: left !important;
+}
+
+.payment-modal-content .form-input:focus {
+    border-color: var(--modal-focus-border);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.payment-modal-content .amount-prefix {
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 10px 12px;
+    background-color: var(--bg-body);
+    border: 1px solid var(--modal-input-border);
+    border-right: none;
+    border-radius: 8px 0 0 8px;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    height: 42px;
+}
+
+.payment-modal-content .amount-input-wrapper {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+}
+
+.payment-modal-content .amount-input-wrapper .form-input {
+    border-radius: 0 8px 8px 0;
+    height: 42px;
 }
 
 .payment-modal-client-details {
     background-color: var(--bg-body);
     border-radius: 0.5rem;
-    padding: 0.75rem; /* Reduced padding */
-    margin-top: 0.75rem; /* Reduced margin */
+    padding: 0.75rem;
+    margin-top: 0.75rem;
     border: 1px solid var(--border-color);
 }
 
 .payment-modal-client-details p {
-    margin: 0.15rem 0; /* Reduced margin */
-    font-size: 0.85rem; /* Slightly smaller font */
+    margin: 0.15rem 0;
+    font-size: 0.85rem;
     color: var(--text-primary);
 }
 
@@ -2179,34 +2398,26 @@ const ClientManagement = () => {
 }
 
 .payment-modal-options {
-    margin-top: 1rem; /* Reduced margin */
-    padding-top: 0.75rem; /* Reduced padding */
+    margin-top: 1rem;
+    padding-top: 0.75rem;
     border-top: 1px solid var(--border-color);
 }
 
 .payment-modal-options h4 {
-    font-size: 0.95rem; /* Slightly smaller font */
+    font-size: 0.95rem;
     font-weight: 600;
     color: var(--text-primary);
-    margin-bottom: 0.5rem; /* Reduced margin */
+    margin-bottom: 0.5rem;
 }
 
 .payment-modal-option-item {
-    font-size: 0.8rem; /* Smaller font */
+    font-size: 0.8rem;
     color: var(--text-secondary);
-    margin-bottom: 0.3rem; /* Reduced margin */
+    margin-bottom: 0.3rem;
 }
 
 .payment-modal-option-item strong {
     color: var(--text-primary);
-}
-
-.modal-form .form-group {
-    gap: 0.4rem; /* Reduced gap between label and input */
-}
-
-.modal-form .form-label {
-    margin-bottom: 0; /* Remove default margin */
 }
 
 .modal-footer {
@@ -3693,21 +3904,127 @@ const ClientManagement = () => {
 
 /* Payment Management Modal Specific Styles */
 .payment-modal-content {
-    max-width: 500px; /* Adjust max-width for payment modal */
-    padding: 1.25rem; /* Reduced padding */
+    max-width: 500px !important;
+    padding: 24px !important;
+    border-radius: 16px !important;
+    box-shadow: var(--modal-shadow) !important;
+}
+
+.payment-modal-content .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 12px;
+}
+
+.payment-modal-content .modal-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.payment-modal-content .modal-subtitle {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin: 4px 0 0 0;
+}
+
+.payment-modal-content .modal-close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+}
+
+.payment-modal-content .modal-close-btn:hover {
+    color: var(--text-primary);
+}
+
+.payment-modal-content .modal-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    text-align: left !important;
+}
+
+.payment-modal-content .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: stretch !important;
+    text-align: left !important;
+}
+
+.payment-modal-content .form-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: left !important;
+    margin-bottom: 0;
+}
+
+.payment-modal-content .form-input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--modal-input-border);
+    border-radius: 8px;
+    background-color: var(--modal-input-bg);
+    color: var(--modal-input-text);
+    font-size: 0.9rem;
+    box-sizing: border-box;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+    text-align: left !important;
+}
+
+.payment-modal-content .form-input:focus {
+    border-color: var(--modal-focus-border);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.payment-modal-content .amount-prefix {
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 10px 12px;
+    background-color: var(--bg-body);
+    border: 1px solid var(--modal-input-border);
+    border-right: none;
+    border-radius: 8px 0 0 8px;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    height: 42px;
+}
+
+.payment-modal-content .amount-input-wrapper {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+}
+
+.payment-modal-content .amount-input-wrapper .form-input {
+    border-radius: 0 8px 8px 0;
+    height: 42px;
 }
 
 .payment-modal-client-details {
     background-color: var(--bg-body);
     border-radius: 0.5rem;
-    padding: 0.75rem; /* Reduced padding */
-    margin-top: 0.75rem; /* Reduced margin */
+    padding: 0.75rem;
+    margin-top: 0.75rem;
     border: 1px solid var(--border-color);
 }
 
 .payment-modal-client-details p {
-    margin: 0.15rem 0; /* Reduced margin */
-    font-size: 0.85rem; /* Slightly smaller font */
+    margin: 0.15rem 0;
+    font-size: 0.85rem;
     color: var(--text-primary);
 }
 
@@ -3717,34 +4034,26 @@ const ClientManagement = () => {
 }
 
 .payment-modal-options {
-    margin-top: 1rem; /* Reduced margin */
-    padding-top: 0.75rem; /* Reduced padding */
+    margin-top: 1rem;
+    padding-top: 0.75rem;
     border-top: 1px solid var(--border-color);
 }
 
 .payment-modal-options h4 {
-    font-size: 0.95rem; /* Slightly smaller font */
+    font-size: 0.95rem;
     font-weight: 600;
     color: var(--text-primary);
-    margin-bottom: 0.5rem; /* Reduced margin */
+    margin-bottom: 0.5rem;
 }
 
 .payment-modal-option-item {
-    font-size: 0.8rem; /* Smaller font */
+    font-size: 0.8rem;
     color: var(--text-secondary);
-    margin-bottom: 0.3rem; /* Reduced margin */
+    margin-bottom: 0.3rem;
 }
 
 .payment-modal-option-item strong {
     color: var(--text-primary);
-}
-
-.modal-form .form-group {
-    gap: 0.4rem; /* Reduced gap between label and input */
-}
-
-.modal-form .form-label {
-    margin-bottom: 0; /* Remove default margin */
 }
 
 .modal-footer {
@@ -4741,8 +5050,8 @@ const ClientManagement = () => {
               <form className="modal-form" onSubmit={(e) => { e.preventDefault(); }}>
                 <div className="form-group modal-form-full-width">
                   <label htmlFor="paymentAmount" className="form-label">Amount *</label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ color: 'var(--text-secondary)', fontSize: '1rem', fontWeight: '500' }}>INR</span>
+                  <div className="amount-input-wrapper">
+                    <span className="amount-prefix">INR</span>
                     <input
                       type="number"
                       id="paymentAmount"
@@ -4836,6 +5145,17 @@ const ClientManagement = () => {
                 </div>
 
                 <div className="modal-footer modal-form-full-width">
+                  {selectedClientForPayment.paymentDetails && (
+                    <button
+                      type="button"
+                      onClick={handleCancelPaymentRequest}
+                      className="confirm-cancel-btn"
+                      style={{ backgroundColor: '#dc3545', color: '#ffffff', marginRight: 'auto' }}
+                      disabled={isSaving}
+                    >
+                      Delete Request
+                    </button>
+                  )}
                   <button type="button" className="confirm-cancel-btn" onClick={handleClosePaymentModal}>Cancel</button>
 
                   {activePaymentTab === 'link' ? (
@@ -4852,7 +5172,7 @@ const ClientManagement = () => {
                       style={{ backgroundColor: '#28a745' }}
                       disabled={isSaving}
                     >
-                      {isSaving ? 'Processing...' : 'Proceed to Payment'}
+                      {isSaving ? 'Processing...' : 'Pay Now'}
                     </button>
                   )}
                 </div>

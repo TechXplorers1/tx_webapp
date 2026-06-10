@@ -5,7 +5,7 @@ const cors = require("cors")({ origin: true });
 // Initialize Razorpay with your CREDENTIALS
 // IMPORTANT: Replace 'YOUR_KEY_SECRET' with the actual secret from Razorpay Dashboard
 const razorpay = new Razorpay({
-    key_id: "rzp_test_Rjy0Hn2Ns66KiP", // Public Key (Safe to be here, but better in env vars)
+    key_id: process.env.RAZORPAY_KEY_ID || "rzp_test_SYC9m4DXT1gjeY", // Read from env, fallback to active Key ID
     key_secret: process.env.RAZORPAY_KEY_SECRET, // <--- Loaded from functions/.env
 });
 

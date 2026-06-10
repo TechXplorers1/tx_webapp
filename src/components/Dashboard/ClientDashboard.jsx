@@ -4,6 +4,7 @@ import { database, storage } from '../../firebase'; // Import your Firebase conf
 import { dbGet, dbSet } from '../../utils/idbCache';
 import { getStorage, ref as storageRef, getDownloadURL } from "firebase/storage";
 import { useTheme } from '../../context/ThemeContext';
+import { useRazorpay } from "react-razorpay";
 import {
   Chart as ChartJS,
   LineElement,
@@ -212,7 +213,9 @@ const ClientHeader = ({
   activeServices,
   inactiveServices,
   onActiveServiceClick,
-  onInactiveServiceClick
+  onInactiveServiceClick,
+  paymentDetails,
+  onPaymentClick
 }) => {
 
   const [isServicesDropdownOpen, setIsServicesDropdownOpen] = useState(false);
@@ -618,6 +621,16 @@ const ClientHeader = ({
             <span className="subscription-text">Subscription</span>
           </li>
 
+          {paymentDetails && paymentDetails.status === 'pending' && (
+            <li className="profile-dropdown-item" onClick={onPaymentClick} style={{ listStyle: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {/* Wallet Icon */}
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1rem', height: '1rem', color: '#10b981' }}>
+                <path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z" />
+              </svg>
+              <span className="subscription-text" style={{ color: '#10b981', fontWeight: 'bold' }}>Payment</span>
+            </li>
+          )}
+
           {/* <div className="header-button-item" onMouseEnter={() => setIsServicesDropdownOpen(true)} onMouseLeave={() => setIsServicesDropdownOpen(false)}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1rem', height: '1rem', color: 'var(--text-primary)' }}>
               <path d="M12 2L2 7L12 12L22 7L12 2Z" />
@@ -809,6 +822,133 @@ const SubscriptionDetailsModal = ({
     </div>
   );
 };
+
+// --- ClientPaymentModal Component ---
+const ClientPaymentModal = ({ paymentDetails, onClose, onPayNow, isSaving }) => {
+  if (!paymentDetails) return null;
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content-style" style={{
+        maxWidth: '500px',
+        padding: '40px',
+        background: 'var(--bg-card)',
+        color: 'var(--text-primary)',
+        borderRadius: '16px',
+        boxShadow: '0 20px 25px rgba(0, 0, 0, 0.15)',
+        border: '1px solid var(--border-color)',
+        position: 'relative'
+      }}>
+        <button onClick={onClose} className="modal-close-button" style={{ color: 'var(--text-secondary)' }}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M13 1L1 13M1 1L13 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        </button>
+        <h3 style={{
+          marginBottom: '24px',
+          textAlign: 'center',
+          color: 'var(--text-primary)',
+          fontSize: '1.8rem',
+          fontWeight: '700'
+        }}>
+          Payment Details
+        </h3>
+        
+        <div style={{
+          background: 'rgba(16, 185, 129, 0.1)',
+          border: '1px solid rgba(16, 185, 129, 0.2)',
+          borderRadius: '12px',
+          padding: '20px',
+          marginBottom: '24px',
+          textAlign: 'center'
+        }}>
+          <span style={{ fontSize: '0.875rem', color: '#10b981', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Amount Due
+          </span>
+          <h2 style={{ fontSize: '2.5rem', fontWeight: '800', color: '#10b981', margin: '8px 0 0 0' }}>
+            ₹{paymentDetails.amount}
+          </h2>
+        </div>
+
+        <div style={{
+          background: 'var(--bg-nav-link-hover)',
+          borderRadius: '12px',
+          padding: '16px',
+          marginBottom: '28px',
+          border: '1px solid var(--border-color)'
+        }}>
+          <p style={{
+            fontSize: '0.875rem',
+            color: 'var(--text-secondary)',
+            fontWeight: '600',
+            margin: '0 0 6px 0',
+            textTransform: 'uppercase',
+            letterSpacing: '0.03em'
+          }}>
+            Description
+          </p>
+          <p style={{
+            fontSize: '1rem',
+            color: 'var(--text-primary)',
+            margin: 0,
+            lineHeight: '1.5'
+          }}>
+            {paymentDetails.description}
+          </p>
+        </div>
+
+        <button
+          onClick={onPayNow}
+          disabled={isSaving}
+          style={{
+            width: '100%',
+            padding: '14px 20px',
+            borderRadius: '10px',
+            backgroundColor: '#10b981',
+            color: '#ffffff',
+            fontWeight: '700',
+            fontSize: '1rem',
+            border: 'none',
+            cursor: isSaving ? 'not-allowed' : 'pointer',
+            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)',
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px'
+          }}
+          onMouseEnter={(e) => {
+            if (!isSaving) {
+              e.currentTarget.style.backgroundColor = '#059669';
+              e.currentTarget.style.boxShadow = '0 6px 16px rgba(16, 185, 129, 0.35)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isSaving) {
+              e.currentTarget.style.backgroundColor = '#10b981';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.25)';
+            }
+          }}
+        >
+          {isSaving ? (
+            <>
+              <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" style={{ width: '1rem', height: '1rem', borderWidth: '0.15em' }}></span>
+              Processing...
+            </>
+          ) : (
+            <>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1.25rem', height: '1.25rem' }}>
+                <path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z" />
+              </svg>
+              Pay Now
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+};
+
 
 // --- PaymentOptionsModal Component (NEW) ---
 const PaymentOptionsModal = ({ onClose, selectedPlanName, selectedPlanPrice }) => {
@@ -2681,6 +2821,11 @@ const ClientDashboard = () => {
   const [clientData, setClientData] = useState(null);
   const [allFiles, setAllFiles] = useState([]);
 
+  // --- Payment States ---
+  const { Razorpay } = useRazorpay();
+  const [showClientPaymentModal, setShowClientPaymentModal] = useState(false);
+  const [isClientPaySaving, setIsClientPaySaving] = useState(false);
+
   // --- UPDATED ADS & BANNERS LOGIC ---
   const [activeBannerAds, setActiveBannerAds] = useState([]);
 
@@ -2909,6 +3054,8 @@ const ClientDashboard = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showSubscriptionDetailsModal, setShowSubscriptionDetailsModal] = useState(false);
   const [selectedRadioPlan, setSelectedRadioPlan] = useState('glass-silver');
+  // State to hold the logged‑in client Firebase key
+  const [clientKey, setClientKey] = useState(null);
 
   const [isServiceDetailsModalOpen, setIsServiceDetailsModalOpen] = useState(false);
   const [selectedServiceForDetails, setSelectedServiceForDetails] = useState(null);
@@ -3183,8 +3330,9 @@ const ClientDashboard = () => {
   useEffect(() => {
     const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInClient'));
     if (!loggedInUserData || !loggedInUserData.firebaseKey) return;
-    const clientKey = loggedInUserData.firebaseKey;
-    const CLIENT_CACHE_KEY = `cache_client_data_${clientKey}`;
+    const key = loggedInUserData.firebaseKey;
+    setClientKey(key);
+    const CLIENT_CACHE_KEY = `cache_client_data_${key}`;
     const CLIENT_CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 
     const loadClientData = async () => {
@@ -3199,7 +3347,7 @@ const ClientDashboard = () => {
 
         // 2. Cache miss — fetch from Firebase
         console.log('[IDB Cache MISS] Fetching client data from Firebase...');
-        const clientRef = ref(database, `clients/${clientKey}`);
+        const clientRef = ref(database, `clients/${key}`);
         const snapshot = await get(clientRef);
         const data = snapshot.exists() ? snapshot.val() : null;
 
@@ -3216,6 +3364,110 @@ const ClientDashboard = () => {
 
     loadClientData();
   }, [processClientData]);
+
+  // --- Check URL query parameters for payments ---
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('pay') === 'true' && clientData?.paymentDetails?.status === 'pending') {
+      setShowClientPaymentModal(true);
+    }
+  }, [clientData]);
+
+  // --- Real‑time listener for paymentDetails changes ---
+  useEffect(() => {
+    if (!clientKey) return; // Wait until clientKey is known
+    const paymentRef = ref(database, `clients/${clientKey}/paymentDetails`);
+    const unsubscribe = onValue(paymentRef, (snap) => {
+      const payData = snap.val();
+      setClientData((prev) => {
+        if (!prev) return prev;
+        return { ...prev, paymentDetails: payData || null };
+      });
+    });
+    return () => unsubscribe();
+  }, [clientKey]);
+
+  // --- Process Payment via Razorpay for custom admin link ---
+  const handleClientPayNow = async () => {
+    if (!clientData || !clientData.paymentDetails) {
+      alert("No payment details found.");
+      return;
+    }
+    
+    setIsClientPaySaving(true);
+    
+    try {
+      // Open Razorpay Checkout directly using Key ID (bypassing backend order creation)
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount: Math.round(Number(clientData.paymentDetails.amount) * 100), // Convert to paise
+        currency: "INR",
+        name: "TechXplorers",
+        description: clientData.paymentDetails.description,
+        handler: async function (rzpResponse) {
+          console.log("Payment Successful:", rzpResponse);
+          
+          const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInClient'));
+          if (!loggedInUserData || !loggedInUserData.firebaseKey) return;
+          const clientKey = loggedInUserData.firebaseKey;
+          const regKey = clientData.paymentDetails.registrationKey;
+          
+          const updates = {};
+          updates[`clients/${clientKey}/paymentDetails/status`] = 'paid';
+          updates[`clients/${clientKey}/paymentDetails/transactionId`] = rzpResponse.razorpay_payment_id;
+          updates[`clients/${clientKey}/paymentDetails/orderId`] = rzpResponse.razorpay_order_id || null;
+          updates[`clients/${clientKey}/paymentDetails/signature`] = rzpResponse.razorpay_signature || null;
+ 
+          updates[`service_registrations_index/${clientKey}_${regKey}/paymentDetails/status`] = 'paid';
+          updates[`service_registrations_index/${clientKey}_${regKey}/paymentDetails/transactionId`] = rzpResponse.razorpay_payment_id;
+          
+          try {
+            await update(ref(database), updates);
+            
+            // Update IndexedDB cache
+            const CLIENT_CACHE_KEY = `cache_client_data_${clientKey}`;
+            const cached = await dbGet(CLIENT_CACHE_KEY);
+            if (cached && cached.data) {
+              cached.data.paymentDetails = { ...cached.data.paymentDetails, status: 'paid', transactionId: rzpResponse.razorpay_payment_id };
+              await dbSet(CLIENT_CACHE_KEY, cached);
+            }
+            
+            // Update local state instantly
+            setClientData(prev => ({
+              ...prev,
+              paymentDetails: { ...prev.paymentDetails, status: 'paid', transactionId: rzpResponse.razorpay_payment_id }
+            }));
+ 
+            alert("Payment successful! Transaction ID: " + rzpResponse.razorpay_payment_id);
+            setShowClientPaymentModal(false);
+          } catch (err) {
+            console.error("Failed to update payment status in database:", err);
+            alert("Payment was successful but we failed to update database status. Please contact support with Transaction ID: " + rzpResponse.razorpay_payment_id);
+          }
+        },
+        prefill: {
+          name: `${clientData.firstName || ''} ${clientData.lastName || ''}`.trim(),
+          email: clientData.email,
+          contact: clientData.mobile,
+        },
+        theme: {
+          color: "#6D28D9",
+        },
+      };
+ 
+      const rzp1 = new Razorpay(options);
+      rzp1.on("payment.failed", function (response) {
+        alert("Payment Failed: " + response.error.description);
+      });
+      rzp1.open();
+ 
+    } catch (err) {
+      console.error("Payment Error:", err);
+      alert("Error initializing payment. " + err.message);
+    } finally {
+      setIsClientPaySaving(false);
+    }
+  };
 
   const handleActiveServiceClick = (service) => {
     if (clientData && clientData.serviceRegistrations) {
@@ -3872,13 +4124,11 @@ const ClientDashboard = () => {
   ]);
 
 
-  // Determine if the overlay should be visible (for all modals and sidebar)
   const isOverlayVisible = useMemo(() => {
     return menuOpen || showResumeModal || showPaymentModal || showSubscriptionDetailsModal ||
-      showNotificationsModal || showAttachmentModal || showDateRangeModal || showJobDescriptionModal || showFilterModal || showPaymentOptionsModal;
-  }, [menuOpen, showResumeModal, showPaymentModal,
-    , showSubscriptionDetailsModal,
-    showNotificationsModal, showAttachmentModal, showDateRangeModal, showJobDescriptionModal, showFilterModal, showPaymentOptionsModal]);
+      showNotificationsModal || showAttachmentModal || showDateRangeModal || showJobDescriptionModal || showFilterModal || showPaymentOptionsModal || showClientPaymentModal;
+  }, [menuOpen, showResumeModal, showPaymentModal, showSubscriptionDetailsModal,
+    showNotificationsModal, showAttachmentModal, showDateRangeModal, showJobDescriptionModal, showFilterModal, showPaymentOptionsModal, showClientPaymentModal]);
 
 
   // ClientDashboard.jsx
@@ -5894,6 +6144,8 @@ html.dark-mode .notify-success-message {
         inactiveServices={inactiveServices}
         onActiveServiceClick={handleActiveServiceClick}
         onInactiveServiceClick={handleInactiveServiceClick}
+        paymentDetails={clientData?.paymentDetails}
+        onPaymentClick={() => setShowClientPaymentModal(true)}
       />
 
       {/* Dimming Overlay */}
@@ -5911,6 +6163,7 @@ html.dark-mode .notify-success-message {
           if (showJobDescriptionModal) setShowJobDescriptionModal(false);
           if (showFilterModal) setShowFilterModal(false);
           if (showPaymentOptionsModal) setShowPaymentOptionsModal(false); // Close payment options modal
+          if (showClientPaymentModal) setShowClientPaymentModal(false); // Close client payment modal
         }}
       />
 
@@ -6212,6 +6465,15 @@ html.dark-mode .notify-success-message {
         <NotificationModal
           notifications={notifications}
           onClose={closeNotificationsModal}
+        />
+      )}
+
+      {showClientPaymentModal && (
+        <ClientPaymentModal
+          paymentDetails={clientData?.paymentDetails}
+          onClose={() => setShowClientPaymentModal(false)}
+          onPayNow={handleClientPayNow}
+          isSaving={isClientPaySaving}
         />
       )}
 
