@@ -17,7 +17,7 @@ const CaptchaGate = ({ children }) => {
       // User successfully solved the CAPTCHA
       setIsVerified(true);
       sessionStorage.setItem('site_captcha_verified', 'true');
-      
+
       // Note: In a fully secure setup, this token should be sent to your backend
       // to be verified with the secret key: 6LdSWessAAAAAPoxWF3ecY6KslAySy5KI0Bda6ee
     }

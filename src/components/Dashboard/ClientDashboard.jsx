@@ -252,9 +252,6 @@ const ClientHeader = ({
       {/* Inline styles for ClientHeader */}
       <style>
         {`
-        /* Import Inter font from Google Fonts */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
         /* CSS Variables for theming (Header specific) */
         :root {
           --bg-header: #ffffff;
@@ -5892,7 +5889,6 @@ html.dark-mode .notify-success-message {
         onSubscriptionClick={handleSubscriptionClick}
         unreadNotificationsCount={unreadNotificationsCount}
         onNotificationClick={handleNotificationClick}
-        // onLogoutClick={handleLogout}
         onLogoClick={() => navigate('/')}
         activeServices={activeServices}
         inactiveServices={inactiveServices}
