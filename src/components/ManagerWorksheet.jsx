@@ -1771,7 +1771,7 @@ const ManagerWorkSheet = () => {
       } else {
         // If NO date range is selected, default to showing ONLY today's applications.
         const todayStr = getLocalDateString(); // Gets today's date in YYYY-MM-DD format
-        matchesDateRange = (formatDateToDDMMYYYY(app.appliedDate) === todayStr);
+        matchesDateRange = (getLocalDateString(app.appliedDate) === todayStr);
       }
 
       return matchesSearch && matchesEmployee && matchesClient && matchesDateRange;
@@ -1797,7 +1797,7 @@ const ManagerWorkSheet = () => {
     const today = getLocalDateString();
 
     // 1. Calculate today's count for all employees
-    const todayCount = filteredApplicationData.filter(app => formatDateToDDMMYYYY(app.appliedDate) === today).length;
+    const todayCount = filteredApplicationData.filter(app => getLocalDateString(app.appliedDate) === today).length;
 
     // 2. Calculate filtered count based on the date range
     let filteredCount = filteredApplicationData.length;
@@ -1816,7 +1816,7 @@ const ManagerWorkSheet = () => {
     let employeeTodayCount = 0;
     if (applicationFilterEmployee) {
       employeeTodayCount = filteredApplicationData.filter(app =>
-        app.assignedTo === applicationFilterEmployee && formatDateToDDMMYYYY(app.appliedDate) === today
+        app.assignedTo === applicationFilterEmployee && getLocalDateString(app.appliedDate) === today
       ).length;
     }
 
