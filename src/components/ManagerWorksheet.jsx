@@ -9,7 +9,8 @@ import {
   get,
   set,
   update,
-  remove
+  remove,
+  onValue
 } from "firebase/database";
 import { database, auth } from '../firebase'; // Import your Firebase config
 import { createUserWithEmailAndPassword } from "firebase/auth";
@@ -52,12 +53,78 @@ const ManagerWorkSheet = () => {
       return null;
     }
   };
-  // --- ADD THESE MISSING STATES & FUNCTIONS ---
 
-  // 1. Missing State for Editing Employee
-  // ✅ KEEP THIS ONE (At the top)
-  const [currentEmployeeToEdit, setCurrentEmployeeToEdit] = useState(null);
-  // Note: You might need to add isAddEmployeeModalOpen here if you deleted it below and it wasn't at the top
+  const transformClientRegistration = (item, clientRoot, reg) => {
+    if (!reg) return null;
+    const jobApplicationsArray = Array.isArray(reg.jobApplications)
+      ? reg.jobApplications
+      : Object.values(reg.jobApplications || {});
+
+    return {
+      ...reg,
+      jobApplications: jobApplicationsArray,
+      clientFirebaseKey: item.clientFirebaseKey,
+      registrationKey: item.registrationKey,
+      email: clientRoot?.email,
+      mobile: clientRoot?.mobile,
+      firstName: reg.firstName || clientRoot?.firstName,
+      lastName: reg.lastName || clientRoot?.lastName,
+      name: `${reg.firstName || clientRoot?.firstName || ''} ${reg.lastName || clientRoot?.lastName || ''}`.trim()
+    };
+  };
+
+  const buildManagerClientState = (registrations) => {
+    const unassigned = [];
+    const assigned = [];
+    const inactive = [];
+
+    registrations.forEach((reg) => {
+      if (!reg || reg.assignedManager !== managerFirebaseKey) {
+        return;
+      }
+
+      switch (reg.assignmentStatus) {
+        case 'pending_employee':
+          unassigned.push(reg);
+          break;
+        case 'pending_acceptance':
+        case 'active':
+          assigned.push(reg);
+          break;
+        case 'inactive':
+          inactive.push(reg);
+          break;
+        default:
+          if (!reg.assignedTo) unassigned.push(reg);
+          else assigned.push(reg);
+      }
+    });
+
+    const allAssignedClients = [...assigned, ...inactive];
+    const appData = [];
+    const interviewData = [];
+
+    allAssignedClients.forEach((clientReg) => {
+      (clientReg.jobApplications || []).forEach((app) => {
+        const enriched = {
+          ...app,
+          clientFirebaseKey: clientReg.clientFirebaseKey,
+          registrationKey: clientReg.registrationKey,
+          clientName: clientReg.name,
+          assignedTo: clientReg.assignedTo,
+        };
+        appData.push(enriched);
+        if (app.status === 'Interview') interviewData.push(enriched);
+      });
+    });
+
+    setUnassignedClients(unassigned);
+    setAssignedClients(assigned);
+    setInactiveAssignedClients(inactive);
+    setApplicationData(appData);
+    setInterviewData(interviewData);
+  };
+
   const [isEditEmployeeModalOpen, setIsEditEmployeeModalOpen] = useState(false);
   const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false); // Ensure this is here too
 
@@ -206,7 +273,7 @@ const ManagerWorkSheet = () => {
   const [isEditApplicationModalOpen, setIsEditApplicationModalOpen] = useState(false);
   const [editableApplication, setEditableApplication] = useState({});
 
-  const DEFAULT_US_TIMEZONE = 'America/New_York';
+  const DEFAULT_TIMEZONE = 'Asia/Kolkata';
 
   const parseRawDateValue = (dateValue) => {
     if (!dateValue) return null;
@@ -234,8 +301,8 @@ const ManagerWorkSheet = () => {
     try {
       const date = parseRawDateValue(timestamp);
       if (!date) return { date: 'Invalid Date', time: 'N/A' };
-      const dateOptions = { year: 'numeric', month: 'long', day: 'numeric', timeZone: DEFAULT_US_TIMEZONE };
-      const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: DEFAULT_US_TIMEZONE };
+      const dateOptions = { year: 'numeric', month: 'long', day: 'numeric', timeZone: DEFAULT_TIMEZONE };
+      const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: DEFAULT_TIMEZONE };
 
       const formattedDate = new Intl.DateTimeFormat('en-US', dateOptions).format(date);
       const formattedTime = new Intl.DateTimeFormat('en-US', timeOptions).format(date);
@@ -636,6 +703,7 @@ const ManagerWorkSheet = () => {
     if (!managerFirebaseKey) return;
 
     let cancelledClientsFetch = false;
+    const unsubscribes = [];
 
     (async () => {
       try {
@@ -684,34 +752,18 @@ const ManagerWorkSheet = () => {
 
         // 2. Loop through the index and fetch specific client data (Parallel Fetch)
         Object.values(assignments).forEach(item => {
-
           // Check if valid in cache
           if (isCacheValid && clientCache[item.clientFirebaseKey]) {
             const cachedRoot = clientCache[item.clientFirebaseKey];
-            // Proceed with cached data logic (copy-paste of the transform logic below)
             const reg = cachedRoot.serviceRegistrations?.[item.registrationKey];
             if (reg) {
-              const jobApplicationsArray = Array.isArray(reg.jobApplications) ? reg.jobApplications : Object.values(reg.jobApplications || {});
-              promises.push(Promise.resolve({
-                ...reg,
-                jobApplications: jobApplicationsArray,
-                clientFirebaseKey: item.clientFirebaseKey,
-                registrationKey: item.registrationKey,
-                email: cachedRoot.email,
-                mobile: cachedRoot.mobile,
-                firstName: reg.firstName || cachedRoot.firstName,
-                lastName: reg.lastName || cachedRoot.lastName,
-                name: `${reg.firstName || cachedRoot.firstName || ''} ${reg.lastName || cachedRoot.lastName || ''}`.trim()
-              }));
+              promises.push(Promise.resolve(transformClientRegistration(item, cachedRoot, reg)));
               return;
             }
           }
 
           // If not in cache or cache invalid, fetch from network
           const clientRef = ref(database, `clients/${item.clientFirebaseKey}`);
-
-          // We fetch the root client node to ensure we get email/mobile + registrations
-          // Fetching one specific client node is small (~5KB).
           promises.push(get(clientRef).then(snap => {
             if (snap.exists()) {
               const clientRoot = snap.val();
@@ -721,26 +773,8 @@ const ManagerWorkSheet = () => {
               fetchedNewData = true;
 
               const reg = clientRoot.serviceRegistrations?.[item.registrationKey];
-
               if (reg) {
-                // Flatten job applications
-                const jobApplicationsArray = Array.isArray(reg.jobApplications)
-                  ? reg.jobApplications
-                  : Object.values(reg.jobApplications || {});
-
-                return {
-                  ...reg,
-                  jobApplications: jobApplicationsArray,
-                  clientFirebaseKey: item.clientFirebaseKey,
-                  registrationKey: item.registrationKey,
-                  // Ensure we have root profile data
-                  email: clientRoot.email,
-                  mobile: clientRoot.mobile,
-                  firstName: reg.firstName || clientRoot.firstName,
-                  lastName: reg.lastName || clientRoot.lastName,
-                  // Fix: Use resolved names for the full name
-                  name: `${reg.firstName || clientRoot.firstName || ''} ${reg.lastName || clientRoot.lastName || ''}`.trim()
-                };
+                return transformClientRegistration(item, clientRoot, reg);
               }
             }
             return null;
@@ -757,60 +791,40 @@ const ManagerWorkSheet = () => {
           console.log("Updated IDB Client Cache");
         }
 
-        // 4. Sort into buckets (Same logic as before)
-        const unassigned = [];
-        const assigned = [];
-        const inactive = [];
+        buildManagerClientState(allRegistrations);
 
-        for (const reg of allRegistrations) {
-          // Double check assignment matches (sanity check)
-          if (reg.assignedManager !== managerFirebaseKey) {
-            continue;
-          }
+        // 4. Attach real-time listeners for assigned client registrations
+        Object.values(assignments).forEach((item) => {
+          const registrationRef = ref(database, `clients/${item.clientFirebaseKey}/serviceRegistrations/${item.registrationKey}`);
+          const unsubscribe = onValue(registrationRef, (snap) => {
+            if (!snap.exists()) return;
 
-          switch (reg.assignmentStatus) {
-            case "pending_employee":
-              unassigned.push(reg);
-              break;
-            case "pending_acceptance":
-            case "active":
-              assigned.push(reg);
-              break;
-            case "inactive":
-              inactive.push(reg);
-              break;
-            default:
-              // Fallback for weird statuses, usually goes to active or unassigned
-              if (!reg.assignedTo) unassigned.push(reg);
-              else assigned.push(reg);
-          }
-        }
-
-        setUnassignedClients(unassigned);
-        setAssignedClients(assigned);
-        setInactiveAssignedClients(inactive);
-
-        // 5. Aggregate Applications & Interviews
-        const allAssignedClients = [...assigned, ...inactive];
-        const appData = [];
-        const interviewData = [];
-
-        allAssignedClients.forEach((clientReg) => {
-          (clientReg.jobApplications || []).forEach((app) => {
-            const enriched = {
-              ...app,
-              clientFirebaseKey: clientReg.clientFirebaseKey,
-              registrationKey: clientReg.registrationKey,
-              clientName: clientReg.name,
-              assignedTo: clientReg.assignedTo,
+            const reg = snap.val();
+            const existingClientRoot = clientCache[item.clientFirebaseKey] || {};
+            const updatedClientRoot = {
+              ...existingClientRoot,
+              serviceRegistrations: {
+                ...existingClientRoot.serviceRegistrations,
+                [item.registrationKey]: reg,
+              }
             };
-            appData.push(enriched);
-            if (app.status === "Interview") interviewData.push(enriched);
-          });
-        });
 
-        setApplicationData(appData);
-        setInterviewData(interviewData);
+            clientCache[item.clientFirebaseKey] = updatedClientRoot;
+            dbSet('cache_clients_full', { timestamp: Date.now(), data: clientCache })
+              .catch(err => console.error('Failed to update manager client cache:', err));
+
+            const updatedRegistrations = Object.values(assignments)
+              .map(innerItem => {
+                const root = clientCache[innerItem.clientFirebaseKey];
+                return transformClientRegistration(innerItem, root, root?.serviceRegistrations?.[innerItem.registrationKey]);
+              })
+              .filter(Boolean);
+
+            buildManagerClientState(updatedRegistrations);
+          });
+
+          unsubscribes.push(unsubscribe);
+        });
 
       } catch (err) {
         console.error("Failed to fetch clients:", err);
@@ -819,7 +833,6 @@ const ManagerWorkSheet = () => {
       }
     })();
 
-    // User/Employee Fetch (Keep existing logic, it's fine)
     let cancelledUsersFetch = false;
     (async () => {
       try {
@@ -837,12 +850,15 @@ const ManagerWorkSheet = () => {
           setEmployeesForAssignment(employees);
           setFirebaseEmployees(Object.fromEntries(employees.map(emp => [emp.firebaseKey, emp])));
         }
-      } catch (err) { console.error(err); }
+      } catch (err) {
+        console.error(err);
+      }
     })();
 
     return () => {
       cancelledClientsFetch = true;
       cancelledUsersFetch = true;
+      unsubscribes.forEach((unsubscribe) => unsubscribe && unsubscribe());
     };
   }, [managerFirebaseKey]);
 
@@ -1150,7 +1166,7 @@ const ManagerWorkSheet = () => {
         return dateString;
       }
       return new Intl.DateTimeFormat('en-GB', {
-        timeZone: DEFAULT_US_TIMEZONE,
+        timeZone: DEFAULT_TIMEZONE,
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
@@ -1165,7 +1181,7 @@ const ManagerWorkSheet = () => {
     const parsed = parseRawDateValue(date);
     if (!parsed) return '';
     return new Intl.DateTimeFormat('en-CA', {
-      timeZone: DEFAULT_US_TIMEZONE,
+      timeZone: DEFAULT_TIMEZONE,
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',

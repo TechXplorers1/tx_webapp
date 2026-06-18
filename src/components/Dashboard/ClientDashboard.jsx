@@ -1977,13 +1977,14 @@ const Applications = ({
           <div style={{ overflowX: 'auto' }}>
             <table style={{
               width: '100%',
-              minWidth: '700px',
+              minWidth: '820px',
               borderCollapse: 'collapse',
             }}>
               <thead>
                 <tr style={{ backgroundColor: '#007bff', color: 'white' }}>
                   <th style={{ padding: '12px', textAlign: 'center' }}>S.No</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Applied Date</th>
+                  <th style={{ padding: '12px', textAlign: 'center' }}>Applied Time</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Job Boards</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Job Title</th>
                   {/* <th style={{ padding: '12px', textAlign: 'center' }}>Job ID</th> */}
@@ -2006,6 +2007,7 @@ const Applications = ({
                     <td style={{ padding: '12px' }}>
                       {app.appliedDate ? formatDate(app.appliedDate) : app.dateAdded}
                     </td>
+                    <td style={{ padding: '12px' }}>{app.appliedTime || 'N/A'}</td>
                     <td style={{ padding: '12px' }}>{app.website}</td>
                     <td style={{ padding: '12px' }}>{app.position}</td>
                     {/* <td style={{ padding: '12px' }}>{app.jobId}</td> */}
@@ -3454,6 +3456,28 @@ const ClientDashboard = () => {
     });
     return () => unsubscribe();
   }, [clientKey]);
+
+  useEffect(() => {
+    if (!clientKey) return;
+
+    const clientRef = ref(database, `clients/${clientKey}`);
+    const CLIENT_CACHE_KEY = `cache_client_data_${clientKey}`;
+
+    const unsubscribe = onValue(clientRef, async (snap) => {
+      const freshData = snap.exists() ? snap.val() : null;
+      if (!freshData) return;
+
+      processClientData(freshData);
+
+      try {
+        await dbSet(CLIENT_CACHE_KEY, { data: freshData, timestamp: Date.now() });
+      } catch (err) {
+        console.error('Failed to update client data cache:', err);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [clientKey, processClientData]);
 
   // --- Process Payment via Razorpay for custom admin link ---
   const handleClientPayNow = async () => {

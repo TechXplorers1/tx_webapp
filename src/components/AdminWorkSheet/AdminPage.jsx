@@ -10,6 +10,29 @@ import AdsManagement from './AdsManagement';
 import { database } from '../../firebase'; // Import your Firebase config
 import { ref, update, get } from "firebase/database"; // Import update function
 
+const DEFAULT_INDIAN_TIMEZONE = 'Asia/Kolkata';
+
+const formatDateToIST = (dateValue) => {
+  if (!dateValue) return '';
+  try {
+    const parsed = new Date(dateValue);
+    if (Number.isNaN(parsed.getTime())) return dateValue;
+    return new Intl.DateTimeFormat('en-IN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true,
+      timeZone: DEFAULT_INDIAN_TIMEZONE,
+    }).format(parsed);
+  } catch (error) {
+    console.error('AdminPage: failed to format date to IST', error);
+    return dateValue;
+  }
+};
+
 const AdminPage = () => {
   const navigate = useNavigate();
   const [currentView, setCurrentView] = useState('clientManagement');
@@ -22,7 +45,7 @@ const AdminPage = () => {
     employeeId: 'ADMIN001',
     email: 'admin@techxplorers.com',
     mobile: '+91 99999 88888',
-    lastLogin: new Date().toLocaleString(),
+    lastLogin: formatDateToIST(new Date()),
     // Add default values for all profile fields
     firstName: 'Admin',
     lastName: 'User',
@@ -56,7 +79,7 @@ const AdminPage = () => {
               firstName: fname,
               lastName: lname,
               name: dbData.name || `${fname} ${lname}`.trim(),
-              lastLogin: dbData.lastLogin || prev.lastLogin
+              lastLogin: formatDateToIST(dbData.lastLogin || prev.lastLogin)
             };
             
             // Perform side effect in a microtask / deferred timeout to avoid React render-phase write errors
@@ -90,7 +113,8 @@ const AdminPage = () => {
           ...userData,
           firstName: fname,
           lastName: lname,
-          name: userData.name || `${fname} ${lname}`.trim()
+          name: userData.name || `${fname} ${lname}`.trim(),
+          lastLogin: formatDateToIST(userData.lastLogin || userProfile.lastLogin)
         };
         setUserProfile(initialCombined);
 

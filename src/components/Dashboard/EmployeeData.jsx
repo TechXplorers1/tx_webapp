@@ -428,19 +428,28 @@ const EmployeeData = () => {
   const updateLocalClientCache = async (clientKey, regKey, field, updatedData) => {
     try {
       const cachedWrapper = await dbGet('cache_clients_full'); // Fetch from IDB
-      if (cachedWrapper) {
-        // Navigate to the specific client and registration
-        if (cachedWrapper.data && cachedWrapper.data[clientKey] &&
-          cachedWrapper.data[clientKey].serviceRegistrations &&
-          cachedWrapper.data[clientKey].serviceRegistrations[regKey]) {
+      if (cachedWrapper && cachedWrapper.data && cachedWrapper.data[clientKey] &&
+        cachedWrapper.data[clientKey].serviceRegistrations &&
+        cachedWrapper.data[clientKey].serviceRegistrations[regKey]) {
 
-          // Update the specific field
-          cachedWrapper.data[clientKey].serviceRegistrations[regKey][field] = updatedData;
+        // Update the specific field in the shared client cache used by manager/admin dashboards
+        cachedWrapper.data[clientKey].serviceRegistrations[regKey][field] = updatedData;
+        cachedWrapper.timestamp = Date.now();
+        await dbSet('cache_clients_full', cachedWrapper);
+        console.log(`Local IDB shared client cache updated for ${field}`);
+      }
 
-          // Save back to IDB
-          await dbSet('cache_clients_full', cachedWrapper);
-          console.log(`Local IDB cache updated for ${field}`);
-        }
+      // Also update the client-specific dashboard cache so ClientDashboard sees the latest application data.
+      const clientCacheKey = `cache_client_data_${clientKey}`;
+      const cachedClientWrapper = await dbGet(clientCacheKey);
+      if (cachedClientWrapper && cachedClientWrapper.data &&
+        cachedClientWrapper.data.serviceRegistrations &&
+        cachedClientWrapper.data.serviceRegistrations[regKey]) {
+
+        cachedClientWrapper.data.serviceRegistrations[regKey][field] = updatedData;
+        cachedClientWrapper.timestamp = Date.now();
+        await dbSet(clientCacheKey, cachedClientWrapper);
+        console.log(`Client dashboard cache updated for ${clientCacheKey}`);
       }
     } catch (e) {
       console.error("Error updating local cache:", e);
@@ -480,10 +489,10 @@ const EmployeeData = () => {
     employeeId: "EMP001",
     mobile: "+1 (555) 123-4567",
     email: "employee.user@techxplorers.com", // Added email
-    lastLogin: new Date().toLocaleString(),
+    lastLogin: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true }),
   });
 
-  const DEFAULT_US_TIMEZONE = 'America/New_York';
+  const DEFAULT_TIMEZONE = 'Asia/Kolkata';
 
   const parseRawDateValue = (dateValue) => {
     if (!dateValue) return null;
@@ -507,7 +516,7 @@ const EmployeeData = () => {
     return Number.isNaN(parsed.getTime()) ? null : parsed;
   };
 
-  const formatDateInTimeZone = (dateValue, timeZone = DEFAULT_US_TIMEZONE) => {
+  const formatDateInTimeZone = (dateValue, timeZone = DEFAULT_TIMEZONE) => {
     const date = parseRawDateValue(dateValue);
     if (!date) return '';
     return new Intl.DateTimeFormat('en-CA', {
@@ -518,7 +527,7 @@ const EmployeeData = () => {
     }).format(date);
   };
 
-  const formatTimeInTimeZone = (dateValue, timeZone = DEFAULT_US_TIMEZONE) => {
+  const formatTimeInTimeZone = (dateValue, timeZone = DEFAULT_TIMEZONE) => {
     const date = parseRawDateValue(dateValue);
     if (!date) return '';
     return new Intl.DateTimeFormat('en-US', {
@@ -2126,8 +2135,8 @@ const EmployeeData = () => {
     try {
       const date = parseRawDateValue(timestamp);
       if (!date) return { date: 'Invalid Date', time: 'N/A' };
-      const dateOptions = { year: 'numeric', month: 'long', day: 'numeric', timeZone: DEFAULT_US_TIMEZONE };
-      const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: DEFAULT_US_TIMEZONE };
+      const dateOptions = { year: 'numeric', month: 'long', day: 'numeric', timeZone: DEFAULT_TIMEZONE };
+      const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: DEFAULT_TIMEZONE };
 
       const formattedDate = new Intl.DateTimeFormat('en-US', dateOptions).format(date);
       const formattedTime = new Intl.DateTimeFormat('en-US', timeOptions).format(date);
