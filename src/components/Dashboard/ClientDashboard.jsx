@@ -53,6 +53,86 @@ const convertDDMMYYYYtoYYYYMMDD = (dateString) => {
   return null; // Invalid format
 };
 
+const DEFAULT_CLIENT_TIMEZONE = 'America/New_York';
+
+const parseRawDateValue = (dateValue) => {
+  if (!dateValue) return null;
+  if (dateValue instanceof Date && !Number.isNaN(dateValue.getTime())) return dateValue;
+  if (typeof dateValue !== 'string') return null;
+
+  const isoDateOnly = /^\d{4}-\d{2}-\d{2}$/;
+  const ddmmyyyy = /^\d{2}-\d{2}-\d{4}$/;
+
+  if (isoDateOnly.test(dateValue)) {
+    const [year, month, day] = dateValue.split('-').map(Number);
+    return new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+  }
+
+  if (ddmmyyyy.test(dateValue)) {
+    const [day, month, year] = dateValue.split('-').map(Number);
+    return new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+  }
+
+  const parsed = new Date(dateValue);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const getTimeZoneDateParts = (dateValue, timeZone = DEFAULT_CLIENT_TIMEZONE) => {
+  const parsedDate = parseRawDateValue(dateValue);
+  if (!parsedDate) return null;
+
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+
+  const parts = formatter.formatToParts(parsedDate);
+  const year = parts.find(p => p.type === 'year')?.value || '';
+  const month = parts.find(p => p.type === 'month')?.value || '';
+  const day = parts.find(p => p.type === 'day')?.value || '';
+
+  return year && month && day ? { year, month, day } : null;
+};
+
+const formatDate = (date, timeZone = DEFAULT_CLIENT_TIMEZONE) => {
+  const parts = getTimeZoneDateParts(date, timeZone);
+  return parts ? `${parts.day}-${parts.month}-${parts.year}` : '';
+};
+
+const formatTime = (date, timeZone = DEFAULT_CLIENT_TIMEZONE) => {
+  const parsed = parseRawDateValue(date);
+  if (!parsed) return '';
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    }).format(parsed);
+  } catch (e) {
+    return '';
+  }
+};
+
+const formatDateForInput = (date, timeZone = DEFAULT_CLIENT_TIMEZONE) => {
+  const parts = getTimeZoneDateParts(date, timeZone);
+  return parts ? `${parts.year}-${parts.month}-${parts.day}` : '';
+};
+
+const getCurrentDateKey = (timeZone = DEFAULT_CLIENT_TIMEZONE) => formatDate(new Date(), timeZone);
+const getCurrentISODate = (timeZone = DEFAULT_CLIENT_TIMEZONE) => {
+  const parts = getTimeZoneDateParts(new Date(), timeZone);
+  return parts ? `${parts.year}-${parts.month}-${parts.day}` : '';
+};
+
+const addDaysToDate = (dateValue, days) => {
+  const parsed = parseRawDateValue(dateValue) || new Date();
+  const nextDate = new Date(parsed.getTime());
+  nextDate.setUTCDate(parsed.getUTCDate() + days);
+  return nextDate;
+};
 
 // --- END: HELPER FUNCTIONS ---
 
@@ -1485,8 +1565,7 @@ const DateRangeCalendar = ({ initialStartDate, initialEndDate, onSelectRange }) 
 
   const formatToInputDate = (date) => {
     if (!date) return '';
-    const d = new Date(date);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return formatDateForInput(date);
   };
 
   return (
@@ -1514,30 +1593,17 @@ const DateRangeCalendar = ({ initialStartDate, initialEndDate, onSelectRange }) 
 
 // --- HELPER FUNCTIONS ---
 
-// Format date as DD-MM-YYYY
-const formatDate = (date) => {
-  if (!date) return ''; // Handle empty date
-  const d = new Date(date);
-  const day = String(d.getDate()).padStart(2, '0');
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const year = d.getFullYear();
-  return `${day}-${month}-${year}`;
-};
-
-
-// Generate 7-day date range for the ribbon
-// FIX: Rewritten generateDateRange function to center the current date
+// Generate 7-day date range for the ribbon using the client time zone
 const generateDateRange = (centerDate) => {
   const dates = [];
-  const options = { weekday: 'short' }; // Option to get the day of the week like "Mon", "Tue"
+  const options = { weekday: 'short', timeZone: DEFAULT_CLIENT_TIMEZONE };
+  const center = parseRawDateValue(centerDate) || new Date();
 
-  // Loop from 3 days before the center date to 3 days after to create a 7-day range
   for (let i = -3; i <= 3; i++) {
-    const date = new Date(centerDate);
-    date.setDate(centerDate.getDate() + i);
+    const date = addDaysToDate(center, i);
     dates.push({
       date: formatDate(date),
-      dayOfWeek: date.toLocaleDateString('en-US', options) // Add the day of the week
+      dayOfWeek: new Intl.DateTimeFormat('en-US', options).format(date),
     });
   }
   return dates;
@@ -1938,7 +2004,7 @@ const Applications = ({
                   >
                     <td style={{ padding: '12px' }}>{(currentPage - 1) * 5 + index + 1}</td>
                     <td style={{ padding: '12px' }}>
-                      {app.dateAdded} {/* Display Applied Date */}
+                      {app.appliedDate ? formatDate(app.appliedDate) : app.dateAdded}
                     </td>
                     <td style={{ padding: '12px' }}>{app.website}</td>
                     <td style={{ padding: '12px' }}>{app.position}</td>
@@ -2337,7 +2403,7 @@ const InterviewsScheduled = ({ interviews, onAttachmentClick, showAttachmentModa
               {interviews.map((interview) => (
                 <tr key={interview.id} className="modal-table-row">
                   <td className="modal-table-cell">
-                    <div style={{ fontWeight: '500' }}>{interview.appliedDate}</div>
+                    <div style={{ fontWeight: '500' }}>{formatDate(interview.appliedDate)}</div>
                   </td>
                   <td className="modal-table-cell">{interview.interviewTime}</td>
                   {/* <td className="modal-table-cell">{interview.jobId}</td> */}
@@ -2841,13 +2907,13 @@ const ClientDashboard = () => {
 
   const wasCardClosedToday = (cardKey) => {
     if (!cardKey) return false;
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const today = getCurrentISODate(); // YYYY-MM-DD
     return localStorage.getItem(`${WELCOME_CARD_CLOSED_PREFIX}${cardKey}_${today}`) === 'true';
   };
 
   const markWelcomeCardClosedToday = (cardKey) => {
     if (!cardKey) return;
-    const today = new Date().toISOString().split('T')[0];
+    const today = getCurrentISODate();
     localStorage.setItem(`${WELCOME_CARD_CLOSED_PREFIX}${cardKey}_${today}`, 'true');
   };
 
@@ -2877,7 +2943,7 @@ const ClientDashboard = () => {
       setActivePopupAds([]);
       return;
     }
-    const today = new Date().toISOString().split('T')[0];
+    const today = getCurrentISODate();
     const banners = [];
     const popups = [];
     Object.keys(data).forEach(key => {
@@ -3120,7 +3186,7 @@ const ClientDashboard = () => {
   // States for Applications tab (from clientworksheet.txt)
   const [selectedDate, setSelectedDate] = useState(null); // For the daily date navigation ribbon
   const [dateRange, setDateRange] = useState([]);
-  const [currentStartDate, setCurrentStartDate] = useState(new Date());
+  const [currentStartDate, setCurrentStartDate] = useState(parseRawDateValue(getCurrentISODate()));
 
   const [filterWebsites, setFilterWebsites] = useState([]);
   const [filterPositions, setFilterPositions] = useState([]);
@@ -3244,7 +3310,7 @@ const ClientDashboard = () => {
     const newNotification = {
       title: 'New Update Available',
       message: 'A new version of the dashboard has been released!',
-      time: new Date().toLocaleTimeString(),
+      time: new Date().toLocaleTimeString('en-US', { timeZone: DEFAULT_CLIENT_TIMEZONE }),
     };
     setNotifications(prev => [newNotification, ...prev]);
     setUnreadNotificationsCount(prev => prev + 1);
@@ -3298,6 +3364,8 @@ const ClientDashboard = () => {
           position: app.jobTitle,
           company: app.company,
           link: app.jobDescriptionUrl || app.link || '',
+          appliedDate: app.appliedDate,
+          appliedTime: formatTime(app.timestamp || app.appliedDate),
         };
         if (!groupedApplications[dateKey]) groupedApplications[dateKey] = [];
         groupedApplications[dateKey].push(entry);
@@ -3499,13 +3567,12 @@ const ClientDashboard = () => {
   // Chart data for Dashboard content
   const generateChartLabelsForPastDays = (numDays) => {
     const labels = [];
-    const today = new Date();
-    const options = { day: '2-digit', month: 'short' }; // Format as "DD Mon"
+    const today = parseRawDateValue(getCurrentISODate());
+    const options = { day: '2-digit', month: 'short', timeZone: DEFAULT_CLIENT_TIMEZONE };
 
     for (let i = numDays - 1; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(today.getDate() - i);
-      labels.push(date.toLocaleDateString('en-US', options));
+      const date = addDaysToDate(today, -i);
+      labels.push(new Intl.DateTimeFormat('en-US', options).format(date));
     }
     return labels;
   };
@@ -3695,8 +3762,8 @@ const ClientDashboard = () => {
 
   // Effect to generate initial date range and select today's date for Applications tab
   useEffect(() => {
-    const today = new Date();
-    setSelectedDate(formatDate(today)); // Highlight today's date in the ribbon
+    const today = parseRawDateValue(getCurrentISODate());
+    setSelectedDate(getCurrentDateKey()); // Highlight today's date in the ribbon
     setCurrentStartDate(today); // Set today as the center date for the range
     setDateRange(generateDateRange(today)); // Generate the initial 7-day range
   }, []);
@@ -3729,7 +3796,7 @@ const ClientDashboard = () => {
     for (const dateKey in applicationsData) {
       if (Object.prototype.hasOwnProperty.call(applicationsData, dateKey)) {
         applicationsData[dateKey].forEach(app => {
-          flattened.push({ ...app, dateAdded: dateKey }); // Add the original date string to each app (DD-MM-YYYY)
+          flattened.push({ ...app, dateAdded: dateKey, appliedDate: app.appliedDate });
         });
       }
     }
@@ -3853,7 +3920,7 @@ const ClientDashboard = () => {
 
     const dataToExport = filteredApplicationsForDisplay.map((app, index) => ({
       'S.No': index + 1,
-      'Applied Date': app.dateAdded,
+      'Applied Date': app.appliedDate ? formatDate(app.appliedDate) : app.dateAdded,
       'Job Boards': app.jobBoards,
       'Job Title': app.position,
       'Job ID': app.jobId,
@@ -4036,7 +4103,7 @@ const ClientDashboard = () => {
       baseApps = applicationsData[selectedDate] || [];
     } else {
       // Default case, if no filters active and no ribbon date selected, show data for today.
-      baseApps = applicationsData[formatDate(new Date())] || [];
+      baseApps = applicationsData[getCurrentDateKey()] || [];
     }
     // --- End Core Fix ---
 
@@ -4281,7 +4348,7 @@ const ClientDashboard = () => {
     if (serviceKey === 'Job Application') {
       if (!applicationsData || !scheduledInterviews) return { appliedToday: 0, totalApplications: 0, interviewsScheduled: 0, responseRate: '0%' };
 
-      const today = formatDate(new Date()); // Format today's date as DD-MM-YYYY
+      const today = getCurrentDateKey();
 
       // Calculate Applied Today
       const appliedToday = applicationsData[today] ? applicationsData[today].length : 0;
@@ -6203,7 +6270,7 @@ html.dark-mode .notify-success-message {
                   {scheduledInterviews.map((interview) => (
                     <tr key={interview.id} className="modal-table-row">
                       <td className="modal-table-cell">
-                        <div style={{ fontWeight: '500' }}>{interview.appliedDate}</div>
+                        <div style={{ fontWeight: '500' }}>{formatDate(interview.appliedDate)}</div>
                       </td>
                       <td className="modal-table-cell">{interview.interviewTime}</td>
                       {/* <td className="modal-table-cell">{interview.jobId}</td> */}

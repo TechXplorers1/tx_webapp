@@ -206,15 +206,39 @@ const ManagerWorkSheet = () => {
   const [isEditApplicationModalOpen, setIsEditApplicationModalOpen] = useState(false);
   const [editableApplication, setEditableApplication] = useState({});
 
+  const DEFAULT_US_TIMEZONE = 'America/New_York';
+
+  const parseRawDateValue = (dateValue) => {
+    if (!dateValue) return null;
+    if (dateValue instanceof Date && !Number.isNaN(dateValue.getTime())) return dateValue;
+    if (typeof dateValue !== 'string') return null;
+
+    const isoDateOnly = /^\d{4}-\d{2}-\d{2}$/;
+    const ddmmyyyy = /^\d{2}-\d{2}-\d{4}$/;
+
+    if (isoDateOnly.test(dateValue)) {
+      const [year, month, day] = dateValue.split('-').map(Number);
+      return new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+    }
+    if (ddmmyyyy.test(dateValue)) {
+      const [day, month, year] = dateValue.split('-').map(Number);
+      return new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+    }
+
+    const parsed = new Date(dateValue);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+
   const formatDateTime = (timestamp) => {
     if (!timestamp) return { date: 'N/A', time: 'N/A' };
     try {
-      const date = new Date(timestamp);
-      const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
-      const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
+      const date = parseRawDateValue(timestamp);
+      if (!date) return { date: 'Invalid Date', time: 'N/A' };
+      const dateOptions = { year: 'numeric', month: 'long', day: 'numeric', timeZone: DEFAULT_US_TIMEZONE };
+      const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: DEFAULT_US_TIMEZONE };
 
-      const formattedDate = date.toLocaleDateString('en-US', dateOptions);
-      const formattedTime = date.toLocaleTimeString('en-US', timeOptions);
+      const formattedDate = new Intl.DateTimeFormat('en-US', dateOptions).format(date);
+      const formattedTime = new Intl.DateTimeFormat('en-US', timeOptions).format(date);
 
       return { date: formattedDate, time: formattedTime };
     } catch (e) {
@@ -1112,36 +1136,40 @@ const ManagerWorkSheet = () => {
 
 
 
-  // Helper function to format date to DD/MM/YYYY
+  // Helper function to format date to DD/MM/YYYY in America/New_York
   const formatDateToDDMMYYYY = (dateString) => {
     if (!dateString) return 'N/A';
     try {
-      const date = new Date(dateString);
-      // Check if the date is valid
-      if (isNaN(date.getTime())) {
-        // If it's not a valid date, try to parse it as DD/MM/YYYY if it already is
+      const date = parseRawDateValue(dateString);
+      if (!date) {
         const parts = dateString.split('/');
         if (parts.length === 3) {
           const [day, month, year] = parts;
           return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
         }
-        return dateString; // Return original if invalid and not DD/MM/YYYY
+        return dateString;
       }
-      const day = String(date.getDate()).padStart(2, '0');
-      const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
-      const year = date.getFullYear();
-      return `${day}/${month}/${year}`;
+      return new Intl.DateTimeFormat('en-GB', {
+        timeZone: DEFAULT_US_TIMEZONE,
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      }).format(date);
     } catch (error) {
       console.error("Error formatting date:", dateString, error);
-      return dateString; // Fallback to original string on error
+      return dateString;
     }
   };
 
   const getLocalDateString = (date = new Date()) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    const parsed = parseRawDateValue(date);
+    if (!parsed) return '';
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: DEFAULT_US_TIMEZONE,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(parsed);
   };
 
 
@@ -1718,16 +1746,16 @@ const ManagerWorkSheet = () => {
 
       if (start || end) {
         // If the user has selected a date range, use that filter.
-        const appDate = new Date(app.appliedDate);
-        const startDate = start ? new Date(start) : null;
-        const endDate = end ? new Date(end) : null;
+        const appDate = parseRawDateValue(app.appliedDate);
+        const startDate = start ? parseRawDateValue(start) : null;
+        const endDate = end ? parseRawDateValue(end) : null;
         if (startDate) startDate.setHours(0, 0, 0, 0);
         if (endDate) endDate.setHours(23, 59, 59, 999);
         matchesDateRange = (!startDate || appDate >= startDate) && (!endDate || appDate <= endDate);
       } else {
         // If NO date range is selected, default to showing ONLY today's applications.
         const todayStr = getLocalDateString(); // Gets today's date in YYYY-MM-DD format
-        matchesDateRange = (app.appliedDate === todayStr);
+        matchesDateRange = (formatDateToDDMMYYYY(app.appliedDate) === todayStr);
       }
 
       return matchesSearch && matchesEmployee && matchesClient && matchesDateRange;
@@ -1753,7 +1781,7 @@ const ManagerWorkSheet = () => {
     const today = getLocalDateString();
 
     // 1. Calculate today's count for all employees
-    const todayCount = filteredApplicationData.filter(app => app.appliedDate === today).length;
+    const todayCount = filteredApplicationData.filter(app => formatDateToDDMMYYYY(app.appliedDate) === today).length;
 
     // 2. Calculate filtered count based on the date range
     let filteredCount = filteredApplicationData.length;
@@ -1761,9 +1789,9 @@ const ManagerWorkSheet = () => {
     const end = applicationFilterDateRange.endDate;
     if (start || end) {
       filteredCount = filteredApplicationData.filter(app => {
-        const appDate = new Date(app.appliedDate);
-        const startDate = start ? new Date(start) : null;
-        const endDate = end ? new Date(end) : null;
+        const appDate = parseRawDateValue(app.appliedDate);
+        const startDate = start ? parseRawDateValue(start) : null;
+        const endDate = end ? parseRawDateValue(end) : null;
         return (!startDate || appDate >= startDate) && (!endDate || appDate <= endDate);
       }).length;
     }
@@ -1772,7 +1800,7 @@ const ManagerWorkSheet = () => {
     let employeeTodayCount = 0;
     if (applicationFilterEmployee) {
       employeeTodayCount = filteredApplicationData.filter(app =>
-        app.assignedTo === applicationFilterEmployee && app.appliedDate === today
+        app.assignedTo === applicationFilterEmployee && formatDateToDDMMYYYY(app.appliedDate) === today
       ).length;
     }
 

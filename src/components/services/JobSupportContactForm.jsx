@@ -278,7 +278,7 @@ const handleConfirmAndSubmit = async (e) => {
 
     const newServiceRegistration = {
         service: 'Job Supporting',
-        registeredDate: new Date().toISOString().split('T')[0],
+        registeredDate: new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' }),
         paymentStatus: 'Pending',
         assignmentStatus: 'registered',
         assignedManager: '',
@@ -419,8 +419,8 @@ const handleConfirmAndSubmit = async (e) => {
         coverLetter: coverLetterUrl || '',
 
         // Dates
-        appliedDate: new Date().toISOString().split('T')[0],
-        registeredDate: new Date().toISOString().split('T')[0],
+        appliedDate: new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' }),
+        timestamp: new Date().toISOString(),
 
         // Manager Info
         manager: null,

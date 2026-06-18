@@ -483,12 +483,53 @@ const EmployeeData = () => {
     lastLogin: new Date().toLocaleString(),
   });
 
-  const getLocalDateString = (date = new Date()) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+  const DEFAULT_US_TIMEZONE = 'America/New_York';
+
+  const parseRawDateValue = (dateValue) => {
+    if (!dateValue) return null;
+    if (dateValue instanceof Date && !Number.isNaN(dateValue.getTime())) return dateValue;
+    if (typeof dateValue !== 'string') return null;
+
+    const isoDateOnly = /^\d{4}-\d{2}-\d{2}$/;
+    const ddmmyyyy = /^\d{2}-\d{2}-\d{4}$/;
+
+    if (isoDateOnly.test(dateValue)) {
+      const [year, month, day] = dateValue.split('-').map(Number);
+      return new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+    }
+
+    if (ddmmyyyy.test(dateValue)) {
+      const [day, month, year] = dateValue.split('-').map(Number);
+      return new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+    }
+
+    const parsed = new Date(dateValue);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
   };
+
+  const formatDateInTimeZone = (dateValue, timeZone = DEFAULT_US_TIMEZONE) => {
+    const date = parseRawDateValue(dateValue);
+    if (!date) return '';
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(date);
+  };
+
+  const formatTimeInTimeZone = (dateValue, timeZone = DEFAULT_US_TIMEZONE) => {
+    const date = parseRawDateValue(dateValue);
+    if (!date) return '';
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    }).format(date);
+  };
+
+  const getLocalDateString = (date = new Date()) => formatDateInTimeZone(date);
 
   // NEW: useEffect to get logged-in user data from sessionStorage
   // Update useEffect to get the full employee object from sessionStorage
@@ -1682,11 +1723,9 @@ const EmployeeData = () => {
         matchesDateRange = true;
       } else if (start || end) {
         // CASE 2: Date range filter is active (show applications within the custom range)
-        const appDate = new Date(app.appliedDate);
-        const startDate = start ? new Date(start) : null;
-        const endDate = end ? new Date(end) : null;
-
-        if (startDate) startDate.setHours(0, 0, 0, 0);
+        const appDate = parseRawDateValue(app.appliedDate);
+        const startDate = start ? parseRawDateValue(start) : null;
+        const endDate = end ? parseRawDateValue(end) : null;
         if (endDate) endDate.setHours(23, 59, 59, 999);
 
         matchesDateRange =
@@ -1695,7 +1734,7 @@ const EmployeeData = () => {
 
       } else {
         // CASE 3: No search and no date range — default to showing ONLY TODAY's applications
-        matchesDateRange = app.appliedDate === todayFormatted;
+        matchesDateRange = formatDateInTimeZone(app.appliedDate) === todayFormatted;
       }
 
       return matchesSearch && matchesStatus && matchesDateRange;
@@ -2085,12 +2124,13 @@ const EmployeeData = () => {
   const formatDateTime = (timestamp) => {
     if (!timestamp) return { date: 'N/A', time: 'N/A' };
     try {
-      const date = new Date(timestamp);
-      const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
-      const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
+      const date = parseRawDateValue(timestamp);
+      if (!date) return { date: 'Invalid Date', time: 'N/A' };
+      const dateOptions = { year: 'numeric', month: 'long', day: 'numeric', timeZone: DEFAULT_US_TIMEZONE };
+      const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: DEFAULT_US_TIMEZONE };
 
-      const formattedDate = date.toLocaleDateString('en-US', dateOptions);
-      const formattedTime = date.toLocaleTimeString('en-US', timeOptions);
+      const formattedDate = new Intl.DateTimeFormat('en-US', dateOptions).format(date);
+      const formattedTime = new Intl.DateTimeFormat('en-US', timeOptions).format(date);
 
       return { date: formattedDate, time: formattedTime };
     } catch (e) {
@@ -2174,7 +2214,8 @@ const EmployeeData = () => {
   };
 
   const normalizeDate = (dateString) => {
-    return dateString;
+    const date = parseRawDateValue(dateString);
+    return date ? new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())) : null;
   };
 
   const downloadApplicationsData = () => {
@@ -2223,7 +2264,7 @@ const EmployeeData = () => {
       'Company': app.company || '-',
       'Employment Type': app.employment || '-',
       'Job Boards': app.jobBoards || '-',
-      'Applied Date': app.appliedDate || '-',
+      'Applied Date': formatDateInTimeZone(app.appliedDate) || '-',
       'Status': app.status || '-',
       'Job ID': app.jobId || '-',
       'Job Description URL': app.jobDescriptionUrl || '-',
@@ -2518,7 +2559,7 @@ const EmployeeData = () => {
   const applicationsByDate = useMemo(() => {
     const grouped = {};
     allFilteredApplications.forEach(app => {
-      const dateKey = app.appliedDate || 'Unknown Date';
+      const dateKey = formatDateInTimeZone(app.appliedDate) || 'Unknown Date';
       if (!grouped[dateKey]) grouped[dateKey] = [];
       grouped[dateKey].push(app);
     });
@@ -3397,6 +3438,7 @@ const EmployeeData = () => {
                                   <th style={applicationTableHeaderCellStyle}>Job ID</th>
                                   <th style={applicationTableHeaderCellStyle}>Job Description Link</th>
                                   <th style={applicationTableHeaderCellStyle}>Applied Date</th>
+                                  <th style={applicationTableHeaderCellStyle}>Applied Time</th>
                                   <th style={applicationTableHeaderCellStyle}>Attachments</th>
                                   <th style={applicationTableHeaderCellStyle}>Actions</th>
                                 </tr>
@@ -3405,7 +3447,7 @@ const EmployeeData = () => {
                                 {allFilteredApplications.length === 0 ? (
                                   <tr>
                                     <td
-                                      colSpan="10"
+                                      colSpan="11"
                                       style={{
                                         textAlign: 'center',
                                         padding: '20px',
@@ -3458,7 +3500,10 @@ const EmployeeData = () => {
                                           )}
                                         </td>
                                         <td style={applicationTableDataCellStyle}>
-                                          {app.appliedDate}
+                                          {formatDateInTimeZone(app.appliedDate) || '-'}
+                                        </td>
+                                        <td style={applicationTableDataCellStyle}>
+                                          {formatTimeInTimeZone(app.timestamp || app.appliedDate) || '-'}
                                         </td>
                                         <td style={applicationTableDataCellStyle}>
                                           {app.attachments && app.attachments.length > 0 ? (
@@ -4465,6 +4510,7 @@ const EmployeeData = () => {
                             <th style={applicationTableHeaderCellStyle}>Job ID</th>
                             <th style={applicationTableHeaderCellStyle}>Job Description Link</th>
                             <th style={applicationTableHeaderCellStyle}>Applied Date</th>
+                            <th style={applicationTableHeaderCellStyle}>Applied Time</th>
                             <th style={applicationTableHeaderCellStyle}>Attachments</th>
                             <th style={applicationTableHeaderCellStyle}>Actions</th>
                           </tr>
@@ -4473,7 +4519,7 @@ const EmployeeData = () => {
                           {allFilteredApplications.length === 0 ? (
                             <tr>
                               <td
-                                colSpan="9"
+                                colSpan="10"
                                 style={{
                                   textAlign: 'center',
                                   padding: '20px',
@@ -4523,7 +4569,10 @@ const EmployeeData = () => {
                                     )}
                                   </td>
                                   <td style={applicationTableDataCellStyle}>
-                                    {app.appliedDate}
+                                    {formatDateInTimeZone(app.appliedDate) || '-'}
+                                  </td>
+                                  <td style={applicationTableDataCellStyle}>
+                                    {formatTimeInTimeZone(app.timestamp || app.appliedDate) || '-'}
                                   </td>
                                   <td style={applicationTableDataCellStyle}>
                                     {app.attachments && app.attachments.length > 0 ? (

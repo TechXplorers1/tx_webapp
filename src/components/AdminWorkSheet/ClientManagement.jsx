@@ -44,6 +44,52 @@ const dbSet = async (key, val) => {
 };
 // --- End IndexedDB Helpers ---
 
+const DEFAULT_US_TIMEZONE = 'America/New_York';
+
+const parseRawDateValue = (dateValue) => {
+  if (!dateValue) return null;
+  if (dateValue instanceof Date && !Number.isNaN(dateValue.getTime())) return dateValue;
+  if (typeof dateValue !== 'string') return null;
+
+  const isoDateOnly = /^\d{4}-\d{2}-\d{2}$/;
+  const ddmmyyyy = /^\d{2}-\d{2}-\d{4}$/;
+
+  if (isoDateOnly.test(dateValue)) {
+    const [year, month, day] = dateValue.split('-').map(Number);
+    return new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+  }
+
+  if (ddmmyyyy.test(dateValue)) {
+    const [day, month, year] = dateValue.split('-').map(Number);
+    return new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+  }
+
+  const parsed = new Date(dateValue);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const formatDateInTimeZone = (dateValue, timeZone = DEFAULT_US_TIMEZONE) => {
+  const date = parseRawDateValue(dateValue);
+  if (!date) return '';
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+};
+
+const formatTimeInTimeZone = (dateValue, timeZone = DEFAULT_US_TIMEZONE) => {
+  const date = parseRawDateValue(dateValue);
+  if (!date) return '';
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  }).format(date);
+};
+
 const ClientManagement = () => {
   const navigate = useNavigate();
 
@@ -300,7 +346,7 @@ const ClientManagement = () => {
 
       const todayCount = appsArray.filter(app => {
         if (!app.appliedDate) return false;
-        const appDate = new Date(app.appliedDate).toISOString().split('T')[0];
+        const appDate = formatDateInTimeZone(app.appliedDate);
         return appDate === today;
       }).length;
 
@@ -2869,13 +2915,12 @@ const ClientManagement = () => {
                   () => {
                     // --- 1. Build filtered list ---
 
-                    const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+                    const todayStr = formatDateInTimeZone(new Date()); // YYYY-MM-DD in America/New_York
 
                     const filteredApps = clientApplications.filter((app) => {
                       if (!app.appliedDate) return false;
 
-                      const appDate = new Date(app.appliedDate);
-                      const appDateStr = appDate.toISOString().split('T')[0];
+                      const appDateStr = formatDateInTimeZone(app.appliedDate);
 
                       // 👉 DEFAULT: no filters → show ALL applications
                       if (!clientDateRange.startDate && !clientDateRange.endDate) {
@@ -2945,7 +2990,7 @@ const ClientManagement = () => {
                               <tr key={idx}>
                                 <td>{app.employeeName || '-'}</td>
                                 <td>{selectedClientForDetails?.firstName || '-'}</td>
-                                <td>{app.appliedDate || '-'}</td>
+                                <td>{formatDateInTimeZone(app.appliedDate) || '-'}</td>
                                 <td>{app.company || '-'}</td>
                                 <td>{app.jobTitle || '-'}</td>
                                 <td>{app.jobId || '-'}</td>
@@ -2959,7 +3004,7 @@ const ClientManagement = () => {
                                     '-'
                                   )}
                                 </td>
-                                <td>{app.timestamp || '-'}</td>
+                                <td>{formatTimeInTimeZone(app.timestamp) || '-'}</td>
                                 <td>{app.status || '-'}</td>
                                 <td>
                                   <i
