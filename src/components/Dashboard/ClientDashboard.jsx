@@ -1984,7 +1984,6 @@ const Applications = ({
                 <tr style={{ backgroundColor: '#007bff', color: 'white' }}>
                   <th style={{ padding: '12px', textAlign: 'center' }}>S.No</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Applied Date</th>
-                  <th style={{ padding: '12px', textAlign: 'center' }}>Applied Time</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Job Boards</th>
                   <th style={{ padding: '12px', textAlign: 'center' }}>Job Title</th>
                   {/* <th style={{ padding: '12px', textAlign: 'center' }}>Job ID</th> */}
@@ -2007,7 +2006,6 @@ const Applications = ({
                     <td style={{ padding: '12px' }}>
                       {app.appliedDate ? formatDate(app.appliedDate) : app.dateAdded}
                     </td>
-                    <td style={{ padding: '12px' }}>{app.appliedTime || 'N/A'}</td>
                     <td style={{ padding: '12px' }}>{app.website}</td>
                     <td style={{ padding: '12px' }}>{app.position}</td>
                     {/* <td style={{ padding: '12px' }}>{app.jobId}</td> */}
@@ -3367,7 +3365,6 @@ const ClientDashboard = () => {
           company: app.company,
           link: app.jobDescriptionUrl || app.link || '',
           appliedDate: app.appliedDate,
-          appliedTime: formatTime(app.timestamp || app.appliedDate),
         };
         if (!groupedApplications[dateKey]) groupedApplications[dateKey] = [];
         groupedApplications[dateKey].push(entry);
