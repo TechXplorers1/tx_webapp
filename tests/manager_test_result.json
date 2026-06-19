@@ -1,0 +1,29 @@
+{
+  "console": [
+    {
+      "type": "debug",
+      "text": "[vite] connecting..."
+    },
+    {
+      "type": "debug",
+      "text": "[vite] connected."
+    },
+    {
+      "type": "info",
+      "text": "%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"
+    }
+  ],
+  "errors": [],
+  "timings": {
+    "navigationStart": 1781868724498,
+    "loadEventEnd": 1781868725697,
+    "domComplete": 1781868725697,
+    "entries": 91
+  },
+  "screenshot": "c:\\Users\\Mannila Sandeep\\Desktop\\Techxplorers_New\\tx_webapp\\tests\\manager_page.png",
+  "wallTime": {
+    "goto": 1859,
+    "processingWait": 20113,
+    "total": 21972
+  }
+}

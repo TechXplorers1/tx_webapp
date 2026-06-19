@@ -247,6 +247,43 @@ const ManagerWorkSheet = () => {
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   // Ref for the profile dropdown to detect clicks outside
   const profileDropdownRef = useRef(null);
+  // Ref to store per-registration application entries for incremental updates
+  const registrationAppsRef = useRef({});
+  // Chunked update settings to avoid blocking the main thread
+  const LARGE_UPDATE_THRESHOLD = 1000;
+  const CHUNK_SIZE = 200;
+  const [isChunkingApplications, setIsChunkingApplications] = useState(false);
+
+  const chunkedSetApplicationData = (items) => {
+    if (!items || items.length === 0) {
+      setApplicationData([]);
+      return Promise.resolve();
+    }
+
+    if (items.length <= LARGE_UPDATE_THRESHOLD) {
+      setApplicationData(items);
+      return Promise.resolve();
+    }
+
+    return new Promise((resolve) => {
+      setIsChunkingApplications(true);
+      setApplicationData([]);
+      let index = 0;
+      const doChunk = () => {
+        const next = items.slice(index, index + CHUNK_SIZE);
+        setApplicationData(prev => [...prev, ...next]);
+        index += CHUNK_SIZE;
+        if (index < items.length) {
+          // yield to the browser
+          setTimeout(doChunk, 0);
+        } else {
+          setIsChunkingApplications(false);
+          resolve();
+        }
+      };
+      doChunk();
+    });
+  };
 
   // Get unique employee names for the filter dropdown
 
@@ -268,6 +305,7 @@ const ManagerWorkSheet = () => {
 
   const [displayEmployees, setDisplayEmployees] = useState([]);
   const [assignedEmployeeSearchQuery, setAssignedEmployeeSearchQuery] = useState('');
+
 
   const [selectedApplication, setSelectedApplication] = useState(null);
   const [isApplicationDetailModalOpen, setIsApplicationDetailModalOpen] = useState(false);
@@ -792,6 +830,26 @@ const ManagerWorkSheet = () => {
           console.log("Updated IDB Client Cache");
         }
 
+        // Build initial maps of applications per registration for incremental updates
+        const initialAppEntries = [];
+        allRegistrations.forEach((clientReg) => {
+          const uniqueKey = `${clientReg.clientFirebaseKey}|${clientReg.registrationKey}`;
+          const apps = (clientReg.jobApplications || []).map(app => ({
+            ...app,
+            clientFirebaseKey: clientReg.clientFirebaseKey,
+            registrationKey: clientReg.registrationKey,
+            clientName: clientReg.name,
+            assignedTo: clientReg.assignedTo,
+            registrationUniqueKey: uniqueKey
+          }));
+          registrationAppsRef.current[uniqueKey] = apps;
+          initialAppEntries.push(...apps);
+        });
+
+        await chunkedSetApplicationData(initialAppEntries);
+        setInterviewData(initialAppEntries.filter(a => a.status === 'Interview'));
+
+        // Keep existing client state segmentation
         buildManagerClientState(allRegistrations);
 
         // 4. Attach real-time listeners for assigned client registrations
@@ -814,14 +872,32 @@ const ManagerWorkSheet = () => {
             dbSet('cache_clients_full', { timestamp: Date.now(), data: clientCache })
               .catch(err => console.error('Failed to update manager client cache:', err));
 
-            const updatedRegistrations = Object.values(assignments)
-              .map(innerItem => {
-                const root = clientCache[innerItem.clientFirebaseKey];
-                return transformClientRegistration(innerItem, root, root?.serviceRegistrations?.[innerItem.registrationKey]);
-              })
-              .filter(Boolean);
+            // Incrementally update applicationData for this single registration only
+            const uniqueKey = `${item.clientFirebaseKey}|${item.registrationKey}`;
+            const newApps = (reg.jobApplications || []).map(app => ({
+              ...app,
+              clientFirebaseKey: item.clientFirebaseKey,
+              registrationKey: item.registrationKey,
+              clientName: updatedClientRoot.name,
+              assignedTo: reg.assignedTo,
+              registrationUniqueKey: uniqueKey
+            }));
 
-            buildManagerClientState(updatedRegistrations);
+            // Update the registrationAppsRef
+            registrationAppsRef.current[uniqueKey] = newApps;
+
+            // Replace entries for this registration in applicationData
+            setApplicationData(prev => {
+              const withoutOld = prev.filter(a => a.registrationUniqueKey !== uniqueKey);
+              return [...withoutOld, ...newApps];
+            });
+
+            // Replace entries for this registration in interviewData
+            setInterviewData(prev => {
+              const withoutOld = prev.filter(a => a.registrationUniqueKey !== uniqueKey);
+              const interviewEntries = newApps.filter(a => a.status === 'Interview');
+              return [...withoutOld, ...interviewEntries];
+            });
           });
 
           unsubscribes.push(unsubscribe);
@@ -1245,6 +1321,8 @@ const ManagerWorkSheet = () => {
 
   const [firebaseEmployees, setFirebaseEmployees] = useState({});
   const [leaveRequests, setLeaveRequests] = useState([]);
+
+  console.log('[TRACE] ManagerWorksheet Render count, activeTab:', activeTab, 'loading:', loading, 'managerFirebaseKey:', managerFirebaseKey, 'employees:', allEmployees.length, 'clients:', assignedClients.length);
 
   const [leaveSearchQuery, setLeaveSearchQuery] = useState('');
   const [leaveFilterFromDate, setLeaveFilterFromDate] = useState('');
@@ -1737,15 +1815,27 @@ const ManagerWorkSheet = () => {
   }, [displayEmployees, assignedClients, assignedEmployeeSearchQuery]);
 
   const filteredApplicationData = useMemo(() => {
-    // Helper to get employee name, as it's needed for searching
-    const getEmployeeName = (employeeKey) => {
-      const employee = allEmployees.find(emp => emp.firebaseKey === employeeKey);
-      return employee ? `${employee.firstName} ${employee.lastName}`.trim() : '';
-    };
+    // Avoid heavy filtering when Applications tab is not active and no filters/search applied
+    if (isChunkingApplications || (activeTab !== 'Applications' && !areApplicationsFiltersActive())) {
+      return [];
+    }
+    // Build a fast lookup map for employees to avoid repeated O(n) finds
+    const employeeMap = new Map(allEmployees.map(emp => [emp.firebaseKey, emp]));
 
-    let filtered = applicationData.filter(app => {
-      const lowerCaseSearchQuery = applicationSearchQuery.toLowerCase();
-      const employeeName = getEmployeeName(app.assignedTo);
+    const lowerCaseSearchQuery = applicationSearchQuery.toLowerCase();
+    const start = applicationFilterDateRange.startDate;
+    const end = applicationFilterDateRange.endDate;
+
+    let startDate = start ? parseRawDateValue(start) : null;
+    let endDate = end ? parseRawDateValue(end) : null;
+    if (startDate) startDate.setHours(0, 0, 0, 0);
+    if (endDate) endDate.setHours(23, 59, 59, 999);
+
+    const todayStr = getLocalDateString();
+
+    const filtered = applicationData.filter(app => {
+      const employee = employeeMap.get(app.assignedTo);
+      const employeeName = employee ? `${employee.firstName} ${employee.lastName}` : '';
 
       const matchesSearch =
         (employeeName || '').toLowerCase().includes(lowerCaseSearchQuery) ||
@@ -1756,23 +1846,14 @@ const ManagerWorkSheet = () => {
       const matchesEmployee = applicationFilterEmployee === '' || app.assignedTo === applicationFilterEmployee;
       const matchesClient = applicationFilterClient === '' || app.clientName === applicationFilterClient;
 
-      // --- THIS IS THE KEY LOGIC CHANGE ---
       let matchesDateRange = false;
-      const start = applicationFilterDateRange.startDate;
-      const end = applicationFilterDateRange.endDate;
-
-      if (start || end) {
-        // If the user has selected a date range, use that filter.
+      if (startDate || endDate) {
         const appDate = parseRawDateValue(app.appliedDate);
-        const startDate = start ? parseRawDateValue(start) : null;
-        const endDate = end ? parseRawDateValue(end) : null;
-        if (startDate) startDate.setHours(0, 0, 0, 0);
-        if (endDate) endDate.setHours(23, 59, 59, 999);
+        if (!appDate) return false;
         matchesDateRange = (!startDate || appDate >= startDate) && (!endDate || appDate <= endDate);
       } else {
-        // If NO date range is selected, default to showing ONLY today's applications.
-        const todayStr = getLocalDateString(); // Gets today's date in YYYY-MM-DD format
-        matchesDateRange = (getLocalDateString(app.appliedDate) === todayStr);
+        const appDateStr = getLocalDateString(app.appliedDate);
+        matchesDateRange = (appDateStr === todayStr);
       }
 
       return matchesSearch && matchesEmployee && matchesClient && matchesDateRange;
@@ -1790,39 +1871,51 @@ const ManagerWorkSheet = () => {
     });
 
     return filtered;
-  }, [applicationData, applicationSearchQuery, applicationFilterEmployee, applicationFilterClient, applicationFilterDateRange, sortOrder, allEmployees]);
+  }, [applicationData, applicationSearchQuery, applicationFilterEmployee, applicationFilterClient, applicationFilterDateRange, sortOrder, allEmployees, activeTab, isChunkingApplications]);
 
 
   // Add this useMemo hook within the ManagerWorkSheet component
   const applicationCounts = useMemo(() => {
-    const today = getLocalDateString();
-
-    // 1. Calculate today's count for all employees
-    const todayCount = filteredApplicationData.filter(app => getLocalDateString(app.appliedDate) === today).length;
-
-    // 2. Calculate filtered count based on the date range
-    let filteredCount = filteredApplicationData.length;
-    const start = applicationFilterDateRange.startDate;
-    const end = applicationFilterDateRange.endDate;
-    if (start || end) {
-      filteredCount = filteredApplicationData.filter(app => {
-        const appDate = parseRawDateValue(app.appliedDate);
-        const startDate = start ? parseRawDateValue(start) : null;
-        const endDate = end ? parseRawDateValue(end) : null;
-        return (!startDate || appDate >= startDate) && (!endDate || appDate <= endDate);
-      }).length;
+    // Avoid heavy counting when Applications tab is not shown, chunking, or no filters are active
+    if (isChunkingApplications || (activeTab !== 'Applications' && !areApplicationsFiltersActive())) {
+      return { todayCount: 0, filteredCount: 0, employeeTodayCount: 0 };
     }
 
-    // 3. Calculate today's count for a specific employee if one is selected
+    const today = getLocalDateString();
+
+    let todayCount = 0;
+    let filteredCount = 0;
     let employeeTodayCount = 0;
-    if (applicationFilterEmployee) {
-      employeeTodayCount = filteredApplicationData.filter(app =>
-        app.assignedTo === applicationFilterEmployee && getLocalDateString(app.appliedDate) === today
-      ).length;
+
+    const start = applicationFilterDateRange.startDate;
+    const end = applicationFilterDateRange.endDate;
+    let startDate = start ? parseRawDateValue(start) : null;
+    let endDate = end ? parseRawDateValue(end) : null;
+    if (startDate) startDate.setHours(0, 0, 0, 0);
+    if (endDate) endDate.setHours(23, 59, 59, 999);
+
+    for (const app of filteredApplicationData) {
+      const appDateStr = getLocalDateString(app.appliedDate);
+      const appDate = parseRawDateValue(app.appliedDate);
+
+      if (appDateStr === today) todayCount++;
+
+      if (startDate || endDate) {
+        if (!appDate) continue;
+        if ((!startDate || appDate >= startDate) && (!endDate || appDate <= endDate)) {
+          filteredCount++;
+        }
+      } else {
+        filteredCount++;
+      }
+
+      if (applicationFilterEmployee && app.assignedTo === applicationFilterEmployee && appDateStr === today) {
+        employeeTodayCount++;
+      }
     }
 
     return { todayCount, filteredCount, employeeTodayCount };
-  }, [filteredApplicationData, applicationFilterDateRange, applicationFilterEmployee]);
+  }, [filteredApplicationData, applicationFilterDateRange, applicationFilterEmployee, activeTab]);
 
 
   const downloadManagerApplicationsData = () => {
@@ -1837,8 +1930,8 @@ const ManagerWorkSheet = () => {
       : 'Current_View';
 
     const dataToExport = filteredApplicationData.map((app, index) => {
-      // Find the assigned employee's name for the export sheet
-      const assignedEmployee = allEmployees.find(emp => emp.firebaseKey === app.assignedTo);
+      // Find the assigned employee's name for the export sheet using the cached map
+      const assignedEmployee = firebaseEmployees[app.assignedTo] || null;
       const employeeName = assignedEmployee ? `${assignedEmployee.firstName} ${assignedEmployee.lastName}` : 'N/A';
       const clientName = app.clientName || `${app.firstName} ${app.lastName}`; // Use full name if clientName is missing
 
