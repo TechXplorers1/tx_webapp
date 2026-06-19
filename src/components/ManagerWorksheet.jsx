@@ -255,34 +255,8 @@ const ManagerWorkSheet = () => {
   const [isChunkingApplications, setIsChunkingApplications] = useState(false);
 
   const chunkedSetApplicationData = (items) => {
-    if (!items || items.length === 0) {
-      setApplicationData([]);
-      return Promise.resolve();
-    }
-
-    if (items.length <= LARGE_UPDATE_THRESHOLD) {
-      setApplicationData(items);
-      return Promise.resolve();
-    }
-
-    return new Promise((resolve) => {
-      setIsChunkingApplications(true);
-      setApplicationData([]);
-      let index = 0;
-      const doChunk = () => {
-        const next = items.slice(index, index + CHUNK_SIZE);
-        setApplicationData(prev => [...prev, ...next]);
-        index += CHUNK_SIZE;
-        if (index < items.length) {
-          // yield to the browser
-          setTimeout(doChunk, 0);
-        } else {
-          setIsChunkingApplications(false);
-          resolve();
-        }
-      };
-      doChunk();
-    });
+    setApplicationData(items || []);
+    return Promise.resolve();
   };
 
   // Get unique employee names for the filter dropdown
@@ -1322,8 +1296,7 @@ const ManagerWorkSheet = () => {
   const [firebaseEmployees, setFirebaseEmployees] = useState({});
   const [leaveRequests, setLeaveRequests] = useState([]);
 
-  console.log('[TRACE] ManagerWorksheet Render count, activeTab:', activeTab, 'loading:', loading, 'managerFirebaseKey:', managerFirebaseKey, 'employees:', allEmployees.length, 'clients:', assignedClients.length);
-
+  
   const [leaveSearchQuery, setLeaveSearchQuery] = useState('');
   const [leaveFilterFromDate, setLeaveFilterFromDate] = useState('');
   const [leaveFilterToDate, setLeaveFilterToDate] = useState('');
