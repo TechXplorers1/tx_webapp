@@ -849,7 +849,7 @@ const ManagerWorkSheet = () => {
             ...app,
             clientFirebaseKey: clientReg.clientFirebaseKey,
             registrationKey: clientReg.registrationKey,
-            clientName: clientReg.name,
+            clientName: clientReg.name || 'Unknown Client',
             assignedTo: clientReg.assignedTo,
             registrationUniqueKey: uniqueKey
           }));
@@ -885,11 +885,12 @@ const ManagerWorkSheet = () => {
 
             // Incrementally update applicationData for this single registration only
             const uniqueKey = `${item.clientFirebaseKey}|${item.registrationKey}`;
+            const clientName = `${reg.firstName || updatedClientRoot.firstName || ''} ${reg.lastName || updatedClientRoot.lastName || ''}`.trim() || 'Unknown Client';
             const newApps = (reg.jobApplications || []).map(app => ({
               ...app,
               clientFirebaseKey: item.clientFirebaseKey,
               registrationKey: item.registrationKey,
-              clientName: updatedClientRoot.name,
+              clientName: clientName,
               assignedTo: reg.assignedTo,
               registrationUniqueKey: uniqueKey
             }));
@@ -7623,13 +7624,18 @@ const ApplicationsTab = ({
     // Group by client (for the expanded rows)
     const groupedByClient = useMemo(() => {
       return applicationData.reduce((acc, app) => {
-        if (!acc[app.clientName]) {
-          acc[app.clientName] = {
+        const clientName = app.clientName;
+        // Filter out applications where clientName is undefined, null, empty string, or the literal string "undefined"
+        if (!clientName || clientName === 'undefined') {
+          return acc;
+        }
+        if (!acc[clientName]) {
+          acc[clientName] = {
             apps: [],
             employeeKey: app.assignedTo,
           };
         }
-        acc[app.clientName].apps.push(app);
+        acc[clientName].apps.push(app);
         return acc;
       }, {});
     }, [applicationData]);
