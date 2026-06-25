@@ -20,6 +20,44 @@ import { utils, writeFile } from 'xlsx';
 // --- Shared IndexedDB cache utility ---
 import { dbGet, dbSet } from '../utils/idbCache';
 
+const DEFAULT_TIMEZONE = 'Asia/Kolkata';
+
+// --- Shared Cached Formatters for Performance ---
+const localDateFormat = new Intl.DateTimeFormat('en-CA', {
+  timeZone: DEFAULT_TIMEZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+const gbDateFormat = new Intl.DateTimeFormat('en-GB', {
+  timeZone: DEFAULT_TIMEZONE,
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+});
+
+const verboseDateFormat = new Intl.DateTimeFormat('en-US', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+  timeZone: DEFAULT_TIMEZONE,
+});
+
+const verboseTimeFormat = new Intl.DateTimeFormat('en-US', {
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: true,
+  timeZone: DEFAULT_TIMEZONE,
+});
+
+const ISO_DATE_REGEXP = /^\d{4}-\d{2}-\d{2}$/;
+const DDMMYYYY_REGEXP = /^\d{2}-\d{2}-\d{4}$/;
+
+const dateCache = new Map();
+const gbDateCache = new Map();
+const dateTimeCache = new Map();
+
 const ManagerWorkSheet = () => {
 
   const navigate = useNavigate();
@@ -293,14 +331,11 @@ const ManagerWorkSheet = () => {
     if (dateValue instanceof Date && !Number.isNaN(dateValue.getTime())) return dateValue;
     if (typeof dateValue !== 'string') return null;
 
-    const isoDateOnly = /^\d{4}-\d{2}-\d{2}$/;
-    const ddmmyyyy = /^\d{2}-\d{2}-\d{4}$/;
-
-    if (isoDateOnly.test(dateValue)) {
+    if (ISO_DATE_REGEXP.test(dateValue)) {
       const [year, month, day] = dateValue.split('-').map(Number);
       return new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
     }
-    if (ddmmyyyy.test(dateValue)) {
+    if (DDMMYYYY_REGEXP.test(dateValue)) {
       const [day, month, year] = dateValue.split('-').map(Number);
       return new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
     }
@@ -314,13 +349,15 @@ const ManagerWorkSheet = () => {
     try {
       const date = parseRawDateValue(timestamp);
       if (!date) return { date: 'Invalid Date', time: 'N/A' };
-      const dateOptions = { year: 'numeric', month: 'long', day: 'numeric', timeZone: DEFAULT_TIMEZONE };
-      const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: DEFAULT_TIMEZONE };
-
-      const formattedDate = new Intl.DateTimeFormat('en-US', dateOptions).format(date);
-      const formattedTime = new Intl.DateTimeFormat('en-US', timeOptions).format(date);
-
-      return { date: formattedDate, time: formattedTime };
+      const time = date.getTime();
+      if (dateTimeCache.has(time)) {
+        return dateTimeCache.get(time);
+      }
+      const formattedDate = verboseDateFormat.format(date);
+      const formattedTime = verboseTimeFormat.format(date);
+      const result = { date: formattedDate, time: formattedTime };
+      dateTimeCache.set(time, result);
+      return result;
     } catch (e) {
       console.error("Error formatting timestamp:", e);
       return { date: 'Invalid Date', time: 'N/A' };
@@ -1216,12 +1253,13 @@ const ManagerWorkSheet = () => {
         }
         return dateString;
       }
-      return new Intl.DateTimeFormat('en-GB', {
-        timeZone: DEFAULT_TIMEZONE,
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      }).format(date);
+      const time = date.getTime();
+      if (gbDateCache.has(time)) {
+        return gbDateCache.get(time);
+      }
+      const formatted = gbDateFormat.format(date);
+      gbDateCache.set(time, formatted);
+      return formatted;
     } catch (error) {
       console.error("Error formatting date:", dateString, error);
       return dateString;
@@ -1229,14 +1267,18 @@ const ManagerWorkSheet = () => {
   };
 
   const getLocalDateString = (date = new Date()) => {
+    if (typeof date === 'string' && ISO_DATE_REGEXP.test(date)) {
+      return date;
+    }
     const parsed = parseRawDateValue(date);
     if (!parsed) return '';
-    return new Intl.DateTimeFormat('en-CA', {
-      timeZone: DEFAULT_TIMEZONE,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).format(parsed);
+    const time = parsed.getTime();
+    if (dateCache.has(time)) {
+      return dateCache.get(time);
+    }
+    const formatted = localDateFormat.format(parsed);
+    dateCache.set(time, formatted);
+    return formatted;
   };
 
 
@@ -1795,7 +1837,7 @@ const ManagerWorkSheet = () => {
     // Build a fast lookup map for employees to avoid repeated O(n) finds
     const employeeMap = new Map(allEmployees.map(emp => [emp.firebaseKey, emp]));
 
-    const lowerCaseSearchQuery = applicationSearchQuery.toLowerCase();
+    const lowerCaseSearchQuery = (applicationSearchQuery || '').trim().toLowerCase();
     const start = applicationFilterDateRange.startDate;
     const end = applicationFilterDateRange.endDate;
 
@@ -1810,11 +1852,12 @@ const ManagerWorkSheet = () => {
       const employee = employeeMap.get(app.assignedTo);
       const employeeName = employee ? `${employee.firstName} ${employee.lastName}` : '';
 
-      const matchesSearch =
+      const matchesSearch = !lowerCaseSearchQuery ||
         (employeeName || '').toLowerCase().includes(lowerCaseSearchQuery) ||
         (app.clientName || '').toLowerCase().includes(lowerCaseSearchQuery) ||
         (app.jobTitle || '').toLowerCase().includes(lowerCaseSearchQuery) ||
-        (app.company || '').toLowerCase().includes(lowerCaseSearchQuery);
+        (app.company || '').toLowerCase().includes(lowerCaseSearchQuery) ||
+        (app.jobId || '').toLowerCase().includes(lowerCaseSearchQuery);
 
       const matchesEmployee = applicationFilterEmployee === '' || app.assignedTo === applicationFilterEmployee;
       const matchesClient = applicationFilterClient === '' || app.clientName === applicationFilterClient;
@@ -1832,12 +1875,13 @@ const ManagerWorkSheet = () => {
       return matchesSearch && matchesEmployee && matchesClient && matchesDateRange;
     });
 
-    // Sorting logic remains the same
+    // Sorting logic using fast string lexicographical comparison
     filtered.sort((a, b) => {
-      const dateA = new Date(a.appliedDate);
-      const dateB = new Date(b.appliedDate);
-      if (sortOrder === 'Newest First') return dateB - dateA;
-      if (sortOrder === 'Oldest First') return dateA - dateB;
+      if (sortOrder === 'Newest First' || sortOrder === 'Oldest First') {
+        const dateA = a.appliedDate || '';
+        const dateB = b.appliedDate || '';
+        return sortOrder === 'Newest First' ? dateB.localeCompare(dateA) : dateA.localeCompare(dateB);
+      }
       if (sortOrder === 'Job Title A-Z') return (a.jobTitle || '').localeCompare(b.jobTitle || '');
       if (sortOrder === 'Company A-Z') return (a.company || '').localeCompare(b.company || '');
       return 0;
@@ -7576,29 +7620,9 @@ const ApplicationsTab = ({
       [employees]
     );
 
-    // USE GLOBAL SEARCH from parent (applicationSearchQuery)
-    const filteredBySearch = useMemo(() => {
-      const lowerCaseSearch = (applicationSearchQuery || '').toLowerCase();
-
-      return applicationData.filter(app => {
-        const employee = employeeMap.get(app.assignedTo);
-        const employeeName = employee
-          ? `${employee.firstName} ${employee.lastName}`.toLowerCase()
-          : '';
-
-        return (
-          employeeName.includes(lowerCaseSearch) ||
-          (app.clientName || '').toLowerCase().includes(lowerCaseSearch) ||
-          (app.jobTitle || '').toLowerCase().includes(lowerCaseSearch) ||
-          (app.company || '').toLowerCase().includes(lowerCaseSearch) ||
-          (app.jobId || '').toLowerCase().includes(lowerCaseSearch)
-        );
-      });
-    }, [applicationData, applicationSearchQuery, employeeMap]);
-
     // Group by client (for the expanded rows)
     const groupedByClient = useMemo(() => {
-      return filteredBySearch.reduce((acc, app) => {
+      return applicationData.reduce((acc, app) => {
         if (!acc[app.clientName]) {
           acc[app.clientName] = {
             apps: [],
@@ -7608,7 +7632,7 @@ const ApplicationsTab = ({
         acc[app.clientName].apps.push(app);
         return acc;
       }, {});
-    }, [filteredBySearch]);
+    }, [applicationData]);
 
     // Group by employee + client for the main table rows
     const groupedByEmployeeAndClient = useMemo(() => {
@@ -7623,9 +7647,11 @@ const ApplicationsTab = ({
         const employeeName = `${employee.firstName || ''} ${employee.lastName || ''}`.trim();
 
         // derive a representative applied date (latest)
-        const latestApp = [...group.apps].sort(
-          (a, b) => new Date(b.appliedDate || 0) - new Date(a.appliedDate || 0)
-        )[0];
+        const latestApp = [...group.apps].sort((a, b) => {
+          const dateA = a.appliedDate || '';
+          const dateB = b.appliedDate || '';
+          return dateB.localeCompare(dateA);
+        })[0];
 
         result.push({
           key: `${group.employeeKey}-${clientName}`,
@@ -7638,28 +7664,8 @@ const ApplicationsTab = ({
         });
       });
 
-      // (Optional) further filtering by employee/client/status/date/quickFilter can
-      // be applied here if you already had such logic elsewhere.
-      // For now we assume that existing filters were applied before building applicationData.
-
       return result;
     }, [groupedByClient, employeeMap]);
-
-    // Group by date (for the small date cards on top, if you are using them)
-    const groupedByDate = useMemo(() => {
-      return applicationData.reduce((acc, app) => {
-        const dateKey = getLocalDateString(new Date(app.appliedDate));
-        if (!acc[dateKey]) {
-          acc[dateKey] = [];
-        }
-        acc[dateKey].push(app);
-        return acc;
-      }, {});
-    }, [applicationData]);
-
-    const sortedDates = Object.keys(groupedByDate).sort(
-      (a, b) => new Date(b) - new Date(a)
-    );
 
     // --- Pagination derived from groupedByEmployeeAndClient ---
     const totalApplicationPages = Math.max(
