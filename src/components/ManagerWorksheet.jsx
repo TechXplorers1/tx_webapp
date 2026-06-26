@@ -344,6 +344,23 @@ const ManagerWorkSheet = () => {
     return Number.isNaN(parsed.getTime()) ? null : parsed;
   };
 
+  const getTodayISTDate = () => {
+    return getLocalDateString(new Date());
+  };
+
+  const getApplicationISTDate = (app) => {
+    if (app.timestamp) {
+      const parsed = new Date(app.timestamp);
+      if (!Number.isNaN(parsed.getTime())) {
+        return getLocalDateString(parsed);
+      }
+    }
+    if (app.appliedDate) {
+      return getLocalDateString(app.appliedDate);
+    }
+    return '';
+  };
+
   const formatDateTime = (timestamp) => {
     if (!timestamp) return { date: 'N/A', time: 'N/A' };
     try {
@@ -1847,7 +1864,8 @@ const ManagerWorkSheet = () => {
     if (startDate) startDate.setHours(0, 0, 0, 0);
     if (endDate) endDate.setHours(23, 59, 59, 999);
 
-    const todayStr = getLocalDateString();
+    const todayStr = getTodayISTDate();
+    const seenKeys = new Set();
 
     const filtered = applicationData.filter(app => {
       const employee = employeeMap.get(app.assignedTo);
@@ -1869,11 +1887,28 @@ const ManagerWorkSheet = () => {
         if (!appDate) return false;
         matchesDateRange = (!startDate || appDate >= startDate) && (!endDate || appDate <= endDate);
       } else {
-        const appDateStr = getLocalDateString(app.appliedDate);
+        const appDateStr = getApplicationISTDate(app);
         matchesDateRange = (appDateStr === todayStr);
       }
 
-      return matchesSearch && matchesEmployee && matchesClient && matchesDateRange;
+      if (!matchesSearch || !matchesEmployee || !matchesClient || !matchesDateRange) {
+        return false;
+      }
+
+      // Deduplicate today's applications (IST)
+      const appDateStr = getApplicationISTDate(app);
+      if (appDateStr === todayStr) {
+        const clientKey = app.clientFirebaseKey || app.clientName || '';
+        const companyKey = (app.company || '').trim().toLowerCase();
+        const jobTitleKey = (app.jobTitle || '').trim().toLowerCase();
+        const uniqueAppKey = `${clientKey}_${companyKey}_${jobTitleKey}`;
+        if (seenKeys.has(uniqueAppKey)) {
+          return false;
+        }
+        seenKeys.add(uniqueAppKey);
+      }
+
+      return true;
     });
 
     // Sorting logic using fast string lexicographical comparison
@@ -1899,7 +1934,7 @@ const ManagerWorkSheet = () => {
       return { todayCount: 0, filteredCount: 0, employeeTodayCount: 0 };
     }
 
-    const today = getLocalDateString();
+    const today = getTodayISTDate();
 
     let todayCount = 0;
     let filteredCount = 0;
@@ -1913,7 +1948,7 @@ const ManagerWorkSheet = () => {
     if (endDate) endDate.setHours(23, 59, 59, 999);
 
     for (const app of filteredApplicationData) {
-      const appDateStr = getLocalDateString(app.appliedDate);
+      const appDateStr = getApplicationISTDate(app);
       const appDate = parseRawDateValue(app.appliedDate);
 
       if (appDateStr === today) todayCount++;
