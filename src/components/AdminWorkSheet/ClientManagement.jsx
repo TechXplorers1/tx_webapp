@@ -134,7 +134,7 @@ const ClientManagement = () => {
   const [managerSearchTerm, setManagerSearchTerm] = useState('');
 
   // --- Payment Modal State ---
-  const [activePaymentTab, setActivePaymentTab] = useState('pay_now'); // 'pay_now', 'link'
+  const [activePaymentTab, setActivePaymentTab] = useState('link'); // Default to 'link' (Generate Link)
   const [cardDetails, setCardDetails] = useState({ number: '', name: '', expiry: '', cvv: '' });
   const [upiId, setUpiId] = useState('');
   const [selectedBank, setSelectedBank] = useState('');
@@ -470,6 +470,7 @@ const ClientManagement = () => {
 
   const handleOpenPaymentModal = (client) => {
     setSelectedClientForPayment(client);
+    setActivePaymentTab('link');
     if (client.paymentDetails) {
       setPaymentDetails({
         amount: client.paymentDetails.amount || '',
@@ -545,6 +546,7 @@ const ClientManagement = () => {
       transactionDate: '',
     });
     setGeneratedPaymentLink('');
+    setActivePaymentTab('link');
   };
 
   const handlePaymentDetailsChange = (e) => {
@@ -5127,27 +5129,21 @@ const ClientManagement = () => {
 
                 {/* Payment Method Tabs */}
                 <div className="modal-form-full-width" style={{ marginTop: '10px' }}>
-                  <label className="form-label" style={{ marginBottom: '10px', display: 'block' }}>Payment Action</label>
                   <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', marginBottom: '20px' }}>
-                    {['pay_now', 'link'].map(tab => (
-                      <button
-                        key={tab}
-                        type="button"
-                        onClick={() => setActivePaymentTab(tab)}
-                        style={{
-                          padding: '10px 20px',
-                          background: 'none',
-                          border: 'none',
-                          borderBottom: activePaymentTab === tab ? '2px solid #2563eb' : '2px solid transparent',
-                          color: activePaymentTab === tab ? '#2563eb' : '#6b7280',
-                          fontWeight: activePaymentTab === tab ? '600' : '500',
-                          cursor: 'pointer',
-                          textTransform: 'capitalize'
-                        }}
-                      >
-                        {tab === 'link' ? 'Generate Link' : 'Pay Now'}
-                      </button>
-                    ))}
+                    <button
+                      type="button"
+                      style={{
+                        padding: '10px 20px',
+                        background: 'none',
+                        border: 'none',
+                        borderBottom: '2px solid #2563eb',
+                        color: '#2563eb',
+                        fontWeight: '600',
+                        cursor: 'default'
+                      }}
+                    >
+                      Generate Link
+                    </button>
                   </div>
 
                   {/* Tab: Generate Link (Existing User Flow) */}
@@ -5177,16 +5173,6 @@ const ClientManagement = () => {
                       )}
                     </div>
                   )}
-
-                  {/* Tab: Pay Now Info */}
-                  {activePaymentTab === 'pay_now' && (
-                    <div className="payment-tab-content" style={{ padding: '20px', background: '#f0f9ff', borderRadius: '8px', border: '1px solid #bae6fd' }}>
-                      <p style={{ color: '#0369a1', margin: 0 }}>
-                        <strong style={{ display: 'block', marginBottom: '5px' }}>Secure Checkout</strong>
-                        You will be redirected to Razorpay's secure payment gateway to complete the transaction via Credit/Debit Card, UPI, or Netbanking.
-                      </p>
-                    </div>
-                  )}
                 </div>
 
                 <div className="modal-footer modal-form-full-width">
@@ -5203,21 +5189,9 @@ const ClientManagement = () => {
                   )}
                   <button type="button" className="confirm-cancel-btn" onClick={handleClosePaymentModal}>Cancel</button>
 
-                  {activePaymentTab === 'link' ? (
-                    !generatedPaymentLink && (
-                      <button type="button" onClick={handleGeneratePaymentLink} className="create-employee-btn">
-                        Generate Link
-                      </button>
-                    )
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={handleProcessPayment}
-                      className="create-employee-btn"
-                      style={{ backgroundColor: '#28a745' }}
-                      disabled={isSaving}
-                    >
-                      {isSaving ? 'Processing...' : 'Pay Now'}
+                  {!generatedPaymentLink && (
+                    <button type="button" onClick={handleGeneratePaymentLink} className="create-employee-btn">
+                      Generate Link
                     </button>
                   )}
                 </div>

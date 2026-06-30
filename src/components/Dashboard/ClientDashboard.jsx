@@ -903,8 +903,42 @@ const SubscriptionDetailsModal = ({
   );
 };
 
+// --- RazorpayHTMLButton Component ---
+const RazorpayHTMLButton = () => {
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    
+    // Clear any existing children to prevent duplicate buttons
+    containerRef.current.innerHTML = '';
+    
+    const form = document.createElement('form');
+    const script = document.createElement('script');
+    script.src = "https://checkout.razorpay.com/v1/payment-button.js";
+    script.setAttribute('data-payment_button_id', 'pl_T7nsnErMZpiC8A');
+    script.async = true;
+    
+    form.appendChild(script);
+    containerRef.current.appendChild(form);
+  }, []);
+
+  return (
+    <div 
+      ref={containerRef} 
+      style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: '100%',
+        margin: '15px 0'
+      }} 
+    />
+  );
+};
+
 // --- ClientPaymentModal Component ---
-const ClientPaymentModal = ({ paymentDetails, onClose, onPayNow, isSaving }) => {
+const ClientPaymentModal = ({ paymentDetails, onClose, onPayNow, onConfirmPaid, isSaving }) => {
   if (!paymentDetails) return null;
 
   return (
@@ -977,53 +1011,89 @@ const ClientPaymentModal = ({ paymentDetails, onClose, onPayNow, isSaving }) => 
           </p>
         </div>
 
-        <button
-          onClick={onPayNow}
-          disabled={isSaving}
-          style={{
-            width: '100%',
-            padding: '14px 20px',
-            borderRadius: '10px',
-            backgroundColor: '#10b981',
-            color: '#ffffff',
-            fontWeight: '700',
-            fontSize: '1rem',
-            border: 'none',
-            cursor: isSaving ? 'not-allowed' : 'pointer',
-            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)',
-            transition: 'all 0.2s ease',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px'
-          }}
-          onMouseEnter={(e) => {
-            if (!isSaving) {
-              e.currentTarget.style.backgroundColor = '#059669';
-              e.currentTarget.style.boxShadow = '0 6px 16px rgba(16, 185, 129, 0.35)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!isSaving) {
-              e.currentTarget.style.backgroundColor = '#10b981';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.25)';
-            }
-          }}
-        >
-          {isSaving ? (
-            <>
-              <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" style={{ width: '1rem', height: '1rem', borderWidth: '0.15em' }}></span>
-              Processing...
-            </>
-          ) : (
-            <>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1.25rem', height: '1.25rem' }}>
-                <path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z" />
-              </svg>
-              Pay Now
-            </>
-          )}
-        </button>
+        {/* Razorpay Integrated Button & Actions */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '15px',
+          width: '100%',
+          marginTop: '10px',
+          paddingTop: '20px',
+          borderTop: '1px solid var(--border-color)'
+        }}>
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0, fontWeight: '500' }}>
+            Pay Securely with Razorpay Button:
+          </p>
+          
+          <RazorpayHTMLButton />
+          
+          <button
+            onClick={onConfirmPaid}
+            disabled={isSaving}
+            style={{
+              width: '100%',
+              padding: '12px 20px',
+              borderRadius: '10px',
+              backgroundColor: '#10b981',
+              color: '#ffffff',
+              fontWeight: '700',
+              fontSize: '0.95rem',
+              border: 'none',
+              cursor: isSaving ? 'not-allowed' : 'pointer',
+              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
+            }}
+          >
+            Confirm Payment Completion
+          </button>
+
+          <div style={{ width: '100%', margin: '5px 0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ height: '1px', background: 'var(--border-color)', flex: 1 }}></span>
+            <span style={{ margin: '0 10px', fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '600' }}>OR</span>
+            <span style={{ height: '1px', background: 'var(--border-color)', flex: 1 }}></span>
+          </div>
+
+          <button
+            onClick={onPayNow}
+            disabled={isSaving}
+            style={{
+              width: '100%',
+              padding: '12px 20px',
+              borderRadius: '10px',
+              backgroundColor: '#6d28d9',
+              color: '#ffffff',
+              fontWeight: '700',
+              fontSize: '0.95rem',
+              border: 'none',
+              cursor: isSaving ? 'not-allowed' : 'pointer',
+              boxShadow: '0 4px 12px rgba(109, 40, 217, 0.25)',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
+            }}
+          >
+            {isSaving ? (
+              <>
+                <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" style={{ width: '1rem', height: '1rem', borderWidth: '0.15em' }}></span>
+                Processing...
+              </>
+            ) : (
+              <>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1.25rem', height: '1.25rem' }}>
+                  <path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z" />
+                </svg>
+                Pay with Custom Checkout
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -3553,6 +3623,56 @@ const ClientDashboard = () => {
     } catch (err) {
       console.error("Payment Error:", err);
       alert("Error initializing payment. " + err.message);
+    } finally {
+      setIsClientPaySaving(false);
+    }
+  };
+
+  const handleClientConfirmPaid = async () => {
+    if (!clientData || !clientData.paymentDetails) {
+      alert("No payment details found.");
+      return;
+    }
+
+    setIsClientPaySaving(true);
+
+    try {
+      const loggedInUserData = JSON.parse(sessionStorage.getItem('loggedInClient'));
+      if (!loggedInUserData || !loggedInUserData.firebaseKey) return;
+      const clientKey = loggedInUserData.firebaseKey;
+      const regKey = clientData.paymentDetails.registrationKey;
+
+      const transactionId = `TX_CONFIRM_${Date.now()}`;
+      const updates = {};
+      updates[`clients/${clientKey}/paymentDetails/status`] = 'paid';
+      updates[`clients/${clientKey}/paymentDetails/transactionId`] = transactionId;
+      updates[`clients/${clientKey}/paymentDetails/orderId`] = null;
+      updates[`clients/${clientKey}/paymentDetails/signature`] = null;
+
+      updates[`service_registrations_index/${clientKey}_${regKey}/paymentDetails/status`] = 'paid';
+      updates[`service_registrations_index/${clientKey}_${regKey}/paymentDetails/transactionId`] = transactionId;
+
+      await update(ref(database), updates);
+
+      // Update IndexedDB cache
+      const CLIENT_CACHE_KEY = `cache_client_data_${clientKey}`;
+      const cached = await dbGet(CLIENT_CACHE_KEY);
+      if (cached && cached.data) {
+        cached.data.paymentDetails = { ...cached.data.paymentDetails, status: 'paid', transactionId };
+        await dbSet(CLIENT_CACHE_KEY, cached);
+      }
+
+      // Update local state instantly
+      setClientData(prev => ({
+        ...prev,
+        paymentDetails: { ...prev.paymentDetails, status: 'paid', transactionId }
+      }));
+
+      alert("Payment status successfully verified and updated to Paid! Transaction ID: " + transactionId);
+      setShowClientPaymentModal(false);
+    } catch (err) {
+      console.error("Failed to confirm payment status in database:", err);
+      alert("Failed to update payment status in the database. " + err.message);
     } finally {
       setIsClientPaySaving(false);
     }
@@ -6561,6 +6681,7 @@ html.dark-mode .notify-success-message {
           paymentDetails={clientData?.paymentDetails}
           onClose={() => setShowClientPaymentModal(false)}
           onPayNow={handleClientPayNow}
+          onConfirmPaid={handleClientConfirmPaid}
           isSaving={isClientPaySaving}
         />
       )}
@@ -6927,6 +7048,74 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
                     }
                 `}
                     </style>
+
+                    {/* Pending Payment Banner */}
+                    {clientData?.paymentDetails?.status === 'pending' && (
+                      <div className="pending-payment-banner" style={{
+                        background: 'linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%)',
+                        border: '1.5px dashed #fbbf24',
+                        borderRadius: '16px',
+                        padding: '20px 24px',
+                        marginBottom: '30px',
+                        boxShadow: '0 10px 25px rgba(251, 191, 36, 0.1)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        flexWrap: 'wrap',
+                        gap: '20px',
+                        maxWidth: '1400px',
+                        margin: '0 auto 20px auto'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                          <div style={{
+                            backgroundColor: '#fbbf24',
+                            color: '#ffffff',
+                            width: '48px',
+                            height: '48px',
+                            borderRadius: '12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '1.5rem',
+                            boxShadow: '0 4px 10px rgba(251, 191, 36, 0.3)'
+                          }}>
+                            💳
+                          </div>
+                          <div>
+                            <h4 style={{ margin: '0 0 4px 0', fontWeight: '700', color: '#78350f', fontSize: '1.15rem' }}>
+                              Pending Payment Request
+                            </h4>
+                            <p style={{ margin: 0, color: '#92400e', fontSize: '0.95rem' }}>
+                              You have a pending payment request of <strong>₹{clientData.paymentDetails.amount}</strong> for: <em>{clientData.paymentDetails.description}</em>
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setShowClientPaymentModal(true)}
+                          style={{
+                            backgroundColor: '#fbbf24',
+                            color: '#78350f',
+                            border: 'none',
+                            padding: '12px 24px',
+                            borderRadius: '10px',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            boxShadow: '0 4px 12px rgba(251, 191, 36, 0.25)',
+                            transition: 'all 0.2s ease',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                          onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                        >
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1.15rem', height: '1.15rem' }}>
+                            <path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z" />
+                          </svg>
+                          Make Payment
+                        </button>
+                      </div>
+                    )}
 
                     {/* --- START CAROUSEL SECTION --- */}
                     <div className="carousel-wrapper" style={{ maxWidth: '1400px', margin: '0 auto 20px auto', padding: '0 20px' }}>
