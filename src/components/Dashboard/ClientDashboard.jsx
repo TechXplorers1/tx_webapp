@@ -903,43 +903,116 @@ const SubscriptionDetailsModal = ({
   );
 };
 
-// --- RazorpayHTMLButton Component ---
-const RazorpayHTMLButton = () => {
-  const containerRef = useRef(null);
 
-  useEffect(() => {
-    if (!containerRef.current) return;
-    
-    // Clear any existing children to prevent duplicate buttons
-    containerRef.current.innerHTML = '';
-    
-    const form = document.createElement('form');
-    const script = document.createElement('script');
-    script.src = "https://checkout.razorpay.com/v1/payment-button.js";
-    script.setAttribute('data-payment_button_id', 'pl_T7nsnErMZpiC8A');
-    script.async = true;
-    
-    form.appendChild(script);
-    containerRef.current.appendChild(form);
-  }, []);
 
+// --- RazorpayStyledPayButton Component ---
+const RazorpayStyledPayButton = ({ onClick, disabled }) => {
   return (
-    <div 
-      ref={containerRef} 
+    <button
+      onClick={onClick}
+      disabled={disabled}
       style={{
         display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
+        alignItems: 'stretch',
+        border: 'none',
+        borderRadius: '6px',
+        overflow: 'hidden',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        padding: 0,
+        height: '52px',
+        boxShadow: '0 4px 10px rgba(0,0,0,0.12)',
+        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         width: '100%',
-        margin: '15px 0'
-      }} 
-    />
+        maxWidth: '300px'
+      }}
+      onMouseEnter={(e) => {
+        if (!disabled) {
+          e.currentTarget.style.transform = 'translateY(-1px)';
+          e.currentTarget.style.boxShadow = '0 6px 14px rgba(0,0,0,0.18)';
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!disabled) {
+          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.boxShadow = '0 4px 10px rgba(0,0,0,0.12)';
+        }
+      }}
+    >
+      {/* Left Icon Panel */}
+      <div style={{
+        backgroundColor: '#1E5AE6',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '0 18px',
+        flexShrink: 0
+      }}>
+        {/* Stylized Razorpay "r" logo */}
+        <svg width="24" height="24" viewBox="0 0 452 512" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ color: '#ffffff' }}>
+          <path d="M428.53 189L358.33 27L42.53 27L112.73 189L428.53 189Z" fill="currentColor"/>
+          <path d="M112.73 189L253.13 351L42.53 351L112.73 189Z" fill="currentColor"/>
+          <path d="M253.13 351L323.33 513L428.53 189L253.13 351Z" fill="currentColor"/>
+        </svg>
+      </div>
+      
+      {/* Right Text Panel */}
+      <div style={{
+        backgroundColor: '#0A1A36',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'flex-start',
+        padding: '0 20px',
+        flexGrow: 1,
+        textAlign: 'left'
+      }}>
+        <span style={{
+          color: '#ffffff',
+          fontWeight: '700',
+          fontSize: '1.2rem',
+          lineHeight: '1.2',
+          fontStyle: 'italic',
+          letterSpacing: '0.3px'
+        }}>
+          Pay Now
+        </span>
+        <span style={{
+          color: '#8a9bb5',
+          fontSize: '0.72rem',
+          lineHeight: '1',
+          marginTop: '3px',
+          fontStyle: 'italic'
+        }}>
+          Secured by Razorpay
+        </span>
+      </div>
+    </button>
   );
 };
+
 
 // --- ClientPaymentModal Component ---
 const ClientPaymentModal = ({ paymentDetails, onClose, onPayNow, onConfirmPaid, isSaving }) => {
   if (!paymentDetails) return null;
+
+  const htmlContainerRef = useRef(null);
+
+  useEffect(() => {
+    if (paymentDetails.linkType !== 'custom' && htmlContainerRef.current) {
+      // Clear any existing children to prevent duplicate buttons
+      htmlContainerRef.current.innerHTML = '';
+      
+      const form = document.createElement('form');
+      const script = document.createElement('script');
+      script.src = "https://checkout.razorpay.com/v1/payment-button.js";
+      script.setAttribute('data-payment_button_id', 'pl_T7nsnErMZpiC8A');
+      script.async = true;
+      
+      form.appendChild(script);
+      htmlContainerRef.current.appendChild(form);
+    }
+  }, [paymentDetails.linkType]);
 
   return (
     <div className="modal-overlay">
@@ -968,50 +1041,54 @@ const ClientPaymentModal = ({ paymentDetails, onClose, onPayNow, onConfirmPaid, 
           Payment Details
         </h3>
         
-        <div style={{
-          background: 'rgba(16, 185, 129, 0.1)',
-          border: '1px solid rgba(16, 185, 129, 0.2)',
-          borderRadius: '12px',
-          padding: '20px',
-          marginBottom: '24px',
-          textAlign: 'center'
-        }}>
-          <span style={{ fontSize: '0.875rem', color: '#10b981', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Amount Due
-          </span>
-          <h2 style={{ fontSize: '2.5rem', fontWeight: '800', color: '#10b981', margin: '8px 0 0 0' }}>
-            ₹{paymentDetails.amount}
-          </h2>
-        </div>
-
-        <div style={{
-          background: 'var(--bg-nav-link-hover)',
-          borderRadius: '12px',
-          padding: '16px',
-          marginBottom: '28px',
-          border: '1px solid var(--border-color)'
-        }}>
-          <p style={{
-            fontSize: '0.875rem',
-            color: 'var(--text-secondary)',
-            fontWeight: '600',
-            margin: '0 0 6px 0',
-            textTransform: 'uppercase',
-            letterSpacing: '0.03em'
+        {paymentDetails.amount && (
+          <div style={{
+            background: 'rgba(16, 185, 129, 0.1)',
+            border: '1px solid rgba(16, 185, 129, 0.2)',
+            borderRadius: '12px',
+            padding: '20px',
+            marginBottom: '24px',
+            textAlign: 'center'
           }}>
-            Description
-          </p>
-          <p style={{
-            fontSize: '1rem',
-            color: 'var(--text-primary)',
-            margin: 0,
-            lineHeight: '1.5'
-          }}>
-            {paymentDetails.description}
-          </p>
-        </div>
+            <span style={{ fontSize: '0.875rem', color: '#10b981', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Amount Due
+            </span>
+            <h2 style={{ fontSize: '2.5rem', fontWeight: '800', color: '#10b981', margin: '8px 0 0 0' }}>
+              ₹{paymentDetails.amount}
+            </h2>
+          </div>
+        )}
 
-        {/* Razorpay Integrated Button & Actions */}
+        {paymentDetails.description && (
+          <div style={{
+            background: 'var(--bg-nav-link-hover)',
+            borderRadius: '12px',
+            padding: '16px',
+            marginBottom: '28px',
+            border: '1px solid var(--border-color)'
+          }}>
+            <p style={{
+              fontSize: '0.875rem',
+              color: 'var(--text-secondary)',
+              fontWeight: '600',
+              margin: '0 0 6px 0',
+              textTransform: 'uppercase',
+              letterSpacing: '0.03em'
+            }}>
+              Description
+            </p>
+            <p style={{
+              fontSize: '1rem',
+              color: 'var(--text-primary)',
+              margin: 0,
+              lineHeight: '1.5'
+            }}>
+              {paymentDetails.description}
+            </p>
+          </div>
+        )}
+
+        {/* Razorpay Styled Button & Actions */}
         <div style={{
           display: 'flex',
           flexDirection: 'column',
@@ -1022,77 +1099,66 @@ const ClientPaymentModal = ({ paymentDetails, onClose, onPayNow, onConfirmPaid, 
           paddingTop: '20px',
           borderTop: '1px solid var(--border-color)'
         }}>
-          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0, fontWeight: '500' }}>
-            Pay Securely with Razorpay Button:
-          </p>
-          
-          <RazorpayHTMLButton />
-          
-          <button
-            onClick={onConfirmPaid}
-            disabled={isSaving}
-            style={{
-              width: '100%',
-              padding: '12px 20px',
-              borderRadius: '10px',
-              backgroundColor: '#10b981',
-              color: '#ffffff',
-              fontWeight: '700',
-              fontSize: '0.95rem',
-              border: 'none',
-              cursor: isSaving ? 'not-allowed' : 'pointer',
-              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)',
-              transition: 'all 0.2s ease',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px'
-            }}
-          >
-            Confirm Payment Completion
-          </button>
-
-          <div style={{ width: '100%', margin: '5px 0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ height: '1px', background: 'var(--border-color)', flex: 1 }}></span>
-            <span style={{ margin: '0 10px', fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '600' }}>OR</span>
-            <span style={{ height: '1px', background: 'var(--border-color)', flex: 1 }}></span>
-          </div>
-
-          <button
-            onClick={onPayNow}
-            disabled={isSaving}
-            style={{
-              width: '100%',
-              padding: '12px 20px',
-              borderRadius: '10px',
-              backgroundColor: '#6d28d9',
-              color: '#ffffff',
-              fontWeight: '700',
-              fontSize: '0.95rem',
-              border: 'none',
-              cursor: isSaving ? 'not-allowed' : 'pointer',
-              boxShadow: '0 4px 12px rgba(109, 40, 217, 0.25)',
-              transition: 'all 0.2s ease',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px'
-            }}
-          >
-            {isSaving ? (
-              <>
-                <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" style={{ width: '1rem', height: '1rem', borderWidth: '0.15em' }}></span>
-                Processing...
-              </>
-            ) : (
-              <>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1.25rem', height: '1.25rem' }}>
-                  <path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z" />
-                </svg>
-                Pay with Custom Checkout
-              </>
-            )}
-          </button>
+          {paymentDetails.linkType === 'custom' ? (
+            <>
+              <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0, fontWeight: '500' }}>
+                Pay Securely with Custom Checkout:
+              </p>
+              
+              <button
+                onClick={onPayNow}
+                disabled={isSaving}
+                style={{
+                  width: '100%',
+                  padding: '12px 20px',
+                  borderRadius: '10px',
+                  backgroundColor: '#6d28d9',
+                  color: '#ffffff',
+                  fontWeight: '700',
+                  fontSize: '0.95rem',
+                  border: 'none',
+                  cursor: isSaving ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 4px 12px rgba(109, 40, 217, 0.25)',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
+                }}
+              >
+                {isSaving ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" style={{ width: '1rem', height: '1rem', borderWidth: '0.15em' }}></span>
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ width: '1.25rem', height: '1.25rem' }}>
+                      <path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z" />
+                    </svg>
+                    Pay with Custom Checkout
+                  </>
+                )}
+              </button>
+            </>
+          ) : (
+            <>
+              <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0, fontWeight: '500' }}>
+                Pay Securely with Razorpay:
+              </p>
+              
+              <div 
+                ref={htmlContainerRef} 
+                style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  width: '100%',
+                  margin: '5px 0'
+                }} 
+              />
+            </>
+          )}
         </div>
       </div>
     </div>

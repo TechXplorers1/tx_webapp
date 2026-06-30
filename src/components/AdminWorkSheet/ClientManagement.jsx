@@ -470,7 +470,6 @@ const ClientManagement = () => {
 
   const handleOpenPaymentModal = (client) => {
     setSelectedClientForPayment(client);
-    setActivePaymentTab('link');
     if (client.paymentDetails) {
       setPaymentDetails({
         amount: client.paymentDetails.amount || '',
@@ -479,6 +478,9 @@ const ClientManagement = () => {
       });
       if (client.paymentDetails.status === 'pending' && client.paymentDetails.link) {
         setGeneratedPaymentLink(client.paymentDetails.link);
+        setActivePaymentTab(client.paymentDetails.linkType === 'custom' ? 'custom_amount' : 'link');
+      } else {
+        setActivePaymentTab('link');
       }
     } else {
       setPaymentDetails({
@@ -487,6 +489,7 @@ const ClientManagement = () => {
         transactionDate: new Date().toISOString().slice(0, 10),
       });
       setGeneratedPaymentLink('');
+      setActivePaymentTab('link');
     }
     setIsPaymentModalOpen(true);
   };
@@ -499,12 +502,6 @@ const ClientManagement = () => {
       return;
     }
 
-    if (!window.confirm('Are you sure you want to cancel and delete this payment request?')) {
-      return;
-    }
-
-    setIsSaving(true);
-
     try {
       const updates = {};
       updates[`clients/${clientFirebaseKey}/paymentDetails`] = null;
@@ -512,7 +509,7 @@ const ClientManagement = () => {
 
       await update(ref(database), updates);
 
-      // Update local state so list is updated
+      // Optimistic update of local state
       setServiceRegistrations(prev =>
         prev.map(reg =>
           reg.registrationKey === registrationKey
@@ -521,19 +518,13 @@ const ClientManagement = () => {
         )
       );
 
-      setPaymentDetails({
-        amount: '',
-        description: '',
-        transactionDate: new Date().toISOString().slice(0, 10),
-      });
+      setPaymentDetails({ amount: '', description: '', transactionDate: '' });
       setGeneratedPaymentLink('');
-      setIsPaymentModalOpen(false);
-      alert('Payment request successfully cancelled and deleted.');
+      alert('Payment request deleted successfully.');
+      handleClosePaymentModal();
     } catch (error) {
-      console.error('Failed to cancel payment request:', error);
-      alert('Failed to cancel payment request. ' + error.message);
-    } finally {
-      setIsSaving(false);
+      console.error('Failed to delete payment request:', error);
+      alert('Failed to delete payment request. ' + error.message);
     }
   };
 
@@ -590,7 +581,8 @@ const ClientManagement = () => {
   };
 
   const handleGeneratePaymentLink = async () => {
-    if (!paymentDetails.amount || !paymentDetails.description) {
+    const isCustom = activePaymentTab === 'custom_amount';
+    if (isCustom && (!paymentDetails.amount || !paymentDetails.description)) {
       alert('Please enter amount and description');
       return;
     }
@@ -606,11 +598,12 @@ const ClientManagement = () => {
     const payUrl = `${window.location.origin}/clientdashboard?pay=true`;
 
     const paymentInfo = {
-      amount: paymentDetails.amount,
-      description: paymentDetails.description,
+      amount: isCustom ? paymentDetails.amount : '',
+      description: isCustom ? paymentDetails.description : '',
       status: 'pending',
       link: payUrl,
       registrationKey: registrationKey,
+      linkType: isCustom ? 'custom' : 'standard',
       createdAt: new Date().toISOString()
     };
 
@@ -5095,54 +5088,52 @@ const ClientManagement = () => {
               </div>
             ) : (
               <form className="modal-form" onSubmit={(e) => { e.preventDefault(); }}>
-                <div className="form-group modal-form-full-width">
-                  <label htmlFor="paymentAmount" className="form-label">Amount *</label>
-                  <div className="amount-input-wrapper">
-                    <span className="amount-prefix">INR</span>
-                    <input
-                      type="number"
-                      id="paymentAmount"
-                      name="amount"
-                      className="form-input"
-                      placeholder="0.00"
-                      value={paymentDetails.amount}
-                      onChange={handlePaymentDetailsChange}
-                      step="1"
-                      min="1"
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="form-group modal-form-full-width">
-                  <label htmlFor="paymentDescription" className="form-label">Description *</label>
-                  <input
-                    type="text"
-                    id="paymentDescription"
-                    name="description"
-                    className="form-input"
-                    placeholder="e.g., Service charges, Consultation fee"
-                    value={paymentDetails.description}
-                    onChange={handlePaymentDetailsChange}
-                    required
-                  />
-                </div>
-
                 {/* Payment Method Tabs */}
                 <div className="modal-form-full-width" style={{ marginTop: '10px' }}>
-                  <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', marginBottom: '20px', gap: '15px' }}>
                     <button
                       type="button"
+                      onClick={() => {
+                        setActivePaymentTab('link');
+                        if (selectedClientForPayment.paymentDetails?.linkType !== 'standard') {
+                          setGeneratedPaymentLink('');
+                        } else if (selectedClientForPayment.paymentDetails?.link) {
+                          setGeneratedPaymentLink(selectedClientForPayment.paymentDetails.link);
+                        }
+                      }}
                       style={{
                         padding: '10px 20px',
                         background: 'none',
                         border: 'none',
-                        borderBottom: '2px solid #2563eb',
-                        color: '#2563eb',
+                        borderBottom: activePaymentTab === 'link' ? '2px solid #2563eb' : 'none',
+                        color: activePaymentTab === 'link' ? '#2563eb' : '#6b7280',
                         fontWeight: '600',
-                        cursor: 'default'
+                        cursor: 'pointer'
                       }}
                     >
                       Generate Link
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActivePaymentTab('custom_amount');
+                        if (selectedClientForPayment.paymentDetails?.linkType !== 'custom') {
+                          setGeneratedPaymentLink('');
+                        } else if (selectedClientForPayment.paymentDetails?.link) {
+                          setGeneratedPaymentLink(selectedClientForPayment.paymentDetails.link);
+                        }
+                      }}
+                      style={{
+                        padding: '10px 20px',
+                        background: 'none',
+                        border: 'none',
+                        borderBottom: activePaymentTab === 'custom_amount' ? '2px solid #2563eb' : 'none',
+                        color: activePaymentTab === 'custom_amount' ? '#2563eb' : '#6b7280',
+                        fontWeight: '600',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Generate Link with Custom Amount
                     </button>
                   </div>
 
@@ -5169,6 +5160,68 @@ const ClientManagement = () => {
                       ) : (
                         <div style={{ padding: '20px', textAlign: 'center', background: '#f9fafb', borderRadius: '8px' }}>
                           <p style={{ color: '#6b7280' }}>Generate a secure link to share with the client.</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Tab: Generate Link with Custom Amount */}
+                  {activePaymentTab === 'custom_amount' && (
+                    <div className="payment-tab-content">
+                      <div className="form-group modal-form-full-width" style={{ textAlign: 'left', marginBottom: '15px' }}>
+                        <label htmlFor="paymentAmount" className="form-label" style={{ fontWeight: '600', color: '#374151' }}>Amount *</label>
+                        <div className="amount-input-wrapper">
+                          <span className="amount-prefix">INR</span>
+                          <input
+                            type="number"
+                            id="paymentAmount"
+                            name="amount"
+                            className="form-input"
+                            placeholder="0.00"
+                            value={paymentDetails.amount}
+                            onChange={handlePaymentDetailsChange}
+                            step="1"
+                            min="1"
+                            disabled={!!generatedPaymentLink}
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div className="form-group modal-form-full-width" style={{ textAlign: 'left', marginBottom: '20px' }}>
+                        <label htmlFor="paymentDescription" className="form-label" style={{ fontWeight: '600', color: '#374151' }}>Description *</label>
+                        <input
+                          type="text"
+                          id="paymentDescription"
+                          name="description"
+                          className="form-input"
+                          placeholder="e.g., Service charges, Consultation fee"
+                          value={paymentDetails.description}
+                          onChange={handlePaymentDetailsChange}
+                          disabled={!!generatedPaymentLink}
+                          required
+                        />
+                      </div>
+
+                      {generatedPaymentLink ? (
+                        <div className="generated-link-section">
+                          <div className="generated-link-header">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2ZM16.7071 9.29289C17.0976 8.90237 17.0976 8.26921 16.7071 7.87869C16.3166 7.48816 15.6834 7.48816 15.2929 7.87869L10.5 12.6716L8.70711 10.8787C8.31658 10.4882 7.68342 10.4882 7.29289 10.8787C6.90237 11.2692 6.90237 11.9024 7.29289 12.2929L9.87869 14.8787C10.2692 15.2692 10.9024 15.2692 11.2929 14.8787L16.7071 9.46447V9.29289Z" />
+                            </svg>
+                            Payment Link for Custom Amount Generated:
+                          </div>
+                          <div className="generated-link-input-group">
+                            <input type="text" className="generated-link-input" value={generatedPaymentLink} readOnly />
+                            <div className="generated-link-actions">
+                              <button type="button" className="generated-link-action-btn" onClick={handleCopyLink}>Copy</button>
+                              <button type="button" className="generated-link-action-btn" onClick={handleSendEmail}>Email</button>
+                              <button type="button" className="generated-link-action-btn" onClick={handlePreviewLink}>Preview</button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ padding: '20px', textAlign: 'center', background: '#f9fafb', borderRadius: '8px' }}>
+                          <p style={{ color: '#6b7280' }}>Generate a dynamic payment link with custom SDK options for the client.</p>
                         </div>
                       )}
                     </div>
