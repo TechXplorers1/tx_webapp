@@ -11,6 +11,24 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const normalizeRoles = (roles) => {
+    if (!roles) return [];
+    if (typeof roles === 'string') {
+      return roles
+        .split(',')
+        .map((role) => role.trim().toLowerCase())
+        .filter(Boolean);
+    }
+
+    if (Array.isArray(roles)) {
+      return roles
+        .map((role) => typeof role === 'string' ? role.trim().toLowerCase() : '')
+        .filter(Boolean);
+    }
+
+    return [];
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
@@ -24,14 +42,14 @@ export const AuthProvider = ({ children }) => {
 
           if (snapshot.exists()) {
             const data = snapshot.val();
-            roles = data.roles || ['client'];
+            roles = normalizeRoles(data.roles || data.role || ['client']);
             additionalData = data;
           }
 
           setUser({
             uid: firebaseUser.uid,
             email: firebaseUser.email,
-            roles: roles,
+            roles,
             firebaseKey: firebaseUser.uid,
             ...additionalData,
           });

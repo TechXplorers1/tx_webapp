@@ -3,6 +3,24 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { Spinner, Container } from 'react-bootstrap';
 
+const normalizeRoles = (roles) => {
+    if (!roles) return [];
+    if (typeof roles === 'string') {
+        return roles
+            .split(',')
+            .map((role) => role.trim().toLowerCase())
+            .filter(Boolean);
+    }
+
+    if (Array.isArray(roles)) {
+        return roles
+            .map((role) => typeof role === 'string' ? role.trim().toLowerCase() : '')
+            .filter(Boolean);
+    }
+
+    return [];
+};
+
 const ProtectedRoute = ({ children, allowedRoles }) => {
     const { user, loading, isLoggedIn } = useAuth();
     const location = useLocation();
@@ -22,11 +40,10 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
         return <Navigate to="/login" state={{ from: location }} replace />;
     }
 
-    // Safely get roles as an array even if stored as a string
-    const userRoles = Array.isArray(user?.roles) ? user.roles : (user?.roles ? [user.roles] : []);
+    const userRoles = normalizeRoles(user?.roles);
+    const allowed = normalizeRoles(allowedRoles);
 
-    // Check if the user's roles are allowed for this route
-    const isAuthorized = user && userRoles.some((role) => allowedRoles.includes(role));
+    const isAuthorized = user && userRoles.some((role) => allowed.includes(role));
 
     if (!isAuthorized) {
         // If logged in but not authorized, redirect to unauthorized page

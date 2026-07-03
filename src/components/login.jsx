@@ -80,8 +80,27 @@ export default function LoginPage() {
           `https://placehold.co/40x40/007bff/white?text=${email.charAt(0).toUpperCase()}`,
       };
 
+      const normalizeRoles = (roles) => {
+        if (!roles) return [];
+        if (typeof roles === 'string') {
+          return roles
+            .split(',')
+            .map((role) => role.trim().toLowerCase())
+            .filter(Boolean);
+        }
+        if (Array.isArray(roles)) {
+          return roles
+            .map((role) => typeof role === 'string' ? role.trim().toLowerCase() : '')
+            .filter(Boolean);
+        }
+        return [];
+      };
+
+      const existingRoles = normalizeRoles(userDataFromDb.roles || userDataFromDb.role || []);
+      finalUserData.roles = existingRoles.length > 0 ? existingRoles : [isAllowlistedAdmin ? 'admin' : 'client'];
+
       // If the email is in the allowlist but DB doesn't yet include 'admin', persist it.
-      if (isAllowlistedAdmin && !Array.isArray(finalUserData.roles || []).includes('admin')) {
+      if (isAllowlistedAdmin && !finalUserData.roles.includes('admin')) {
         const newRoles = Array.from(new Set([...(finalUserData.roles || []), 'admin']));
         finalUserData.roles = newRoles;
         try {
@@ -90,7 +109,6 @@ export default function LoginPage() {
           console.error('Failed to persist admin role for allowlisted email:', e);
         }
       }
-
 
       sessionStorage.setItem('loggedInClient', JSON.stringify(finalUserData));
       // ✅ Cache in sessionStorage and context
