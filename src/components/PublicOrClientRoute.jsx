@@ -3,6 +3,27 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { Spinner, Container } from 'react-bootstrap';
 
+const normalizeRoles = (roles) => {
+    if (!roles) return [];
+    if (typeof roles === 'string') {
+        return roles
+            .split(',')
+            .map((role) => role.trim().toLowerCase())
+            .filter(Boolean);
+    }
+    if (Array.isArray(roles)) {
+        return roles
+            .map((role) => typeof role === 'string' ? role.trim().toLowerCase() : '')
+            .filter(Boolean);
+    }
+    if (typeof roles === 'object') {
+        return Object.values(roles)
+            .flatMap((role) => normalizeRoles(role))
+            .filter(Boolean);
+    }
+    return [];
+};
+
 const PublicOrClientRoute = ({ children }) => {
     const { user, loading, isLoggedIn } = useAuth();
 
@@ -16,16 +37,12 @@ const PublicOrClientRoute = ({ children }) => {
     }
 
     if (isLoggedIn) {
-        // Safely get roles as an array even if stored as a string
-        const userRoles = Array.isArray(user?.roles) ? user.roles : (user?.roles ? [user.roles] : []);
-        
-        // If the user is logged in but NOT a client, deny access
+        const userRoles = normalizeRoles(user?.roles);
         if (!userRoles.includes('client')) {
             return <Navigate to="/unauthorized" replace />;
         }
     }
 
-    // If not logged in, or logged in as client, allow access
     return children;
 };
 

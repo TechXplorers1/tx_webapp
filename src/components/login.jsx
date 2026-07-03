@@ -93,6 +93,11 @@ export default function LoginPage() {
             .map((role) => typeof role === 'string' ? role.trim().toLowerCase() : '')
             .filter(Boolean);
         }
+        if (typeof roles === 'object') {
+          return Object.values(roles)
+            .flatMap((role) => normalizeRoles(role))
+            .filter(Boolean);
+        }
         return [];
       };
 

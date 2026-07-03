@@ -26,6 +26,12 @@ export const AuthProvider = ({ children }) => {
         .filter(Boolean);
     }
 
+    if (typeof roles === 'object') {
+      return Object.values(roles)
+        .flatMap((role) => normalizeRoles(role))
+        .filter(Boolean);
+    }
+
     return [];
   };
 
