@@ -4,6 +4,7 @@ import { Modal, Button, Spinner } from 'react-bootstrap';
 import { database } from '../../firebase'; // Import your Firebase config
 import { ref, push, set, update } from "firebase/database";
 import { useAuth } from '../../components/AuthContext';
+import { useRazorpay } from 'react-razorpay';
 
 const ServicesForm = () => {
     const location = useLocation();
@@ -20,6 +21,10 @@ const ServicesForm = () => {
         selectedServices: [],
         userType: '',
     });
+    const [paymentAmount, setPaymentAmount] = useState('');
+    const [paymentError, setPaymentError] = useState('');
+    const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+    const [paymentSuccess, setPaymentSuccess] = useState(false);
 
     const [readOnlyService, setReadOnlyService] = useState('');
 
@@ -47,6 +52,8 @@ const ServicesForm = () => {
         });
     };
 
+    const { Razorpay, isLoading: isRazorpayLoading, error: razorpayError } = useRazorpay();
+
     const handleUserTypeChange = (userType) => {
         setFormData((prevData) => ({
             ...prevData,
@@ -54,24 +61,93 @@ const ServicesForm = () => {
         }));
     };
 
+    const createRazorpayOrder = async (amount) => {
+        const baseUrl = import.meta.env.VITE_FUNCTION_BASE_URL;
+        if (!baseUrl) {
+            throw new Error('Payment service is not configured. Please set VITE_FUNCTION_BASE_URL in your .env file.');
+        }
+
+        const response = await fetch(`${baseUrl}/createPaymentOrder`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ amount: Number(amount) }),
+        });
+
+        if (!response.ok) {
+            const body = await response.json().catch(() => ({}));
+            throw new Error(body.error || `Failed to create payment order (${response.status})`);
+        }
+
+        return response.json();
+    };
+
+    const openRazorpayCheckout = (order) => {
+        return new Promise((resolve, reject) => {
+            if (!Razorpay) {
+                return reject(new Error('Razorpay SDK is not loaded yet.'));
+            }
+
+            const options = {
+                key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+                amount: order.amount,
+                currency: order.currency,
+                name: 'TechXplorers',
+                description: `Payment for ${readOnlyService}`,
+                order_id: order.id,
+                handler: function (response) {
+                    resolve(response);
+                },
+                prefill: {
+                    name: `${formData.firstName || ''} ${formData.lastName || ''}`.trim(),
+                    email: formData.email || '',
+                    contact: formData.mobile || '',
+                },
+                theme: {
+                    color: '#0d6efd',
+                },
+                modal: {
+                    ondismiss: function () {
+                        reject(new Error('Payment checkout was closed before completion.'));
+                    },
+                },
+            };
+
+            const rzp = new Razorpay(options);
+            rzp.on('payment.failed', function (response) {
+                reject(new Error(response.error.description || 'Payment failed.'));
+            });
+            rzp.open();
+        });
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-         setIsLoading(true);
-        
+        if (!paymentAmount || Number(paymentAmount) <= 0) {
+            setPaymentError('Please enter a valid payment amount in INR.');
+            return;
+        }
+
+        setPaymentError('');
+        setIsLoading(true);
+        setIsProcessingPayment(true);
+
         const newServiceRegistration = {
             service: readOnlyService,
             subServices: formData.selectedServices,
             userType: formData.userType,
-            firstName: formData.firstName, // Keep name for context
-            lastName: formData.lastName,   // Keep name for context
+            firstName: formData.firstName,
+            lastName: formData.lastName,
             registeredDate: new Date().toISOString().split('T')[0],
             assignmentStatus: 'registered',
             assignedManager: '',
             paymentStatus: 'Pending',
-            country: 'N/A', // Default value
+            country: 'N/A',
         };
-          const clientProfileUpdate = {
+
+        const clientProfileUpdate = {
             firstName: formData.firstName,
             lastName: formData.lastName,
             mobile: formData.mobile,
@@ -79,30 +155,53 @@ const ServicesForm = () => {
 
         try {
             if (!user || !user.firebaseKey) {
-                throw new Error("You must be logged in to submit this form.");
+                throw new Error('You must be logged in to submit this form.');
             }
 
-            // 1. Create a new, unique entry under the client's "serviceRegistrations"
-            const newRegistrationRef = push(ref(database, `clients/${user.firebaseKey}/serviceRegistrations`));
-            await set(newRegistrationRef, newServiceRegistration);
+            if (isRazorpayLoading) {
+                throw new Error('Razorpay SDK is still loading. Please wait a moment and try again.');
+            }
+            if (razorpayError) {
+                throw new Error('Unable to initialize Razorpay. ' + razorpayError.message);
+            }
 
-            // 2. Update the main client profile with the latest contact info
+            const order = await createRazorpayOrder(paymentAmount);
+            const paymentResponse = await openRazorpayCheckout(order);
+
+            const paymentDetails = {
+                amount: Number(paymentAmount).toFixed(2),
+                status: 'paid',
+                transactionId: paymentResponse.razorpay_payment_id,
+                orderId: paymentResponse.razorpay_order_id || null,
+                signature: paymentResponse.razorpay_signature || null,
+                createdAt: new Date().toISOString(),
+            };
+
+            const registrationData = {
+                ...newServiceRegistration,
+                paymentStatus: 'Paid',
+                paymentDetails,
+            };
+
+            const newRegistrationRef = push(ref(database, `clients/${user.firebaseKey}/serviceRegistrations`));
+            await set(newRegistrationRef, registrationData);
+
             const clientProfileRef = ref(database, `clients/${user.firebaseKey}`);
             await update(clientProfileRef, clientProfileUpdate);
 
-            console.log('New service registration saved to Firebase successfully.');
+            setPaymentSuccess(true);
             setShowSuccessModal(true);
             setTimeout(() => {
                 setShowSuccessModal(false);
-                navigate("/");
+                navigate('/');
             }, 3000);
-
         } catch (error) {
-            console.error("Failed to save to Firebase", error);
-            alert("Submission failed. Please try again.");
-        }finally {
-            // MODIFICATION: Set loading to false when submission is complete (or fails)
+            console.error('Payment or submission failed:', error);
+            setPaymentError(error.message || 'Payment failed. Please try again.');
+            alert(error.message || 'Submission failed. Please try again.');
+        } finally {
             setIsLoading(false);
+            setIsProcessingPayment(false);
         }
     };
 
@@ -207,14 +306,36 @@ return (
                         </div>
                     </div>
 
+                    <div className="form-group-modern">
+                        <label htmlFor="paymentAmount" className="form-label-modern">Payment Amount (INR) <span style={{color: 'red'}}>*</span></label>
+                        <input
+                            type="number"
+                            step="0.01"
+                            min="1"
+                            id="paymentAmount"
+                            name="paymentAmount"
+                            value={paymentAmount}
+                            onChange={(e) => setPaymentAmount(e.target.value)}
+                            className="form-control-modern"
+                            placeholder="Enter amount to pay"
+                            required
+                        />
+                    </div>
+
+                    {paymentError && (
+                        <div style={{ color: '#b91c1c', fontSize: '0.95rem', marginBottom: '16px' }}>
+                            {paymentError}
+                        </div>
+                    )}
+
                     <div>
-                        <button type="submit" className="submit-button-modern" disabled={isLoading}>
-                            {isLoading ? (
+                        <button type="submit" className="submit-button-modern" disabled={isLoading || isProcessingPayment}>
+                            {isLoading || isProcessingPayment ? (
                                 <>
                                     <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
-                                    <span style={{ marginLeft: '8px' }}>Submitting...</span>
+                                    <span style={{ marginLeft: '8px' }}>Processing Payment...</span>
                                 </>
-                            ) : 'Submit'}
+                            ) : 'Pay & Submit'}
                         </button>
                     </div>
                 </form>

@@ -1054,7 +1054,7 @@ const ClientPaymentModal = ({ paymentDetails, onClose, onPayNow, onConfirmPaid, 
               Amount Due
             </span>
             <h2 style={{ fontSize: '2.5rem', fontWeight: '800', color: '#10b981', margin: '8px 0 0 0' }}>
-              ₹{paymentDetails.amount}
+              {formatAmount(paymentDetails.amount, paymentDetails.currency)}
             </h2>
           </div>
         )}
@@ -3015,6 +3015,26 @@ const WorksheetView = ({ setActiveTab, activeWorksheetTab, setActiveWorksheetTab
 
 
 // --- ClientDashboard Main Component ---
+const currencySymbol = (currency) => {
+  switch ((currency || 'INR').toUpperCase()) {
+    case 'USD': return '$';
+    case 'EUR': return '€';
+    case 'GBP': return '£';
+    case 'AUD': return 'A$';
+    case 'CAD': return 'C$';
+    case 'AED': return 'د.إ';
+    case 'INR': return '₹';
+    default: return currency || '';
+  }
+};
+
+const formatAmount = (amount, currency) => {
+  if (!amount) return '';
+  const numeric = Number(amount);
+  if (Number.isNaN(numeric)) return amount;
+  return `${currencySymbol(currency)}${numeric.toFixed(2)}`;
+};
+
 const ClientDashboard = () => {
   const navigate = useNavigate();
 
@@ -3625,8 +3645,8 @@ const ClientDashboard = () => {
       // Open Razorpay Checkout directly using Key ID (bypassing backend order creation)
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-        amount: Math.round(Number(clientData.paymentDetails.amount) * 100), // Convert to paise
-        currency: "INR",
+        amount: Math.round(Number(clientData.paymentDetails.amount) * 100),
+        currency: clientData.paymentDetails.currency || "INR",
         name: "TechXplorers",
         description: clientData.paymentDetails.description,
         handler: async function (rzpResponse) {
@@ -7152,7 +7172,7 @@ background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 2
                               Pending Payment Request
                             </h4>
                             <p style={{ margin: 0, color: '#92400e', fontSize: '0.95rem' }}>
-                              You have a pending payment request of <strong>₹{clientData.paymentDetails.amount}</strong> for: <em>{clientData.paymentDetails.description}</em>
+                              You have a pending payment request of <strong>{formatAmount(clientData.paymentDetails.amount, clientData.paymentDetails.currency)}</strong> for: <em>{clientData.paymentDetails.description}</em>
                             </p>
                           </div>
                         </div>

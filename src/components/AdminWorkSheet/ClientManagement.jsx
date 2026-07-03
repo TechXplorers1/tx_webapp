@@ -127,6 +127,7 @@ const ClientManagement = () => {
     amount: '',
     description: '',
     transactionDate: '',
+    currency: 'INR',
   });
   const [generatedPaymentLink, setGeneratedPaymentLink] = useState('');
   const [isManagerModalOpen, setIsManagerModalOpen] = useState(false);
@@ -468,13 +469,28 @@ const ClientManagement = () => {
   };
 
 
+  const currencyByCountry = (country) => {
+    if (!country || typeof country !== 'string') return 'INR';
+    const normalized = country.toLowerCase();
+    if (normalized.includes('india')) return 'INR';
+    if (normalized.includes('united states') || normalized === 'usa' || normalized === 'us') return 'USD';
+    if (normalized.includes('canada')) return 'CAD';
+    if (normalized.includes('australia')) return 'AUD';
+    if (normalized.includes('europe') || normalized.includes('germany') || normalized.includes('france') || normalized.includes('spain') || normalized.includes('italy') || normalized.includes('netherlands') || normalized.includes('belgium')) return 'EUR';
+    if (normalized.includes('united kingdom') || normalized === 'uk' || normalized.includes('britain')) return 'GBP';
+    if (normalized.includes('united arab emirates') || normalized === 'uae') return 'AED';
+    return 'INR';
+  };
+
   const handleOpenPaymentModal = (client) => {
     setSelectedClientForPayment(client);
+    const initialCurrency = client.paymentDetails?.currency || currencyByCountry(client?.country);
     if (client.paymentDetails) {
       setPaymentDetails({
         amount: client.paymentDetails.amount || '',
         description: client.paymentDetails.description || '',
         transactionDate: client.paymentDetails.createdAt ? client.paymentDetails.createdAt.slice(0, 10) : new Date().toISOString().slice(0, 10),
+        currency: initialCurrency,
       });
       if (client.paymentDetails.status === 'pending' && client.paymentDetails.link) {
         setGeneratedPaymentLink(client.paymentDetails.link);
@@ -487,6 +503,7 @@ const ClientManagement = () => {
         amount: '',
         description: '',
         transactionDate: new Date().toISOString().slice(0, 10),
+        currency: initialCurrency,
       });
       setGeneratedPaymentLink('');
       setActivePaymentTab('link');
@@ -548,6 +565,29 @@ const ClientManagement = () => {
     }));
   };
 
+  const currencySymbol = (currency) => {
+    switch ((currency || '').toUpperCase()) {
+      case 'USD': return '$';
+      case 'EUR': return '€';
+      case 'GBP': return '£';
+      case 'AUD': return 'A$';
+      case 'CAD': return 'C$';
+      case 'AED': return 'د.إ';
+      case 'INR': return '₹';
+      default: return currency || '';
+    }
+  };
+
+  const currencyOptions = [
+    { code: 'INR', label: 'Indian Rupee (₹)' },
+    { code: 'USD', label: 'US Dollar ($)' },
+    { code: 'EUR', label: 'Euro (€)' },
+    { code: 'GBP', label: 'British Pound (£)' },
+    { code: 'AUD', label: 'Australian Dollar (A$)' },
+    { code: 'CAD', label: 'Canadian Dollar (C$)' },
+    { code: 'AED', label: 'Dirham (د.إ)' },
+  ];
+
 
   // New helper functions to manage the educationDetails array in state
   const handleAddEducationEntry = () => {
@@ -582,8 +622,8 @@ const ClientManagement = () => {
 
   const handleGeneratePaymentLink = async () => {
     const isCustom = activePaymentTab === 'custom_amount';
-    if (isCustom && (!paymentDetails.amount || !paymentDetails.description)) {
-      alert('Please enter amount and description');
+    if (isCustom && !paymentDetails.amount) {
+      alert('Please enter an amount');
       return;
     }
 
@@ -599,6 +639,7 @@ const ClientManagement = () => {
 
     const paymentInfo = {
       amount: isCustom ? paymentDetails.amount : '',
+      currency: isCustom ? paymentDetails.currency : 'INR',
       description: isCustom ? paymentDetails.description : '',
       status: 'pending',
       link: payUrl,
@@ -651,8 +692,8 @@ const ClientManagement = () => {
       // Open Razorpay Checkout directly using Key ID (bypassing backend order creation)
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-        amount: Math.round(Number(paymentDetails.amount) * 100), // Convert to paise
-        currency: "INR",
+        amount: Math.round(Number(paymentDetails.amount) * 100),
+        currency: paymentDetails.currency || "INR",
         name: "TechXplorers",
         description: paymentDetails.description,
         handler: async function (response) {
@@ -5170,25 +5211,41 @@ const ClientManagement = () => {
                     <div className="payment-tab-content">
                       <div className="form-group modal-form-full-width" style={{ textAlign: 'left', marginBottom: '15px' }}>
                         <label htmlFor="paymentAmount" className="form-label" style={{ fontWeight: '600', color: '#374151' }}>Amount *</label>
-                        <div className="amount-input-wrapper">
-                          <span className="amount-prefix">INR</span>
-                          <input
-                            type="number"
-                            id="paymentAmount"
-                            name="amount"
+                        <div className="amount-input-wrapper" style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '10px', alignItems: 'center' }}>
+                          <select
+                            id="currency"
+                            name="currency"
                             className="form-input"
-                            placeholder="0.00"
-                            value={paymentDetails.amount}
+                            value={paymentDetails.currency}
                             onChange={handlePaymentDetailsChange}
-                            step="1"
-                            min="1"
                             disabled={!!generatedPaymentLink}
-                            required
-                          />
+                            style={{ maxWidth: '100%', padding: '0.75rem 0.9rem', borderRadius: '8px' }}
+                          >
+                            {currencyOptions.map((option) => (
+                              <option key={option.code} value={option.code}>{option.label}</option>
+                            ))}
+                          </select>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span className="amount-prefix" style={{ minWidth: '50px' }}>{currencySymbol(paymentDetails.currency)}</span>
+                            <input
+                              type="number"
+                              id="paymentAmount"
+                              name="amount"
+                              className="form-input"
+                              placeholder="0.00"
+                              value={paymentDetails.amount}
+                              onChange={handlePaymentDetailsChange}
+                              step="1"
+                              min="1"
+                              disabled={!!generatedPaymentLink}
+                              required
+                              style={{ width: '100%' }}
+                            />
+                          </div>
                         </div>
                       </div>
                       <div className="form-group modal-form-full-width" style={{ textAlign: 'left', marginBottom: '20px' }}>
-                        <label htmlFor="paymentDescription" className="form-label" style={{ fontWeight: '600', color: '#374151' }}>Description *</label>
+                        <label htmlFor="paymentDescription" className="form-label" style={{ fontWeight: '600', color: '#374151' }}>Description (optional)</label>
                         <input
                           type="text"
                           id="paymentDescription"
@@ -5198,7 +5255,6 @@ const ClientManagement = () => {
                           value={paymentDetails.description}
                           onChange={handlePaymentDetailsChange}
                           disabled={!!generatedPaymentLink}
-                          required
                         />
                       </div>
 
@@ -5229,7 +5285,7 @@ const ClientManagement = () => {
                 </div>
 
                 <div className="modal-footer modal-form-full-width">
-                  {selectedClientForPayment.paymentDetails && (
+                  {(selectedClientForPayment.paymentDetails || generatedPaymentLink) && (
                     <button
                       type="button"
                       onClick={handleCancelPaymentRequest}
