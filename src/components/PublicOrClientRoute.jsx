@@ -37,7 +37,7 @@ const PublicOrClientRoute = ({ children }) => {
     }
 
     if (isLoggedIn) {
-        const userRoles = normalizeRoles(user?.roles);
+        const userRoles = normalizeRoles(user?.roles || user?.role);
         if (!userRoles.includes('client')) {
             return <Navigate to="/unauthorized" replace />;
         }

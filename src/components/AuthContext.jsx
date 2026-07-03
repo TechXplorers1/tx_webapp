@@ -56,6 +56,7 @@ export const AuthProvider = ({ children }) => {
             uid: firebaseUser.uid,
             email: firebaseUser.email,
             roles,
+            role: roles[0] || 'client',
             firebaseKey: firebaseUser.uid,
             ...additionalData,
           });

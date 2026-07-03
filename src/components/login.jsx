@@ -115,10 +115,16 @@ export default function LoginPage() {
         }
       }
 
-      sessionStorage.setItem('loggedInClient', JSON.stringify(finalUserData));
+      const normalizedFinalUserData = {
+        ...finalUserData,
+        roles: finalUserData.roles,
+        role: finalUserData.roles[0] || (isAllowlistedAdmin ? 'admin' : 'client'),
+      };
+
+      sessionStorage.setItem('loggedInClient', JSON.stringify(normalizedFinalUserData));
       // ✅ Cache in sessionStorage and context
-      sessionStorage.setItem('loggedInEmployee', JSON.stringify(finalUserData));
-      login(finalUserData);
+      sessionStorage.setItem('loggedInEmployee', JSON.stringify(normalizedFinalUserData));
+      login(normalizedFinalUserData);
 
       // ✅ Map roles to routes (cleaner and faster)
       const roleRoutes = {

@@ -46,7 +46,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
         return <Navigate to="/login" state={{ from: location }} replace />;
     }
 
-    const userRoles = normalizeRoles(user?.roles);
+    const userRoles = normalizeRoles(user?.roles || user?.role);
     const allowed = normalizeRoles(allowedRoles);
 
     const isAuthorized = user && userRoles.some((role) => allowed.includes(role));
