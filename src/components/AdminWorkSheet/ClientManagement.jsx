@@ -128,6 +128,7 @@ const ClientManagement = () => {
     description: '',
     transactionDate: '',
     currency: 'INR',
+    status: '',
   });
   const [generatedPaymentLink, setGeneratedPaymentLink] = useState('');
   const [isManagerModalOpen, setIsManagerModalOpen] = useState(false);
@@ -484,6 +485,7 @@ const ClientManagement = () => {
 
   const handleOpenPaymentModal = (client) => {
     setSelectedClientForPayment(client);
+    setPaymentSuccess(false);
     const initialCurrency = client.paymentDetails?.currency || currencyByCountry(client?.country);
     if (client.paymentDetails) {
       setPaymentDetails({
@@ -491,6 +493,7 @@ const ClientManagement = () => {
         description: client.paymentDetails.description || '',
         transactionDate: client.paymentDetails.createdAt ? client.paymentDetails.createdAt.slice(0, 10) : new Date().toISOString().slice(0, 10),
         currency: initialCurrency,
+        status: client.paymentDetails.status || 'pending',
       });
       if (client.paymentDetails.status === 'pending' && client.paymentDetails.link) {
         setGeneratedPaymentLink(client.paymentDetails.link);
@@ -504,6 +507,7 @@ const ClientManagement = () => {
         description: '',
         transactionDate: new Date().toISOString().slice(0, 10),
         currency: initialCurrency,
+        status: 'pending',
       });
       setGeneratedPaymentLink('');
       setActivePaymentTab('link');
@@ -552,9 +556,12 @@ const ClientManagement = () => {
       amount: '',
       description: '',
       transactionDate: '',
+      currency: 'INR',
+      status: '',
     });
     setGeneratedPaymentLink('');
     setActivePaymentTab('link');
+    setPaymentSuccess(false);
   };
 
   const handlePaymentDetailsChange = (e) => {
@@ -728,6 +735,7 @@ const ClientManagement = () => {
                     : reg
                 )
               );
+              setPaymentDetails(prev => ({ ...prev, status: 'paid' }));
             } catch (error) {
               console.error('Failed to save payment status in database:', error);
             }
@@ -5120,11 +5128,11 @@ const ClientManagement = () => {
               <button className="modal-close-btn" onClick={handleClosePaymentModal}>&times;</button>
             </div>
 
-            {paymentSuccess ? (
+            {(paymentSuccess || paymentDetails.status === 'paid') ? (
               <div style={{ padding: '40px 20px', textAlign: 'center' }}>
                 <div style={{ fontSize: '4rem', marginBottom: '20px' }}>✅</div>
-                <h3>Payment Successful!</h3>
-                <p>Transaction has been processed.</p>
+                <h3>Payment Made Successful</h3>
+                <p>The client payment has been received and recorded.</p>
                 <button className="confirm-cancel-btn" onClick={handleClosePaymentModal} style={{ marginTop: '20px' }}>Close</button>
               </div>
             ) : (
