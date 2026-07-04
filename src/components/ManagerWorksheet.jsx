@@ -257,6 +257,7 @@ const ManagerWorkSheet = () => {
   const [filteredApplicationCount, setFilteredApplicationCount] = useState(0);
   const [selectedEmployeeDailyCount, setSelectedEmployeeDailyCount] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
+  const [isAssigning, setIsAssigning] = useState(false);
   const [originalClientData, setOriginalClientData] = useState(null);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -1615,6 +1616,8 @@ const ManagerWorkSheet = () => {
       priority: assignmentPriority,
     };
 
+    setIsAssigning(true);
+
     try {
       // 2. Update the main Client Record
       await update(registrationRef, updates);
@@ -1678,6 +1681,8 @@ const ManagerWorkSheet = () => {
     } catch (error) {
       console.error("Firebase update failed:", error);
       alert("Failed to assign client. Please try again.");
+    } finally {
+      setIsAssigning(false);
     }
   };
 
@@ -5762,8 +5767,17 @@ Please provide a summary no longer than 150 words.`;
             </div>
             <div style={{ flex: 1 }}>
               <div className="assign-form-actions">
-                <button className="assign-form-button cancel" onClick={closeAssignClientModal}>Cancel</button>
-                <button className="assign-form-button assign" onClick={handleAssignmentSubmit}>Confirm Assignment</button>
+                <button className="assign-form-button cancel" onClick={closeAssignClientModal} disabled={isAssigning}>Cancel</button>
+                <button className="assign-form-button assign" onClick={handleAssignmentSubmit} disabled={isAssigning}>
+                  {isAssigning ? (
+                    <>
+                      <i className="fas fa-spinner fa-spin" style={{ marginRight: '8px' }}></i>
+                      Assigning...
+                    </>
+                  ) : (
+                    'Confirm Assignment'
+                  )}
+                </button>
               </div>
             </div>
           </div>
@@ -6197,11 +6211,18 @@ Please provide a summary no longer than 150 words.`;
             </div>
 
             <div className="assign-form-actions">
-              <button className="assign-form-button cancel" onClick={closeReassignClientModal}>
+              <button className="assign-form-button cancel" onClick={closeReassignClientModal} disabled={isAssigning}>
                 Cancel
               </button>
-              <button className="assign-form-button assign" onClick={handleAssignmentSubmit}>
-                Reassign Client
+              <button className="assign-form-button assign" onClick={handleAssignmentSubmit} disabled={isAssigning}>
+                {isAssigning ? (
+                  <>
+                    <i className="fas fa-spinner fa-spin" style={{ marginRight: '8px' }}></i>
+                    Reassigning...
+                  </>
+                ) : (
+                  'Reassign Client'
+                )}
               </button>
             </div>
           </div>
