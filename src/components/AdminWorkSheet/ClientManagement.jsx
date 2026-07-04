@@ -1306,8 +1306,17 @@ const ClientManagement = () => {
       const updatePayload = {};
       const indexKey = `service_registrations_index/${currentClientToEdit.clientFirebaseKey}_${currentClientToEdit.registrationKey}`;
 
-      // 1. Update Registration Node
-      updatePayload[`clients/${currentClientToEdit.clientFirebaseKey}/serviceRegistrations/${currentClientToEdit.registrationKey}`] = registrationUpdates;
+      // 1. Update Registration Node - Update individual fields only to prevent deleting unedited nodes (like jobApplications or files)
+      const regPath = `clients/${currentClientToEdit.clientFirebaseKey}/serviceRegistrations/${currentClientToEdit.registrationKey}`;
+      updatePayload[`${regPath}/firstName`] = firstName || '';
+      updatePayload[`${regPath}/lastName`] = lastName || '';
+      updatePayload[`${regPath}/email`] = email || '';
+      updatePayload[`${regPath}/mobile`] = mobile || '';
+
+      Object.entries(registrationUpdates).forEach(([key, val]) => {
+        if (key === 'clientFirebaseKey' || key === 'registrationKey' || val === undefined) return;
+        updatePayload[`${regPath}/${key}`] = val;
+      });
 
       // 2. Update Client Profile Node
       updatePayload[`clients/${currentClientToEdit.clientFirebaseKey}/firstName`] = firstName;
@@ -1327,6 +1336,27 @@ const ClientManagement = () => {
       if (registrationUpdates.visaStatus) updatePayload[`${indexKey}/visaStatus`] = registrationUpdates.visaStatus;
 
       await update(ref(database), updatePayload);
+
+      // Update local state immediately so UI updates
+      setServiceRegistrations(prev =>
+        prev.map(reg =>
+          reg.registrationKey === currentClientToEdit.registrationKey && reg.clientFirebaseKey === currentClientToEdit.clientFirebaseKey
+            ? {
+              ...reg,
+              ...updates,
+            }
+            : reg
+        )
+      );
+
+      // Clear local IndexedDB caches to flush stale entries
+      try {
+        await dbSet(CLIENT_MGMT_CACHE_KEY, null);
+        await dbSet('cache_clients_full', null);
+        await dbSet(`cache_client_data_${currentClientToEdit.clientFirebaseKey}`, null);
+      } catch (cacheErr) {
+        console.warn("Failed to clear local caches after saving client details:", cacheErr);
+      }
 
       handleCloseEditClientModal();
       setShowSuccessModal(true);

@@ -650,31 +650,41 @@ const EmployeeData = () => {
         const assignments = assignmentsSnapshot.val();
         const promises = [];
 
-        // B. Fetch ONLY the specific client records needed (Parallel Fetch)
+        // B. Fetch the client node to get both root info (firstName, lastName, email, mobile) and the specific registration (Parallel Fetch)
         Object.values(assignments).forEach(assignment => {
-          const specificClientRef = ref(database, `clients/${assignment.clientFirebaseKey}/serviceRegistrations/${assignment.registrationKey}`);
+          const clientRef = ref(database, `clients/${assignment.clientFirebaseKey}`);
 
-          promises.push(get(specificClientRef).then(snap => {
+          promises.push(get(clientRef).then(snap => {
             if (snap.exists()) {
-              const registration = snap.val();
+              const clientData = snap.val();
+              const registration = clientData.serviceRegistrations?.[assignment.registrationKey];
 
-              // Flatten jobApplications
-              const jobApplicationsArray = registration.jobApplications
-                ? Object.values(registration.jobApplications)
-                : [];
+              if (registration) {
+                // Flatten jobApplications
+                const jobApplicationsArray = registration.jobApplications
+                  ? Object.values(registration.jobApplications)
+                  : [];
 
-              // Reconstruct the data structure the UI expects
-              return {
-                ...registration,
-                jobApplications: jobApplicationsArray,
-                clientFirebaseKey: assignment.clientFirebaseKey,
-                registrationKey: assignment.registrationKey,
-                // Ensure names and initials are generated correctly
-                firstName: registration.firstName,
-                lastName: registration.lastName,
-                name: `${(registration.firstName || '')} ${(registration.lastName || '')}`.trim(),
-                initials: `${(registration.firstName || 'C').charAt(0)}${(registration.lastName || 'L').charAt(0)}`
-              };
+                const firstName = registration.firstName || clientData.firstName || '';
+                const lastName = registration.lastName || clientData.lastName || '';
+                const email = registration.email || clientData.email || '';
+                const mobile = registration.mobile || clientData.mobile || '';
+
+                // Reconstruct the data structure the UI expects
+                return {
+                  ...registration,
+                  jobApplications: jobApplicationsArray,
+                  clientFirebaseKey: assignment.clientFirebaseKey,
+                  registrationKey: assignment.registrationKey,
+                  // Ensure names, initials, email, and mobile are resolved correctly
+                  firstName: firstName,
+                  lastName: lastName,
+                  email: email,
+                  mobile: mobile,
+                  name: `${firstName} ${lastName}`.trim(),
+                  initials: `${(firstName || 'C').charAt(0)}${(lastName || 'L').charAt(0)}`
+                };
+              }
             }
             return null;
           }));

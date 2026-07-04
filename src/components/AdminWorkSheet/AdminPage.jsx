@@ -235,6 +235,11 @@ const AdminPage = () => {
             const reg = client.serviceRegistrations[regKey];
             const indexKey = `${clientKey}_${regKey}`; // Unique ID for the index
 
+            const regFirstName = reg.firstName || client.firstName || '';
+            const regLastName = reg.lastName || client.lastName || '';
+            const regEmail = reg.email || client.email || '';
+            const regMobile = reg.mobile || client.mobile || '';
+
             // Create a lightweight object for the list
             // We include ALL fields used for Filtering and Display in the main table
             indexUpdates[`service_registrations_index/${indexKey}`] = {
@@ -242,14 +247,14 @@ const AdminPage = () => {
               registrationKey: regKey,
 
               // Basic Info
-              firstName: reg.firstName || client.firstName || '',
+              firstName: regFirstName,
               middleName: reg.middleName || client.middleName || '',
-              lastName: reg.lastName || client.lastName || '',
+              lastName: regLastName,
               dob: reg.dob || reg.dateOfBirth || client.dob || client.dateOfBirth || '',
               gender: reg.gender || client.gender || '',
               ethnicity: reg.ethnicity || client.ethnicity || '',
-              mobile: reg.mobile || client.mobile || '',
-              email: reg.email || client.email || '',
+              mobile: regMobile,
+              email: regEmail,
 
               // Address
               address: reg.address || client.address || '',
@@ -312,10 +317,43 @@ const AdminPage = () => {
               manager: reg.manager || null,
               assignedManager: reg.assignedManager || null,
             };
+
+            // ALSO repair the original registration node if it's missing these fields!
+            if (!reg.firstName || !reg.lastName) {
+              indexUpdates[`clients/${clientKey}/serviceRegistrations/${regKey}/firstName`] = regFirstName;
+              indexUpdates[`clients/${clientKey}/serviceRegistrations/${regKey}/lastName`] = regLastName;
+              indexUpdates[`clients/${clientKey}/serviceRegistrations/${regKey}/email`] = regEmail;
+              indexUpdates[`clients/${clientKey}/serviceRegistrations/${regKey}/mobile`] = regMobile;
+            }
+
             count++;
           });
         }
       });
+
+      // 2C. NEW: Scan and repair assignedTo for registrations from employee_assignments
+      const employeeAssignmentsSnap = await get(ref(database, 'employee_assignments'));
+      if (employeeAssignmentsSnap.exists()) {
+        const employeeAssignments = employeeAssignmentsSnap.val();
+        Object.entries(employeeAssignments).forEach(([employeeKey, assignmentsObj]) => {
+          if (assignmentsObj) {
+            Object.values(assignmentsObj).forEach(assignment => {
+              if (assignment && assignment.clientFirebaseKey && assignment.registrationKey) {
+                const clientKey = assignment.clientFirebaseKey;
+                const regKey = assignment.registrationKey;
+                const clientNode = allClients[clientKey];
+                const regNode = clientNode?.serviceRegistrations?.[regKey];
+
+                // If the registration exists in database but has no assignedTo field, restore it!
+                if (regNode && !regNode.assignedTo) {
+                  indexUpdates[`clients/${clientKey}/serviceRegistrations/${regKey}/assignedTo`] = employeeKey;
+                  console.log(`[Repair] Restored assignedTo for client ${clientKey}/${regKey} to employee ${employeeKey}`);
+                }
+              }
+            });
+          }
+        });
+      }
 
       // 2B. NEW: Create Master Employee Index (to avoid fetching all users)
       const allUsersSnap = await get(ref(database, 'users'));

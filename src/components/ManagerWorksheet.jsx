@@ -1169,7 +1169,14 @@ const ManagerWorkSheet = () => {
       startDate = '';
       endDate = '';
     }
-    setFilterDateRange({ startDate, endDate });
+    
+    if (activeTab === 'Applications') {
+      setApplicationFilterDateRange({ startDate, endDate });
+    } else if (activeTab === 'Interviews') {
+      setInterviewFilterDateRange({ startDate, endDate });
+    } else {
+      setFilterDateRange({ startDate, endDate });
+    }
     setQuickFilter(filterType);
   };
 
@@ -1867,7 +1874,17 @@ const ManagerWorkSheet = () => {
     const todayStr = getTodayISTDate();
     const seenKeys = new Set();
 
+    // Map active and inactive client keys for fast lookup
+    const activeKeys = new Set((assignedClients || []).map(c => c.clientFirebaseKey).filter(Boolean));
+    const inactiveKeys = new Set((inactiveAssignedClients || []).map(c => c.clientFirebaseKey).filter(Boolean));
+
     const filtered = applicationData.filter(app => {
+      // Filter by client status (active vs inactive)
+      const isClientActive = activeKeys.has(app.clientFirebaseKey);
+      const isClientInactive = inactiveKeys.has(app.clientFirebaseKey);
+      if (clientStatusFilter === 'active' && !isClientActive) return false;
+      if (clientStatusFilter === 'inactive' && !isClientInactive) return false;
+
       const employee = employeeMap.get(app.assignedTo);
       const employeeName = employee ? `${employee.firstName} ${employee.lastName}` : '';
 
@@ -1887,8 +1904,7 @@ const ManagerWorkSheet = () => {
         if (!appDate) return false;
         matchesDateRange = (!startDate || appDate >= startDate) && (!endDate || appDate <= endDate);
       } else {
-        const appDateStr = getApplicationISTDate(app);
-        matchesDateRange = (appDateStr === todayStr);
+        matchesDateRange = true; // Show all by default when no filter is active
       }
 
       if (!matchesSearch || !matchesEmployee || !matchesClient || !matchesDateRange) {
@@ -1924,7 +1940,7 @@ const ManagerWorkSheet = () => {
     });
 
     return filtered;
-  }, [applicationData, applicationSearchQuery, applicationFilterEmployee, applicationFilterClient, applicationFilterDateRange, sortOrder, allEmployees, activeTab, isChunkingApplications]);
+  }, [applicationData, applicationSearchQuery, applicationFilterEmployee, applicationFilterClient, applicationFilterDateRange, sortOrder, allEmployees, activeTab, isChunkingApplications, clientStatusFilter, assignedClients, inactiveAssignedClients]);
 
 
   // Add this useMemo hook within the ManagerWorkSheet component
@@ -7683,9 +7699,10 @@ const ApplicationsTab = ({
         const group = groupedByClient[clientName];
         const employee = employeeMap.get(group.employeeKey);
 
-        if (!employee) return;
-
-        const employeeName = `${employee.firstName || ''} ${employee.lastName || ''}`.trim();
+        // Fallback to employee name if available, or placeholder if employee lookup fails (e.g. inactive or missing)
+        const employeeName = employee 
+          ? `${employee.firstName || ''} ${employee.lastName || ''}`.trim() 
+          : (group.employeeKey ? `Employee (${group.employeeKey.substring(0, 6)})` : 'Unassigned');
 
         // derive a representative applied date (latest)
         const latestApp = [...group.apps].sort((a, b) => {
@@ -7695,8 +7712,8 @@ const ApplicationsTab = ({
         })[0];
 
         result.push({
-          key: `${group.employeeKey}-${clientName}`,
-          employeeKey: group.employeeKey,
+          key: `${group.employeeKey || 'unassigned'}-${clientName}`,
+          employeeKey: group.employeeKey || '',
           employeeName,
           clientName,
           appliedDate: latestApp?.appliedDate || '',
