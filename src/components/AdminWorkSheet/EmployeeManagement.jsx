@@ -1,6 +1,6 @@
 // In EmployeeManagement.jsx, replace the entire file content with this code.
 import React, { useState, useEffect } from 'react';
-import { database, auth } from '../../firebase'; // Import your Firebase config
+import { database, auth, firebaseConfig } from '../../firebase'; // Import your Firebase config
 import {
   ref,
   set,
@@ -16,7 +16,8 @@ import {
   equalTo,
 } from "firebase/database";
 
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, getAuth, signOut } from "firebase/auth";
+import { initializeApp, deleteApp } from "firebase/app";
 import { Spinner } from 'react-bootstrap';
 
 
@@ -62,6 +63,8 @@ const EmployeeManagement = () => {
 
   // NEW: State for loading spinners
   const [isCreatingEmployee, setIsCreatingEmployee] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   const [isUpdatingEmployee, setIsUpdatingEmployee] = useState(false);
   const [isDeletingEmployee, setIsDeletingEmployee] = useState(false);
 
@@ -210,8 +213,11 @@ const EmployeeManagement = () => {
     };
 
     try {
+      // Create a secondary app instance to avoid logging out the current admin
+      const tempApp = initializeApp(firebaseConfig, `temp-${Date.now()}`);
+      const tempAuth = getAuth(tempApp);
       const userCredential = await createUserWithEmailAndPassword(
-        auth,
+        tempAuth,
         newEmployee.workEmail,
         newEmployee.temporaryPassword
       );
@@ -221,10 +227,22 @@ const EmployeeManagement = () => {
       
       const userRef = ref(database, `users/${user.uid}`);
       await set(userRef, newEmployeeData);
+
+      // Clean up the secondary app
+      await signOut(tempAuth);
+      await deleteApp(tempApp);
       
       console.log("Employee created successfully!");
       handleCloseAddEmployeeModal();
       
+      setSuccessMessage("Account Successfully created");
+      setShowSuccessModal(true);
+
+      // Dismiss success modal after 5 seconds
+      setTimeout(() => {
+        setShowSuccessModal(false);
+      }, 5000);
+
       // Clear cache and reload page 1 to show new user
       setPageCache({});
       setPageLastKeys({});
@@ -1773,6 +1791,16 @@ const EmployeeManagement = () => {
                 </button>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {showSuccessModal && (
+        <div className="modal-overlay open" onClick={() => setShowSuccessModal(false)}>
+          <div className="modal-content" style={{ maxWidth: '400px', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>✅</div>
+            <h3 className="modal-title" style={{ marginBottom: '0.5rem' }}>Success!</h3>
+            <p className="modal-subtitle">{successMessage}</p>
           </div>
         </div>
       )}

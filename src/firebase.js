@@ -9,7 +9,7 @@ import { getStorage } from "firebase/storage";
 
 // Your web app's Firebase configuration
 // For production, it's highly recommended to use environment variables for these keys
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: "AIzaSyDjqHCvvAWzG4hMUHSdXutpzcAPQwe0Tog",
   authDomain: "tech-xplorers.firebaseapp.com",
   databaseURL: "https://tech-xplorers-default-rtdb.asia-southeast1.firebasedatabase.app",

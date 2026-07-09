@@ -12,8 +12,9 @@ import {
   remove,
   onValue
 } from "firebase/database";
-import { database, auth } from '../firebase'; // Import your Firebase config
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { database, auth, firebaseConfig } from '../firebase'; // Import your Firebase config
+import { createUserWithEmailAndPassword, getAuth, signOut } from "firebase/auth";
+import { initializeApp, deleteApp } from "firebase/app";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { utils, writeFile } from 'xlsx';
 
@@ -667,9 +668,11 @@ const ManagerWorkSheet = () => {
     };
 
     try {
-
+      // Create a secondary app instance to avoid logging out the current manager
+      const tempApp = initializeApp(firebaseConfig, `temp-${Date.now()}`);
+      const tempAuth = getAuth(tempApp);
       const userCredential = await createUserWithEmailAndPassword(
-        auth,
+        tempAuth,
         newEmployee.workEmail,
         newEmployee.temporaryPassword
       );
@@ -678,15 +681,21 @@ const ManagerWorkSheet = () => {
       // Step 2: Add the unique auth UID (firebaseKey) to the data object
       newEmployeeData.firebaseKey = user.uid;
 
-
       const usersRef = ref(database, `users/${user.uid}`);
-
-
       await set(usersRef, newEmployeeData);
 
+      // Clean up the secondary app
+      await signOut(tempAuth);
+      await deleteApp(tempApp);
+
       handleCloseAddEmployeeModal();
-      setSuccessMessage(`${newEmployee.firstName} ${newEmployee.lastName} has been successfully added.`);
+      setSuccessMessage("Account Successfully created");
       setShowSuccessModal(true);
+
+      // Dismiss success modal after 5 seconds
+      setTimeout(() => {
+        setShowSuccessModal(false);
+      }, 5000);
 
     } catch (error) {
       if (error.code === 'auth/email-already-in-use') {
