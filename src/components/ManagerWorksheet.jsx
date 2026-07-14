@@ -1062,13 +1062,22 @@ const ManagerWorkSheet = () => {
   const [isLoadingLLMResponse, setIsLoadingLLMResponse] = useState(false);
   const [newResumeFiles, setNewResumeFiles] = useState({});
 
-  const [applicationFilterDateRange, setApplicationFilterDateRange] = useState({ startDate: '', endDate: '' });
+  const [applicationFilterDateRange, setApplicationFilterDateRange] = useState(() => {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const todayStr = `${yyyy}-${mm}-${dd}`;
+    return { startDate: todayStr, endDate: todayStr };
+  });
   const [interviewFilterDateRange, setInterviewFilterDateRange] = useState({ startDate: '', endDate: '' });
 
 
   const [filterDateRange, setFilterDateRange] = useState({ startDate: '', endDate: '' });
   const [sortOrder, setSortOrder] = useState('Newest First');
   const [quickFilter, setQuickFilter] = useState('');
+  const [applicationQuickFilter, setApplicationQuickFilter] = useState('Today');
+  const [interviewQuickFilter, setInterviewQuickFilter] = useState('');
 
   const [clientStatusFilter, setClientStatusFilter] = useState('active');
 
@@ -1167,7 +1176,10 @@ const ManagerWorkSheet = () => {
     let startDate = '';
     let endDate = today.toISOString().split('T')[0];
 
-    if (filterType === 'Last 7 Days') {
+    if (filterType === 'Today') {
+      startDate = today.toISOString().split('T')[0];
+      endDate = today.toISOString().split('T')[0];
+    } else if (filterType === 'Last 7 Days') {
       const sevenDaysAgo = new Date(today);
       sevenDaysAgo.setDate(today.getDate() - 7);
       startDate = sevenDaysAgo.toISOString().split('T')[0];
@@ -1182,8 +1194,10 @@ const ManagerWorkSheet = () => {
     
     if (activeTab === 'Applications') {
       setApplicationFilterDateRange({ startDate, endDate });
+      setApplicationQuickFilter(filterType);
     } else if (activeTab === 'Interviews') {
       setInterviewFilterDateRange({ startDate, endDate });
+      setInterviewQuickFilter(filterType);
     } else {
       setFilterDateRange({ startDate, endDate });
     }
@@ -1223,13 +1237,20 @@ const ManagerWorkSheet = () => {
 
   // Inside the ManagerWorkSheet component, replace or add these functions
   const handleClearApplicationsFilters = () => {
-    // Clear all filter states specific to the Applications tab
-    setApplicationFilterDateRange({ startDate: '', endDate: '' });
+    // Clear all filter states specific to the Applications tab, resetting date range to Today
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const todayStr = `${yyyy}-${mm}-${dd}`;
+
+    setApplicationFilterDateRange({ startDate: todayStr, endDate: todayStr });
     setSortOrder('Newest First');
     setApplicationSearchQuery('');
     setApplicationFilterEmployee('');
     setApplicationFilterClient('');
     setClientStatusFilter('active');
+    setApplicationQuickFilter('Today');
   };
 
   const handleClientStatusFilterChange = (e) => {
@@ -1238,14 +1259,21 @@ const ManagerWorkSheet = () => {
   };
 
   const areApplicationsFiltersActive = () => {
-    // Check all filter states specific to the Applications tab
+    // Check all filter states specific to the Applications tab against default "Today" baseline
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const todayStr = `${yyyy}-${mm}-${dd}`;
+
     return (
-      applicationFilterDateRange.startDate !== '' ||
-      applicationFilterDateRange.endDate !== '' ||
+      applicationFilterDateRange.startDate !== todayStr ||
+      applicationFilterDateRange.endDate !== todayStr ||
       sortOrder !== 'Newest First' ||
       applicationSearchQuery !== '' ||
       applicationFilterEmployee !== '' ||
-      applicationFilterClient !== ''
+      applicationFilterClient !== '' ||
+      clientStatusFilter !== 'active'
     );
   };
 
@@ -1255,6 +1283,7 @@ const ManagerWorkSheet = () => {
     setSortOrder('Newest First');
     setInterviewSearchQuery('');
     setInterviewFilterRound('All Rounds');
+    setInterviewQuickFilter('');
   };
 
   const areInterviewsFiltersActive = () => {
@@ -5337,11 +5366,11 @@ Please provide a summary no longer than 150 words.`;
             handleApplicationFilterClientChange={handleApplicationFilterClientChange}
             clientStatusFilter={clientStatusFilter}
             handleClientStatusFilterChange={handleClientStatusFilterChange}
-            filterDateRange={filterDateRange}
+            filterDateRange={applicationFilterDateRange}
             handleDateRangeChange={(e) => setApplicationFilterDateRange(prev => ({ ...prev, [e.target.name]: e.target.value }))}
             sortOrder={sortOrder}
             setSortOrder={setSortOrder}
-            quickFilter={quickFilter}
+            quickFilter={applicationQuickFilter}
             handleQuickFilterChange={handleQuickFilterChange}
             areFiltersActive={areApplicationsFiltersActive}
             handleClearFilters={handleClearApplicationsFilters}
@@ -7600,6 +7629,12 @@ const FilterComponent = ({
       <div className="filter-group-style">
         <label className="filter-label-style">Quick Filters</label>
         <div className="quick-filter-buttons-style" style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={() => handleQuickFilterChange('Today')}
+            className={`quick-filter-button-style ${quickFilter === 'Today' ? 'active' : ''}`}
+          >
+            Today
+          </button>
           <button
             onClick={() => handleQuickFilterChange('Last 7 Days')}
             className={`quick-filter-button-style ${quickFilter === 'Last 7 Days' ? 'active' : ''}`}
