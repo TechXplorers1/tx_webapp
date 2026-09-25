@@ -1,25 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { Link } from 'react-router-dom'; 
+import { Link } from 'react-router-dom';
 import CustomNavbar from './Navbar';
 import { useTheme } from '../context/ThemeContext';
-import Footer from './Footer'; 
-import { database } from '../firebase'; 
+import { useAuth } from './AuthContext';
+import Footer from './Footer';
+import { database } from '../firebase';
 import { ref, get, query, limitToLast } from "firebase/database";
 import { dbGet, dbSet } from '../utils/idbCache';
 
 
 const Projects = () => {
-  const { isDarkMode } = useTheme(); 
+  const { isDarkMode } = useTheme();
+  const { isLoggedIn, loading: authLoading } = useAuth();
   const [filter, setFilter] = useState('All');
   const [projectsData, setProjectsData] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // --- SMART SYNC LOGIC ---
   useEffect(() => {
+    // Wait until auth state is confirmed
+    if (authLoading) return;
+
+    // If not logged in, stop loading and do not query projects
+    if (!isLoggedIn) {
+      setProjectsData([]);
+      setLoading(false);
+      return;
+    }
+
     const fetchProjects = async () => {
       setLoading(true);
-      
+
       try {
         // 1. Fetch "Last Updated" timestamp from Firebase (Tiny cost: ~10 bytes)
         const metaRef = ref(database, "metadata/projects_last_updated");
@@ -32,11 +44,11 @@ const Projects = () => {
 
         if (cached) {
           const { data, timestamp: localTimestamp } = cached;
-          
+
           // If remote timestamp is SAME or OLDER than local, cache is valid
           // (Also fallback: if cache is very fresh (< 2 mins), skip check to prevent spamming)
           if (remoteTimestamp <= localTimestamp) {
-             useCache = true;
+            useCache = true;
           }
         }
 
@@ -44,7 +56,7 @@ const Projects = () => {
           setProjectsData(cached.data);
           console.log("Loaded projects from Cache (Version Match)");
           setLoading(false);
-          return; 
+          return;
         }
 
         // 3. If versions mismatch, Fetch Full Data from Firebase
@@ -65,20 +77,20 @@ const Projects = () => {
         }));
 
         const sortedProjects = projectList.sort((a, b) => {
-            if (a.order !== undefined && b.order !== undefined) {
-                return a.order - b.order;
-            }
-            const dateA = new Date(a.createdAt || 0);
-            const dateB = new Date(b.createdAt || 0);
-            return dateB - dateA;
+          if (a.order !== undefined && b.order !== undefined) {
+            return a.order - b.order;
+          }
+          const dateA = new Date(a.createdAt || 0);
+          const dateB = new Date(b.createdAt || 0);
+          return dateB - dateA;
         });
 
         setProjectsData(sortedProjects);
-        
+
         // Save new data with the CURRENT time (or remoteTimestamp if you want strict sync)
-        await dbSet('projectsCache', { 
-            data: sortedProjects, 
-            timestamp: Date.now() 
+        await dbSet('projectsCache', {
+          data: sortedProjects,
+          timestamp: Date.now()
         });
 
       } catch (error) {
@@ -89,7 +101,7 @@ const Projects = () => {
     };
 
     fetchProjects();
-  }, []);
+  }, [isLoggedIn, authLoading]);
 
 
   // Extract unique categories
@@ -138,7 +150,7 @@ const Projects = () => {
 
     .hero-section {
       background-color: var(--light-surface);
-      padding: 2rem 1rem;
+      padding: 1.25rem 1rem;
       text-align: center;
       border-bottom: 1px solid var(--light-border);
       transition: background-color 0.3s ease, border-color 0.3s ease;
@@ -149,10 +161,10 @@ const Projects = () => {
     }
 
     .hero-title {
-      font-size: 2rem;
+      font-size: 1.85rem;
       font-weight: 700;
       color: var(--light-text-primary);
-      margin-bottom: 1rem;
+      margin-bottom: 0.5rem;
       transition: color 0.3s ease;
     }
     .dark-mode .hero-title {
@@ -160,11 +172,11 @@ const Projects = () => {
     }
 
     .hero-subtitle {
-      font-size: 1.2rem;
+      font-size: 1.05rem;
       color: var(--light-text-secondary);
       max-width: 800px;
       margin: 0 auto;
-      line-height: 1.7;
+      line-height: 1.5;
       transition: color 0.3s ease;
     }
     .dark-mode .hero-subtitle {
@@ -226,6 +238,117 @@ const Projects = () => {
       border-top-color: var(--dark-border);
     }
 
+    /* Guest state styles */
+    .guest-projects-card {
+      max-width: 520px;
+      padding: 2rem 2rem 2.25rem 2rem;
+      background-color: var(--light-surface);
+      border: 1px solid var(--light-border);
+      border-radius: 1.25rem;
+      box-shadow: var(--shadow-light);
+      transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    .dark-mode .guest-projects-card {
+      background-color: var(--dark-surface);
+      border-color: var(--dark-border);
+      box-shadow: var(--shadow-dark);
+    }
+
+    .guest-lock-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: rgba(79, 70, 229, 0.1);
+      color: #4F46E5;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+      transition: all 0.3s ease;
+    }
+    .dark-mode .guest-lock-icon {
+      background: rgba(139, 92, 246, 0.18);
+      color: #a78bfa;
+    }
+
+    .guest-projects-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--light-text-primary);
+      margin-bottom: 0.5rem;
+      line-height: 1.4;
+    }
+    .dark-mode .guest-projects-title {
+      color: var(--dark-text-primary);
+    }
+
+    .guest-projects-subtitle {
+      color: var(--light-text-secondary);
+      font-size: 0.93rem;
+      line-height: 1.5;
+      max-width: 440px;
+      margin-left: auto;
+      margin-right: auto;
+      margin-bottom: 1.5rem;
+    }
+    .dark-mode .guest-projects-subtitle {
+      color: var(--dark-text-secondary);
+    }
+
+    /* Heartbeat Button Animation */
+    @keyframes heartbeat {
+      0% {
+        transform: scale(1);
+        box-shadow: 0 4px 15px rgba(79, 70, 229, 0.35);
+      }
+      14% {
+        transform: scale(1.08);
+        box-shadow: 0 6px 22px rgba(79, 70, 229, 0.55);
+      }
+      28% {
+        transform: scale(1);
+        box-shadow: 0 4px 15px rgba(79, 70, 229, 0.35);
+      }
+      42% {
+        transform: scale(1.12);
+        box-shadow: 0 8px 26px rgba(79, 70, 229, 0.65);
+      }
+      70% {
+        transform: scale(1);
+        box-shadow: 0 4px 15px rgba(79, 70, 229, 0.35);
+      }
+      100% {
+        transform: scale(1);
+        box-shadow: 0 4px 15px rgba(79, 70, 229, 0.35);
+      }
+    }
+
+    .btn-heartbeat {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+      color: #ffffff !important;
+      font-family: 'Inter', sans-serif;
+      font-size: 1.02rem;
+      font-weight: 600;
+      padding: 0.72rem 2.4rem;
+      border-radius: 50px;
+      border: none;
+      text-decoration: none;
+      cursor: pointer;
+      animation: heartbeat 1.8s ease-in-out infinite;
+      transition: all 0.3s ease;
+    }
+    .btn-heartbeat:hover {
+      transform: scale(1.1);
+      background: linear-gradient(135deg, #4338CA 0%, #6D28D9 100%);
+      box-shadow: 0 10px 30px rgba(79, 70, 229, 0.6);
+      color: #ffffff !important;
+      animation-play-state: paused;
+    }
+
     .cta-section {
       background-color: var(--light-surface);
       border-top: 1px solid var(--light-border);
@@ -275,24 +398,50 @@ const Projects = () => {
   return (
     <>
       <style>{styles}</style>
-      
+
       <div className={`projects-container ${isDarkMode ? 'dark-mode' : ''}`}>
         <CustomNavbar />
 
-        <section className="hero-section mb-4">
+        <section className="hero-section mb-3">
           <div className="container">
             <h3 className="hero-title">Our Work</h3>
             <p className="hero-subtitle">
-              At <strong>TechXplorers</strong>, we deliver digital excellence. 
+              At <strong>TechXplorers</strong>, we deliver digital excellence.
               Explore our portfolio of successful projects across Web, Mobile, and Security.
             </p>
           </div>
         </section>
 
-        {loading ? (
+        {authLoading || loading ? (
           <div className="container loading-spinner-container">
             <div className="spinner-border text-primary" role="status">
               <span className="visually-hidden">Loading...</span>
+            </div>
+          </div>
+        ) : !isLoggedIn ? (
+          <div className="container py-3 my-1">
+            <div className="guest-projects-card text-center mx-auto">
+              <div className="guest-lock-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+              </div>
+              <h4 className="guest-projects-title">
+                Log In to View Our Projects
+              </h4>
+              <p className="guest-projects-subtitle">
+                Please log in to your account to explore our complete portfolio of web, mobile, and security projects.
+              </p>
+              <div className="d-flex justify-content-center">
+                <Link to="/login" className="btn-heartbeat">
+                  <span>Login</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                  </svg>
+                </Link>
+              </div>
             </div>
           </div>
         ) : (
@@ -303,11 +452,10 @@ const Projects = () => {
                   <button
                     key={cat}
                     onClick={() => setFilter(cat)}
-                    className={`btn px-4 rounded-pill btn-filter-custom ${
-                      filter === cat 
+                    className={`btn px-4 rounded-pill btn-filter-custom ${filter === cat
                         ? (isDarkMode ? 'btn-light' : 'btn-dark')
                         : (isDarkMode ? 'btn-outline-light' : 'btn-outline-secondary')
-                    }`}
+                      }`}
                   >
                     {cat}
                   </button>
@@ -321,7 +469,7 @@ const Projects = () => {
                   filteredProjects.map((project) => (
                     <div key={project.id} className="col-12 col-md-6 col-lg-4">
                       <div className="project-card">
-                        
+
                         <div className="overflow-hidden position-relative" style={{ height: '220px' }}>
                           <img
                             src={project.image}
@@ -332,7 +480,7 @@ const Projects = () => {
                             onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
                             onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}
                           />
-                          <span 
+                          <span
                             className={`position-absolute top-0 end-0 px-3 py-1 m-2 rounded-pill small ${isDarkMode ? 'bg-light text-dark' : 'bg-dark text-white'}`}
                             style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600 }}
                           >
@@ -346,12 +494,12 @@ const Projects = () => {
                             {project.description}
                           </p>
                           <div className="d-flex justify-content-between align-items-center mt-3 pt-3 project-divider">
-                            
-                            <a 
-                              href={project.link && project.link !== '#' ? project.link : null} 
-                              target="_blank" 
+
+                            <a
+                              href={project.link && project.link !== '#' ? project.link : null}
+                              target="_blank"
                               rel="noopener noreferrer"
-                              className={`btn btn-sm rounded-pill px-3 ${isDarkMode ? 'btn-outline-light' : 'btn-outline-dark'} ${(!project.link || project.link === '#') ? 'disabled' : ''}`} 
+                              className={`btn btn-sm rounded-pill px-3 ${isDarkMode ? 'btn-outline-light' : 'btn-outline-dark'} ${(!project.link || project.link === '#') ? 'disabled' : ''}`}
                               style={{ fontFamily: 'Inter, sans-serif', textDecoration: 'none' }}
                             >
                               View Project
@@ -384,9 +532,9 @@ const Projects = () => {
             </Link>
           </div>
         </div>
-        
+
       </div>
-       <Footer />
+      <Footer />
     </>
   );
 };
