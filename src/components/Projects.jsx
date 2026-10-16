@@ -183,6 +183,15 @@ const Projects = () => {
       color: var(--dark-text-secondary);
     }
 
+    .project-pricing-note {
+      color: var(--light-text-secondary);
+      font-size: 0.775rem;
+      margin: 0.35rem auto 0;
+    }
+    .dark-mode .project-pricing-note {
+      color: var(--dark-text-secondary);
+    }
+
     .btn-filter-custom {
       font-weight: 500;
       font-family: 'Inter', sans-serif;
@@ -408,6 +417,10 @@ const Projects = () => {
             <p className="hero-subtitle">
               At <strong>TechXplorers</strong>, we deliver digital excellence.
               Explore our portfolio of successful projects across Web, Mobile, and Security.
+            </p>
+            <br></br>
+            <p className="project-pricing-note">
+              <i>(Project pricing ranges from ₹1,000 to ₹5,00,000, tailored to project scope, complexity, and custom requirements.)</i>
             </p>
           </div>
         </section>
